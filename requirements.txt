@@ -5,4 +5,4 @@ razorpay==1.4.1
 requests==2.32.3
 Werkzeug==3.0.3
 gunicorn==22.0.0
-setuptools
+setuptools==69.5.1
