@@ -105,33 +105,38 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
+import requests
+
 def send_email_wrapper(to_email, subject, body):
-    # 1. ALWAYS print the email to Render Logs so you can read your OTPs!
-    logging.info(f"\n--- EMAIL TO: {to_email} ---")
-    logging.info(f"Subject: {subject}\nBody:\n{body}")
-    logging.info(f"-----------------------------\n")
+    api_key = os.environ.get('RESEND_API_KEY')
     
-    if not SMTP_PASSWORD:
-        logging.warning("EMAIL_PASSWORD not set in Render Environment.")
-        return True # Return True anyway so the UI lets you type the OTP you read from the logs
+    if not api_key:
+        print(f"\n\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n\n", flush=True)
+        return True
         
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = SMTP_EMAIL
-    msg['To'] = to_email
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    # Note: On Resend's free tier, use 'onboarding@resend.dev' as the sender until you verify your own domain.
+    payload = {
+        "from": "PustakVerse <onboarding@resend.dev>",
+        "to": [to_email],
+        "subject": subject,
+        "text": body
+    }
     
     try:
-        # 2. Add a 5-second timeout so Render doesn't freeze and crash (500 Error)
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5)
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
+        response = requests.post(url, json=payload, headers=headers, timeout=5)
+        if response.status_code in [200, 201]:
+            return True
+        else:
+            logging.error(f"Resend API Error: {response.text}")
+            return True
     except Exception as e:
-        logging.error(f"Render blocked the email: {e}")
-        # 3. Return True even if it fails, so you can type the OTP from the logs!
+        logging.error(f"Email API connection failed: {e}")
         return True
-
 def send_otp_email(to_email, otp):
     body = f"Your PustakVerse password reset code is: {otp}\n\nPlease do not share this code with anyone for your own security."
     return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', body)
