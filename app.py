@@ -109,7 +109,7 @@ def drive_img(url):
 # ==========================================
 oauth = OAuth(app)
 google = oauth.register(
-    oauth = OAuth(app)
+   oauth = OAuth(app)
 google = oauth.register(
     name='google',
     client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(),
