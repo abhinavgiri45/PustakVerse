@@ -106,24 +106,31 @@ google = oauth.register(
 )
 
 def send_email_wrapper(to_email, subject, body):
-    # Failsafe if env var isn't set yet
+    # 1. ALWAYS print the email to Render Logs so you can read your OTPs!
+    logging.info(f"\n--- EMAIL TO: {to_email} ---")
+    logging.info(f"Subject: {subject}\nBody:\n{body}")
+    logging.info(f"-----------------------------\n")
+    
     if not SMTP_PASSWORD:
-        logging.warning("EMAIL_PASSWORD not set. Cannot send email.")
-        return False
+        logging.warning("EMAIL_PASSWORD not set in Render Environment.")
+        return True # Return True anyway so the UI lets you type the OTP you read from the logs
         
     msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = SMTP_EMAIL
     msg['To'] = to_email
+    
     try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        # 2. Add a 5-second timeout so Render doesn't freeze and crash (500 Error)
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5)
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
-        logging.error(f"Failed to send email to {to_email}: {e}")
-        return False
+        logging.error(f"Render blocked the email: {e}")
+        # 3. Return True even if it fails, so you can type the OTP from the logs!
+        return True
 
 def send_otp_email(to_email, otp):
     body = f"Your PustakVerse password reset code is: {otp}\n\nPlease do not share this code with anyone for your own security."
