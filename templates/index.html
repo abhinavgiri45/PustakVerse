@@ -143,16 +143,19 @@
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
                     <div class="book-actions">
-                        <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
-                            {% if book.is_paid %}
-                                <button type="submit" class="btn btn-premium">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
-                            {% else %}
-                                <button type="submit" class="btn btn-read">Read Now</button>
-                            {% endif %}
-                        </form>
-                        <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
-                            <button type="submit" class="btn btn-save">Save</button>
-                        </form>
+                        {% if book.is_paid %}
+                            <!-- For Paid Books: Shows Preview & Buy Now -->
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="display: flex; align-items: center; justify-content: center;">Preview</a>
+                            <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
+                                <button type="submit" class="btn btn-premium" style="width: 100%;">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
+                            </form>
+                        {% else %}
+                            <!-- For Free Books: Shows Read Now & Save -->
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="display: flex; align-items: center; justify-content: center;">Read Now</a>
+                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
+                                <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
