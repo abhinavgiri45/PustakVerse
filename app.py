@@ -107,9 +107,6 @@ def drive_img(url):
 # ==========================================
 # GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
 # ==========================================
-# ==========================================
-# GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
-# ==========================================
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
@@ -210,6 +207,18 @@ def send_approved_author(to_email, username):
 def send_official_welcome(to_email, username, password):
     body = f"Hello {username},\n\nWelcome to the administrative team!\n\nLogin credentials:\nUsername: {username}\nPassword: {password}\n\nBest Regards,\nThe PustakVerse Team"
     return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', body)
+
+def send_revoked_official_email(to_email, username, reason):
+    body = f"Hello {username},\n\nYour official administrative privileges on PustakVerse have been revoked.\n\nReason: {reason}\n\nYour account has been reverted to a standard Reader role.\n\nBest Regards,\nThe PustakVerse Team"
+    return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', body)
+
+def send_account_deleted_email(to_email, username, reason):
+    body = f"Hello {username},\n\nYour PustakVerse account has been permanently deleted by an administrator.\n\nReason: {reason}\n\nIf you believe this was a mistake, please contact support.\n\nBest Regards,\nThe PustakVerse Team"
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', body)
+
+def send_author_rejected_email(to_email, username, reason):
+    body = f"Hello {username},\n\nWe regret to inform you that your application for an Author account on PustakVerse has been rejected.\n\nReason: {reason}\n\nBest Regards,\nThe PustakVerse Team"
+    return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', body)
 
 # ==========================================
 # SECURE TiDB (MYSQL) DATABASE CONNECTION
@@ -1033,7 +1042,9 @@ def dashboard():
     
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        role = session.get('role'); search_query = request.args.get('search', '')
+        role = session.get('role')
+        search_query = request.args.get('search', '')
+        role_filter = request.args.get('role_filter', 'all')
 
         cursor.execute("SELECT two_factor_enabled FROM users WHERE id = %s", (session['user_id'],))
         tf_data = cursor.fetchone()
@@ -1117,9 +1128,17 @@ def dashboard():
                 flash("Author approved and notified!", "success")
             elif 'reject_author_id' in request.form:
                 auth_id = request.form['reject_author_id']
-                cursor.execute("SELECT username FROM users WHERE id = %s", (auth_id,)); author_name = cursor.fetchone()['username'] if cursor.rowcount > 0 else "Unknown"
-                cursor.execute("DELETE FROM users WHERE id = %s", (auth_id,)); db.commit()
-                if role == 'official': log_official_activity(session['user_id'], f"Rejected & deleted author: {author_name}")
+                reason = request.form.get('reject_reason', 'Did not meet platform guidelines.')
+                cursor.execute("SELECT username, email FROM users WHERE id = %s", (auth_id,))
+                user_data = cursor.fetchone()
+                author_name = user_data['username'] if user_data else "Unknown"
+                
+                if user_data:
+                    send_author_rejected_email(user_data['email'], author_name, reason)
+                    
+                cursor.execute("DELETE FROM users WHERE id = %s", (auth_id,))
+                db.commit()
+                if role == 'official': log_official_activity(session['user_id'], f"Rejected & deleted author: {author_name}. Reason: {reason}")
                 flash("Author rejected and removed.", "success")
 
         username_requests = []
@@ -1135,9 +1154,19 @@ def dashboard():
             except Exception: pass
 
         if role == 'developer':
-            if search_query: cursor.execute("SELECT id, username, email, role, last_activity FROM users WHERE username LIKE %s OR email LIKE %s", (f"%{search_query}%", f"%{search_query}%"))
-            else: cursor.execute("SELECT id, username, email, role, last_activity FROM users WHERE role != 'developer' ORDER BY last_activity DESC LIMIT 50")
+            params = []
+            base_query = "SELECT id, username, email, role, last_activity FROM users WHERE role != 'developer'"
+            if search_query:
+                base_query += " AND (username LIKE %s OR email LIKE %s)"
+                params.extend([f"%{search_query}%", f"%{search_query}%"])
+            if role_filter and role_filter != 'all':
+                base_query += " AND role = %s"
+                params.append(role_filter)
+            base_query += " ORDER BY last_activity DESC LIMIT 50"
+            
+            cursor.execute(base_query, tuple(params))
             searched_users = cursor.fetchall()
+            
             cursor.execute("SELECT dr.id, u.username as target_name, o.username as official_name, dr.reason FROM deletion_requests dr JOIN users u ON dr.target_user_id = u.id JOIN users o ON dr.requested_by = o.id WHERE dr.status = 'pending'")
             del_requests = cursor.fetchall()
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
@@ -1286,10 +1315,16 @@ def create_official():
 @app.route('/revoke_official/<int:user_id>', methods=['POST'])
 def revoke_official(user_id):
     if session.get('role') != 'developer': return redirect(url_for('dashboard'))
+    reason = request.form.get('reason', 'Administrative decision.')
     db = None
     try:
-        db = get_db_connection(); cursor = db.cursor()
-        cursor.execute("UPDATE users SET role = 'reader' WHERE id = %s AND role = 'official'", (user_id,)); db.commit(); flash("Official privileges revoked.", "success")
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT username, email FROM users WHERE id = %s AND role = 'official'", (user_id,))
+        user_data = cursor.fetchone()
+        cursor.execute("UPDATE users SET role = 'reader' WHERE id = %s AND role = 'official'", (user_id,))
+        db.commit()
+        if user_data: send_revoked_official_email(user_data['email'], user_data['username'], reason)
+        flash("Official privileges revoked and email sent.", "success")
     except Exception: flash("Database error.", "error")
     finally:
         if db:
@@ -1336,11 +1371,21 @@ def handle_deletion(req_id, action):
 @app.route('/admin_delete_user/<int:user_id>', methods=['POST'])
 def admin_delete_user(user_id):
     if session.get('role') != 'developer': return redirect(url_for('dashboard'))
+    reason = request.form.get('reason', 'Violation of platform terms.')
     db = None
     try:
-        db = get_db_connection(); cursor = db.cursor(); tables = ['personal_library', 'interactions', 'books', 'users']
-        for table in tables: column = 'author_id' if table == 'books' else ('id' if table == 'users' else 'user_id'); cursor.execute(f"DELETE FROM {table} WHERE {column} = %s", (user_id,))
-        db.commit(); flash("User deleted.", "success")
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
+        user_data = cursor.fetchone()
+        
+        tables = ['personal_library', 'interactions', 'books', 'users']
+        for table in tables: 
+            column = 'author_id' if table == 'books' else ('id' if table == 'users' else 'user_id')
+            cursor.execute(f"DELETE FROM {table} WHERE {column} = %s", (user_id,))
+        db.commit()
+        
+        if user_data: send_account_deleted_email(user_data['email'], user_data['username'], reason)
+        flash("User deleted and notification email sent.", "success")
     except Exception: flash("Database error.", "error")
     finally:
         if db:
