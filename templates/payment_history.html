@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Payments - PustakVerse</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f7fafc; color: #2d3748; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background: #f8fafc; color: #718096; }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #2d3748; color: white; text-decoration: none; border-radius: 6px; margin-bottom: 20px; }
+        .status-paid { color: #38a169; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/my-library" class="btn-back">← Back to Library</a>
+        
+        <h1 style="color: #f66d2f;">My Payment History</h1>
+
+        {% if payments %}
+            <table>
+                <tr>
+                    <th>Date</th>
+                    <th>Book Title</th>
+                    <th>Order ID</th>
+                    <th>Amount Paid</th>
+                    <th>Status</th>
+                </tr>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.paid_at.strftime('%Y-%m-%d %H:%M') if payment.paid_at else 'N/A' }}</td>
+                    <td style="font-weight: 600;">{{ payment.book_title }}</td>
+                    <td style="font-family: monospace; font-size: 0.9em; color: #718096;">{{ payment.razorpay_order_id }}</td>
+                    <td>₹{{ "%.2f"|format(payment.amount_paise/100) }}</td>
+                    <td class="status-paid">PAID</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #a0aec0;">You haven't purchased any premium books yet.</h3>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_settings.hero_title }} - Global Library</title>
+    <style>
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
+        
+        .navbar { background-color: #2d3748; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; object-fit: contain;}
+        
+        .navbar-links { display: flex; gap: 20px; align-items: center; margin-left: auto; }
+        .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: 0.2s; }
+        .navbar-links a:hover { color: #f66d2f; }
+        
+        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #f66d2f; }
+        .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
+        .hero-section p { font-size: 1.2rem; color: #a0aec0; margin-top: 10px; }
+
+        .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: white; border-radius: 30px; padding: 5px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: #333; background: transparent; }
+        .icon-btn { background: none; border: none; cursor: pointer; color: #718096; padding: 8px; transition: 0.2s; }
+        .icon-btn:hover { color: #f66d2f; transform: scale(1.1); }
+
+        .filter-nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
+        .filter-nav a { padding: 8px 20px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 0.9rem; color: #4a5568; background: #edf2f7; transition: 0.2s; }
+        .filter-nav a.active, .filter-nav a:hover { background: #f66d2f; color: white; }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+        
+        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .book-cover { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; }
+        .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
+        .book-tag { color: #f66d2f; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+        .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
+        .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
+        
+        .book-actions { display: flex; gap: 10px; margin-top: auto; }
+        .btn { flex: 1; padding: 12px 0; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; }
+        .btn:hover { opacity: 0.85; }
+        .btn-read { background-color: #2d3748; color: white; }
+        .btn-save { background-color: #edf2f7; color: #2d3748; }
+        .btn-premium { background-color: #38a169; color: white; }
+
+        .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
+        .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 40px 0; }
+        .no-results h2 { color: #2d3748; margin-bottom: 10px; font-size: 1.8rem;}
+
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; padding: 15px; }
+            .navbar-links { width: 100%; justify-content: center; margin-top: 10px; }
+            .hero-section { padding: 40px 20px; }
+            .hero-section h1 { font-size: 2.5rem; }
+            .container { padding: 20px; }
+            .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+            .book-cover { height: 220px; }
+            .book-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <!-- Safely load logo using Jinja's safe connector (~) -->
+            <a href="/"><img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" onerror="this.src='{{ url_for('static', filename='PustakVerse.png') }}'" alt="Logo"></a>
+        </div>
+        <div class="navbar-links">
+            <a href="{{ url_for('contact') }}">Contact</a>
+            {% if session.user_id %}
+                <a href="{{ url_for('my_library') }}">My Library</a>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('logout') }}" style="background: #e53e3e; padding: 8px 15px; border-radius: 20px;">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" style="background: #f66d2f; padding: 8px 20px; border-radius: 20px;">Sign In / Login</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="hero-section">
+        <h1>{{ site_settings.hero_title }}</h1>
+        <p>{{ site_settings.hero_subtitle }}</p>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search for a book or author..." onkeyup="filterBooks()">
+            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="filter-nav">
+        <a href="/" class="active">All Books</a>
+        {% for cat in site_catalogs %}
+            <a href="/category/{{ cat.name }}">{{ cat.name }}</a>
+        {% endfor %}
+        <a href="/archives" style="background: #2d3748; color: white;">Archives (Free)</a>
+    </div>
+
+    <div class="container">
+        <!-- Developer Donation Banner -->
+        {% if site_settings.donation_active and site_settings.donation_qr %}
+        <div class="donation-banner">
+            <h2 style="color: #276749; margin-top: 0;">Support PustakVerse!</h2>
+            <p style="color: #2f855a; margin-bottom: 0;">If you love our free library, consider buying the developer a coffee.</p>
+            <img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.donation_qr) }}" alt="Donation QR Code">
+        </div>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div style="padding: 15px; margin-bottom: 30px; text-align: center; border-radius: 8px; background: #fed7d7; color: #c53030; font-weight: bold;">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="book-grid" id="bookGrid">
+            {% for book in books %}
+            <div class="book-card" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}">
+                
+                {% set cover = book.cover_image %}
+                {% if cover.startswith('http') %}
+                    <img src="{{ cover | drive_img }}" alt="Cover" class="book-cover">
+                {% else %}
+                    <!-- Safely concatenating using ~ -->
+                    <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover" class="book-cover">
+                {% endif %}
+
+                <div class="book-info">
+                    <div class="book-tag">{{ book.catalog }}</div>
+                    <h3 class="book-title">{{ book.title }}</h3>
+                    <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
+                    
+                    <div class="book-actions">
+                        <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
+                            {% if book.is_paid %}
+                                <button type="submit" class="btn btn-premium">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-read">Read Now</button>
+                            {% endif %}
+                        </form>
+                        <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
+                            <button type="submit" class="btn btn-save">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+                <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
+                    <h2 style="color: #718096;">No books available yet. Check back soon!</h2>
+                </div>
+            {% endfor %}
+
+            <div class="no-results" id="noResultsMsg">
+                <h2>No matches found in the library.</h2>
+                <p style="color: #718096;">Try searching for a different title or author.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterBooks() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let cards = document.querySelectorAll('.book-card');
+            let visibleCount = 0;
+            
+            cards.forEach(card => {
+                let title = card.getAttribute('data-title'); 
+                let author = card.getAttribute('data-author'); 
+                let catalog = card.getAttribute('data-catalog');
+                
+                if (title.includes(input) || author.includes(input) || catalog.includes(input)) { 
+                    card.style.display = 'flex'; 
+                    visibleCount++;
+                } else { 
+                    card.style.display = 'none'; 
+                }
+            });
+            
+            let noResults = document.getElementById('noResultsMsg');
+            if (noResults) {
+                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+            }
+        }
+
+        const micBtn = document.getElementById('micBtn');
+        const searchInput = document.getElementById('searchInput');
+
+        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+            
+            micBtn.addEventListener('click', () => { 
+                recognition.start(); 
+                micBtn.style.color = '#f66d2f'; 
+                micBtn.style.transform = 'scale(1.2)'; 
+                searchInput.placeholder = "Listening..."; 
+            });
+            
+            recognition.onresult = (event) => { 
+                searchInput.value = event.results[0][0].transcript; 
+                filterBooks(); 
+            };
+            
+            recognition.onerror = (event) => { 
+                console.error("Speech error", event.error); 
+                resetMic(); 
+            };
+            
+            recognition.onend = () => { resetMic(); };
+            
+            function resetMic() { 
+                micBtn.style.color = '#718096'; 
+                micBtn.style.transform = 'scale(1)'; 
+                searchInput.placeholder = "Search for a book or author..."; 
+            }
+        } else if (micBtn) { 
+            micBtn.style.display = 'none'; 
+        }
+    </script>
+</body>
+</html>

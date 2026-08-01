@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales History - PustakVerse</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f7fafc; color: #2d3748; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background: #f8fafc; color: #718096; }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #2d3748; color: white; text-decoration: none; border-radius: 6px; margin-bottom: 20px; }
+        .status-paid { color: #38a169; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+        
+        <h1 style="color: #f66d2f;">Sales History</h1>
+        <h3 style="margin-top: 0; color: #718096;">Book: {{ book.title }}</h3>
+        <p><strong>Base Price:</strong> ₹{{ "%.2f"|format(book.price_paise/100) }}</p>
+
+        {% if sales %}
+            <table>
+                <tr>
+                    <th>Date</th>
+                    <th>Order ID</th>
+                    <th>Buyer Username</th>
+                    <th>Amount Paid</th>
+                    <th>Status</th>
+                </tr>
+                {% for sale in sales %}
+                <tr>
+                    <td>{{ sale.paid_at.strftime('%Y-%m-%d %H:%M') if sale.paid_at else 'N/A' }}</td>
+                    <td style="font-family: monospace;">{{ sale.razorpay_order_id }}</td>
+                    <td>{{ sale.buyer_name }}</td>
+                    <td>₹{{ "%.2f"|format(sale.amount_paise/100) }}</td>
+                    <td class="status-paid">SUCCESS</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #a0aec0;">No sales recorded yet.</h3>
+                <p>Keep promoting your book to get your first reader!</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

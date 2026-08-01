@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PustakVerse | Every Book. Every Mind. Free.</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
+    <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
+        <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        <h3>Browse by category</h3>
+        {% for cat in site_catalogs %}
+            <a href="{{ url_for('category_view', name=cat.name) }}">{{ cat.name }}</a>
+        {% endfor %}
+        <h3>Special collections</h3>
+        <a href="{{ url_for('archives_view') }}">Archives (Free Books)</a>
+    </aside>
+
+    <nav>
+        <div class="nav-brand">
+            <button class="hamburger-btn" type="button" onclick="openNav()" aria-label="Open navigation">☰</button>
+            <a href="{{ url_for('index') }}" class="brand-logo" aria-label="PustakVerse home">
+                {% if site_settings.logo_image != 'PustakVerse.png' %}
+                    <img src="{{ url_for('static', filename='uploads/logos/' + site_settings.logo_image) }}" alt="PustakVerse" class="logo-img">
+                {% else %}
+                    <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img">
+                {% endif %}
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}">Global Library</a>
+            {% if session.username %}
+                <a href="{{ url_for('my_library') }}">My Library</a>
+                <a href="{{ url_for('dashboard') }}">My Profile</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('contact') }}">Contact</a>
+                <a href="{{ url_for('login') }}" class="nav-btn-highlight">Sign In / Join</a>
+            {% endif %}
+        </div>
+        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="container flash-container">
+            {% for category, message in messages %}
+              <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    <div class="popup-overlay" id="tgPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-hidden="true">
+        <div class="popup-content">
+            <button class="popup-close" type="button" onclick="dismissPopup()" aria-label="Close popup">&times;</button>
+            <div class="popup-kicker">THE PUSTAKVERSE COMMUNITY</div>
+            <div class="popup-orbit"><span>✦</span><span>✦</span><span>✦</span><div class="popup-book">PV</div></div>
+            <h2 id="popupTitle">Join the PustakVerse Family! <span>🚀</span></h2>
+            <p>Find your next favorite book, meet curious readers, and get first access to community updates.</p>
+            <div class="popup-perks"><span>✦ Reader picks</span><span>✦ Author updates</span><span>✦ Free resources</span></div>
+            <a href="https://t.me/PustakVerse" target="_blank" rel="noopener" class="popup-btn" onclick="dismissPopup()">Join our Telegram community <span>→</span></a>
+            <button class="close-popup" type="button" onclick="dismissPopup()">Maybe later</button>
+        </div>
+    </div>
+    <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
+
+    <script>
+        function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
+        function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
+        function dismissPopup() { const popup = document.getElementById('tgPopup'); popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); localStorage.setItem('pustakverse_tg_seen', 'true'); }
+        function applyTheme(theme) { document.body.classList.toggle('dark-theme', theme === 'dark'); document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '☾'; }
+        function toggleTheme() { const nextTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark'; localStorage.setItem('pustakverse_theme', nextTheme); applyTheme(nextTheme); }
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        document.addEventListener('DOMContentLoaded', function() {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
+            if (!localStorage.getItem('pustakverse_tg_seen')) {
+                setTimeout(function() { const popup = document.getElementById('tgPopup'); popup.classList.add('is-visible'); popup.setAttribute('aria-hidden', 'false'); }, 1200);
+            }
+        });
+        document.addEventListener('keydown', function(event) { if (event.key === 'Escape') { dismissPopup(); closeNav(); } });
+        window.addEventListener('scroll', function() {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            document.getElementById('myBar').style.width = height > 0 ? (winScroll / height) * 100 + '%' : '0%';
+            document.getElementById('backToTop').classList.toggle('is-visible', winScroll > 400);
+        });
+    </script>
+</body>
+</html>

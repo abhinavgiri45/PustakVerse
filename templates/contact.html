@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - PustakVerse</title>
+    <style>
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; height: 100vh; display: flex; flex-direction: column; }
+        .navbar { background-color: #34495e; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; }
+        .navbar-links { display: flex; gap: 20px; align-items: center; }
+        .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; }
+        .navbar-links a:hover { color: #f66d2f; }
+
+        .contact-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .contact-card { background: white; padding: 45px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); max-width: 500px; width: 100%; border: 1px solid #e2e8f0; }
+        .contact-card h1 { margin-top: 0; color: #2d3748; margin-bottom: 15px; font-size: 2.2rem; text-align: center; }
+        .contact-card p { color: #718096; line-height: 1.6; margin-bottom: 35px; font-size: 1.05rem; text-align: center; }
+
+        .contact-info { background: #f8fafc; padding: 25px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .contact-item { margin-bottom: 25px; display: flex; flex-direction: column; }
+        .contact-item:last-child { margin-bottom: 0; }
+        .contact-label { font-weight: 700; color: #a0aec0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .contact-value { color: #2d3748; font-weight: 600; text-decoration: none; font-size: 1.15rem; transition: color 0.2s; }
+        .contact-value:hover { color: #f66d2f; }
+
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; padding: 15px; gap: 15px; }
+            .contact-card { padding: 30px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="Logo"></a>
+        </div>
+        <div class="navbar-links">
+            <a href="/">← Back to Library</a>
+            {% if session.user_id %}
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" style="background: #f66d2f; padding: 8px 20px; border-radius: 20px;">Sign In</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="contact-container">
+        <div class="contact-card">
+            <h1>Get in Touch</h1>
+            <p>Have questions, feedback, or need support? Reach out to us through any of the channels below.</p>
+            
+            <div class="contact-info">
+                <div class="contact-item">
+                    <span class="contact-label">Primary Support</span>
+                    <a href="mailto:abhinavgiri370@gmail.com" class="contact-value">abhinavgiri370@gmail.com</a>
+                </div>
+                
+                <div class="contact-item">
+                    <span class="contact-label">Automated Systems</span>
+                    <a href="mailto:noreply.pustakverse@gmail.com" class="contact-value">noreply.pustakverse@gmail.com</a>
+                </div>
+
+                <div class="contact-item">
+                    <span class="contact-label">Instagram</span>
+                    <a href="https://www.instagram.com/abhinavgiri45/" target="_blank" class="contact-value">@abhinavgiri45</a>
+                </div>
+
+                <!-- ADDED TELEGRAM BACK IN -->
+                <div class="contact-item">
+                    <span class="contact-label">Official Telegram</span>
+                    <a href="https://t.me/PustakVerse" target="_blank" class="contact-value" style="color: #0284c7;">t.me/PustakVerse</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

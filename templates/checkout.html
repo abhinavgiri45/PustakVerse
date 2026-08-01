@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Checkout - PustakVerse</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .checkout-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .book-title { font-size: 1.5rem; color: #2d3748; margin-bottom: 5px; }
+        .author-name { color: #718096; margin-bottom: 25px; }
+        .price-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #edf2f7; color: #4a5568; }
+        .total-row { display: flex; justify-content: space-between; padding: 15px 0; font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #2d3748; color: #2d3748; margin-bottom: 25px; }
+        .btn-pay { background: #f66d2f; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-pay:hover { background: #dd5b21; }
+        .btn-cancel { display: block; margin-top: 15px; color: #718096; text-decoration: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="checkout-card">
+        <h2 class="book-title">{{ book.title }}</h2>
+        <p class="author-name">By {{ book.author_name }}</p>
+
+        <div class="price-row">
+            <span>Book Price</span>
+            <span>₹{{ "%.2f"|format(base_price/100) }}</span>
+        </div>
+        <div class="price-row">
+            <span>Platform Fee (Incl. Taxes)</span>
+            <span>₹{{ "%.2f"|format(fee_paise/100) }}</span>
+        </div>
+        <div class="total-row">
+            <span>Total to Pay</span>
+            <span>₹{{ "%.2f"|format(total_paise/100) }}</span>
+        </div>
+
+        <button id="rzp-button1" class="btn-pay">Pay Securely</button>
+        <a href="/" class="btn-cancel">Cancel Payment</a>
+    </div>
+
+    <!-- Hidden form to auto-submit successful payment to your backend -->
+    <form action="/payment/verify" method="POST" id="verifyForm">
+        <input type="hidden" name="razorpay_order_id" id="order_id">
+        <input type="hidden" name="razorpay_payment_id" id="payment_id">
+        <input type="hidden" name="razorpay_signature" id="signature">
+    </form>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        var options = {
+            "key": "{{ razorpay_key }}", 
+            "amount": "{{ total_paise }}", 
+            "currency": "INR",
+            "name": "PustakVerse",
+            "description": "Unlock Premium Book",
+            "image": "https://i.imgur.com/your-logo.png",
+            "order_id": "{{ order_id }}",
+            "handler": function (response){
+                // WHEN PAYMENT SUCCEEDS, THIS SENDS DATA TO BACKEND TO UNLOCK BOOK
+                document.getElementById('order_id').value = response.razorpay_order_id;
+                document.getElementById('payment_id').value = response.razorpay_payment_id;
+                document.getElementById('signature').value = response.razorpay_signature;
+                document.getElementById('verifyForm').submit();
+            },
+            "theme": {
+                "color": "#f66d2f"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        document.getElementById('rzp-button1').onclick = function(e){
+            rzp1.open();
+            e.preventDefault();
+        }
+    </script>
+</body>
+</html>

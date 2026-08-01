@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="form-card" style="text-align: center;">
+        <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" style="height: 90px; margin-bottom: 10px;">
+        <h2 style="color: var(--navy); margin-top: 0;">Create an Account</h2>
+        <form method="POST" action="/register" style="text-align: left;">
+            <label>Username:</label>
+            <input type="text" name="username" required>
+            <label>Email Address:</label>
+            <input type="email" name="email" required>
+            <label>Password:</label>
+            <input type="password" name="password" required>
+            <label>Security Question (In case you forget your password):</label>
+            <select name="security_question" required>
+                <option value="What is your pet's name?">What is your pet's name?</option>
+                <option value="What is your favorite book?">What is your favorite book?</option>
+                <option value="What city were you born in?">What city were you born in?</option>
+                <option value="What is your favorite food?">What is your favorite food?</option>
+            </select>
+            <label>Security Answer:</label>
+            <input type="text" name="security_answer" placeholder="e.g. Harry Potter" required>
+            <label>I am a:</label>
+            <select name="role">
+                <option value="reader">Reader</option>
+                <option value="author">Author</option>
+            </select>
+            <label style="color: var(--orange);">If registering as an Author, why do you want to publish here?</label>
+            <textarea name="verification_reason" rows="3" placeholder="Tell us about your writing..." style="padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit; margin-bottom: 15px; margin-top: 8px;"></textarea>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

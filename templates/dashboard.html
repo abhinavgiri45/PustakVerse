@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PustakVerse</title>
+    <style>
+        :root { --nav-bg: #2d3748; --primary-orange: #f66d2f; --bg-light: #f7fafc; --text-dark: #2d3748; --text-light: #718096; --card-bg: #ffffff; }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-light); color: var(--text-dark); -webkit-font-smoothing: antialiased; }
+        .navbar { background-color: var(--nav-bg); padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand img { height: 45px; object-fit: contain; }
+        .navbar-links { display: flex; gap: 25px; align-items: center; }
+        .navbar-links a { color: white; text-decoration: none; font-weight: 500; font-size: 0.95rem; }
+        .navbar-links a:hover { color: var(--primary-orange); }
+        .btn-logout { background: transparent; border: 1px solid #e2e8f0; color: white; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-logout:hover { background: #e2e8f0; color: var(--nav-bg); }
+        
+        .dashboard-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 30px 40px; margin-bottom: 30px; }
+        .dashboard-header h1 { margin: 0; font-size: 2rem; color: var(--nav-bg); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px 50px 20px;}
+        .panel { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 30px; margin-bottom: 30px; border: 1px solid #edf2f7; }
+        .panel h2 { margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; margin-bottom: 20px; color: var(--nav-bg); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; vertical-align: middle;}
+        th { background: #f8fafc; color: var(--text-light); text-transform: uppercase; font-size: 0.85rem;}
+        
+        .btn-sm { padding: 8px 12px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; color: white;}
+        .btn-green { background: #38a169; } .btn-red { background: #e53e3e; } .btn-orange { background: var(--primary-orange); } .btn-dark { background: var(--nav-bg); } .btn-warn { background: #d97706; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
+        input[type="text"], input[type="password"], input[type="email"], input[type="file"], select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc; }
+        
+        .flash { padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: center; font-weight: 500; }
+        .flash.success { background: #dcfce7; color: #166534; } .flash.error { background: #fee2e2; color: #991b1b; } .flash.info { background: #e0f2fe; color: #075985; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+
+        /* --- PREMIUM TELEGRAM POPUP STYLING --- */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
+        .popup-box { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .popup-icon-bg { width: 80px; height: 80px; background: #e0f2fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #0284c7; }
+        .popup-box h2 { color: #0f172a; margin-top: 0; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
+        .popup-box p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+        .btn-telegram { background: linear-gradient(to right, #0ea5e9, #0284c7); color: white; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 1.1rem; display: inline-block; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-telegram:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4); color: white; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; transition: color 0.2s; }
+        .close-btn:hover { color: #0f172a; }
+
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .navbar { flex-direction: column; padding: 15px; gap: 15px; } }
+    </style>
+</head>
+<body>
+
+    <!-- AESTHETIC TELEGRAM POP-UP -->
+    {% if show_telegram_popup %}
+    <div id="telegramPopup" class="popup-overlay">
+        <div class="popup-box">
+            <button class="close-btn" onclick="document.getElementById('telegramPopup').style.display='none'">&times;</button>
+            <div class="popup-icon-bg">
+                <svg width="40" height="40" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.21-1.12-.33-1.08-.7.02-.19.27-.39.75-.59 2.95-1.29 4.92-2.14 5.92-2.55 2.81-1.18 3.4-1.38 3.78-1.38.08 0 .27.02.39.1.1.06.13.15.15.24.01.07.02.16.01.27z"/></svg>
+            </div>
+            <h2>Join the Community!</h2>
+            <p>Don't miss out on free premium archives and daily updates. Connect with thousands of passionate readers.</p>
+            <a href="https://t.me/PustakVerse" target="_blank" class="btn-telegram" onclick="document.getElementById('telegramPopup').style.display='none'">
+                Join Official Channel
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <nav class="navbar">
+        <div class="navbar-brand"><a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}"></a></div>
+        <div class="navbar-links"><a href="/">Global Library</a> <a href="{{ url_for('my_library') }}">My Library</a> <a href="{{ url_for('logout') }}"><button class="btn-logout">Logout</button></a></div>
+    </nav>
+
+    <div class="dashboard-header">
+        <h1>Welcome, {{ session.username }}</h1>
+        <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
+        {% endwith %}
+
+        {% if session.role == 'reader' %}
+            <div class="panel" style="text-align: center; padding: 60px;">
+                <h2 style="border: none;">Start Reading</h2>
+                <p style="color: var(--text-light); margin-bottom: 30px;">Head over to the Global Library to discover amazing books.</p>
+                <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library</a>
+            </div>
+        {% endif %}
+
+        {% if session.role == 'author' and not session.is_verified %}
+            <div class="panel" style="border-left: 5px solid var(--primary-orange);">
+                <h2 style="color: var(--primary-orange);">Account Under Review</h2>
+                <p>Thank you for signing up to be an author! Our administrative team is currently reviewing your application.</p>
+                <p>You will receive an email as soon as you are approved and can begin publishing your books.</p>
+            </div>
+        {% endif %}
+
+        {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
+            <div class="grid-2">
+                <div class="panel">
+                    <h2>Publish a New Book</h2>
+                    <form action="/dashboard" method="POST" enctype="multipart/form-data">
+                        <div class="form-group"><label>Book Title</label><input type="text" name="title" required></div>
+                        <div class="form-group">
+                            <label>Catalog</label>
+                            <select name="catalog" required>
+                                {% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}
+                                {% if session.role in ['official', 'developer'] %}<option value="Archives">Archives (Free Only)</option>{% endif %}
+                            </select>
+                        </div>
+                        <div class="form-group" style="background: #fdf2f8; padding: 15px; border-radius: 6px; border: 1px solid #fce7f3; margin-bottom: 25px;">
+                            <label style="color: #9d174d;">Cover Image & PDF Uploads</label>
+                            <small style="color: #be185d; display: block; font-weight: 600; margin-bottom: 15px;">Recommendation: Use Google Drive Links instead of direct uploads.</small>
+                            <input type="file" name="cover_image" accept="image/*"><input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;">
+                            <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;"><input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;">
+                        </div>
+                        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <label><input type="checkbox" name="is_paid" id="is_paid_checkbox"> Premium/Paid Book</label>
+                            <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR)" style="margin-top: 10px; display: none;">
+                        </div>
+                        <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;">Publish Book</button>
+                    </form>
+                </div>
+
+                <div>
+                    {% if session.role == 'author' %}
+                    <div class="panel" style="background: #fffaf0; border-color: #fbd38d;">
+                        <h2 style="color: #c05621;">Banking & Payout Details</h2>
+                        <p style="font-size: 0.9rem; color: #9c4221; margin-bottom: 20px; line-height: 1.5;">
+                            <strong>Transparent Billing:</strong> You will receive exactly 100% of the price you set for your books. To cover gateway charges, a 5% Platform Convenience Fee is automatically added at checkout for the buyer.
+                        </p>
+                        <form action="/dashboard" method="POST">
+                            <input type="hidden" name="update_payout" value="1">
+                            <div class="form-group">
+                                <label style="color: #c05621;">Bank Account Number / UPI ID</label>
+                                <input type="text" name="payout_details" value="{{ payout_details or '' }}" placeholder="e.g., authorname@upi or Account: 1234..." required style="border-color: #f6ad55;">
+                            </div>
+                            <button type="submit" class="btn-sm btn-orange">Save Banking Details</button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    <div class="panel">
+                        <h2>My Published Books</h2>
+                        {% if my_books %}
+                            <div style="overflow-x: auto;">
+                                <table>
+                                    <tr><th>Cover</th><th>Title</th><th>Type</th><th>Action</th></tr>
+                                    {% for book in my_books %}
+                                    <tr>
+                                        <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                        <td style="font-weight: 500;">{{ book.title }}</td>
+                                        <td>{% if book.is_paid %}<span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>{% else %}Free{% endif %}</td>
+                                        <td>
+                                            <div style="display: flex; gap: 5px;">
+                                                {% if book.is_paid %}
+                                                <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
+                                                {% endif %}
+                                                <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
+                                                <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');"><button type="submit" class="btn-sm btn-red">Del</button></form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </table>
+                            </div>
+                        {% else %}<p>You haven't published any books yet.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if session.role in ['official', 'developer'] %}
+            <!-- Pending Username Requests -->
+            <div class="panel" style="border-left: 5px solid #3182ce;"><h2>Pending Username Requests</h2>
+                {% if username_requests %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Current Username</th><th>Requested Username</th><th>Reason</th><th>Action</th></tr>
+                            {% for req in username_requests %}
+                            <tr>
+                                <td>{{ req.current_username }}</td>
+                                <td>{{ req.new_username }}</td>
+                                <td>{{ req.reason }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='approve') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-green">Approve</button>
+                                    </form>
+                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='reject') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-red">Reject</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No pending username requests.</p>{% endif %}
+            </div>
+
+            <!-- Approvals (Both Admins) -->
+            <div class="panel" style="border-left: 5px solid #38a169;"><h2>Pending Author Approvals</h2>
+                {% if pending_authors %}<table><tr><th>Username</th><th>Email</th><th>Action</th></tr>{% for user in pending_authors %}<tr><td>{{ user.username }}</td><td>{{ user.email }}</td><td style="display: flex; gap: 10px;"><form action="/dashboard" method="POST"><input type="hidden" name="approve_author_id" value="{{ user.id }}"><button type="submit" class="btn-sm btn-green">Approve</button></form><form action="/dashboard" method="POST"><input type="hidden" name="reject_author_id" value="{{ user.id }}"><button type="submit" class="btn-sm btn-red">Reject</button></form></td></tr>{% endfor %}</table>{% else %}<p>No pending authors.</p>{% endif %}
+            </div>
+        {% endif %}
+
+        <!-- STRICT DEVELOPER ONLY SECTION -->
+        {% if session.role == 'developer' %}
+            <div class="grid-2">
+                <div class="panel"><h2>Website Settings & Donations</h2>
+                    <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
+                        <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="{{ site_settings.hero_title }}"></div>
+                        <div class="form-group"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}"></div>
+                        
+                        <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
+                            <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
+                            <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> Show 'Donate' button to users
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn-sm btn-dark">Update Settings</button>
+                    </form>
+                </div>
+                <!-- CREATING OFFICIALS IS STRICTLY FOR DEVELOPERS -->
+                <div class="panel"><h2>Create Official</h2>
+                    <form action="{{ url_for('create_official') }}" method="POST">
+                        <div class="form-group"><input type="text" name="username" placeholder="Username" required></div>
+                        <div class="form-group"><input type="email" name="email" placeholder="Email" required></div>
+                        <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+                        <button type="submit" class="btn-sm btn-orange">Appoint Official</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- DEVELOPER USER MANAGEMENT (HAS REVOKE BUTTON) -->
+            <div class="panel" style="border-left: 5px solid #d97706;">
+                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ search_query }}" style="margin-bottom: 0;">
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search</button>
+                </form>
+
+                {% if searched_users %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Username</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
+                            {% for user in searched_users %}
+                            <tr>
+                                <td style="font-weight: 500;">{{ user.username }}</td>
+                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
+                                <td style="color: #718096;">{{ user.last_activity }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    {% if user.role == 'official' %}
+                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');">
+                                            <button type="submit" class="btn-sm btn-warn">Revoke Official</button>
+                                        </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');">
+                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No users found.</p>{% endif %}
+            </div>
+        
+        <!-- OFFICIAL USER MANAGEMENT (NO REVOKE BUTTON) -->
+        {% elif session.role == 'official' %}
+            <div class="panel">
+                <h2>Manage Platform Users</h2>
+                {% if all_users %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Username</th><th>Role</th><th>Action</th></tr>
+                            {% for user in all_users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td style="text-transform: capitalize;">{{ user.role }}</td>
+                                <td>
+                                    <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST">
+                                        <input type="hidden" name="reason" value="Policy Violation">
+                                        <button type="submit" class="btn-sm btn-orange">Request Ban</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="grid-2">
+            <div class="panel" style="border-top: 4px solid var(--primary-orange); margin-top: 40px;">
+                <h2>Change Username</h2>
+                <form action="{{ url_for('change_username') }}" method="POST" style="max-width: 500px;">
+                    <div class="form-group"><label>New Username</label><input type="text" name="new_username" required></div>
+                    
+                    {% if session.role in ['author', 'official'] %}
+                        <div class="form-group">
+                            <label>Reason for Change (Required for approval)</label>
+                            <input type="text" name="reason" required placeholder="Why do you want to change your username?">
+                        </div>
+                        <button type="submit" class="btn-sm btn-orange">Submit Request</button>
+                        <p style="color: #718096; font-size: 0.85rem; margin-top: 10px;">Your request will be reviewed by an administrator.</p>
+                    {% else %}
+                        <button type="submit" class="btn-sm btn-orange">Change Username</button>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div class="panel" style="border-top: 4px solid var(--nav-bg); margin-top: 40px;">
+                <h2>Security Settings</h2>
+                {% if session.get('change_pw_otp') %}
+                    <form action="{{ url_for('change_password') }}" method="POST" style="max-width: 500px;">
+                        <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
+                        <div class="form-group"><label>Current Password</label><input type="password" name="old_password" required></div>
+                        <div class="form-group"><label>New Password</label><input type="password" name="new_password" required minlength="6"></div>
+                        <button type="submit" class="btn-sm btn-green">Update Password</button>
+                        <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
+                    </form>
+                {% else %}
+                    <form action="{{ url_for('send_change_password_otp') }}" method="POST"><button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Request Password Change</button></form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal Script -->
+    <div id="editBookModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; position: relative;">
+            <button type="button" onclick="document.getElementById('editBookModal').style.display='none'" style="position: absolute; top: 15px; right: 20px; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 style="margin-top: 0;">Edit Book</h2>
+            <form id="editBookForm" method="POST" enctype="multipart/form-data">
+                <div class="form-group"><input type="text" name="title" id="edit_title" required></div>
+                <div class="form-group"><select name="catalog" id="edit_catalog" required>{% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book <input type="text" name="price_inr" id="edit_price_inr" style="display: none;"></div>
+                <button type="submit" class="btn-sm btn-orange">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const paidCheckbox = document.getElementById('is_paid_checkbox'); const priceInput = document.getElementById('price_inr_input');
+        if(paidCheckbox) { paidCheckbox.addEventListener('change', function() { if(this.checked) { priceInput.style.display = 'block'; priceInput.required = true; } else { priceInput.style.display = 'none'; priceInput.required = false; }}); }
+        function openEditModal(id, title, catalog, isPaid, pricePaise) {
+            document.getElementById('editBookForm').action = "/edit_book/" + id; document.getElementById('edit_title').value = title; document.getElementById('edit_catalog').value = catalog;
+            const isPaidCheck = document.getElementById('edit_is_paid'); const pInput = document.getElementById('edit_price_inr');
+            isPaidCheck.checked = isPaid; if(isPaid) { pInput.style.display = 'block'; pInput.value = (pricePaise / 100).toFixed(2); } else { pInput.style.display = 'none'; pInput.value = ''; }
+            document.getElementById('editBookModal').style.display = 'flex';
+        }
+        function toggleEditPrice() { const isPaidCheck = document.getElementById('edit_is_paid'); const pInput = document.getElementById('edit_price_inr'); if(isPaidCheck.checked) { pInput.style.display = 'block'; pInput.required = true; } else { pInput.style.display = 'none'; pInput.required = false; } }
+    </script>
+</body>
+</html>
