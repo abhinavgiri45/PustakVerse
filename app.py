@@ -122,7 +122,7 @@ def send_email_wrapper(to_email, subject, body):
     Sends emails using the official Gmail API over HTTPS (Port 443).
     This bypasses Render's firewall SMTP blocks completely.
     """
-    client_id = os.environ.get('GOOGLE_CLIENT_ID', '593863629217-7penq1jh89r0e6mbtundabk8cu3t6cdd.apps.googleusercontent.com')
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '434774912235-pck0f5fiiugs0b8mvfak8co27m360l16.apps.googleusercontent.com')
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
     refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
     
