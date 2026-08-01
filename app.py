@@ -107,9 +107,10 @@ def drive_img(url):
 # ==========================================
 # GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
 # ==========================================
+# ==========================================
+# GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
+# ==========================================
 oauth = OAuth(app)
-google = oauth.register(
-   oauth = OAuth(app)
 google = oauth.register(
     name='google',
     client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(),
