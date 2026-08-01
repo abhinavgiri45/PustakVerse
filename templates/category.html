@@ -33,7 +33,7 @@
         .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
         
         .book-actions { display: flex; gap: 10px; margin-top: auto; }
-        .btn { flex: 1; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; border: none; transition: opacity 0.2s; }
+        .btn { flex: 1; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; border: none; transition: opacity 0.2s; text-decoration: none; }
         .btn:hover { opacity: 0.85; }
         .btn-read { background-color: #34495e; color: white; }
         .btn-save { background-color: #f1f3f5; color: #2d3748; }
@@ -105,16 +105,19 @@
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
                     <div class="book-actions">
-                        <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
-                            {% if book.is_paid %}
-                                <button type="submit" class="btn btn-premium">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
-                            {% else %}
-                                <button type="submit" class="btn btn-read">Read Now</button>
-                            {% endif %}
-                        </form>
-                        <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
-                            <button type="submit" class="btn btn-save">Save</button>
-                        </form>
+                        {% if book.is_paid %}
+                            <!-- For Paid Books: Shows Preview & Buy Now -->
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="display: flex; align-items: center; justify-content: center;">Preview</a>
+                            <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
+                                <button type="submit" class="btn btn-premium" style="width: 100%;">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
+                            </form>
+                        {% else %}
+                            <!-- For Free Books: Shows Read Now & Save -->
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="display: flex; align-items: center; justify-content: center;">Read Now</a>
+                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
+                                <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
