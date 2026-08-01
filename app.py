@@ -5,14 +5,19 @@ import smtplib
 import logging
 import re
 import time
+import io
+import base64
 import razorpay
+from email.message import EmailMessage
 from email.mime.text import MIMEText
 from decimal import Decimal, InvalidOperation, ROUND_CEILING
 import mysql.connector
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
+from PyPDF2 import PdfReader, PdfWriter
+import requests
 
 # ==========================================
 # APPLICATION SETUP & LOGGING CONFIGURATION
@@ -33,6 +38,18 @@ os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'covers'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'logos'), exist_ok=True)
 os.makedirs(os.path.join(app.config['PRIVATE_PDF_FOLDER']), exist_ok=True)
+
+# ==========================================
+# IN-MEMORY CACHE
+# ==========================================
+global_cache = {
+    'settings': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None},
+    'catalogs': [{'name': 'Fiction'}, {'name': 'Non-Fiction'}, {'name': 'Educational'}, {'name': 'History'}, {'name': 'Poetry'}],
+    'last_update': 0
+}
+
+def invalidate_cache():
+    global_cache['last_update'] = 0
 
 # ==========================================
 # DATA CLEANER FOR MISSING DB VALUES
@@ -89,54 +106,70 @@ def drive_img(url):
     return url
 
 # ==========================================
-# SMTP EMAIL CONFIGURATION & CLIENT
+# GMAIL API EMAIL ENGINE (PORT 443 - UNBLOCKED)
 # ==========================================
-SMTP_EMAIL = 'noreply.pustakverse@gmail.com'
-# SECURE: Hidden from GitHub, must be set in your host's environment variables
-SMTP_PASSWORD = os.environ.get('EMAIL_PASSWORD')  
-
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
     client_id='593863629217-7penq1jh89r0e6mbtundabk8cu3t6cdd.apps.googleusercontent.com',
-    # SECURE: Hidden from GitHub
     client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
 
-import requests
-
 def send_email_wrapper(to_email, subject, body):
-    api_key = os.environ.get('RESEND_API_KEY')
+    """
+    Sends emails using the official Gmail API over HTTPS (Port 443).
+    This bypasses Render's firewall SMTP blocks completely.
+    """
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '593863629217-7penq1jh89r0e6mbtundabk8cu3t6cdd.apps.googleusercontent.com')
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
     
-    if not api_key:
+    if not refresh_token or not client_secret:
         print(f"\n\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n\n", flush=True)
         return True
         
-    url = "https://api.resend.com/emails"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    # Note: On Resend's free tier, use 'onboarding@resend.dev' as the sender until you verify your own domain.
-    payload = {
-        "from": "onboarding@resend.dev",
-        "to": [to_email],
-        "subject": subject,
-        "text": body
-    }
-    
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=5)
-        if response.status_code in [200, 201]:
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token"
+        }
+        r = requests.post(token_url, data=token_data, timeout=5)
+        res_json = r.json()
+        access_token = res_json.get("access_token")
+        
+        if not access_token:
+            logging.error(f"Gmail Token Error: {res_json}")
+            print(f"\n\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n\n", flush=True)
+            return True
+            
+        message = EmailMessage()
+        message.set_content(body)
+        message['To'] = to_email
+        message['Subject'] = subject
+        message['From'] = "noreply.pustakverse@gmail.com"
+        
+        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        
+        send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
+        if send_res.status_code in [200, 201]:
             return True
         else:
-            logging.error(f"Resend API Error: {response.text}")
+            logging.error(f"Gmail Send Error: {send_res.text}")
             return True
     except Exception as e:
         logging.error(f"Email API connection failed: {e}")
         return True
+
 def send_otp_email(to_email, otp):
     body = f"Your PustakVerse password reset code is: {otp}\n\nPlease do not share this code with anyone for your own security."
     return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', body)
@@ -222,7 +255,6 @@ def ensure_payment_schema():
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE")
         except Exception: pass
         
-        # --- RAZORPAY ROUTE ACCOUNT TRACKING ---
         try:
             cursor.execute("SHOW COLUMNS FROM users LIKE 'razorpay_account_id'")
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN razorpay_account_id VARCHAR(100) DEFAULT NULL")
@@ -241,9 +273,16 @@ def ensure_payment_schema():
                 id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, author_id INT NOT NULL,
                 catalog VARCHAR(100) NOT NULL, cover_image VARCHAR(1000) NOT NULL, pdf_file VARCHAR(1000) NOT NULL,
                 is_paid BOOLEAN NOT NULL DEFAULT FALSE, price_paise INT NOT NULL DEFAULT 0, private_pdf BOOLEAN NOT NULL DEFAULT FALSE,
+                preview_pages INT NOT NULL DEFAULT 5,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
+        
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'preview_pages'")
+            if not cursor.fetchone(): cursor.execute("ALTER TABLE books ADD COLUMN preview_pages INT NOT NULL DEFAULT 5")
+        except Exception: pass
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS personal_library (
                 id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL,
@@ -321,48 +360,6 @@ def log_official_activity(official_id, action_desc):
         if db:
             try: db.close()
             except: pass
-
-# ==========================================
-# IN-MEMORY CACHE
-# ==========================================
-global_cache = {
-    'settings': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None},
-    'catalogs': [{'name': 'Fiction'}, {'name': 'Non-Fiction'}, {'name': 'Educational'}, {'name': 'History'}, {'name': 'Poetry'}],
-    'last_update': 0
-}
-
-def invalidate_cache():
-    global_cache['last_update'] = 0
-
-@app.context_processor
-def inject_global_settings():
-    current_time = time.time()
-    if current_time - global_cache['last_update'] > 60:
-        db = None
-        try:
-            db = get_db_connection()
-            cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
-            fetched_settings = cursor.fetchone()
-            cursor.execute("SELECT * FROM catalogs")
-            fetched_catalogs = cursor.fetchall()
-            
-            if fetched_settings and fetched_catalogs:
-                fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
-                fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
-                fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
-                fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
-                
-                global_cache['settings'] = fetched_settings
-                global_cache['catalogs'] = fetched_catalogs
-                global_cache['last_update'] = current_time
-        except Exception as e:
-            logging.error(f"Context Processor Cache Error: {e}")
-        finally:
-            if db:
-                try: db.close()
-                except: pass
-    return dict(site_settings=global_cache['settings'], site_catalogs=global_cache['catalogs'])
 
 @app.before_request
 def ensure_payment_schema_before_request():
@@ -502,7 +499,6 @@ def login():
                 if login_portal == 'reader' and user['role'] != 'reader': flash("Please use the 'Author / Official' tab to log in to your account.", "error"); return render_template('login.html', active_tab='reader')
                 if login_portal == 'author_official' and user['role'] not in ['author', 'official', 'developer']: flash("Readers must log in using the 'Reader Login' tab.", "error"); return render_template('login.html', active_tab='official')
 
-                # Check if 2FA is required
                 if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
                     otp = str(random.randint(100000, 999999)); session['login_2fa_otp'] = otp
                     session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
@@ -774,7 +770,6 @@ def buy_book(book_id):
     try:
         client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
         
-        # --- RAZORPAY ROUTE SPLIT LOGIC ---
         order_data = {
             'amount': total_paise,
             'currency': 'INR',
@@ -877,7 +872,7 @@ def read_book(book_id):
     db = None; can_read = False
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT id, title, author_id, pdf_file, is_paid, private_pdf FROM books WHERE id = %s', (book_id,))
+        cursor.execute('SELECT id, title, author_id, pdf_file, is_paid, private_pdf, preview_pages FROM books WHERE id = %s', (book_id,))
         book = cursor.fetchone()
         if not book: abort(404)
         can_read = not book['is_paid'] or session.get('user_id') == book['author_id'] or session.get('role') in ('official', 'developer')
@@ -890,30 +885,64 @@ def read_book(book_id):
             try: db.close()
             except: pass
 
-    if not can_read: flash('Please purchase or sign in to access this book.', 'error'); return redirect(url_for('index'))
-    return render_template('viewer.html', book=book)
+    # Always render viewer, serve_secure_pdf will slice preview if can_read is False
+    return render_template('viewer.html', book=book, can_read=can_read)
 
+# ==========================================
+# SECURE PDF SERVING & PREVIEW SLICING
+# ==========================================
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
-    if 'user_id' not in session: abort(401)
-    db = None; book = None
+    db = None; book = None; can_read = False
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT author_id, pdf_file, is_paid, private_pdf FROM books WHERE id = %s', (book_id,))
+        cursor.execute('SELECT author_id, pdf_file, is_paid, private_pdf, preview_pages FROM books WHERE id = %s', (book_id,))
         book = cursor.fetchone()
         if not book: abort(404)
-        can_read = not book['is_paid'] or session.get('user_id') == book['author_id'] or session.get('role') in ('official', 'developer')
-        if book['is_paid'] and not can_read:
-            cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
-            if not cursor.fetchone(): abort(403)
+        
+        user_id = session.get('user_id')
+        user_role = session.get('role')
+        can_read = not book['is_paid'] or user_id == book['author_id'] or user_role in ('official', 'developer')
+        
+        if book['is_paid'] and not can_read and user_id:
+            cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))
+            can_read = bool(cursor.fetchone())
     except Exception: abort(500)
     finally:
         if db:
             try: db.close()
             except: pass
+
     if book['pdf_file'].startswith('http'): abort(400)
+    
     folder = app.config['PRIVATE_PDF_FOLDER'] if book['is_paid'] or book['private_pdf'] else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
-    return send_from_directory(folder, book['pdf_file'])
+    full_path = os.path.join(folder, book['pdf_file'])
+
+    if not os.path.exists(full_path):
+        abort(404)
+
+    # 1. IF AUTHORIZED: Serve full PDF
+    if can_read:
+        return send_from_directory(folder, book['pdf_file'])
+        
+    # 2. IF UNPAID: Dynamically slice and send preview pages only
+    try:
+        reader = PdfReader(full_path)
+        writer = PdfWriter()
+        
+        preview_limit = book.get('preview_pages') or 5
+        num_pages = min(preview_limit, len(reader.pages))
+        
+        for page_num in range(num_pages):
+            writer.add_page(reader.pages[page_num])
+            
+        output = io.BytesIO()
+        writer.write(output)
+        output.seek(0)
+        return send_file(output, mimetype='application/pdf', download_name=f"preview_{book['pdf_file']}")
+    except Exception as e:
+        logging.error(f"Error slicing PDF preview: {e}")
+        abort(500)
 
 @app.route('/save_book/<int:book_id>', methods=['POST'])
 def save_book(book_id):
@@ -961,12 +990,10 @@ def dashboard():
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
         role = session.get('role'); search_query = request.args.get('search', '')
 
-        # Fetch 2FA Status
         cursor.execute("SELECT two_factor_enabled FROM users WHERE id = %s", (session['user_id'],))
         tf_data = cursor.fetchone()
         two_factor_enabled = tf_data['two_factor_enabled'] if tf_data else False
 
-        # Toggle 2FA Setting
         if request.method == 'POST' and 'toggle_2fa' in request.form:
             current_status = request.form.get('current_status') == 'True'
             new_status = not current_status
@@ -976,7 +1003,6 @@ def dashboard():
             flash(f"Two-Step Verification has been {status_text}.", "success")
             return redirect(url_for('dashboard'))
 
-        # --- AUTHOR ROUTE ACCOUNT CREATION API ---
         if role == 'author' and request.method == 'POST' and 'create_route_account' in request.form:
             legal_name = request.form.get('legal_name').strip()
             phone = request.form.get('phone').strip()
@@ -1018,6 +1044,8 @@ def dashboard():
             try: price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
             except (InvalidOperation, ValueError): price_paise = -1
 
+            preview_pages = int(request.form.get('preview_pages', 5) or 5)
+
             if is_paid and price_paise <= 0: flash('Paid books need a valid price.', 'error'); return redirect(url_for('dashboard'))
             
             f_cov = c_link if c_link else (secure_filename(c_file.filename) if c_file and c_file.filename else "")
@@ -1029,7 +1057,7 @@ def dashboard():
                 p_file.save(os.path.join(pdf_folder, f_pdf))
                 
             if f_cov and f_pdf:
-                cursor.execute("INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid))
+                cursor.execute("INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages))
                 db.commit(); flash("Book published successfully!", "success"); return redirect(url_for('dashboard'))
 
         if role in ['developer', 'official'] and request.method == 'POST':
@@ -1069,7 +1097,7 @@ def dashboard():
             pending_authors = cursor.fetchall()
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 100")
             official_logs = cursor.fetchall()
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             return render_template('dashboard.html', searched_users=searched_users, del_requests=del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
@@ -1079,7 +1107,7 @@ def dashboard():
             all_users = cursor.fetchall()
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
@@ -1087,7 +1115,7 @@ def dashboard():
             cursor.execute("SELECT is_verified, razorpay_account_id FROM users WHERE id = %s", (session['user_id'],))
             author_data = cursor.fetchone()
             session['is_verified'] = author_data['is_verified']; razorpay_account_id = author_data['razorpay_account_id']
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             return render_template('dashboard.html', my_books=my_books, razorpay_account_id=razorpay_account_id, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
@@ -1118,6 +1146,7 @@ def edit_book(book_id):
         try: price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
         except (InvalidOperation, ValueError): price_paise = book['price_paise'] if is_paid else 0
             
+        preview_pages = int(request.form.get('preview_pages', book.get('preview_pages', 5)) or 5)
         c_link = request.form.get('cover_link', '').strip(); p_link = request.form.get('pdf_link', '').strip()
         c_file = request.files.get('cover_image'); p_file = request.files.get('pdf_file')
         
@@ -1130,7 +1159,7 @@ def edit_book(book_id):
         elif p_file and p_file.filename:
             f_pdf = secure_filename(p_file.filename); pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs'); p_file.save(os.path.join(pdf_folder, f_pdf))
             
-        cursor.execute("UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, private_pdf=%s WHERE id=%s", (title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, book_id))
+        cursor.execute("UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, private_pdf=%s, preview_pages=%s WHERE id=%s", (title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_id))
         db.commit(); flash("Book updated!", "success")
     except Exception: flash("Database error.", "error")
     finally:
