@@ -121,7 +121,7 @@ def send_email_wrapper(to_email, subject, body):
     }
     # Note: On Resend's free tier, use 'onboarding@resend.dev' as the sender until you verify your own domain.
     payload = {
-        "from": "PustakVerse <onboarding@resend.dev>",
+        "from": "onboarding@resend.dev",
         "to": [to_email],
         "subject": subject,
         "text": body
