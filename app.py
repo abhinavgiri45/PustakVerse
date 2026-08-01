@@ -77,7 +77,6 @@ def inject_global_settings():
             fetched_catalogs = cursor.fetchall()
             
             if fetched_settings and fetched_catalogs:
-                # STRICT DATA CLEANER: Forces all settings to strings to prevent crashes
                 fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
                 fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
                 fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
@@ -106,69 +105,86 @@ def drive_img(url):
     return url
 
 # ==========================================
-# GMAIL API EMAIL ENGINE (PORT 443 - UNBLOCKED)
+# GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
 # ==========================================
 oauth = OAuth(app)
 google = oauth.register(
+    oauth = OAuth(app)
+google = oauth.register(
     name='google',
-    client_id='593863629217-7penq1jh89r0e6mbtundabk8cu3t6cdd.apps.googleusercontent.com',
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', '').strip(),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
 
 def send_email_wrapper(to_email, subject, body):
     """
-    Sends emails using the official Gmail API over HTTPS (Port 443).
-    This bypasses Render's firewall SMTP blocks completely.
+    Sends emails using the Gmail API (Port 443).
+    Falls back automatically to Gmail SMTP if OAuth token fails.
     """
-    client_id = os.environ.get('GOOGLE_CLIENT_ID', '434774912235-pck0f5fiiugs0b8mvfak8co27m360l16.apps.googleusercontent.com')
-    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
-    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
-    
-    if not refresh_token or not client_secret:
-        print(f"\n\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n\n", flush=True)
-        return True
-        
-    try:
-        token_url = "https://oauth2.googleapis.com/token"
-        token_data = {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "refresh_token": refresh_token,
-            "grant_type": "refresh_token"
-        }
-        r = requests.post(token_url, data=token_data, timeout=5)
-        res_json = r.json()
-        access_token = res_json.get("access_token")
-        
-        if not access_token:
-            logging.error(f"Gmail Token Error: {res_json}")
-            print(f"\n\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n\n", flush=True)
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
+    email_password = os.environ.get('EMAIL_PASSWORD', '').replace(' ', '').strip()
+
+    # 1. TRY GMAIL API FIRST
+    if refresh_token and client_secret:
+        try:
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token"
+            }
+            r = requests.post(token_url, data=token_data, timeout=5)
+            res_json = r.json()
+            access_token = res_json.get("access_token")
+
+            if access_token:
+                message = EmailMessage()
+                message.set_content(body)
+                message['To'] = to_email
+                message['Subject'] = subject
+                message['From'] = "noreply.pustakverse@gmail.com"
+
+                encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
+                if send_res.status_code in [200, 201]:
+                    logging.info(f"Email sent via Gmail API to {to_email}")
+                    return True
+                else:
+                    logging.error(f"Gmail API error: {send_res.text}")
+            else:
+                logging.warning(f"Gmail Token exchange failed: {res_json}")
+        except Exception as e:
+            logging.error(f"Gmail API exception: {e}")
+
+    # 2. AUTOMATED BACKUP: SMTP VIA EMAIL_PASSWORD
+    if email_password:
+        try:
+            msg = MIMEText(body)
+            msg['Subject'] = subject
+            msg['From'] = "noreply.pustakverse@gmail.com"
+            msg['To'] = to_email
+
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5) as server:
+                server.login("noreply.pustakverse@gmail.com", email_password)
+                server.send_message(msg)
+            logging.info(f"Email sent via SMTP Backup to {to_email}")
             return True
-            
-        message = EmailMessage()
-        message.set_content(body)
-        message['To'] = to_email
-        message['Subject'] = subject
-        message['From'] = "noreply.pustakverse@gmail.com"
-        
-        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        
-        send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
-        if send_res.status_code in [200, 201]:
-            return True
-        else:
-            logging.error(f"Gmail Send Error: {send_res.text}")
-            return True
-    except Exception as e:
-        logging.error(f"Email API connection failed: {e}")
-        return True
+        except Exception as smtp_err:
+            logging.error(f"SMTP Backup failed: {smtp_err}")
+
+    # 3. FALLBACK LOGGING IF ALL METHODS FAIL
+    print(f"\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n", flush=True)
+    return True
 
 def send_otp_email(to_email, otp):
     body = f"Your PustakVerse password reset code is: {otp}\n\nPlease do not share this code with anyone for your own security."
@@ -178,16 +194,12 @@ def send_2fa_email(to_email, otp):
     body = f"Your PustakVerse Login Verification code is: {otp}\n\nPlease enter this code to securely access your account. Do not share this."
     return send_email_wrapper(to_email, 'PustakVerse - 2-Step Login Verification', body)
 
-def send_telegram_email(to_email, username):
-    body = f"Hello {username},\n\nWelcome back to PustakVerse!\n\nJoin our Telegram channel: https://t.me/PustakVerse\n\nHappy Reading,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'Join the PustakVerse Telegram Community!', body)
-
 def send_welcome_reader(to_email, username):
     body = f"Hello {username},\n\nWelcome to PustakVerse! Your Reader account is officially active. Dive into our extensive Global Library today!\n\nHappy Reading,\nThe PustakVerse Team"
     return send_email_wrapper(to_email, 'Welcome to PustakVerse!', body)
 
 def send_pending_author(to_email, username):
-    body = f"Hello {username},\n\nThank you for registering as an Author on PustakVerse! Your account is currently under review by our administrative team. We will notify you when approved.\n\nBest Regards,\nThe PustakVerse Team"
+    body = f"Hello {username},\n\nThank you for registering as an Author on PustakVerse! Your account is currently under review by our administrative team.\n\nBest Regards,\nThe PustakVerse Team"
     return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', body)
 
 def send_approved_author(to_email, username):
@@ -195,22 +207,30 @@ def send_approved_author(to_email, username):
     return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', body)
 
 def send_official_welcome(to_email, username, password):
-    body = f"Hello {username},\n\nWelcome to the administrative team! You have been officially appointed as a dedicated PustakVerse Official.\n\nHere are your secure login credentials:\nUsername: {username}\nPassword: {password}\n\nPlease log in to access your administrative dashboard to review authors and manage the community.\n\nBest Regards,\nThe PustakVerse Team"
+    body = f"Hello {username},\n\nWelcome to the administrative team!\n\nLogin credentials:\nUsername: {username}\nPassword: {password}\n\nBest Regards,\nThe PustakVerse Team"
     return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', body)
 
 # ==========================================
-# TiDB (MYSQL) DATABASE CONNECTION ENGINE
+# SECURE TiDB (MYSQL) DATABASE CONNECTION
 # ==========================================
 def get_db_connection(retries=2, delay=1.0):
     last_exception = None
+    
+    # Read from environment variables with safe defaults
+    db_host = os.environ.get('DB_HOST', "gateway01.ap-southeast-1.prod.aws.tidbcloud.com")
+    db_port = int(os.environ.get('DB_PORT', 4000))
+    db_user = os.environ.get('DB_USER', "39proe1L4PTbJ3X.root")
+    db_pass = os.environ.get('DB_PASSWORD', "cOXI6Co9lYTGuTsM")
+    db_name = os.environ.get('DB_NAME', "test")
+
     for attempt in range(retries):
         try:
             conn = mysql.connector.connect(
-                host="gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
-                port=4000,
-                user="39proe1L4PTbJ3X.root",
-                password="cOXI6Co9lYTGuTsM",
-                database="test",
+                host=db_host,
+                port=db_port,
+                user=db_user,
+                password=db_pass,
+                database=db_name,
                 ssl_verify_cert=False,       
                 ssl_verify_identity=False,   
                 connection_timeout=8
@@ -524,37 +544,60 @@ def google_login(): return google.authorize_redirect(url_for('google_authorize',
 
 @app.route('/login/google/callback')
 def google_authorize():
-    user_info = google.authorize_access_token().get('userinfo')
-    if not user_info: flash("Google login failed.", "error"); return redirect(url_for('login'))
-    email = user_info.get('email'); name = user_info.get('name')
-    base_username = name.replace(" ", "").lower() if name else email.split('@')[0]
-    
-    db = None; user = None
     try:
-        db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,)); user = cursor.fetchone()
-        if not user:
-            cursor.execute("SELECT * FROM users WHERE username = %s", (base_username,))
-            if cursor.fetchone(): base_username = f"{base_username}{secrets.randbelow(9999)}"
-            cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer) VALUES (%s, %s, %s, 'reader', TRUE, 'Google', 'Google')", (base_username, email, generate_password_hash(secrets.token_urlsafe(16))))
-            db.commit(); send_welcome_reader(email, base_username)
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,)); user = cursor.fetchone()
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+        if not user_info:
+            flash("Google login failed. User info not received.", "error")
+            return redirect(url_for('login'))
+        
+        email = user_info.get('email')
+        name = user_info.get('name')
+        base_username = name.replace(" ", "").lower() if name else email.split('@')[0]
+        
+        db = None; user = None
+        try:
+            db = get_db_connection(); cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            if not user:
+                cursor.execute("SELECT * FROM users WHERE username = %s", (base_username,))
+                if cursor.fetchone(): base_username = f"{base_username}{secrets.randbelow(9999)}"
+                cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer) VALUES (%s, %s, %s, 'reader', TRUE, 'Google', 'Google')", (base_username, email, generate_password_hash(secrets.token_urlsafe(16))))
+                db.commit()
+                send_welcome_reader(email, base_username)
+                cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+                user = cursor.fetchone()
+        except Exception as e:
+            logging.error(f"Google Callback DB error: {e}")
+            flash("Database connection timeout during Google Sign-In.", "error")
+            return redirect(url_for('login'))
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+        if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
+            otp = str(random.randint(100000, 999999))
+            session['login_2fa_otp'] = otp
+            session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
+            if send_2fa_email(user['email'], otp): 
+                flash("A 2-Step Verification code has been sent to your email.", "info")
+                return render_template('login.html', show_2fa_form=True, email=user['email'])
+            else: 
+                flash("Failed to send 2FA email.", "error")
+                return redirect(url_for('login'))
+
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+        session['role'] = user['role']
+        session['is_verified'] = user['is_verified']
+        session['show_telegram_popup'] = True
+        return redirect(url_for('dashboard'))
     except Exception as e:
-        flash("Secure connection to the database timed out. Please try logging in again.", "error")
+        logging.error(f"Google OAuth callback exception: {e}")
+        flash("Google Authentication failed. Please try again.", "error")
         return redirect(url_for('login'))
-    finally:
-        if db:
-            try: db.close()
-            except: pass
-    
-    if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
-        otp = str(random.randint(100000, 999999)); session['login_2fa_otp'] = otp
-        session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
-        if send_2fa_email(user['email'], otp): flash("A 2-Step Verification code has been sent to your email.", "info"); return render_template('login.html', show_2fa_form=True, email=user['email'])
-        else: flash("Failed to send 2FA email. Please contact server administration.", "error"); return redirect(url_for('login'))
-            
-    session['user_id'] = user['id']; session['username'] = user['username']; session['role'] = user['role']; session['is_verified'] = user['is_verified']
-    session['show_telegram_popup'] = True; return redirect(url_for('dashboard'))
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('index'))
@@ -728,7 +771,7 @@ def change_password():
 def cancel_password_change(): session.pop('change_pw_otp', None); return redirect(url_for('dashboard'))
 
 # ==========================================
-# E-COMMERCE: AUTOMATED ROUTE PAYOUTS
+# E-COMMERCE & BUY NOW LOGIC
 # ==========================================
 @app.route('/buy_book/<int:book_id>', methods=['POST'])
 def buy_book(book_id):
@@ -817,7 +860,7 @@ def verify_payment():
             cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
             cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
             db.commit()
-        flash('Payment successful — your book is now unlocked.', 'success'); return redirect(url_for('read_book', book_id=purchase['book_id']))
+        flash('Payment successful! Book has been saved to My Library and unlocked.', 'success'); return redirect(url_for('read_book', book_id=purchase['book_id']))
     except Exception: flash('Payment verification failed.', 'error'); return redirect(url_for('my_library'))
     finally:
         if db:
@@ -885,11 +928,10 @@ def read_book(book_id):
             try: db.close()
             except: pass
 
-    # Always render viewer, serve_secure_pdf will slice preview if can_read is False
     return render_template('viewer.html', book=book, can_read=can_read)
 
 # ==========================================
-# SECURE PDF SERVING & PREVIEW SLICING
+# SECURE PDF SERVING & PREVIEW SLICING (MAX 10 PAGES)
 # ==========================================
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
@@ -921,16 +963,18 @@ def serve_secure_pdf(book_id):
     if not os.path.exists(full_path):
         abort(404)
 
-    # 1. IF AUTHORIZED: Serve full PDF
+    # 1. IF PAID OR AUTHORIZED: Serve full PDF
     if can_read:
         return send_from_directory(folder, book['pdf_file'])
         
-    # 2. IF UNPAID: Dynamically slice and send preview pages only
+    # 2. IF UNPAID: Dynamically slice preview pages (Enforced Maximum: 10 Pages)
     try:
         reader = PdfReader(full_path)
         writer = PdfWriter()
         
-        preview_limit = book.get('preview_pages') or 5
+        # Enforces maximum preview limit of 10 pages
+        author_preview_setting = book.get('preview_pages') or 5
+        preview_limit = min(max(1, author_preview_setting), 10)
         num_pages = min(preview_limit, len(reader.pages))
         
         for page_num in range(num_pages):
@@ -951,7 +995,7 @@ def save_book(book_id):
     try:
         db = get_db_connection(); cursor = db.cursor()
         cursor.execute("INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)", (session['user_id'], book_id))
-        db.commit(); flash("Book added to My Library!", "success")
+        db.commit(); flash("Book saved to My Library!", "success")
     except Exception: flash("Database error.", "error")
     finally:
         if db:
@@ -1044,7 +1088,9 @@ def dashboard():
             try: price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
             except (InvalidOperation, ValueError): price_paise = -1
 
-            preview_pages = int(request.form.get('preview_pages', 5) or 5)
+            # ENFORCE MAX 10 PREVIEW PAGES LIMIT
+            raw_preview = int(request.form.get('preview_pages', 5) or 5)
+            preview_pages = min(max(1, raw_preview), 10)
 
             if is_paid and price_paise <= 0: flash('Paid books need a valid price.', 'error'); return redirect(url_for('dashboard'))
             
@@ -1146,7 +1192,9 @@ def edit_book(book_id):
         try: price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
         except (InvalidOperation, ValueError): price_paise = book['price_paise'] if is_paid else 0
             
-        preview_pages = int(request.form.get('preview_pages', book.get('preview_pages', 5)) or 5)
+        raw_preview = int(request.form.get('preview_pages', book.get('preview_pages', 5)) or 5)
+        preview_pages = min(max(1, raw_preview), 10)
+        
         c_link = request.form.get('cover_link', '').strip(); p_link = request.form.get('pdf_link', '').strip()
         c_file = request.files.get('cover_image'); p_file = request.files.get('pdf_file')
         
