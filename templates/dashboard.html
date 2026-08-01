@@ -36,7 +36,6 @@
         .flash.success { background: #dcfce7; color: #166534; } .flash.error { background: #fee2e2; color: #991b1b; } .flash.info { background: #e0f2fe; color: #075985; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
 
-        /* --- PREMIUM TELEGRAM POPUP STYLING --- */
         .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
         .popup-box { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -53,7 +52,6 @@
 </head>
 <body>
 
-    <!-- AESTHETIC TELEGRAM POP-UP -->
     {% if show_telegram_popup %}
     <div id="telegramPopup" class="popup-overlay">
         <div class="popup-box">
@@ -84,6 +82,41 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
+
+        <!-- PERSONAL SETTINGS SECTION MOVED TO TOP -->
+        <div class="grid-2">
+            <div class="panel" style="border-top: 4px solid var(--primary-orange);">
+                <h2>Change Username</h2>
+                <form action="{{ url_for('change_username') }}" method="POST">
+                    <div class="form-group"><label>New Username</label><input type="text" name="new_username" required></div>
+                    {% if session.role in ['author', 'official'] %}
+                        <div class="form-group">
+                            <label>Reason for Change (Required for approval)</label>
+                            <input type="text" name="reason" required placeholder="Why do you want to change your username?">
+                        </div>
+                        <button type="submit" class="btn-sm btn-orange">Submit Request</button>
+                        <p style="color: #718096; font-size: 0.85rem; margin-top: 10px;">Your request will be reviewed by an administrator.</p>
+                    {% else %}
+                        <button type="submit" class="btn-sm btn-orange">Change Username</button>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div class="panel" style="border-top: 4px solid var(--nav-bg);">
+                <h2>Security Settings</h2>
+                {% if session.get('change_pw_otp') %}
+                    <form action="{{ url_for('change_password') }}" method="POST">
+                        <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
+                        <div class="form-group"><label>Current Password</label><input type="password" name="old_password" required></div>
+                        <div class="form-group"><label>New Password</label><input type="password" name="new_password" required minlength="6"></div>
+                        <button type="submit" class="btn-sm btn-green">Update Password</button>
+                        <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
+                    </form>
+                {% else %}
+                    <form action="{{ url_for('send_change_password_otp') }}" method="POST"><button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Request Password Change</button></form>
+                {% endif %}
+            </div>
+        </div>
 
         {% if session.role == 'reader' %}
             <div class="panel" style="text-align: center; padding: 60px;">
@@ -205,12 +238,57 @@
 
             <!-- Approvals (Both Admins) -->
             <div class="panel" style="border-left: 5px solid #38a169;"><h2>Pending Author Approvals</h2>
-                {% if pending_authors %}<table><tr><th>Username</th><th>Email</th><th>Action</th></tr>{% for user in pending_authors %}<tr><td>{{ user.username }}</td><td>{{ user.email }}</td><td style="display: flex; gap: 10px;"><form action="/dashboard" method="POST"><input type="hidden" name="approve_author_id" value="{{ user.id }}"><button type="submit" class="btn-sm btn-green">Approve</button></form><form action="/dashboard" method="POST"><input type="hidden" name="reject_author_id" value="{{ user.id }}"><button type="submit" class="btn-sm btn-red">Reject</button></form></td></tr>{% endfor %}</table>{% else %}<p>No pending authors.</p>{% endif %}
+                {% if pending_authors %}
+                <div style="overflow-x: auto;">
+                    <table>
+                        <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+                        {% for user in pending_authors %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td style="display: flex; gap: 15px;">
+                                <form action="/dashboard" method="POST">
+                                    <input type="hidden" name="approve_author_id" value="{{ user.id }}">
+                                    <button type="submit" class="btn-sm btn-green">Approve</button>
+                                </form>
+                                <form action="/dashboard" method="POST" style="display: flex; gap: 5px;">
+                                    <input type="hidden" name="reject_author_id" value="{{ user.id }}">
+                                    <input type="text" name="reject_reason" placeholder="Reason for rejection..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
+                                    <button type="submit" class="btn-sm btn-red">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% else %}<p>No pending authors.</p>{% endif %}
             </div>
         {% endif %}
 
         <!-- STRICT DEVELOPER ONLY SECTION -->
         {% if session.role == 'developer' %}
+            
+            <!-- OFFICIAL ACTIVITY LOGS -->
+            <div class="panel" style="border-left: 5px solid #805ad5;">
+                <h2 style="color: #805ad5;">Official Activity Logs (Work Tracker)</h2>
+                {% if official_logs %}
+                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                        <table>
+                            <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
+                            {% for log in official_logs %}
+                            <tr>
+                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp }}</td>
+                                <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
+                                <td>{{ log.action }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <p>No official activity logged yet.</p>
+                {% endif %}
+            </div>
+
             <div class="grid-2">
                 <div class="panel"><h2>Website Settings & Donations</h2>
                     <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
@@ -228,6 +306,7 @@
                         <button type="submit" class="btn-sm btn-dark">Update Settings</button>
                     </form>
                 </div>
+                
                 <!-- CREATING OFFICIALS IS STRICTLY FOR DEVELOPERS -->
                 <div class="panel"><h2>Create Official</h2>
                     <form action="{{ url_for('create_official') }}" method="POST">
@@ -239,12 +318,18 @@
                 </div>
             </div>
 
-            <!-- DEVELOPER USER MANAGEMENT (HAS REVOKE BUTTON) -->
+            <!-- DEVELOPER USER MANAGEMENT (WITH FILTER & REASON EMAILS) -->
             <div class="panel" style="border-left: 5px solid #d97706;">
                 <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ search_query }}" style="margin-bottom: 0;">
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search</button>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
+                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
+                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
+                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
                 </form>
 
                 {% if searched_users %}
@@ -256,13 +341,15 @@
                                 <td style="font-weight: 500;">{{ user.username }}</td>
                                 <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
                                 <td style="color: #718096;">{{ user.last_activity }}</td>
-                                <td style="display: flex; gap: 10px;">
+                                <td style="display: flex; gap: 10px; align-items: flex-start;">
                                     {% if user.role == 'official' %}
-                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');">
+                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');" style="display: flex; flex-direction: column; gap: 5px;">
+                                            <input type="text" name="reason" placeholder="Reason for revocation..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
                                             <button type="submit" class="btn-sm btn-warn">Revoke Official</button>
                                         </form>
                                     {% endif %}
-                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');">
+                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason for deletion..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
                                         <button type="submit" class="btn-sm btn-red">Force Delete</button>
                                     </form>
                                 </td>
@@ -270,13 +357,23 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No users found.</p>{% endif %}
+                {% else %}<p>No users found matching that filter.</p>{% endif %}
             </div>
         
-        <!-- OFFICIAL USER MANAGEMENT (NO REVOKE BUTTON) -->
+        <!-- OFFICIAL USER MANAGEMENT -->
         {% elif session.role == 'official' %}
             <div class="panel">
                 <h2>Manage Platform Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search readers or authors..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Readers & Authors</option>
+                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
+                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                </form>
+
                 {% if all_users %}
                     <div style="overflow-x: auto;">
                         <table>
@@ -286,8 +383,8 @@
                                 <td>{{ user.username }}</td>
                                 <td style="text-transform: capitalize;">{{ user.role }}</td>
                                 <td>
-                                    <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST">
-                                        <input type="hidden" name="reason" value="Policy Violation">
+                                    <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Why request a ban?" required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
                                         <button type="submit" class="btn-sm btn-orange">Request Ban</button>
                                     </form>
                                 </td>
@@ -295,44 +392,10 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% endif %}
+                {% else %}<p>No users found matching that filter.</p>{% endif %}
             </div>
         {% endif %}
 
-        <div class="grid-2">
-            <div class="panel" style="border-top: 4px solid var(--primary-orange); margin-top: 40px;">
-                <h2>Change Username</h2>
-                <form action="{{ url_for('change_username') }}" method="POST" style="max-width: 500px;">
-                    <div class="form-group"><label>New Username</label><input type="text" name="new_username" required></div>
-                    
-                    {% if session.role in ['author', 'official'] %}
-                        <div class="form-group">
-                            <label>Reason for Change (Required for approval)</label>
-                            <input type="text" name="reason" required placeholder="Why do you want to change your username?">
-                        </div>
-                        <button type="submit" class="btn-sm btn-orange">Submit Request</button>
-                        <p style="color: #718096; font-size: 0.85rem; margin-top: 10px;">Your request will be reviewed by an administrator.</p>
-                    {% else %}
-                        <button type="submit" class="btn-sm btn-orange">Change Username</button>
-                    {% endif %}
-                </form>
-            </div>
-
-            <div class="panel" style="border-top: 4px solid var(--nav-bg); margin-top: 40px;">
-                <h2>Security Settings</h2>
-                {% if session.get('change_pw_otp') %}
-                    <form action="{{ url_for('change_password') }}" method="POST" style="max-width: 500px;">
-                        <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
-                        <div class="form-group"><label>Current Password</label><input type="password" name="old_password" required></div>
-                        <div class="form-group"><label>New Password</label><input type="password" name="new_password" required minlength="6"></div>
-                        <button type="submit" class="btn-sm btn-green">Update Password</button>
-                        <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
-                    </form>
-                {% else %}
-                    <form action="{{ url_for('send_change_password_otp') }}" method="POST"><button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Request Password Change</button></form>
-                {% endif %}
-            </div>
-        </div>
     </div>
 
     <!-- Edit Modal Script -->
