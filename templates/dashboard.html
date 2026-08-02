@@ -445,19 +445,25 @@
 
         <!-- BOTTOM DEVELOPER SECTION (MOVED DOWN) -->
         {% if session.role == 'developer' %}
-            
+        <div class="grid-2">
             <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
-            <div class="panel" style="border-left: 5px solid #2b6cb0;">
+            <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
                 <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
+                
+                <!-- NEW SEARCH BAR FOR ARCHIVES -->
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
+                </div>
+
                 {% if archive_books %}
                     <div style="overflow-x: auto;">
                         <table>
                             <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
                             {% for book in archive_books %}
-                            <tr>
+                            <tr class="archive-row">
                                 <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
-                                <td style="font-weight: 500;">{{ book.title }}</td>
+                                <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
                                 <td>
                                     <div style="display: flex; gap: 5px;">
                                         <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }}, '{{ book.rp_key_id or '' }}', '{{ book.rp_key_secret or '' }}')">Edit</button>
@@ -475,7 +481,7 @@
             </div>
 
             <!-- DEVELOPER USER MANAGEMENT (WITH FILTER & REASON EMAILS) -->
-            <div class="panel" style="border-left: 5px solid #d97706;">
+            <div class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
                 <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
                 <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
                     <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
@@ -515,7 +521,7 @@
                     </div>
                 {% else %}<p>No users found matching that filter.</p>{% endif %}
             </div>
-            
+        </div>
         {% endif %}
 
     </div>
@@ -551,6 +557,20 @@
             let rows = document.querySelectorAll('.library-row');
             rows.forEach(row => {
                 let titleText = row.querySelector('.book-title-cell').innerText.toLowerCase();
+                if (titleText.includes(input)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Real-time Archive Search Filter
+        function filterArchives() {
+            let input = document.getElementById('archiveSearch').value.toLowerCase();
+            let rows = document.querySelectorAll('.archive-row');
+            rows.forEach(row => {
+                let titleText = row.querySelector('.archive-title-cell').innerText.toLowerCase();
                 if (titleText.includes(input)) {
                     row.style.display = '';
                 } else {
