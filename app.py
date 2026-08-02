@@ -515,7 +515,8 @@ def login():
             return render_template('login.html', active_tab=login_portal)
             
         elif action == 'verify_2fa':
-            user_otp = request.form.get('otp', '').strip()
+            # FIX: This strips out all accidental spaces so the code matches perfectly!
+            user_otp = request.form.get('otp', '').replace(' ', '').strip()
             pending_user = session.get('pending_2fa_user')
             correct_otp = session.get('login_2fa_otp')
             
