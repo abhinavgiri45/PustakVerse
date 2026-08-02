@@ -529,26 +529,50 @@ def login():
                 if login_portal == 'reader' and user['role'] != 'reader': flash("Please use the 'Author / Official' tab to log in to your account.", "error"); return render_template('login.html', active_tab='reader')
                 if login_portal == 'author_official' and user['role'] not in ['author', 'official', 'developer']: flash("Readers must log in using the 'Reader Login' tab.", "error"); return render_template('login.html', active_tab='official')
 
+                # TRIGGER 2FA for Officials/Devs OR if the user manually enabled it
                 if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
-                    otp = str(random.randint(100000, 999999)); session['login_2fa_otp'] = otp
+                    otp = str(random.randint(100000, 999999))
+                    session['login_2fa_otp'] = otp
                     session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
-                    if send_2fa_email(user['email'], otp): flash("A 2-Step Verification code has been sent to your email.", "info"); return render_template('login.html', show_2fa_form=True, email=user['email'])
-                    else: flash("Failed to send 2FA email. Contact admin.", "error"); return render_template('login.html', active_tab=login_portal)
+                    
+                    if send_2fa_email(user['email'], otp): 
+                        flash("A 2-Step Verification code has been sent to your email.", "info")
+                        return render_template('login.html', show_2fa_form=True, email=user['email'])
+                    else: 
+                        flash("Failed to send 2FA email. Contact admin.", "error")
+                        return render_template('login.html', active_tab=login_portal)
 
-                session['user_id'] = user['id']; session['username'] = user['username']; session['role'] = user['role']; session['is_verified'] = user['is_verified']
-                session['show_telegram_popup'] = True; return redirect(url_for('dashboard'))
+                # Standard Login
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['role'] = user['role']
+                session['is_verified'] = user['is_verified']
+                session['show_telegram_popup'] = True
+                return redirect(url_for('dashboard'))
             
-            flash("Invalid username or password.", "error"); return render_template('login.html', active_tab=login_portal)
+            flash("Invalid username or password.", "error")
+            return render_template('login.html', active_tab=login_portal)
             
         elif action == 'verify_2fa':
-            user_otp = request.form.get('otp'); pending_user = session.get('pending_2fa_user')
-            if pending_user and user_otp == session.get('login_2fa_otp'):
-                session['user_id'] = pending_user['id']; session['username'] = pending_user['username']; session['role'] = pending_user['role']; session['is_verified'] = pending_user['is_verified']
-                session.pop('login_2fa_otp', None); session.pop('pending_2fa_user', None)
-                session['show_telegram_popup'] = True; flash(f"Welcome back, {pending_user['username']}!", "success"); return redirect(url_for('dashboard'))
-            else: flash("Invalid Verification Code. Please try again.", "error"); return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
+            user_otp = request.form.get('otp', '').strip()
+            pending_user = session.get('pending_2fa_user')
+            correct_otp = session.get('login_2fa_otp')
+            
+            if pending_user and user_otp == correct_otp:
+                session['user_id'] = pending_user['id']
+                session['username'] = pending_user['username']
+                session['role'] = pending_user['role']
+                session['is_verified'] = pending_user['is_verified']
+                session.pop('login_2fa_otp', None)
+                session.pop('pending_2fa_user', None)
+                session['show_telegram_popup'] = True
+                flash(f"Welcome back, {pending_user['username']}!", "success")
+                return redirect(url_for('dashboard'))
+            else: 
+                flash("Invalid Verification Code. Please try again.", "error")
+                return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
+                
     return render_template('login.html', active_tab='reader')
-
 @app.route('/login/google')
 def google_login(): return google.authorize_redirect(url_for('google_authorize', _external=True))
 
