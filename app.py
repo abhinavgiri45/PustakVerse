@@ -19,6 +19,14 @@ from authlib.integrations.flask_client import OAuth
 from PyPDF2 import PdfReader, PdfWriter
 import requests
 
+# Bulletproof import for Pillow (Image Compression)
+try:
+    from PIL import Image
+    HAS_PILLOW = True
+except ImportError:
+    HAS_PILLOW = False
+    logging.warning("Pillow is not installed. Image compression is disabled.")
+
 # ==========================================
 # APPLICATION SETUP & LOGGING CONFIGURATION
 # ==========================================
@@ -31,6 +39,7 @@ UPLOAD_FOLDER = 'static/uploads'
 PRIVATE_PDF_FOLDER = 'private_uploads/pdfs'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['PRIVATE_PDF_FOLDER'] = PRIVATE_PDF_FOLDER
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000 # Cache static files for 1 year to boost speed
 payment_schema_ready = False
 
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'covers'), exist_ok=True)
@@ -97,6 +106,39 @@ def drive_img(url):
         if not match: match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
         if match: return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w1000"
     return url
+
+# ==========================================
+# SAFE IMAGE COMPRESSION HELPER
+# ==========================================
+def compress_cover_image(file_obj, upload_folder):
+    """Resizes and compresses images. Falls back to standard save if Pillow is missing."""
+    if not HAS_PILLOW:
+        safe_name = secure_filename(file_obj.filename)
+        file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
+        return safe_name
+
+    try:
+        img = Image.open(file_obj)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
+        # Resize while maintaining aspect ratio (Max 800x1200)
+        img.thumbnail((800, 1200), Image.Resampling.LANCZOS)
+        
+        filename = secure_filename(file_obj.filename)
+        base_name, _ = os.path.splitext(filename)
+        webp_filename = f"{base_name}_{secrets.token_hex(4)}.webp"
+        
+        save_path = os.path.join(upload_folder, 'covers', webp_filename)
+        img.save(save_path, format="WEBP", quality=75, optimize=True)
+        return webp_filename
+    except Exception as e:
+        logging.error(f"Image compression failed: {e}")
+        # Fallback to standard save if Pillow fails on a weird file format
+        safe_name = secure_filename(file_obj.filename)
+        file_obj.seek(0)
+        file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
+        return safe_name
 
 # ==========================================
 # GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
@@ -1084,14 +1126,16 @@ def dashboard():
 
             if is_paid and price_paise <= 0: flash('Paid books need a valid price.', 'error'); return redirect(url_for('dashboard'))
             
-            f_cov = c_link if c_link else (secure_filename(c_file.filename) if c_file and c_file.filename else "")
-            f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
-            
             # Key Extraction directly from the book upload form
             book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
             book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
             
-            if c_file and not c_link: c_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'covers', f_cov))
+            f_cov = c_link if c_link else ""
+            if c_file and c_file.filename and not c_link:
+                f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
+                
+            f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
+            
             if p_file and not p_link:
                 pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
                 p_file.save(os.path.join(pdf_folder, f_pdf))
@@ -1224,8 +1268,10 @@ def edit_book(book_id):
         book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
         
         f_cov = book['cover_image']
-        if c_link: f_cov = c_link
-        elif c_file and c_file.filename: f_cov = secure_filename(c_file.filename); c_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'covers', f_cov))
+        if c_link: 
+            f_cov = c_link
+        elif c_file and c_file.filename: 
+            f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
             
         f_pdf = book['pdf_file']
         if p_link: f_pdf = p_link
