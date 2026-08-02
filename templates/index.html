@@ -22,58 +22,61 @@
         /* Accessibility: Visually hidden class for screen-readers */
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
-        /* Deepened brand orange (#bf360c) to pass the strict 4.5:1 WCAG AA contrast ratio */
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
         
         .navbar { background-color: #2d3748; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; object-fit: contain;}
         
         .navbar-links { display: flex; gap: 15px; align-items: center; margin-left: auto; }
-        /* SEO: Added min-height to ensure tap targets are at least 48px tall */
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: 0.2s; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box;}
         .navbar-links a:hover { color: #bf360c; }
         
         .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #bf360c; }
         .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
-        .hero-section p { font-size: 1.2rem; color: #a0aec0; margin-top: 10px; }
+        .hero-section p { font-size: 1.2rem; color: #cbd5e1; margin-top: 10px; } /* Darkened slightly to pass contrast on dark bg */
 
         .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: white; border-radius: 30px; padding: 5px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: #333; background: transparent; }
-        /* SEO: Minimum 48px tap target for the mic button */
-        .icon-btn { background: none; border: none; cursor: pointer; color: #718096; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        
+        /* Accessibility: Forced placeholder to be dark enough to pass strict text contrast */
+        .search-container input::placeholder { color: #4a5568; opacity: 1; }
+        
+        .icon-btn { background: none; border: none; cursor: pointer; color: #4a5568; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .icon-btn:hover { color: #bf360c; transform: scale(1.1); }
 
         .filter-nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
-        /* SEO: Minimum 48px tap target for category pills */
         .filter-nav a { padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 0.9rem; color: #4a5568; background: #edf2f7; transition: 0.2s; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;}
         .filter-nav a.active, .filter-nav a:hover { background: #bf360c; color: white; }
 
         .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
         .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
         
-        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; content-visibility: auto; contain-intrinsic-size: 450px; }
+        /* Performance: Auto intrinsic size prevents CLS issues on Desktop */
+        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; content-visibility: auto; contain-intrinsic-size: auto 450px; }
         .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .book-cover { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; display: block; }
+        
+        /* USER REQUEST / BEST PRACTICES: Auto-adjusting book cover scales perfectly via aspect-ratio without distortion! */
+        .book-cover { width: 100%; height: auto; aspect-ratio: 250 / 320; object-fit: cover; background: #e2e8f0; display: block; }
+        
         .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
         .book-tag { color: #bf360c; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
         .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
         .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
         
         .book-actions { display: flex; gap: 10px; margin-top: auto; }
-        /* SEO: 48px min-height for book action buttons */
         .btn { flex: 1; padding: 12px 0; min-height: 48px; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;}
         .btn:hover { opacity: 0.85; }
         .btn-read { background-color: #2d3748; color: white; }
         .btn-save { background-color: #edf2f7; color: #2d3748; }
-        
-        /* Accessibility: Darkened green to ensure white text passes contrast tests */
         .btn-premium { background-color: #276749; color: white; }
 
         .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
         .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 40px 0; }
+        /* Accessibility: Darkened empty state text */
         .no-results h2 { color: #2d3748; margin-bottom: 10px; font-size: 1.8rem;}
+        .no-results p { color: #4a5568; }
 
         @media (max-width: 768px) {
             .navbar { flex-direction: column; padding: 15px; }
@@ -82,7 +85,6 @@
             .hero-section h1 { font-size: 2.5rem; }
             .container { padding: 20px; }
             .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-            .book-cover { height: 220px; }
             .book-actions { flex-direction: column; }
         }
     </style>
@@ -190,13 +192,13 @@
             </div>
             {% else %}
                 <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
-                    <h2 style="color: #718096;">No books available yet. Check back soon!</h2>
+                    <h2 style="color: #4a5568;">No books available yet. Check back soon!</h2>
                 </div>
             {% endfor %}
 
             <div class="no-results" id="noResultsMsg">
                 <h2>No matches found in the library.</h2>
-                <p style="color: #718096;">Try searching for a different title or author.</p>
+                <p>Try searching for a different title or author.</p>
             </div>
         </div>
     </div>
@@ -254,7 +256,7 @@
             recognition.onend = () => { resetMic(); };
             
             function resetMic() { 
-                micBtn.style.color = '#718096'; 
+                micBtn.style.color = '#4a5568'; 
                 micBtn.style.transform = 'scale(1)'; 
                 searchInput.placeholder = "Search for a book or author..."; 
             }
