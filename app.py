@@ -76,6 +76,8 @@ def inject_global_settings():
                 fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
                 fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
                 fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
+                fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
+                fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
                 
                 global_cache['settings'] = fetched_settings
                 global_cache['catalogs'] = fetched_catalogs
@@ -207,6 +209,14 @@ def get_db_connection(retries=2, delay=1.0):
             last_exception = err; time.sleep(delay)
     raise last_exception
 
+def payment_gateway_configured():
+    settings = global_cache.get('settings', {})
+    return bool(settings.get('rp_key_id') and settings.get('rp_key_secret'))
+
+def get_payment_fee_paise(price_paise):
+    rate = Decimal('0.0236')
+    return int((Decimal(price_paise) * rate / (Decimal('1') - rate)).to_integral_value(rounding=ROUND_CEILING))
+
 def ensure_payment_schema():
     db = None
     try:
@@ -220,20 +230,20 @@ def ensure_payment_schema():
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE")
         except Exception: pass
         
-        # INDIVIDUAL AUTHOR KEYS ADDED TO USERS TABLE
-        try:
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'rp_key_id'")
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE users ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
-                cursor.execute("ALTER TABLE users ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
-        except Exception: pass
-        
         cursor.execute("CREATE TABLE IF NOT EXISTS username_requests (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, new_username VARCHAR(100) NOT NULL, reason TEXT NOT NULL, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS books (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, author_id INT NOT NULL, catalog VARCHAR(100) NOT NULL, cover_image VARCHAR(1000) NOT NULL, pdf_file VARCHAR(1000) NOT NULL, is_paid BOOLEAN NOT NULL DEFAULT FALSE, price_paise INT NOT NULL DEFAULT 0, private_pdf BOOLEAN NOT NULL DEFAULT FALSE, preview_pages INT NOT NULL DEFAULT 5, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE)")
         
         try:
             cursor.execute("SHOW COLUMNS FROM books LIKE 'preview_pages'")
             if not cursor.fetchone(): cursor.execute("ALTER TABLE books ADD COLUMN preview_pages INT NOT NULL DEFAULT 5")
+        except Exception: pass
+
+        # ADD RAZORPAY KEYS DIRECTLY TO THE BOOKS TABLE (PER BOOK BASIS)
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'rp_key_id'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
+                cursor.execute("ALTER TABLE books ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
         except Exception: pass
 
         cursor.execute("CREATE TABLE IF NOT EXISTS personal_library (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, UNIQUE(user_id, book_id))")
@@ -763,7 +773,7 @@ def change_password():
 def cancel_password_change(): session.pop('change_pw_otp', None); return redirect(url_for('dashboard'))
 
 # ==========================================
-# E-COMMERCE & BUY NOW LOGIC (DIRECT AUTHOR PAYMENTS)
+# E-COMMERCE & BUY NOW LOGIC (DIRECT BOOK PAYMENTS NO FALLBACK)
 # ==========================================
 @app.route('/buy_book/<int:book_id>', methods=['POST'])
 def buy_book(book_id):
@@ -774,8 +784,8 @@ def buy_book(book_id):
     db = None; book = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        # Fetching INDIVIDUAL Author Keys directly from the users table!
-        cursor.execute("SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, u.rp_key_id as author_key_id, u.rp_key_secret as author_key_secret, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        # Fetch keys assigned DIRECTLY to this specific book
+        cursor.execute("SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
         book = cursor.fetchone()
         if book:
             book['cover_image'] = book.get('cover_image') or ""
@@ -794,23 +804,20 @@ def buy_book(book_id):
             try: db.close()
             except: pass
 
-    # Ensure Author has set up their OWN Razorpay Keys
     author_key_id = book.get('author_key_id')
     author_key_secret = book.get('author_key_secret')
     
+    # NO FALLBACK: If the author didn't add keys to this book, block the sale.
     if not author_key_id or not author_key_secret:
-        flash('The author has not configured their payment gateway. Purchases are temporarily disabled for this book.', 'error')
+        flash('The author has not configured their payment gateway for this specific book. Purchases are temporarily disabled.', 'error')
         return redirect(request.referrer or url_for('index'))
 
-    # Total Price (Author gets 100%, Razorpay deducts its own standard processing fee)
     total_paise = book['price_paise']
     
     db = None
     try:
-        # Client initialized with INDIVIDUAL AUTHOR KEYS!
         client = razorpay.Client(auth=(author_key_id, author_key_secret))
         
-        # Direct Order Creation (No Transfers needed, money goes straight to Author!)
         order_data = {
             'amount': total_paise,
             'currency': 'INR',
@@ -822,8 +829,8 @@ def buy_book(book_id):
         cursor.execute("INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, fee_paise, status) VALUES (%s, %s, %s, %s, %s, 'pending')", (session['user_id'], book_id, order['id'], book['price_paise'], 0))
         db.commit()
     except Exception as e: 
-        logging.error(f"Razorpay Author Key Error: {e}")
-        flash('Unable to connect to the Author\'s payment gateway. Please try again shortly.', 'error'); return redirect(request.referrer or url_for('index'))
+        logging.error(f"Razorpay Key Error: {e}")
+        flash('Unable to connect to the payment gateway. The author keys may be invalid.', 'error'); return redirect(request.referrer or url_for('index'))
     finally:
         if db:
             try: db.close()
@@ -840,28 +847,32 @@ def verify_payment():
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        # Fetch the exact Author Keys associated with this purchase order
         cursor.execute('''
-            SELECT p.id, p.book_id, u.rp_key_id, u.rp_key_secret 
+            SELECT p.id, p.book_id, b.rp_key_id, b.rp_key_secret 
             FROM purchases p 
             JOIN books b ON p.book_id = b.id 
-            JOIN users u ON b.author_id = u.id 
             WHERE p.razorpay_order_id = %s AND p.user_id = %s
         ''', (order_id, session['user_id']))
         purchase = cursor.fetchone()
         
-        if purchase and purchase['rp_key_id'] and purchase['rp_key_secret']:
-            # Verify signature using the INDIVIDUAL AUTHOR'S Secret Key
-            client = razorpay.Client(auth=(purchase['rp_key_id'], purchase['rp_key_secret']))
-            client.utility.verify_payment_signature({'razorpay_order_id': order_id, 'razorpay_payment_id': payment_id, 'razorpay_signature': signature})
-            
-            cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
-            cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
-            db.commit()
-            flash('Payment successful! Book has been saved to My Library and unlocked.', 'success')
-            return redirect(url_for('read_book', book_id=purchase['book_id']))
+        if purchase:
+            key_id = purchase['rp_key_id']
+            key_secret = purchase['rp_key_secret']
+                
+            if key_id and key_secret:
+                client = razorpay.Client(auth=(key_id, key_secret))
+                client.utility.verify_payment_signature({'razorpay_order_id': order_id, 'razorpay_payment_id': payment_id, 'razorpay_signature': signature})
+                
+                cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
+                cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
+                db.commit()
+                flash('Payment successful! Book has been saved to My Library and unlocked.', 'success')
+                return redirect(url_for('read_book', book_id=purchase['book_id']))
+            else:
+                flash('Payment verification failed. Keys missing on this book.', 'error')
+                return redirect(url_for('my_library'))
         else:
-            flash('Payment verification failed. Author keys missing.', 'error')
+            flash('Payment verification failed. Order not found.', 'error')
             return redirect(url_for('my_library'))
     except Exception as e: 
         logging.error(f"Verification error: {e}")
@@ -1053,15 +1064,6 @@ def dashboard():
             flash(f"Two-Step Verification has been {status_text}.", "success")
             return redirect(url_for('dashboard'))
 
-        # INDIVIDUAL AUTHOR KEYS POST HANDLER
-        if role == 'author' and request.method == 'POST' and 'update_author_keys' in request.form:
-            rp_id = request.form.get('rp_key_id', '').strip()
-            rp_sec = request.form.get('rp_key_secret', '').strip()
-            cursor.execute("UPDATE users SET rp_key_id = %s, rp_key_secret = %s WHERE id = %s", (rp_id, rp_sec, session['user_id']))
-            db.commit()
-            flash("Your personal Razorpay Keys have been securely saved!", "success")
-            return redirect(url_for('dashboard'))
-
         if request.method == 'POST' and 'title' in request.form:
             catalog = request.form.get('catalog', '')
             if role == 'author':
@@ -1085,13 +1087,17 @@ def dashboard():
             f_cov = c_link if c_link else (secure_filename(c_file.filename) if c_file and c_file.filename else "")
             f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
             
+            # Key Extraction directly from the book upload form
+            book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
+            book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
+            
             if c_file and not c_link: c_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'covers', f_cov))
             if p_file and not p_link:
                 pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
                 p_file.save(os.path.join(pdf_folder, f_pdf))
                 
             if f_cov and f_pdf:
-                cursor.execute("INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages))
+                cursor.execute("INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret))
                 db.commit(); flash("Book published successfully!", "success"); return redirect(url_for('dashboard'))
 
         if role in ['developer', 'official'] and request.method == 'POST':
@@ -1154,10 +1160,10 @@ def dashboard():
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id WHERE oa.timestamp >= NOW() - INTERVAL 30 DAY ORDER BY oa.timestamp DESC LIMIT 200")
             official_logs = cursor.fetchall()
             
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.rp_key_id, books.rp_key_secret, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
             archive_books = clean_book_data(cursor.fetchall())
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
             return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
@@ -1168,21 +1174,18 @@ def dashboard():
             all_users = cursor.fetchall()
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
         if role == 'author':
-            # FETECHING INDIVIDUAL AUTHOR KEYS FOR THE DASHBOARD
-            cursor.execute("SELECT is_verified, rp_key_id, rp_key_secret FROM users WHERE id = %s", (session['user_id'],))
+            cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
             author_data = cursor.fetchone()
             session['is_verified'] = author_data['is_verified']
-            author_rp_id = author_data['rp_key_id']
-            author_rp_secret = author_data['rp_key_secret']
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
-            return render_template('dashboard.html', my_books=my_books, author_rp_id=author_rp_id, author_rp_secret=author_rp_secret, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', my_books=my_books, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
         return render_template('dashboard.html', show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
         
@@ -1217,6 +1220,9 @@ def edit_book(book_id):
         c_link = request.form.get('cover_link', '').strip(); p_link = request.form.get('pdf_link', '').strip()
         c_file = request.files.get('cover_image'); p_file = request.files.get('pdf_file')
         
+        book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
+        book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
+        
         f_cov = book['cover_image']
         if c_link: f_cov = c_link
         elif c_file and c_file.filename: f_cov = secure_filename(c_file.filename); c_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'covers', f_cov))
@@ -1226,7 +1232,7 @@ def edit_book(book_id):
         elif p_file and p_file.filename:
             f_pdf = secure_filename(p_file.filename); pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs'); p_file.save(os.path.join(pdf_folder, f_pdf))
             
-        cursor.execute("UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, private_pdf=%s, preview_pages=%s WHERE id=%s", (title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_id))
+        cursor.execute("UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, private_pdf=%s, preview_pages=%s, rp_key_id=%s, rp_key_secret=%s WHERE id=%s", (title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret, book_id))
         db.commit(); flash("Book updated!", "success")
     except Exception: flash("Database error.", "error")
     finally:
@@ -1411,9 +1417,6 @@ def admin_delete_user(user_id):
             except: pass
     return redirect(url_for('dashboard'))
 
-# ==========================================
-# BOOK DELETION (OFFICIALS REQUEST -> DEVELOPER FORCES)
-# ==========================================
 @app.route('/request_book_deletion/<int:book_id>', methods=['POST'])
 def request_book_deletion(book_id):
     if session.get('role') != 'official': return redirect(url_for('dashboard'))
