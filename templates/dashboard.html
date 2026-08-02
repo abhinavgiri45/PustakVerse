@@ -370,14 +370,33 @@
                         <p style="font-size: 0.9rem; color: #9c4221; margin-bottom: 20px; line-height: 1.5;">
                             <strong>Transparent Billing:</strong> You will receive exactly 100% of the price you set for your books. To cover gateway charges, a 5% Platform Convenience Fee is automatically added at checkout for the buyer.
                         </p>
-                        <form action="/dashboard" method="POST">
-                            <input type="hidden" name="update_payout" value="1">
-                            <div class="form-group">
-                                <label style="color: #c05621;">Bank Account Number / UPI ID</label>
-                                <input type="text" name="payout_details" value="{{ payout_details or '' }}" placeholder="e.g., authorname@upi or Account: 1234..." required style="border-color: #f6ad55;">
+                        
+                        {% if not razorpay_account_id %}
+                            <div style="background: #feebc8; padding: 15px; border-radius: 6px; border: 1px solid #f6ad55; margin-bottom: 15px;">
+                                <h3 style="color: #c05621; margin-top: 0; font-size: 1rem;">Action Required: Setup Payouts</h3>
+                                <p style="font-size: 0.85rem; color: #9c4221; margin-bottom: 15px;">You must link your bank account to receive payments for your premium books.</p>
+                                <form action="/dashboard" method="POST">
+                                    <input type="hidden" name="create_route_account" value="1">
+                                    <div class="form-group">
+                                        <label style="color: #c05621; font-size: 0.85rem;">Legal Full Name (As per Bank/PAN)</label>
+                                        <input type="text" name="legal_name" required placeholder="Enter your legal name" style="border-color: #f6ad55;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="color: #c05621; font-size: 0.85rem;">Phone Number</label>
+                                        <input type="text" name="phone" required placeholder="10-digit mobile number" style="border-color: #f6ad55;">
+                                    </div>
+                                    <button type="submit" class="btn-sm btn-orange" style="width: 100%;">Create Linked Account</button>
+                                </form>
                             </div>
-                            <button type="submit" class="btn-sm btn-orange">Save Banking Details</button>
-                        </form>
+                        {% else %}
+                            <div style="background: #c6f6d5; padding: 15px; border-radius: 6px; border: 1px solid #9ae6b4; display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.5rem;">✅</span>
+                                <div>
+                                    <h3 style="color: #276749; margin: 0; font-size: 1rem;">Bank Account Linked</h3>
+                                    <p style="font-size: 0.85rem; color: #2f855a; margin: 5px 0 0 0;">Your Razorpay Route account <strong>({{ razorpay_account_id }})</strong> is active. You are ready to receive payouts!</p>
+                                </div>
+                            </div>
+                        {% endif %}
                     </div>
                     {% endif %}
 
