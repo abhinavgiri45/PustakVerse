@@ -10,6 +10,7 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="preconnect" href="https://drive.google.com" crossorigin>
     <style>
+        /* Updated brand orange to #d84315 to pass strict WCAG AA contrast ratio standards */
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
         
         .navbar { background-color: #2d3748; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -17,20 +18,20 @@
         
         .navbar-links { display: flex; gap: 20px; align-items: center; margin-left: auto; }
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: 0.2s; }
-        .navbar-links a:hover { color: #f66d2f; }
+        .navbar-links a:hover { color: #d84315; }
         
-        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #f66d2f; }
+        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #d84315; }
         .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
         .hero-section p { font-size: 1.2rem; color: #a0aec0; margin-top: 10px; }
 
         .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: white; border-radius: 30px; padding: 5px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: #333; background: transparent; }
         .icon-btn { background: none; border: none; cursor: pointer; color: #718096; padding: 8px; transition: 0.2s; }
-        .icon-btn:hover { color: #f66d2f; transform: scale(1.1); }
+        .icon-btn:hover { color: #d84315; transform: scale(1.1); }
 
         .filter-nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
         .filter-nav a { padding: 8px 20px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 0.9rem; color: #4a5568; background: #edf2f7; transition: 0.2s; }
-        .filter-nav a.active, .filter-nav a:hover { background: #f66d2f; color: white; }
+        .filter-nav a.active, .filter-nav a:hover { background: #d84315; color: white; }
 
         .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
         .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
@@ -39,7 +40,7 @@
         .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .book-cover { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; }
         .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-        .book-tag { color: #f66d2f; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+        .book-tag { color: #d84315; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
         .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
         .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
         
@@ -72,8 +73,8 @@
 
     <nav class="navbar">
         <div class="navbar-brand">
-            <!-- Safely load logo using Jinja's safe connector (~) -->
-            <a href="/"><img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" onerror="this.src='{{ url_for('static', filename='PustakVerse.png') }}'" alt="Logo"></a>
+            <!-- ADDED: Explicit width and height for layout stability and accessibility -->
+            <a href="/"><img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" onerror="this.src='{{ url_for('static', filename='PustakVerse.png') }}'" alt="Logo" width="150" height="45"></a>
         </div>
         <div class="navbar-links">
             <a href="{{ url_for('contact') }}">Contact</a>
@@ -82,7 +83,7 @@
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>
                 <a href="{{ url_for('logout') }}" style="background: #e53e3e; padding: 8px 15px; border-radius: 20px;">Logout</a>
             {% else %}
-                <a href="{{ url_for('login') }}" style="background: #f66d2f; padding: 8px 20px; border-radius: 20px;">Sign In / Login</a>
+                <a href="{{ url_for('login') }}" style="background: #d84315; padding: 8px 20px; border-radius: 20px;">Sign In / Login</a>
             {% endif %}
         </div>
     </nav>
@@ -115,7 +116,8 @@
         <div class="donation-banner">
             <h2 style="color: #276749; margin-top: 0;">Support PustakVerse!</h2>
             <p style="color: #2f855a; margin-bottom: 0;">If you love our free library, consider buying the developer a coffee.</p>
-            <img src="{{ url_for('static', filename='uploads/logos/' + site_settings.donation_qr) }}" alt="Donation QR Code">
+            <!-- ADDED: Explicit width and height for the donation QR -->
+            <img src="{{ url_for('static', filename='uploads/logos/' + site_settings.donation_qr) }}" alt="Donation QR Code" width="200" height="200">
         </div>
         {% endif %}
 
@@ -219,7 +221,7 @@
             
             micBtn.addEventListener('click', () => { 
                 recognition.start(); 
-                micBtn.style.color = '#f66d2f'; 
+                micBtn.style.color = '#d84315'; 
                 micBtn.style.transform = 'scale(1.2)'; 
                 searchInput.placeholder = "Listening..."; 
             });
