@@ -4,21 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- ADDED: SEO Meta Description for a 100 SEO Score -->
+    <!-- SEO & Best Practices: Added Description, Theme Color, and Apple Touch Icon -->
     <meta name="description" content="PustakVerse is a global digital library offering free and premium books, educational resources, and classic archives. Discover and read your next favorite book today.">
-    
-    <!-- Your unique Google Tag -->
+    <meta name="theme-color" content="#2d3748">
     <meta name="google-site-verification" content="uC9A0kYiSE4aOQnf-wxSjyNCkF0UM5bGxMBt_ItJES4" />
     
     <title>{{ site_settings.hero_title }} - Global Library</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='PustakVerse.png') }}">
     
-    <!-- ADDED: DNS Prefetch for maximum performance -->
+    <!-- Performance: DNS Prefetching for Drive Images -->
     <link rel="preconnect" href="https://drive.google.com" crossorigin>
     <link rel="dns-prefetch" href="https://drive.google.com">
     
     <style>
-        /* Deepened brand orange (#d84315) to perfectly pass WCAG AA contrast ratio standards */
+        /* Accessibility: Visually hidden class for screen-readers */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+        
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
         
         .navbar { background-color: #2d3748; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -44,20 +46,23 @@
         .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
         .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
         
-        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; }
+        /* Performance: content-visibility completely skips rendering off-screen elements */
+        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; content-visibility: auto; contain-intrinsic-size: 450px; }
         .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .book-cover { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; }
+        .book-cover { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; display: block; }
         .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
         .book-tag { color: #d84315; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
         .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
         .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
         
         .book-actions { display: flex; gap: 10px; margin-top: auto; }
-        .btn { flex: 1; padding: 12px 0; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; }
+        .btn { flex: 1; padding: 12px 0; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center;}
         .btn:hover { opacity: 0.85; }
         .btn-read { background-color: #2d3748; color: white; }
         .btn-save { background-color: #edf2f7; color: #2d3748; }
-        .btn-premium { background-color: #38a169; color: white; }
+        
+        /* Accessibility: Darkened the buy button background so white text passes contrast validation */
+        .btn-premium { background-color: #276749; color: white; }
 
         .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -81,8 +86,10 @@
 
     <nav class="navbar">
         <div class="navbar-brand">
-            <!-- ADDED: Explicit width/height & descriptive alt text for Accessibility -->
-            <a href="/"><img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" onerror="this.src='{{ url_for('static', filename='PustakVerse.png') }}'" alt="PustakVerse Logo" width="150" height="45"></a>
+            <!-- Accessibility: Added aria-label for logo link -->
+            <a href="/" aria-label="PustakVerse Homepage">
+                <img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" onerror="this.src='{{ url_for('static', filename='PustakVerse.png') }}'" alt="PustakVerse Logo" width="150" height="45">
+            </a>
         </div>
         <div class="navbar-links">
             <a href="{{ url_for('contact') }}">Contact</a>
@@ -101,10 +108,10 @@
         <p>{{ site_settings.hero_subtitle }}</p>
         
         <div class="search-container">
-            <!-- ADDED: aria-label for accessibility -->
-            <input type="text" id="searchInput" placeholder="Search for a book or author..." onkeyup="filterBooks()" aria-label="Search for a book or author">
+            <!-- Accessibility: Added explicit label for the search input -->
+            <label for="searchInput" class="sr-only">Search for a book or author</label>
+            <input type="text" id="searchInput" placeholder="Search for a book or author..." onkeyup="filterBooks()">
             
-            <!-- ADDED: aria-label for accessibility -->
             <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -146,14 +153,14 @@
                 {% set cover = book.cover_image %}
                 
                 {% if loop.index <= 4 %}
-                    <!-- FIRST 4 BOOKS: High Priority Load to Fix LCP Score. Added descriptive alt text. -->
+                    <!-- FIRST 4 BOOKS: High Priority Load -->
                     {% if cover.startswith('http') %}
                         <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" width="250" height="320">
                     {% else %}
                         <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" width="250" height="320">
                     {% endif %}
                 {% else %}
-                    <!-- REMAINING BOOKS: Lazy Load & Async Decode to Fix Speed Index Score -->
+                    <!-- REMAINING BOOKS: Lazy Load & Async Decode to free up main thread -->
                     {% if cover.startswith('http') %}
                         <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
                     {% else %}
@@ -168,12 +175,12 @@
                     
                     <div class="book-actions">
                         {% if book.is_paid %}
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="display: flex; align-items: center; justify-content: center;">Preview</a>
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Preview</a>
                             <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
                                 <button type="submit" class="btn btn-premium" style="width: 100%;">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
                             </form>
                         {% else %}
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="display: flex; align-items: center; justify-content: center;">Read Now</a>
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Read Now</a>
                             <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
                                 <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                             </form>
