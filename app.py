@@ -25,7 +25,6 @@ import requests
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# SECURE: Pulls secret key from environment variables
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super_secret_pustakverse_fallback_key')
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -55,7 +54,6 @@ def invalidate_cache():
 # DATA CLEANER FOR MISSING DB VALUES
 # ==========================================
 def clean_book_data(books):
-    """ Prevents NoneType concatenation errors in HTML templates """
     if not books: return []
     for b in books:
         b['cover_image'] = str(b.get('cover_image') or "")
@@ -117,16 +115,11 @@ google = oauth.register(
 )
 
 def send_email_wrapper(to_email, subject, body):
-    """
-    Sends emails using the Gmail API (Port 443).
-    Falls back automatically to Gmail SMTP if OAuth token fails.
-    """
     client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
     refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
     email_password = os.environ.get('EMAIL_PASSWORD', '').replace(' ', '').strip()
 
-    # 1. TRY GMAIL API FIRST
     if refresh_token and client_secret:
         try:
             token_url = "https://oauth2.googleapis.com/token"
@@ -164,7 +157,6 @@ def send_email_wrapper(to_email, subject, body):
         except Exception as e:
             logging.error(f"Gmail API exception: {e}")
 
-    # 2. AUTOMATED BACKUP: SMTP VIA EMAIL_PASSWORD
     if email_password:
         try:
             msg = MIMEText(body)
@@ -180,7 +172,6 @@ def send_email_wrapper(to_email, subject, body):
         except Exception as smtp_err:
             logging.error(f"SMTP Backup failed: {smtp_err}")
 
-    # 3. FALLBACK LOGGING IF ALL METHODS FAIL
     print(f"\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n", flush=True)
     return True
 
@@ -225,8 +216,6 @@ def send_author_rejected_email(to_email, username, reason):
 # ==========================================
 def get_db_connection(retries=2, delay=1.0):
     last_exception = None
-    
-    # Read from environment variables with safe defaults
     db_host = os.environ.get('DB_HOST', "gateway01.ap-southeast-1.prod.aws.tidbcloud.com")
     db_port = int(os.environ.get('DB_PORT', 4000))
     db_user = os.environ.get('DB_USER', "39proe1L4PTbJ3X.root")
@@ -422,6 +411,11 @@ def create_master_developer():
 def check_username():
     username = request.form.get('username', '').strip()
     if not username: return jsonify({'available': False, 'message': ''})
+    
+    # Strictly check for letters, numbers, and underscores only
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        return jsonify({'available': False, 'message': 'Username cannot contain spaces or special characters.'})
+
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
@@ -489,6 +483,12 @@ def register():
     username = request.form['username'].strip(); email = request.form['email'].strip(); password = request.form['password']
     role = request.form['role']; sec_question = request.form['security_question']; sec_answer = request.form['security_answer'].lower().strip()
     verification_reason = request.form.get('verification_reason', '')
+    
+    # ENFORCE USERNAME LIMITATION: NO SPACES & NO SPECIAL CHARACTERS
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
+        return redirect(url_for('login'))
+
     if role not in ['reader', 'author']: role = 'reader'
     hashed_pw = generate_password_hash(password)
     db = None
@@ -563,7 +563,8 @@ def google_authorize():
         
         email = user_info.get('email')
         name = user_info.get('name')
-        base_username = name.replace(" ", "").lower() if name else email.split('@')[0]
+        base_username = re.sub(r'[^a-zA-Z0-9_]', '', name.lower()) if name else email.split('@')[0]
+        if not base_username: base_username = f"user_{secrets.randbelow(9999)}"
         
         db = None; user = None
         try:
@@ -663,6 +664,11 @@ def change_username():
 
     if not new_username:
         flash("New username cannot be empty.", "error"); return redirect(url_for('dashboard'))
+
+    # ENFORCE USERNAME LIMITATION: NO SPACES & NO SPECIAL CHARACTERS
+    if not re.match(r'^[a-zA-Z0-9_]+$', new_username):
+        flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
+        return redirect(url_for('dashboard'))
 
     db = None
     try:
@@ -785,7 +791,9 @@ def cancel_password_change(): session.pop('change_pw_otp', None); return redirec
 # ==========================================
 @app.route('/buy_book/<int:book_id>', methods=['POST'])
 def buy_book(book_id):
-    if 'user_id' not in session: flash('Please sign in before purchasing a book.', 'error'); return redirect(url_for('login'))
+    if 'user_id' not in session: 
+        flash('Please sign in or register before purchasing a book.', 'error')
+        return redirect(url_for('login'))
     
     db = None; book = None
     try:
@@ -823,6 +831,7 @@ def buy_book(book_id):
     try:
         client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
         
+        # Payout transfers 100% of setting directly to author's Razorpay Route account
         order_data = {
             'amount': total_paise,
             'currency': 'INR',
@@ -920,8 +929,16 @@ def book_sales(book_id):
             except: pass
     return render_template('sales_history.html', sales=sales, book=book)
 
+# ==========================================
+# READ BOOK ROUTE (LOGIN REQUIRED)
+# ==========================================
 @app.route('/read_book/<int:book_id>')
 def read_book(book_id):
+    # ENFORCE LOGIN: UNREGISTERED USERS CANNOT READ OR PREVIEW BOOKS
+    if 'user_id' not in session:
+        flash("Please sign in or register to read or preview books.", "error")
+        return redirect(url_for('login'))
+
     db = None; can_read = False
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
@@ -945,6 +962,10 @@ def read_book(book_id):
 # ==========================================
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
+    # ENFORCE LOGIN ON THE BACKEND ENDPOINT
+    if 'user_id' not in session:
+        abort(401)
+
     db = None; book = None; can_read = False
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
@@ -982,7 +1003,6 @@ def serve_secure_pdf(book_id):
         reader = PdfReader(full_path)
         writer = PdfWriter()
         
-        # Enforces maximum preview limit of 10 pages
         author_preview_setting = book.get('preview_pages') or 5
         preview_limit = min(max(1, author_preview_setting), 10)
         num_pages = min(preview_limit, len(reader.pages))
@@ -1000,7 +1020,7 @@ def serve_secure_pdf(book_id):
 
 @app.route('/save_book/<int:book_id>', methods=['POST'])
 def save_book(book_id):
-    if 'user_id' not in session: flash("Please sign in first.", "error"); return redirect(url_for('login'))
+    if 'user_id' not in session: flash("Please sign in or register first.", "error"); return redirect(url_for('login'))
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor()
@@ -1100,7 +1120,6 @@ def dashboard():
             try: price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
             except (InvalidOperation, ValueError): price_paise = -1
 
-            # ENFORCE MAX 10 PREVIEW PAGES LIMIT
             raw_preview = int(request.form.get('preview_pages', 5) or 5)
             preview_pages = min(max(1, raw_preview), 10)
 
