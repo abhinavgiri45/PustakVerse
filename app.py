@@ -440,7 +440,7 @@ def index():
     return render_template('index.html', books=books)
 
 # ==========================================
-# AUTHENTICATION
+# AUTHENTICATION & GLOBAL REDIRECT TO '/'
 # ==========================================
 @app.route('/register', methods=['POST'])
 def register():
@@ -509,13 +509,13 @@ def login():
                 session['role'] = user['role']
                 session['is_verified'] = user['is_verified']
                 session['show_telegram_popup'] = True
-                return redirect(url_for('dashboard'))
+                flash(f"Welcome back, {user['username']}!", "success")
+                return redirect(url_for('index')) # Redirecting to Global Library!
             
             flash("Invalid username or password.", "error")
             return render_template('login.html', active_tab=login_portal)
             
         elif action == 'verify_2fa':
-            # FIX: This strips out all accidental spaces so the code matches perfectly!
             user_otp = request.form.get('otp', '').replace(' ', '').strip()
             pending_user = session.get('pending_2fa_user')
             correct_otp = session.get('login_2fa_otp')
@@ -529,7 +529,7 @@ def login():
                 session.pop('pending_2fa_user', None)
                 session['show_telegram_popup'] = True
                 flash(f"Welcome back, {pending_user['username']}!", "success")
-                return redirect(url_for('dashboard'))
+                return redirect(url_for('index')) # Redirecting to Global Library!
             else: 
                 flash("Invalid Verification Code. Please try again.", "error")
                 return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
@@ -590,7 +590,8 @@ def google_authorize():
         session['role'] = user['role']
         session['is_verified'] = user['is_verified']
         session['show_telegram_popup'] = True
-        return redirect(url_for('dashboard'))
+        flash(f"Welcome back, {user['username']}!", "success")
+        return redirect(url_for('index')) # Redirecting to Global Library!
     except Exception as e:
         flash("Google Authentication failed. Please try again.", "error")
         return redirect(url_for('login'))
@@ -1165,7 +1166,6 @@ def dashboard():
             cursor.execute("SELECT dr.id, u.username as target_name, o.username as official_name, dr.reason FROM deletion_requests dr JOIN users u ON dr.target_user_id = u.id JOIN users o ON dr.requested_by = o.id WHERE dr.status = 'pending'")
             del_requests = cursor.fetchall()
             
-            # Fetch Book Deletion Requests for Developer
             cursor.execute("SELECT bdr.id, b.title as book_title, u.username as author_name, o.username as official_name, bdr.reason FROM book_deletion_requests bdr JOIN books b ON bdr.book_id = b.id JOIN users u ON b.author_id = u.id JOIN users o ON bdr.requested_by = o.id WHERE bdr.status = 'pending'")
             book_del_requests = cursor.fetchall()
 
@@ -1173,9 +1173,14 @@ def dashboard():
             pending_authors = cursor.fetchall()
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id WHERE oa.timestamp >= NOW() - INTERVAL 30 DAY ORDER BY oa.timestamp DESC LIMIT 200")
             official_logs = cursor.fetchall()
+            
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
+            archive_books = clean_book_data(cursor.fetchall())
+            
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
-            return render_template('dashboard.html', searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
         if role == 'official':
             if search_query: cursor.execute("SELECT id, username, role, last_activity FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
@@ -1478,7 +1483,6 @@ def delete_book(book_id):
     role = session.get('role')
     user_id = session.get('user_id')
     
-    # Only Authors (for their own books) and Developers (for any book) can directly delete.
     if role in ['author', 'developer']:
         db = None
         try:
