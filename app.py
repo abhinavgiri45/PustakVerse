@@ -104,7 +104,8 @@ def drive_img(url):
     if url and 'drive.google.com' in url:
         match = re.search(r'/d/([a-zA-Z0-9_-]+)', url)
         if not match: match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
-        if match: return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w1000"
+        # CHANGED: Requested size dropped from w1000 to w400 to drastically speed up LCP
+        if match: return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w400"
     return url
 
 # ==========================================
