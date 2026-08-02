@@ -104,6 +104,25 @@
 
             <div class="panel" style="border-top: 4px solid var(--nav-bg);">
                 <h2>Security Settings</h2>
+                
+                <!-- 2FA Toggle Form -->
+                <div style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #2d3748;">Two-Step Verification (2FA)</h3>
+                    <p style="font-size: 0.9rem; color: #718096;">Add an extra layer of security. When enabled, you'll need an email code to log in.</p>
+                    <form action="/dashboard" method="POST" style="margin-top: 10px;">
+                        <input type="hidden" name="toggle_2fa" value="1">
+                        <input type="hidden" name="current_status" value="{{ 'True' if two_factor_enabled else 'False' }}">
+                        {% if two_factor_enabled %}
+                            <button type="submit" class="btn-sm btn-red">Disable 2FA</button>
+                            <span style="color: #38a169; font-weight: bold; margin-left: 10px;">Currently Enabled</span>
+                        {% else %}
+                            <button type="submit" class="btn-sm btn-green">Enable 2FA</button>
+                            <span style="color: #718096; margin-left: 10px;">Currently Disabled</span>
+                        {% endif %}
+                    </form>
+                </div>
+
+                <!-- Password Change Form -->
                 {% if session.get('change_pw_otp') %}
                     <form action="{{ url_for('change_password') }}" method="POST">
                         <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
