@@ -113,7 +113,7 @@
         <div class="donation-banner">
             <h2 style="color: #276749; margin-top: 0;">Support PustakVerse!</h2>
             <p style="color: #2f855a; margin-bottom: 0;">If you love our free library, consider buying the developer a coffee.</p>
-            <img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.donation_qr) }}" alt="Donation QR Code">
+            <img src="{{ url_for('static', filename='uploads/logos/' + site_settings.donation_qr) }}" alt="Donation QR Code">
         </div>
         {% endif %}
 
