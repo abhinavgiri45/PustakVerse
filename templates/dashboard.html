@@ -178,13 +178,6 @@
                     <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="{{ site_settings.hero_title }}"></div>
                     <div class="form-group"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}"></div>
                     
-                    <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-bottom: 20px;">
-                        <label style="color: #166534; font-weight: bold;">Razorpay Gateway Settings</label>
-                        <small style="color: #15803d; display: block; margin-bottom: 10px;">No environment variables needed. Save keys here.</small>
-                        <input type="text" name="rp_key_id" placeholder="Live Key ID (Optional if unchanged)" style="margin-bottom: 10px; border-color: #bbf7d0;">
-                        <input type="password" name="rp_key_secret" placeholder="Live Key Secret (Optional if unchanged)" style="border-color: #bbf7d0;">
-                    </div>
-
                     <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
                         <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
                         <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
@@ -284,36 +277,26 @@
                             <input type="file" name="cover_image" accept="image/*"><input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;">
                             <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;"><input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;">
                         </div>
+                        
                         <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
                             <label><input type="checkbox" name="is_paid" id="is_paid_checkbox"> Premium/Paid Book</label>
-                            <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR)" style="margin-top: 10px; display: none;">
+                            
+                            <!-- DYNAMIC RAZORPAY SETTINGS FOR THIS BOOK -->
+                            <div id="paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
+                                <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
+                                
+                                <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Author's Razorpay Payment Keys (For this book)</label>
+                                <small style="color: #15803d; display: block; margin-bottom: 8px;">100% of sales will go directly to your linked account.</small>
+                                <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Your Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                                <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="border-color: #bbf7d0;">
+                            </div>
                         </div>
+                        
                         <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;">Publish Book</button>
                     </form>
                 </div>
 
                 <div>
-                    {% if session.role == 'author' %}
-                    <div class="panel" style="background: #f0fdf4; border-color: #bbf7d0;">
-                        <h2 style="color: #166534;">Your Razorpay Keys (Direct Payments)</h2>
-                        <p style="font-size: 0.9rem; color: #15803d; margin-bottom: 20px; line-height: 1.5;">
-                            <strong>Direct Checkout:</strong> Enter your own Razorpay Live API Keys. Buyers will pay you directly into your Razorpay account. You keep 100% of your earnings.
-                        </p>
-                        <form action="/dashboard" method="POST">
-                            <input type="hidden" name="update_author_keys" value="1">
-                            <div class="form-group">
-                                <label style="color: #166534; font-size: 0.85rem;">Your Live Key ID</label>
-                                <input type="text" name="rp_key_id" value="{{ author_rp_id or '' }}" required placeholder="rzp_live_..." style="border-color: #bbf7d0;">
-                            </div>
-                            <div class="form-group">
-                                <label style="color: #166534; font-size: 0.85rem;">Your Live Key Secret</label>
-                                <input type="password" name="rp_key_secret" value="{{ author_rp_secret or '' }}" required placeholder="Secret Key" style="border-color: #bbf7d0;">
-                            </div>
-                            <button type="submit" class="btn-sm btn-green" style="width: 100%;">Save Payment Keys</button>
-                        </form>
-                    </div>
-                    {% endif %}
-
                     <div class="panel">
                         <h2>{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
                         
@@ -340,7 +323,7 @@
                                                 <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
                                                 {% endif %}
                                                 
-                                                <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
+                                                <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }}, '{{ book.rp_key_id or '' }}', '{{ book.rp_key_secret or '' }}')">Edit</button>
                                                 
                                                 {% if session.role == 'official' %}
                                                     <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;">
@@ -477,7 +460,7 @@
                                 <td style="font-weight: 500;">{{ book.title }}</td>
                                 <td>
                                     <div style="display: flex; gap: 5px;">
-                                        <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
+                                        <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }}, '{{ book.rp_key_id or '' }}', '{{ book.rp_key_secret or '' }}')">Edit</button>
                                         <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
                                             <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
                                             <button type="submit" class="btn-sm btn-red">Delete</button>
@@ -545,7 +528,17 @@
             <form id="editBookForm" method="POST" enctype="multipart/form-data">
                 <div class="form-group"><input type="text" name="title" id="edit_title" required></div>
                 <div class="form-group"><select name="catalog" id="edit_catalog" required>{% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}</select></div>
-                <div class="form-group"><input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book <input type="text" name="price_inr" id="edit_price_inr" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book
+                    <div id="edit_paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
+                        <input type="text" name="price_inr" id="edit_price_inr" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
+                        <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Update Razorpay Keys (For this book)</label>
+                        <input type="text" name="rp_key_id" id="edit_rp_key_id" placeholder="Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                        <input type="password" name="rp_key_secret" id="edit_rp_key_secret" placeholder="Secret Key" style="border-color: #bbf7d0;">
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn-sm btn-orange">Save Changes</button>
             </form>
         </div>
@@ -566,15 +559,76 @@
             });
         }
         
-        const paidCheckbox = document.getElementById('is_paid_checkbox'); const priceInput = document.getElementById('price_inr_input');
-        if(paidCheckbox) { paidCheckbox.addEventListener('change', function() { if(this.checked) { priceInput.style.display = 'block'; priceInput.required = true; } else { priceInput.style.display = 'none'; priceInput.required = false; }}); }
-        function openEditModal(id, title, catalog, isPaid, pricePaise) {
-            document.getElementById('editBookForm').action = "/edit_book/" + id; document.getElementById('edit_title').value = title; document.getElementById('edit_catalog').value = catalog;
-            const isPaidCheck = document.getElementById('edit_is_paid'); const pInput = document.getElementById('edit_price_inr');
-            isPaidCheck.checked = isPaid; if(isPaid) { pInput.style.display = 'block'; pInput.value = (pricePaise / 100).toFixed(2); } else { pInput.style.display = 'none'; pInput.value = ''; }
+        // Setup Publish Book Form Toggles
+        const paidCheckbox = document.getElementById('is_paid_checkbox'); 
+        const paidSettings = document.getElementById('paid_settings');
+        const priceInput = document.getElementById('price_inr_input');
+        const rpKeyIdInput = document.getElementById('rp_key_id_input');
+        const rpKeySecretInput = document.getElementById('rp_key_secret_input');
+        
+        if(paidCheckbox) { 
+            paidCheckbox.addEventListener('change', function() { 
+                if(this.checked) { 
+                    paidSettings.style.display = 'block'; 
+                    priceInput.required = true; 
+                    rpKeyIdInput.required = true;
+                    rpKeySecretInput.required = true;
+                } else { 
+                    paidSettings.style.display = 'none'; 
+                    priceInput.required = false; 
+                    rpKeyIdInput.required = false;
+                    rpKeySecretInput.required = false;
+                }
+            }); 
+        }
+
+        // Setup Edit Book Modal Toggles and Pre-fills
+        function openEditModal(id, title, catalog, isPaid, pricePaise, keyId, keySecret) {
+            document.getElementById('editBookForm').action = "/edit_book/" + id; 
+            document.getElementById('edit_title').value = title; 
+            document.getElementById('edit_catalog').value = catalog;
+            
+            const isPaidCheck = document.getElementById('edit_is_paid'); 
+            const editPaidSettings = document.getElementById('edit_paid_settings');
+            const pInput = document.getElementById('edit_price_inr');
+            const keyIdInput = document.getElementById('edit_rp_key_id');
+            const keySecretInput = document.getElementById('edit_rp_key_secret');
+            
+            isPaidCheck.checked = isPaid; 
+            if(isPaid) { 
+                editPaidSettings.style.display = 'block'; 
+                pInput.value = (pricePaise / 100).toFixed(2); 
+                pInput.required = true;
+                keyIdInput.value = keyId; keyIdInput.required = true;
+                keySecretInput.value = keySecret; keySecretInput.required = true;
+            } else { 
+                editPaidSettings.style.display = 'none'; 
+                pInput.value = ''; pInput.required = false;
+                keyIdInput.value = ''; keyIdInput.required = false;
+                keySecretInput.value = ''; keySecretInput.required = false;
+            }
             document.getElementById('editBookModal').style.display = 'flex';
         }
-        function toggleEditPrice() { const isPaidCheck = document.getElementById('edit_is_paid'); const pInput = document.getElementById('edit_price_inr'); if(isPaidCheck.checked) { pInput.style.display = 'block'; pInput.required = true; } else { pInput.style.display = 'none'; pInput.required = false; } }
+
+        function toggleEditPrice() { 
+            const isPaidCheck = document.getElementById('edit_is_paid'); 
+            const editPaidSettings = document.getElementById('edit_paid_settings');
+            const pInput = document.getElementById('edit_price_inr'); 
+            const keyIdInput = document.getElementById('edit_rp_key_id');
+            const keySecretInput = document.getElementById('edit_rp_key_secret');
+            
+            if(isPaidCheck.checked) { 
+                editPaidSettings.style.display = 'block'; 
+                pInput.required = true; 
+                keyIdInput.required = true;
+                keySecretInput.required = true;
+            } else { 
+                editPaidSettings.style.display = 'none'; 
+                pInput.required = false; 
+                keyIdInput.required = false;
+                keySecretInput.required = false;
+            } 
+        }
     </script>
 </body>
 </html>
