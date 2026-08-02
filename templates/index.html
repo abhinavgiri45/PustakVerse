@@ -7,11 +7,14 @@
     <!-- SEO & Best Practices -->
     <meta name="description" content="PustakVerse is a global digital library offering free and premium books, educational resources, and classic archives. Discover and read your next favorite book today.">
     <meta name="theme-color" content="#2d3748">
+    <meta name="format-detection" content="telephone=no">
     <meta name="google-site-verification" content="uC9A0kYiSE4aOQnf-wxSjyNCkF0UM5bGxMBt_ItJES4" />
+    <link rel="canonical" href="{{ request.base_url }}">
     
     <title>{{ site_settings.hero_title }} - Global Library</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <!-- Best Practices: Added explicit sizes for Apple Touch Icon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     
     <!-- Performance: Strict Preconnects to eliminate LCP setup time -->
     <link rel="preconnect" href="https://drive.google.com">
@@ -23,14 +26,14 @@
         /* Accessibility: Visually hidden class for screen-readers */
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
-        /* Deepened brand orange (#992b00) to perfectly pass WCAG AA contrast ratio */
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; font-size: 16px; } /* SEO: Forced 16px base font size for mobile */
         
-        .navbar { background-color: #2d3748; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; object-fit: contain;}
+        .navbar { background-color: #2d3748; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; object-fit: contain; }
         
-        .navbar-links { display: flex; gap: 15px; align-items: center; margin-left: auto; }
-        .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: 0.2s; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box;}
+        /* SEO: Increased gap and padding for flawless mobile tap targets */
+        .navbar-links { display: flex; gap: 16px; align-items: center; margin-left: auto; }
+        .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 1rem; transition: 0.2s; padding: 12px 16px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box; }
         .navbar-links a:hover { color: #992b00; }
         
         .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #992b00; }
@@ -39,13 +42,14 @@
 
         .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: white; border-radius: 30px; padding: 5px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: #333; background: transparent; }
-        .search-container input::placeholder { color: #4a5568; opacity: 1; }
+        .search-container input::placeholder { color: #4a5568; opacity: 1; } /* Accessibility: High contrast placeholder */
         
-        .icon-btn { background: none; border: none; cursor: pointer; color: #4a5568; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .icon-btn { background: none; border: none; cursor: pointer; color: #4a5568; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; padding: 0; }
         .icon-btn:hover { color: #992b00; transform: scale(1.1); }
 
-        .filter-nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
-        .filter-nav a { padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 0.9rem; color: #4a5568; background: #edf2f7; transition: 0.2s; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;}
+        /* SEO: Increased gap for mobile tap targets */
+        .filter-nav { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
+        .filter-nav a { padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 1rem; color: #4a5568; background: #edf2f7; transition: 0.2s; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
         .filter-nav a.active, .filter-nav a:hover { background: #992b00; color: white; }
 
         .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
@@ -54,20 +58,22 @@
         .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; }
         .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         
-        /* Auto-adjusting book cover scales perfectly via aspect-ratio without distortion */
         .book-cover { width: 100%; height: auto; aspect-ratio: 250 / 320; object-fit: cover; background: #e2e8f0; display: block; }
         
         .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-        .book-tag { color: #992b00; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+        .book-tag { color: #992b00; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
         .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
-        .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
+        /* Accessibility & SEO: Darkened text and bumped to 1rem (16px) */
+        .book-author { font-size: 1rem; color: #4a5568; margin: 0 0 20px 0; }
         
-        .book-actions { display: flex; gap: 10px; margin-top: auto; }
-        .btn { flex: 1; padding: 12px 0; min-height: 48px; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;}
+        /* SEO: Increased gap for button tap targets */
+        .book-actions { display: flex; gap: 12px; margin-top: auto; }
+        .btn { flex: 1; padding: 12px 0; min-height: 48px; text-align: center; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
         .btn:hover { opacity: 0.85; }
         .btn-read { background-color: #2d3748; color: white; }
-        .btn-save { background-color: #edf2f7; color: #2d3748; }
-        .btn-premium { background-color: #276749; color: white; }
+        .btn-save { background-color: #edf2f7; color: #1a202c; }
+        /* Accessibility: Extremely dark green to guarantee white text contrast passes */
+        .btn-premium { background-color: #1a4731; color: white; }
 
         .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -92,7 +98,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="/" aria-label="PustakVerse Homepage">
-                <img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" onerror="this.src='{{ url_for('static', filename='PustakVerse.png') }}'" alt="PustakVerse Logo" width="150" height="45">
+                <img src="{{ url_for('static', filename='uploads/logos/' ~ site_settings.logo_image) }}" alt="PustakVerse Logo" width="150" height="45">
             </a>
         </div>
         <div class="navbar-links">
@@ -111,17 +117,18 @@
         <h1>{{ site_settings.hero_title }}</h1>
         <p>{{ site_settings.hero_subtitle }}</p>
         
-        <div class="search-container">
+        <!-- Accessibility: Upgraded to semantic search form -->
+        <form class="search-container" role="search" id="searchForm">
             <label for="searchInput" class="sr-only">Search for a book or author</label>
-            <input type="text" id="searchInput" name="search" placeholder="Search for a book or author..." onkeyup="filterBooks()" aria-label="Search for a book or author">
+            <!-- Best Practices: Changed type="text" to type="search" -->
+            <input type="search" id="searchInput" name="search" placeholder="Search for a book or author..." aria-label="Search for a book or author">
             
             <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
-                <!-- Accessibility: focusable false on SVG -->
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
             </button>
-        </div>
+        </form>
     </div>
 
     <div class="filter-nav">
@@ -156,10 +163,11 @@
                 {% set cover = book.cover_image %}
                 
                 {% if loop.index <= 4 %}
+                    <!-- Performance: Added loading="eager" to strictly force instant LCP loading -->
                     {% if cover.startswith('http') %}
-                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" width="250" height="320">
+                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" loading="eager" width="250" height="320">
                     {% else %}
-                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" width="250" height="320">
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" loading="eager" width="250" height="320">
                     {% endif %}
                 {% else %}
                     {% if cover.startswith('http') %}
@@ -202,7 +210,7 @@
         </div>
     </div>
 
-    <!-- Performance: Defer JS execution to ensure it doesn't block LCP -->
+    <!-- Performance: Defer JS execution -->
     <script defer>
         function filterBooks() {
             let input = document.getElementById('searchInput').value.toLowerCase();
@@ -229,8 +237,23 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const micBtn = document.getElementById('micBtn');
             const searchInput = document.getElementById('searchInput');
+            const searchForm = document.getElementById('searchForm');
+            const micBtn = document.getElementById('micBtn');
+
+            // Attach standard typing filter
+            if (searchInput) {
+                searchInput.addEventListener('keyup', filterBooks);
+            }
+
+            // Prevent form from refreshing page if user presses "Enter" on mobile keyboards
+            if (searchForm) {
+                searchForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    filterBooks();
+                    searchInput.blur(); // Collapse mobile keyboard
+                });
+            }
 
             if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
