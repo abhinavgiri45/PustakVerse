@@ -11,6 +11,7 @@
             height: 100%;
             overflow: hidden; /* Prevents scrolling outside the iframe */
             background-color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .header {
             background-color: #1a1a1a;
@@ -19,8 +20,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-family: sans-serif;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10;
+            position: relative;
         }
         
         .header-left {
@@ -40,7 +42,7 @@
             color: #f39c12;
         }
 
-        /* --- NEW: View Controls --- */
+        /* View Controls */
         .view-controls {
             display: flex;
             gap: 8px;
@@ -68,22 +70,34 @@
             color: white;
         }
 
+        /* Preview Warning Banner */
+        .preview-warning { 
+            background: #feebc8; 
+            color: #c05621; 
+            padding: 12px; 
+            text-align: center; 
+            font-weight: bold; 
+            border-bottom: 1px solid #f6ad55; 
+            z-index: 9; 
+            position: relative; 
+            font-size: 0.95rem; 
+        }
+
+        /* Iframe Sizing */
         iframe {
             width: 100%;
-            height: calc(100vh - 48px); /* Adjusted for header height */
             border: none;
         }
-        
-        /* Overlay to block transparent clicks if necessary */
-        #protection-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            pointer-events: none; /* Let clicks pass through to the document */
+        .pdf-container { height: calc(100vh - 48px); }
+        .pdf-container.with-warning { height: calc(100vh - 93px); }
+
+        /* Lock Screen for Drive Links */
+        .drive-block { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: calc(100vh - 48px); text-align: center; padding: 20px; background-color: #f4f6f9; 
         }
+        .drive-block h2 { color: #2d3748; margin-top: 15px; }
+        .drive-block p { color: #718096; max-width: 500px; line-height: 1.6; }
     </style>
 </head>
 <!-- Prevent Right Click entirely on the body -->
@@ -103,39 +117,55 @@
             {% endif %}
         </div>
         
-        <a href="{{ request.referrer or url_for('index') }}">← Back to Library</a>
+        <a href="javascript:history.back()">← Back</a>
     </div>
 
-    <!-- Determine the correct URL based on if it's a Drive Link or Local Upload -->
-    {% set pdf_url = '' %}
-    
-    {% if book.pdf_file.startswith('http') %}
-        <!-- For Google Drive Links: replace /view with /preview to hide toolbars -->
-        {% set pdf_url = book.pdf_file.replace('/view', '/preview') %}
-    {% else %}
-        <!-- For Local Uploads: point to secure internal route -->
-        {% set pdf_url = url_for('serve_secure_pdf', book_id=book.id) %}
+    <!-- Shows a bright warning banner if the user is in Preview mode -->
+    {% if not can_read %}
+        <div class="preview-warning">
+            ⚠️ You are viewing a limited preview. Purchase the book to unlock the full version.
+        </div>
     {% endif %}
 
-    <!-- Embed the Document with a default view of FitH (Fit Width) -->
-    <iframe id="pdf-frame" 
-            src="{{ pdf_url }}{% if not book.pdf_file.startswith('http') %}#toolbar=0&navpanes=0&scrollbar=0&view=FitH{% endif %}" 
-            sandbox="allow-scripts allow-same-origin">
-    </iframe>
+    <!-- Determine how to serve the file based on link type and purchase status -->
+    {% if book.pdf_file.startswith('http') %}
+        
+        <!-- Google Drive Links -->
+        {% if can_read %}
+            <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="pdf-container {% if not can_read %}with-warning{% endif %}" allow="autoplay"></iframe>
+        {% else %}
+            <!-- Block Drive Links if Unpaid -->
+            <div class="drive-block">
+                <span style="font-size: 4rem;">🔒</span>
+                <h2>Preview Not Available</h2>
+                <p>Because this premium book is securely hosted on an external drive, our system cannot automatically slice it to generate a preview. Please purchase the book to unlock full access.</p>
+                <a href="javascript:history.back()" style="display:inline-block; margin-top:20px; padding:10px 20px; background:#f66d2f; color:white; border-radius:5px; text-decoration:none; font-weight:bold;">Go Back</a>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Secure Internal Python Slicer for Uploaded PDFs -->
+        <iframe id="pdf-frame" 
+                src="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
+                class="pdf-container {% if not can_read %}with-warning{% endif %}" 
+                sandbox="allow-scripts allow-same-origin">
+        </iframe>
+    {% endif %}
 
     <!-- Advanced Protection & View Scripts -->
     <script>
-        // --- NEW: Function to dynamically change the PDF view mode ---
+        // Dynamically change the PDF view mode for internal files
         function changeView(viewMode) {
             const frame = document.getElementById('pdf-frame');
-            const baseUrl = "{{ pdf_url }}";
-            // Update the iframe source with the new view fragment identifier
-            frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
+            if (frame) {
+                const baseUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
+                frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
+            }
         }
 
-        // --- EXISITNG: Disable common keyboard shortcuts used for saving/printing/inspecting ---
+        // Disable common keyboard shortcuts used for saving/printing/inspecting[cite: 7]
         document.addEventListener('keydown', function(e) {
-            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C
+            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C[cite: 7]
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -147,7 +177,7 @@
             }
         });
 
-        // --- EXISTING: Prevent Dragging elements (like images) ---
+        // Prevent Dragging elements (like images)[cite: 7]
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();
         });
