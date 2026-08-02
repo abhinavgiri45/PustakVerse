@@ -83,7 +83,193 @@
             {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
 
-        <!-- PERSONAL SETTINGS SECTION MOVED TO TOP -->
+        <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
+        {% if session.role == 'developer' %}
+            
+            <div class="panel" style="border-left: 5px solid #38a169;">
+                <h2 style="color: #2f855a;">Appoint New Official</h2>
+                <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Username</label><input type="text" name="username" required></div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Email</label><input type="email" name="email" required></div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Password</label><input type="password" name="password" required></div>
+                    <button type="submit" class="btn-sm btn-green" style="padding: 12px 25px; height: 43px;">Create Official</button>
+                </form>
+            </div>
+
+            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
+            <div class="panel" style="border-left: 5px solid #2b6cb0;">
+                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
+                {% if archive_books %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
+                            {% for book in archive_books %}
+                            <tr>
+                                <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                <td style="font-weight: 500;">{{ book.title }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
+                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
+                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No books in Archives.</p>{% endif %}
+            </div>
+
+            <div class="panel" style="border-left: 5px solid #805ad5;">
+                <h2 style="color: #805ad5;">Official Activity Logs (Last 30 Days)</h2>
+                {% if official_logs %}
+                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                        <table>
+                            <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
+                            {% for log in official_logs %}
+                            <tr>
+                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp }}</td>
+                                <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
+                                <td>{{ log.action }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <p>No official activity logged in the last 30 days.</p>
+                {% endif %}
+            </div>
+            
+            <div class="panel" style="border-left: 5px solid #d97706;">
+                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
+                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
+                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
+                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                </form>
+
+                {% if searched_users %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Username</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
+                            {% for user in searched_users %}
+                            <tr>
+                                <td style="font-weight: 500;">{{ user.username }}</td>
+                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
+                                <td style="color: #718096;">{{ user.last_activity }}</td>
+                                <td style="display: flex; gap: 10px; align-items: flex-start;">
+                                    {% if user.role == 'official' %}
+                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');" style="display: flex; flex-direction: column; gap: 5px;">
+                                            <input type="text" name="reason" placeholder="Reason for revocation..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-warn">Revoke Official</button>
+                                        </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason for deletion..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No users found matching that filter.</p>{% endif %}
+            </div>
+
+            <!-- Pending Book Deletion Requests -->
+            <div class="panel" style="border-left: 5px solid #f6ad55;">
+                <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for platform books.</p>
+                {% if book_del_requests %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Reported Book</th><th>Author</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
+                            {% for req in book_del_requests %}
+                            <tr>
+                                <td style="font-weight: bold;">{{ req.book_title }}</td>
+                                <td>{{ req.author_name }}</td>
+                                <td>{{ req.official_name }}</td>
+                                <td style="color: #c53030;">{{ req.reason }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='approve') }}" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Approve & Delete Book</button>
+                                    </form>
+                                    <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='reject') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-dark">Reject Report</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No pending book deletion requests.</p>{% endif %}
+            </div>
+
+            <!-- Pending User Deletion Requests -->
+            <div class="panel" style="border-left: 5px solid #e53e3e;">
+                <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for user termination.</p>
+                {% if del_requests %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Reported User</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
+                            {% for req in del_requests %}
+                            <tr>
+                                <td style="font-weight: bold;">{{ req.target_name }}</td>
+                                <td>{{ req.official_name }}</td>
+                                <td style="color: #c53030;">{{ req.reason }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    <form action="{{ url_for('handle_deletion', req_id=req.id, action='approve') }}" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason to send to user..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Approve & Delete User</button>
+                                    </form>
+                                    <form action="{{ url_for('handle_deletion', req_id=req.id, action='reject') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-dark">Reject Report</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No pending user deletion requests.</p>{% endif %}
+            </div>
+
+            <div class="panel"><h2>Website Settings & Payments</h2>
+                <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
+                    <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="{{ site_settings.hero_title }}"></div>
+                    <div class="form-group"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}"></div>
+                    
+                    <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-bottom: 20px;">
+                        <label style="color: #166534; font-weight: bold;">Razorpay Gateway Settings</label>
+                        <small style="color: #15803d; display: block; margin-bottom: 10px;">No environment variables needed. Save keys here.</small>
+                        <input type="text" name="rp_key_id" placeholder="Live Key ID (Optional if unchanged)" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                        <input type="password" name="rp_key_secret" placeholder="Live Key Secret (Optional if unchanged)" style="border-color: #bbf7d0;">
+                    </div>
+
+                    <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
+                        <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
+                        <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> Show 'Donate' button to users
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn-sm btn-dark">Update Settings</button>
+                </form>
+            </div>
+            
+        {% endif %}
+
         <div class="grid-2">
             <div class="panel" style="border-top: 4px solid var(--primary-orange);">
                 <h2>Change Username</h2>
@@ -104,8 +290,6 @@
 
             <div class="panel" style="border-top: 4px solid var(--nav-bg);">
                 <h2>Security Settings</h2>
-                
-                <!-- 2FA Toggle Form -->
                 <div style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
                     <h3 style="margin-top: 0; font-size: 1.1rem; color: #2d3748;">Two-Step Verification (2FA)</h3>
                     <p style="font-size: 0.9rem; color: #718096;">Add an extra layer of security. When enabled, you'll need an email code to log in.</p>
@@ -122,7 +306,6 @@
                     </form>
                 </div>
 
-                <!-- Password Change Form -->
                 {% if session.get('change_pw_otp') %}
                     <form action="{{ url_for('change_password') }}" method="POST">
                         <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
@@ -199,7 +382,7 @@
                     {% endif %}
 
                     <div class="panel">
-                        <h2>My Published Books</h2>
+                        <h2>{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
                         {% if my_books %}
                             <div style="overflow-x: auto;">
                                 <table>
@@ -207,22 +390,39 @@
                                     {% for book in my_books %}
                                     <tr>
                                         <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
-                                        <td style="font-weight: 500;">{{ book.title }}</td>
+                                        <td style="font-weight: 500;">
+                                            {{ book.title }} 
+                                            {% if session.role in ['official', 'developer'] %}<br><small style="color: #718096;">by {{ book.author_name }}</small>{% endif %}
+                                        </td>
                                         <td>{% if book.is_paid %}<span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>{% else %}Free{% endif %}</td>
                                         <td>
-                                            <div style="display: flex; gap: 5px;">
+                                            <div style="display: flex; gap: 5px; align-items: flex-start; flex-wrap: wrap;">
                                                 {% if book.is_paid %}
                                                 <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
                                                 {% endif %}
+                                                
                                                 <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
-                                                <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');"><button type="submit" class="btn-sm btn-red">Del</button></form>
+                                                
+                                                {% if session.role == 'official' %}
+                                                    <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;">
+                                                        <input type="text" name="reason" placeholder="Reason for Dev..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                                        <button type="submit" class="btn-sm btn-warn">Req. Delete</button>
+                                                    </form>
+                                                {% elif session.role == 'developer' %}
+                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this book permanently?');">
+                                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
+                                                    </form>
+                                                {% else %}
+                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');"><button type="submit" class="btn-sm btn-red">Del</button></form>
+                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 </table>
                             </div>
-                        {% else %}<p>You haven't published any books yet.</p>{% endif %}
+                        {% else %}<p>No books available.</p>{% endif %}
                     </div>
                 </div>
             </div>
@@ -284,103 +484,8 @@
             </div>
         {% endif %}
 
-        <!-- STRICT DEVELOPER ONLY SECTION -->
-        {% if session.role == 'developer' %}
-            
-            <!-- OFFICIAL ACTIVITY LOGS -->
-            <div class="panel" style="border-left: 5px solid #805ad5;">
-                <h2 style="color: #805ad5;">Official Activity Logs (Work Tracker)</h2>
-                {% if official_logs %}
-                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
-                        <table>
-                            <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
-                            {% for log in official_logs %}
-                            <tr>
-                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp }}</td>
-                                <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
-                                <td>{{ log.action }}</td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No official activity logged yet.</p>
-                {% endif %}
-            </div>
-
-            <div class="grid-2">
-                <div class="panel"><h2>Website Settings & Donations</h2>
-                    <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
-                        <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="{{ site_settings.hero_title }}"></div>
-                        <div class="form-group"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}"></div>
-                        
-                        <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
-                            <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
-                            <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
-                            <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> Show 'Donate' button to users
-                            </label>
-                        </div>
-                        
-                        <button type="submit" class="btn-sm btn-dark">Update Settings</button>
-                    </form>
-                </div>
-                
-                <!-- CREATING OFFICIALS IS STRICTLY FOR DEVELOPERS -->
-                <div class="panel"><h2>Create Official</h2>
-                    <form action="{{ url_for('create_official') }}" method="POST">
-                        <div class="form-group"><input type="text" name="username" placeholder="Username" required></div>
-                        <div class="form-group"><input type="email" name="email" placeholder="Email" required></div>
-                        <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
-                        <button type="submit" class="btn-sm btn-orange">Appoint Official</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- DEVELOPER USER MANAGEMENT (WITH FILTER & REASON EMAILS) -->
-            <div class="panel" style="border-left: 5px solid #d97706;">
-                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
-                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
-                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
-                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
-
-                {% if searched_users %}
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <tr><th>Username</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
-                            {% for user in searched_users %}
-                            <tr>
-                                <td style="font-weight: 500;">{{ user.username }}</td>
-                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
-                                <td style="color: #718096;">{{ user.last_activity }}</td>
-                                <td style="display: flex; gap: 10px; align-items: flex-start;">
-                                    {% if user.role == 'official' %}
-                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');" style="display: flex; flex-direction: column; gap: 5px;">
-                                            <input type="text" name="reason" placeholder="Reason for revocation..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Revoke Official</button>
-                                        </form>
-                                    {% endif %}
-                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; flex-direction: column; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Reason for deletion..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}<p>No users found matching that filter.</p>{% endif %}
-            </div>
-        
         <!-- OFFICIAL USER MANAGEMENT -->
-        {% elif session.role == 'official' %}
+        {% if session.role == 'official' %}
             <div class="panel">
                 <h2>Manage Platform Users</h2>
                 <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -402,9 +507,10 @@
                                 <td>{{ user.username }}</td>
                                 <td style="text-transform: capitalize;">{{ user.role }}</td>
                                 <td>
+                                    <!-- OFFICIALS ONLY SEND REQUESTS TO THE DEVELOPER -->
                                     <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Why request a ban?" required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-orange">Request Ban</button>
+                                        <input type="text" name="reason" placeholder="Report Reason to Dev..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-orange">Submit Report</button>
                                     </form>
                                 </td>
                             </tr>
