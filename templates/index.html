@@ -132,11 +132,21 @@
             <div class="book-card" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}">
                 
                 {% set cover = book.cover_image %}
-                {% if cover.startswith('http') %}
-                    <img src="{{ cover | drive_img }}" alt="Cover" class="book-cover" loading="lazy" width="250" height="320">
+                
+                {% if loop.index <= 4 %}
+                    <!-- FIRST 4 BOOKS: High Priority Load to Fix LCP Score -->
+                    {% if cover.startswith('http') %}
+                        <img src="{{ cover | drive_img }}" alt="Cover" class="book-cover" fetchpriority="high" width="250" height="320">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover" class="book-cover" fetchpriority="high" width="250" height="320">
+                    {% endif %}
                 {% else %}
-                    <!-- Safely concatenating using ~ -->
-                    <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover" class="book-cover">
+                    <!-- REMAINING BOOKS: Lazy Load to Fix Speed Index Score -->
+                    {% if cover.startswith('http') %}
+                        <img src="{{ cover | drive_img }}" alt="Cover" class="book-cover" loading="lazy" width="250" height="320">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover" class="book-cover" loading="lazy" width="250" height="320">
+                    {% endif %}
                 {% endif %}
 
                 <div class="book-info">
