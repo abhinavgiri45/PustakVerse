@@ -182,10 +182,13 @@ def send_revoked_official_email(to_email, username, reason):
     return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', f"Hello {username},\n\nYour official administrative privileges on PustakVerse have been revoked.\n\nReason: {reason}")
 
 def send_account_deleted_email(to_email, username, reason):
-    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', f"Hello {username},\n\nYour PustakVerse account has been permanently deleted by an administrator.\n\nReason: {reason}")
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', f"Hello {username},\n\nYour PustakVerse account has been permanently deleted by an administrator.\n\nReason: {reason}\n\nIf you believe this was a mistake, please contact support.")
 
 def send_author_rejected_email(to_email, username, reason):
     return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', f"Hello {username},\n\nWe regret to inform you that your application for an Author account has been rejected.\n\nReason: {reason}")
+
+def send_book_deleted_email(to_email, username, book_title, reason):
+    return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', f"Hello {username},\n\nYour book titled '{book_title}' has been removed from PustakVerse by the platform Developer.\n\nReason: {reason}\n\nPlease ensure your future publications adhere to our platform guidelines.")
 
 # ==========================================
 # SECURE TiDB (MYSQL) DATABASE CONNECTION
@@ -243,6 +246,9 @@ def ensure_payment_schema():
         cursor.execute("CREATE TABLE IF NOT EXISTS personal_library (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, UNIQUE(user_id, book_id))")
         cursor.execute("CREATE TABLE IF NOT EXISTS interactions (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, rating INT CHECK (rating >= 1 AND rating <= 5), review TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS deletion_requests (id INT AUTO_INCREMENT PRIMARY KEY, target_user_id INT NOT NULL, requested_by INT NOT NULL, reason TEXT, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE)")
+        
+        cursor.execute("CREATE TABLE IF NOT EXISTS book_deletion_requests (id INT AUTO_INCREMENT PRIMARY KEY, book_id INT NOT NULL, requested_by INT NOT NULL, reason TEXT, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE)")
+
         cursor.execute("CREATE TABLE IF NOT EXISTS front_page_settings (id INT AUTO_INCREMENT PRIMARY KEY, hero_title VARCHAR(255) DEFAULT 'PustakVerse', hero_subtitle VARCHAR(255) DEFAULT 'Every Book. Every Mind. Free.', logo_image VARCHAR(255) DEFAULT 'PustakVerse.png', font_color VARCHAR(50) DEFAULT '#ffffff', donation_qr VARCHAR(255) DEFAULT NULL, donation_active BOOLEAN DEFAULT FALSE)")
         
         try:
@@ -1157,13 +1163,18 @@ def dashboard():
             
             cursor.execute("SELECT dr.id, u.username as target_name, o.username as official_name, dr.reason FROM deletion_requests dr JOIN users u ON dr.target_user_id = u.id JOIN users o ON dr.requested_by = o.id WHERE dr.status = 'pending'")
             del_requests = cursor.fetchall()
+            
+            # Fetch Book Deletion Requests for Developer
+            cursor.execute("SELECT bdr.id, b.title as book_title, u.username as author_name, o.username as official_name, bdr.reason FROM book_deletion_requests bdr JOIN books b ON bdr.book_id = b.id JOIN users u ON b.author_id = u.id JOIN users o ON bdr.requested_by = o.id WHERE bdr.status = 'pending'")
+            book_del_requests = cursor.fetchall()
+
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id WHERE oa.timestamp >= NOW() - INTERVAL 30 DAY ORDER BY oa.timestamp DESC LIMIT 200")
             official_logs = cursor.fetchall()
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
-            return render_template('dashboard.html', searched_users=searched_users, del_requests=del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
         if role == 'official':
             if search_query: cursor.execute("SELECT id, username, role, last_activity FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
@@ -1410,35 +1421,84 @@ def admin_delete_user(user_id):
             except: pass
     return redirect(url_for('dashboard'))
 
+# ==========================================
+# BOOK DELETION (OFFICIALS REQUEST -> DEVELOPER FORCES)
+# ==========================================
+@app.route('/request_book_deletion/<int:book_id>', methods=['POST'])
+def request_book_deletion(book_id):
+    if session.get('role') != 'official': return redirect(url_for('dashboard'))
+    db = None
+    try:
+        reason = request.form.get('reason', 'Violates guidelines.')
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("INSERT INTO book_deletion_requests (book_id, requested_by, reason) VALUES (%s, %s, %s)", (book_id, session['user_id'], reason))
+        db.commit()
+        cursor.execute("SELECT title FROM books WHERE id = %s", (book_id,))
+        book_title = cursor.fetchone()['title']
+        log_official_activity(session['user_id'], f"Requested deletion of book: '{book_title}'")
+        flash("Book deletion request sent to the Developer.", "success")
+    except Exception: flash("Database error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/handle_book_deletion/<int:req_id>/<action>', methods=['POST'])
+def handle_book_deletion(req_id, action):
+    if session.get('role') != 'developer': return redirect(url_for('dashboard'))
+    db = None
+    try:
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT bdr.book_id, b.title, u.email, u.username FROM book_deletion_requests bdr JOIN books b ON bdr.book_id = b.id JOIN users u ON b.author_id = u.id WHERE bdr.id = %s", (req_id,))
+        req = cursor.fetchone()
+        
+        if action == 'approve' and req:
+            reason = request.form.get('reason', 'Policy violation.')
+            send_book_deleted_email(req['email'], req['username'], req['title'], reason)
+            cursor.execute("DELETE FROM personal_library WHERE book_id = %s", (req['book_id'],))
+            cursor.execute("DELETE FROM books WHERE id = %s", (req['book_id'],))
+            cursor.execute("UPDATE book_deletion_requests SET status = 'approved' WHERE id = %s", (req_id,))
+            db.commit()
+            flash("Book deleted and author notified.", "success")
+        else:
+            cursor.execute("UPDATE book_deletion_requests SET status = 'rejected' WHERE id = %s", (req_id,))
+            db.commit()
+            flash("Book deletion request rejected.", "info")
+    except Exception: flash("Database error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):
     role = session.get('role')
     user_id = session.get('user_id')
-    if role in ['author', 'official', 'developer']:
+    
+    # Only Authors (for their own books) and Developers (for any book) can directly delete.
+    if role in ['author', 'developer']:
         db = None
         try:
             db = get_db_connection(); cursor = db.cursor(dictionary=True)
-            
-            cursor.execute("SELECT author_id FROM books WHERE id = %s", (book_id,))
+            cursor.execute("SELECT b.author_id, b.title, u.email, u.username FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
             book = cursor.fetchone()
             if not book:
                 flash("Book not found.", "error")
                 return redirect(url_for('dashboard'))
                 
-            is_authorized = False
-            if role in ['developer', 'official']:
-                is_authorized = True
-            elif role == 'author' and book['author_id'] == user_id:
-                is_authorized = True
-                
-            if is_authorized:
+            if role == 'developer' or (role == 'author' and book['author_id'] == user_id):
+                if role == 'developer' and book['author_id'] != user_id:
+                    reason = request.form.get('reason', 'Violation of platform guidelines.')
+                    send_book_deleted_email(book['email'], book['username'], book['title'], reason)
+                    
                 cursor.execute("DELETE FROM personal_library WHERE book_id = %s", (book_id,))
                 cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
                 db.commit()
                 flash("Book deleted successfully.", "success")
             else:
                 flash("Unauthorized to delete this book.", "error")
-                
         except Exception: flash("Database error.", "error")
         finally:
             if db:
