@@ -131,7 +131,7 @@
                 
                 {% set cover = book.cover_image %}
                 {% if cover.startswith('http') %}
-                    <img src="{{ cover | drive_img }}" alt="Cover" class="book-cover">
+                    <img src="{{ cover | drive_img }}" alt="Cover" class="book-cover" loading="lazy" width="250" height="320">
                 {% else %}
                     <!-- Safely concatenating using ~ -->
                     <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover" class="book-cover">
