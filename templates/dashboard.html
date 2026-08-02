@@ -21,9 +21,23 @@
         .panel { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 30px; margin-bottom: 30px; border: 1px solid #edf2f7; }
         .panel h2 { margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; margin-bottom: 20px; color: var(--nav-bg); }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        /* --- CUSTOM SCROLL CONTAINER FOR ALL TABLES --- */
+        .table-scroll-container {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #edf2f7;
+            border-radius: 6px;
+        }
+        /* Custom scrollbar styling for a modern look */
+        .table-scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll-container::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+        .table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .table-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 0; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; vertical-align: middle;}
-        th { background: #f8fafc; color: var(--text-light); text-transform: uppercase; font-size: 0.85rem;}
+        th { background: #f8fafc; color: var(--text-light); text-transform: uppercase; font-size: 0.85rem; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #edf2f7;}
         
         .btn-sm { padding: 8px 12px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; color: white;}
         .btn-green { background: #38a169; } .btn-red { background: #e53e3e; } .btn-orange { background: var(--primary-orange); } .btn-dark { background: var(--nav-bg); } .btn-warn { background: #d97706; }
@@ -99,7 +113,7 @@
             <div class="panel" style="border-left: 5px solid #805ad5;">
                 <h2 style="color: #805ad5;">Official Activity Logs (Last 30 Days)</h2>
                 {% if official_logs %}
-                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
                             {% for log in official_logs %}
@@ -120,7 +134,7 @@
                 <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for platform books.</p>
                 {% if book_del_requests %}
-                    <div style="overflow-x: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Reported Book</th><th>Author</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
                             {% for req in book_del_requests %}
@@ -149,7 +163,7 @@
                 <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for user termination.</p>
                 {% if del_requests %}
-                    <div style="overflow-x: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Reported User</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
                             {% for req in del_requests %}
@@ -306,7 +320,7 @@
                         </div>
 
                         {% if my_books %}
-                            <div style="overflow-x: auto;">
+                            <div class="table-scroll-container">
                                 <table>
                                     <tr><th>Cover</th><th>Title</th><th>Type</th><th>Action</th></tr>
                                     {% for book in my_books %}
@@ -354,7 +368,7 @@
             <!-- Pending Username Requests -->
             <div class="panel" style="border-left: 5px solid #3182ce;"><h2>Pending Username Requests</h2>
                 {% if username_requests %}
-                    <div style="overflow-x: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Current Username</th><th>Requested Username</th><th>Reason</th><th>Action</th></tr>
                             {% for req in username_requests %}
@@ -380,7 +394,7 @@
             <!-- Approvals (Both Admins) -->
             <div class="panel" style="border-left: 5px solid #38a169;"><h2>Pending Author Approvals</h2>
                 {% if pending_authors %}
-                <div style="overflow-x: auto;">
+                <div class="table-scroll-container">
                     <table>
                         <tr><th>Username</th><th>Email</th><th>Action</th></tr>
                         {% for user in pending_authors %}
@@ -421,7 +435,7 @@
                 </form>
 
                 {% if all_users %}
-                    <div style="overflow-x: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Username</th><th>Role</th><th>Action</th></tr>
                             {% for user in all_users %}
@@ -457,7 +471,7 @@
                 </div>
 
                 {% if archive_books %}
-                    <div style="overflow-x: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
                             {% for book in archive_books %}
@@ -495,7 +509,7 @@
                 </form>
 
                 {% if searched_users %}
-                    <div style="overflow-x: auto;">
+                    <div class="table-scroll-container">
                         <table>
                             <tr><th>Username</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
                             {% for user in searched_users %}
