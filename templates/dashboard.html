@@ -83,8 +83,9 @@
             {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
 
-        <!-- TOP DEVELOPER TOOLS SECTION -->
+        <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
         {% if session.role == 'developer' %}
+            
             <div class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
@@ -330,14 +331,20 @@
 
                     <div class="panel">
                         <h2>{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
+                        
+                        <!-- INSTANT SEARCH BAR -->
+                        <div style="margin-bottom: 20px;">
+                            <input type="text" id="librarySearch" placeholder="Search books by title..." onkeyup="filterLibrary()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
+                        </div>
+
                         {% if my_books %}
                             <div style="overflow-x: auto;">
                                 <table>
                                     <tr><th>Cover</th><th>Title</th><th>Type</th><th>Action</th></tr>
                                     {% for book in my_books %}
-                                    <tr>
+                                    <tr class="library-row">
                                         <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
-                                        <td style="font-weight: 500;">
+                                        <td style="font-weight: 500;" class="book-title-cell">
                                             {{ book.title }} 
                                             {% if session.role in ['official', 'developer'] %}<br><small style="color: #718096;">by {{ book.author_name }}</small>{% endif %}
                                         </td>
@@ -468,7 +475,7 @@
             </div>
         {% endif %}
 
-        <!-- BOTTOM DEVELOPER SECTION -->
+        <!-- BOTTOM DEVELOPER SECTION (MOVED DOWN) -->
         {% if session.role == 'developer' %}
             
             <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
@@ -560,6 +567,20 @@
     </div>
 
     <script>
+        // Real-time Library Search Filter
+        function filterLibrary() {
+            let input = document.getElementById('librarySearch').value.toLowerCase();
+            let rows = document.querySelectorAll('.library-row');
+            rows.forEach(row => {
+                let titleText = row.querySelector('.book-title-cell').innerText.toLowerCase();
+                if (titleText.includes(input)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
         const paidCheckbox = document.getElementById('is_paid_checkbox'); const priceInput = document.getElementById('price_inr_input');
         if(paidCheckbox) { paidCheckbox.addEventListener('change', function() { if(this.checked) { priceInput.style.display = 'block'; priceInput.required = true; } else { priceInput.style.display = 'none'; priceInput.required = false; }}); }
         function openEditModal(id, title, catalog, isPaid, pricePaise) {
