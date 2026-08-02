@@ -83,9 +83,8 @@
             {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
 
-        <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
+        <!-- TOP DEVELOPER TOOLS SECTION -->
         {% if session.role == 'developer' %}
-            
             <div class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
@@ -94,34 +93,6 @@
                     <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Password</label><input type="password" name="password" required></div>
                     <button type="submit" class="btn-sm btn-green" style="padding: 12px 25px; height: 43px;">Create Official</button>
                 </form>
-            </div>
-
-            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
-            <div class="panel" style="border-left: 5px solid #2b6cb0;">
-                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
-                {% if archive_books %}
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
-                            {% for book in archive_books %}
-                            <tr>
-                                <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
-                                <td style="font-weight: 500;">{{ book.title }}</td>
-                                <td>
-                                    <div style="display: flex; gap: 5px;">
-                                        <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
-                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
-                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}<p>No books in Archives.</p>{% endif %}
             </div>
 
             <div class="panel" style="border-left: 5px solid #805ad5;">
@@ -143,49 +114,7 @@
                     <p>No official activity logged in the last 30 days.</p>
                 {% endif %}
             </div>
-            
-            <div class="panel" style="border-left: 5px solid #d97706;">
-                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
-                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
-                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
-                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
 
-                {% if searched_users %}
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <tr><th>Username</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
-                            {% for user in searched_users %}
-                            <tr>
-                                <td style="font-weight: 500;">{{ user.username }}</td>
-                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
-                                <td style="color: #718096;">{{ user.last_activity }}</td>
-                                <td style="display: flex; gap: 10px; align-items: flex-start;">
-                                    {% if user.role == 'official' %}
-                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');" style="display: flex; flex-direction: column; gap: 5px;">
-                                            <input type="text" name="reason" placeholder="Reason for revocation..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Revoke Official</button>
-                                        </form>
-                                    {% endif %}
-                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; flex-direction: column; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Reason for deletion..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}<p>No users found matching that filter.</p>{% endif %}
-            </div>
-
-            <!-- Pending Book Deletion Requests -->
             <div class="panel" style="border-left: 5px solid #f6ad55;">
                 <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for platform books.</p>
@@ -215,7 +144,6 @@
                 {% else %}<p>No pending book deletion requests.</p>{% endif %}
             </div>
 
-            <!-- Pending User Deletion Requests -->
             <div class="panel" style="border-left: 5px solid #e53e3e;">
                 <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for user termination.</p>
@@ -538,6 +466,81 @@
                     </div>
                 {% else %}<p>No users found matching that filter.</p>{% endif %}
             </div>
+        {% endif %}
+
+        <!-- BOTTOM DEVELOPER SECTION -->
+        {% if session.role == 'developer' %}
+            
+            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
+            <div class="panel" style="border-left: 5px solid #2b6cb0;">
+                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
+                {% if archive_books %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
+                            {% for book in archive_books %}
+                            <tr>
+                                <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                <td style="font-weight: 500;">{{ book.title }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button type="button" class="btn-sm btn-dark" onclick="openEditModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.catalog }}', {{ 'true' if book.is_paid else 'false' }}, {{ book.price_paise }})">Edit</button>
+                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
+                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No books in Archives.</p>{% endif %}
+            </div>
+
+            <!-- DEVELOPER USER MANAGEMENT (WITH FILTER & REASON EMAILS) -->
+            <div class="panel" style="border-left: 5px solid #d97706;">
+                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
+                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
+                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
+                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                </form>
+
+                {% if searched_users %}
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>Username</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
+                            {% for user in searched_users %}
+                            <tr>
+                                <td style="font-weight: 500;">{{ user.username }}</td>
+                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
+                                <td style="color: #718096;">{{ user.last_activity }}</td>
+                                <td style="display: flex; gap: 10px; align-items: flex-start;">
+                                    {% if user.role == 'official' %}
+                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');" style="display: flex; flex-direction: column; gap: 5px;">
+                                            <input type="text" name="reason" placeholder="Reason for revocation..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-warn">Revoke Official</button>
+                                        </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason for deletion..." required style="padding: 5px; font-size: 0.8rem; width: 160px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No users found matching that filter.</p>{% endif %}
+            </div>
+            
         {% endif %}
 
     </div>
