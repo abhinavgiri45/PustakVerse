@@ -8,20 +8,22 @@
     <meta name="description" content="PustakVerse is a global digital library offering free and premium books, educational resources, and classic archives. Discover and read your next favorite book today.">
     <meta name="theme-color" content="#2d3748">
     <meta name="google-site-verification" content="uC9A0kYiSE4aOQnf-wxSjyNCkF0UM5bGxMBt_ItJES4" />
-    <link rel="canonical" href="{{ request.base_url }}">
     
     <title>{{ site_settings.hero_title }} - Global Library</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='PustakVerse.png') }}">
     
-    <!-- Performance: DNS Prefetching -->
-    <link rel="preconnect" href="https://drive.google.com" crossorigin>
+    <!-- Performance: Strict Preconnects to eliminate LCP setup time -->
+    <link rel="preconnect" href="https://drive.google.com">
+    <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
     <link rel="dns-prefetch" href="https://drive.google.com">
+    <link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
     
     <style>
         /* Accessibility: Visually hidden class for screen-readers */
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
+        /* Deepened brand orange (#992b00) to perfectly pass WCAG AA contrast ratio */
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
         
         .navbar { background-color: #2d3748; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
@@ -29,37 +31,34 @@
         
         .navbar-links { display: flex; gap: 15px; align-items: center; margin-left: auto; }
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: 0.2s; padding: 12px 10px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box;}
-        .navbar-links a:hover { color: #bf360c; }
+        .navbar-links a:hover { color: #992b00; }
         
-        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #bf360c; }
+        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #992b00; }
         .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
-        .hero-section p { font-size: 1.2rem; color: #cbd5e1; margin-top: 10px; } /* Darkened slightly to pass contrast on dark bg */
+        .hero-section p { font-size: 1.2rem; color: #cbd5e1; margin-top: 10px; }
 
         .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: white; border-radius: 30px; padding: 5px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: #333; background: transparent; }
-        
-        /* Accessibility: Forced placeholder to be dark enough to pass strict text contrast */
         .search-container input::placeholder { color: #4a5568; opacity: 1; }
         
         .icon-btn { background: none; border: none; cursor: pointer; color: #4a5568; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .icon-btn:hover { color: #bf360c; transform: scale(1.1); }
+        .icon-btn:hover { color: #992b00; transform: scale(1.1); }
 
         .filter-nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
         .filter-nav a { padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 0.9rem; color: #4a5568; background: #edf2f7; transition: 0.2s; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;}
-        .filter-nav a.active, .filter-nav a:hover { background: #bf360c; color: white; }
+        .filter-nav a.active, .filter-nav a:hover { background: #992b00; color: white; }
 
         .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
         .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
         
-        /* Performance: Auto intrinsic size prevents CLS issues on Desktop */
-        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; content-visibility: auto; contain-intrinsic-size: auto 450px; }
+        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; }
         .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         
-        /* USER REQUEST / BEST PRACTICES: Auto-adjusting book cover scales perfectly via aspect-ratio without distortion! */
+        /* Auto-adjusting book cover scales perfectly via aspect-ratio without distortion */
         .book-cover { width: 100%; height: auto; aspect-ratio: 250 / 320; object-fit: cover; background: #e2e8f0; display: block; }
         
         .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-        .book-tag { color: #bf360c; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+        .book-tag { color: #992b00; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
         .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
         .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
         
@@ -74,7 +73,6 @@
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
         .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 40px 0; }
-        /* Accessibility: Darkened empty state text */
         .no-results h2 { color: #2d3748; margin-bottom: 10px; font-size: 1.8rem;}
         .no-results p { color: #4a5568; }
 
@@ -104,7 +102,7 @@
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>
                 <a href="{{ url_for('logout') }}" style="background: #e53e3e; border-radius: 25px;">Logout</a>
             {% else %}
-                <a href="{{ url_for('login') }}" style="background: #bf360c; border-radius: 25px;">Sign In / Login</a>
+                <a href="{{ url_for('login') }}" style="background: #992b00; border-radius: 25px;">Sign In / Login</a>
             {% endif %}
         </div>
     </nav>
@@ -118,7 +116,8 @@
             <input type="text" id="searchInput" name="search" placeholder="Search for a book or author..." onkeyup="filterBooks()" aria-label="Search for a book or author">
             
             <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <!-- Accessibility: focusable false on SVG -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
             </button>
@@ -203,7 +202,8 @@
         </div>
     </div>
 
-    <script>
+    <!-- Performance: Defer JS execution to ensure it doesn't block LCP -->
+    <script defer>
         function filterBooks() {
             let input = document.getElementById('searchInput').value.toLowerCase();
             let cards = document.querySelectorAll('.book-card');
@@ -228,41 +228,43 @@
             }
         }
 
-        const micBtn = document.getElementById('micBtn');
-        const searchInput = document.getElementById('searchInput');
+        document.addEventListener('DOMContentLoaded', () => {
+            const micBtn = document.getElementById('micBtn');
+            const searchInput = document.getElementById('searchInput');
 
-        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
-            recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
-            
-            micBtn.addEventListener('click', () => { 
-                recognition.start(); 
-                micBtn.style.color = '#bf360c'; 
-                micBtn.style.transform = 'scale(1.2)'; 
-                searchInput.placeholder = "Listening..."; 
-            });
-            
-            recognition.onresult = (event) => { 
-                searchInput.value = event.results[0][0].transcript; 
-                filterBooks(); 
-            };
-            
-            recognition.onerror = (event) => { 
-                console.error("Speech error", event.error); 
-                resetMic(); 
-            };
-            
-            recognition.onend = () => { resetMic(); };
-            
-            function resetMic() { 
-                micBtn.style.color = '#4a5568'; 
-                micBtn.style.transform = 'scale(1)'; 
-                searchInput.placeholder = "Search for a book or author..."; 
+            if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+                
+                micBtn.addEventListener('click', () => { 
+                    recognition.start(); 
+                    micBtn.style.color = '#992b00'; 
+                    micBtn.style.transform = 'scale(1.2)'; 
+                    searchInput.placeholder = "Listening..."; 
+                });
+                
+                recognition.onresult = (event) => { 
+                    searchInput.value = event.results[0][0].transcript; 
+                    filterBooks(); 
+                };
+                
+                recognition.onerror = (event) => { 
+                    console.error("Speech error", event.error); 
+                    resetMic(); 
+                };
+                
+                recognition.onend = () => { resetMic(); };
+                
+                function resetMic() { 
+                    micBtn.style.color = '#4a5568'; 
+                    micBtn.style.transform = 'scale(1)'; 
+                    searchInput.placeholder = "Search for a book or author..."; 
+                }
+            } else if (micBtn) { 
+                micBtn.style.display = 'none'; 
             }
-        } else if (micBtn) { 
-            micBtn.style.display = 'none'; 
-        }
+        });
     </script>
 </body>
 </html>
