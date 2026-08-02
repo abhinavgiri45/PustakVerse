@@ -39,10 +39,10 @@ os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'logos'), exist_ok=True)
 os.makedirs(os.path.join(app.config['PRIVATE_PDF_FOLDER']), exist_ok=True)
 
 # ==========================================
-# IN-MEMORY CACHE
+# IN-MEMORY CACHE & DYNAMIC SETTINGS
 # ==========================================
 global_cache = {
-    'settings': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None},
+    'settings': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None, 'rp_key_id': '', 'rp_key_secret': ''},
     'catalogs': [{'name': 'Fiction'}, {'name': 'Non-Fiction'}, {'name': 'Educational'}, {'name': 'History'}, {'name': 'Poetry'}],
     'last_update': 0
 }
@@ -50,9 +50,6 @@ global_cache = {
 def invalidate_cache():
     global_cache['last_update'] = 0
 
-# ==========================================
-# DATA CLEANER FOR MISSING DB VALUES
-# ==========================================
 def clean_book_data(books):
     if not books: return []
     for b in books:
@@ -79,6 +76,8 @@ def inject_global_settings():
                 fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
                 fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
                 fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
+                fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
+                fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
                 
                 global_cache['settings'] = fetched_settings
                 global_cache['catalogs'] = fetched_catalogs
@@ -91,9 +90,6 @@ def inject_global_settings():
                 except: pass
     return dict(site_settings=global_cache['settings'], site_catalogs=global_cache['catalogs'])
 
-# ==========================================
-# GOOGLE DRIVE IMAGE FILTER
-# ==========================================
 @app.template_filter('drive_img')
 def drive_img(url):
     if url and 'drive.google.com' in url:
@@ -148,14 +144,8 @@ def send_email_wrapper(to_email, subject, body):
                 }
                 send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
                 if send_res.status_code in [200, 201]:
-                    logging.info(f"Email sent via Gmail API to {to_email}")
                     return True
-                else:
-                    logging.error(f"Gmail API error: {send_res.text}")
-            else:
-                logging.warning(f"Gmail Token exchange failed: {res_json}")
-        except Exception as e:
-            logging.error(f"Gmail API exception: {e}")
+        except Exception as e: pass
 
     if email_password:
         try:
@@ -163,53 +153,39 @@ def send_email_wrapper(to_email, subject, body):
             msg['Subject'] = subject
             msg['From'] = "noreply.pustakverse@gmail.com"
             msg['To'] = to_email
-
             with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5) as server:
                 server.login("noreply.pustakverse@gmail.com", email_password)
                 server.send_message(msg)
-            logging.info(f"Email sent via SMTP Backup to {to_email}")
             return True
-        except Exception as smtp_err:
-            logging.error(f"SMTP Backup failed: {smtp_err}")
-
-    print(f"\n=================================\n🚨 FALLBACK EMAIL TO {to_email}:\nSubject: {subject}\nBody:\n{body}\n=================================\n", flush=True)
+        except Exception as smtp_err: pass
     return True
 
 def send_otp_email(to_email, otp):
-    body = f"Your PustakVerse password reset code is: {otp}\n\nPlease do not share this code with anyone for your own security."
-    return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', body)
+    return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', f"Your password reset code is: {otp}")
 
 def send_2fa_email(to_email, otp):
-    body = f"Your PustakVerse Login Verification code is: {otp}\n\nPlease enter this code to securely access your account. Do not share this."
-    return send_email_wrapper(to_email, 'PustakVerse - 2-Step Login Verification', body)
+    return send_email_wrapper(to_email, 'PustakVerse - 2-Step Login Verification', f"Your Login Verification code is: {otp}")
 
 def send_welcome_reader(to_email, username):
-    body = f"Hello {username},\n\nWelcome to PustakVerse! Your Reader account is officially active. Dive into our extensive Global Library today!\n\nHappy Reading,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'Welcome to PustakVerse!', body)
+    return send_email_wrapper(to_email, 'Welcome to PustakVerse!', f"Hello {username},\n\nWelcome to PustakVerse! Dive into our extensive Global Library today!")
 
 def send_pending_author(to_email, username):
-    body = f"Hello {username},\n\nThank you for registering as an Author on PustakVerse! Your account is currently under review by our administrative team.\n\nBest Regards,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', body)
+    return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', f"Hello {username},\n\nThank you for registering as an Author! Your account is currently under review.")
 
 def send_approved_author(to_email, username):
-    body = f"Hello {username},\n\nCongratulations! Your Author account on PustakVerse has been officially approved. You can now publish your books.\n\nWelcome aboard,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', body)
+    return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', f"Hello {username},\n\nCongratulations! Your Author account is officially approved. You can now publish your books.")
 
 def send_official_welcome(to_email, username, password):
-    body = f"Hello {username},\n\nWelcome to the administrative team!\n\nLogin credentials:\nUsername: {username}\nPassword: {password}\n\nBest Regards,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', body)
+    return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', f"Hello {username},\n\nWelcome to the administrative team!\n\nUsername: {username}\nPassword: {password}")
 
 def send_revoked_official_email(to_email, username, reason):
-    body = f"Hello {username},\n\nYour official administrative privileges on PustakVerse have been revoked.\n\nReason: {reason}\n\nYour account has been reverted to a standard Reader role.\n\nBest Regards,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', body)
+    return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', f"Hello {username},\n\nYour official administrative privileges on PustakVerse have been revoked.\n\nReason: {reason}")
 
 def send_account_deleted_email(to_email, username, reason):
-    body = f"Hello {username},\n\nYour PustakVerse account has been permanently deleted by an administrator.\n\nReason: {reason}\n\nIf you believe this was a mistake, please contact support.\n\nBest Regards,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', body)
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', f"Hello {username},\n\nYour PustakVerse account has been permanently deleted by an administrator.\n\nReason: {reason}")
 
 def send_author_rejected_email(to_email, username, reason):
-    body = f"Hello {username},\n\nWe regret to inform you that your application for an Author account on PustakVerse has been rejected.\n\nReason: {reason}\n\nBest Regards,\nThe PustakVerse Team"
-    return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', body)
+    return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', f"Hello {username},\n\nWe regret to inform you that your application for an Author account has been rejected.\n\nReason: {reason}")
 
 # ==========================================
 # SECURE TiDB (MYSQL) DATABASE CONNECTION
@@ -224,33 +200,18 @@ def get_db_connection(retries=2, delay=1.0):
 
     for attempt in range(retries):
         try:
-            conn = mysql.connector.connect(
-                host=db_host,
-                port=db_port,
-                user=db_user,
-                password=db_pass,
-                database=db_name,
-                ssl_verify_cert=False,       
-                ssl_verify_identity=False,   
-                connection_timeout=8
-            )
-            if conn.is_connected():
-                return conn
+            conn = mysql.connector.connect(host=db_host, port=db_port, user=db_user, password=db_pass, database=db_name, ssl_verify_cert=False, ssl_verify_identity=False, connection_timeout=8)
+            if conn.is_connected(): return conn
         except mysql.connector.Error as err:
-            last_exception = err
-            logging.warning(f"DB Connection attempt {attempt+1} failed: {err}")
-            time.sleep(delay)
+            last_exception = err; time.sleep(delay)
     raise last_exception
 
 def payment_gateway_configured():
-    return bool(os.environ.get('RAZORPAY_KEY_ID') and os.environ.get('RAZORPAY_KEY_SECRET'))
+    settings = global_cache.get('settings', {})
+    return bool(settings.get('rp_key_id') and settings.get('rp_key_secret'))
 
 def get_payment_fee_paise(price_paise):
-    try:
-        rate = Decimal(os.environ.get('PAYMENT_FEE_PERCENT', '2.36')) / Decimal('100')
-    except InvalidOperation:
-        rate = Decimal('0.0236')
-    if rate <= 0 or rate >= 1: return 0
+    rate = Decimal('0.0236')
     return int((Decimal(price_paise) * rate / (Decimal('1') - rate)).to_integral_value(rounding=ROUND_CEILING))
 
 def ensure_payment_schema():
@@ -259,16 +220,7 @@ def ensure_payment_schema():
         db = get_db_connection()
         cursor = db.cursor()
         
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100) NOT NULL UNIQUE, email VARCHAR(150) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL, role ENUM('reader', 'author', 'official', 'developer') DEFAULT 'reader',
-                is_verified BOOLEAN DEFAULT FALSE, security_question VARCHAR(255) NOT NULL, security_answer VARCHAR(255) NOT NULL,
-                verification_reason TEXT, payout_details VARCHAR(255) DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            )
-        """)
-
+        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100) NOT NULL UNIQUE, email VARCHAR(150) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, role ENUM('reader', 'author', 'official', 'developer') DEFAULT 'reader', is_verified BOOLEAN DEFAULT FALSE, security_question VARCHAR(255) NOT NULL, security_answer VARCHAR(255) NOT NULL, verification_reason TEXT, payout_details VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
         try:
             cursor.execute("SHOW COLUMNS FROM users LIKE 'two_factor_enabled'")
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE")
@@ -279,59 +231,20 @@ def ensure_payment_schema():
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN razorpay_account_id VARCHAR(100) DEFAULT NULL")
         except Exception: pass
         
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS username_requests (
-                id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, new_username VARCHAR(100) NOT NULL,
-                reason TEXT NOT NULL, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
+        cursor.execute("CREATE TABLE IF NOT EXISTS username_requests (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, new_username VARCHAR(100) NOT NULL, reason TEXT NOT NULL, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
         
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS books (
-                id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, author_id INT NOT NULL,
-                catalog VARCHAR(100) NOT NULL, cover_image VARCHAR(1000) NOT NULL, pdf_file VARCHAR(1000) NOT NULL,
-                is_paid BOOLEAN NOT NULL DEFAULT FALSE, price_paise INT NOT NULL DEFAULT 0, private_pdf BOOLEAN NOT NULL DEFAULT FALSE,
-                preview_pages INT NOT NULL DEFAULT 5,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
+        cursor.execute("CREATE TABLE IF NOT EXISTS books (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, author_id INT NOT NULL, catalog VARCHAR(100) NOT NULL, cover_image VARCHAR(1000) NOT NULL, pdf_file VARCHAR(1000) NOT NULL, is_paid BOOLEAN NOT NULL DEFAULT FALSE, price_paise INT NOT NULL DEFAULT 0, private_pdf BOOLEAN NOT NULL DEFAULT FALSE, preview_pages INT NOT NULL DEFAULT 5, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE)")
         
         try:
             cursor.execute("SHOW COLUMNS FROM books LIKE 'preview_pages'")
             if not cursor.fetchone(): cursor.execute("ALTER TABLE books ADD COLUMN preview_pages INT NOT NULL DEFAULT 5")
         except Exception: pass
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS personal_library (
-                id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL,
-                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-                UNIQUE(user_id, book_id)
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS interactions (
-                id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL,
-                rating INT CHECK (rating >= 1 AND rating <= 5), review TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS deletion_requests (
-                id INT AUTO_INCREMENT PRIMARY KEY, target_user_id INT NOT NULL, requested_by INT NOT NULL, reason TEXT,
-                status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS front_page_settings (
-                id INT AUTO_INCREMENT PRIMARY KEY, hero_title VARCHAR(255) DEFAULT 'PustakVerse',
-                hero_subtitle VARCHAR(255) DEFAULT 'Every Book. Every Mind. Free. Read More. Grow More. Inspire India.',
-                logo_image VARCHAR(255) DEFAULT 'PustakVerse.png', font_color VARCHAR(50) DEFAULT '#ffffff',
-                donation_qr VARCHAR(255) DEFAULT NULL, donation_active BOOLEAN DEFAULT FALSE
-            )
-        """)
+        cursor.execute("CREATE TABLE IF NOT EXISTS personal_library (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, UNIQUE(user_id, book_id))")
+        cursor.execute("CREATE TABLE IF NOT EXISTS interactions (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, rating INT CHECK (rating >= 1 AND rating <= 5), review TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS deletion_requests (id INT AUTO_INCREMENT PRIMARY KEY, target_user_id INT NOT NULL, requested_by INT NOT NULL, reason TEXT, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS front_page_settings (id INT AUTO_INCREMENT PRIMARY KEY, hero_title VARCHAR(255) DEFAULT 'PustakVerse', hero_subtitle VARCHAR(255) DEFAULT 'Every Book. Every Mind. Free.', logo_image VARCHAR(255) DEFAULT 'PustakVerse.png', font_color VARCHAR(50) DEFAULT '#ffffff', donation_qr VARCHAR(255) DEFAULT NULL, donation_active BOOLEAN DEFAULT FALSE)")
+        
         try:
             cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'donation_qr'")
             if not cursor.fetchone():
@@ -339,28 +252,22 @@ def ensure_payment_schema():
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN donation_active BOOLEAN DEFAULT FALSE")
         except Exception: pass
 
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'rp_key_id'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
+        except Exception: pass
+
         cursor.execute("INSERT IGNORE INTO front_page_settings (id) VALUES (1)")
         cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES ('Fiction'), ('Non-Fiction'), ('Educational'), ('History'), ('Poetry')")
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS purchases (
-                id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE,
-                razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0,
-                status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS official_activities (
-                id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        """)
+        cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
         db.commit()
         return True
     except Exception as error:
         if db: db.rollback()
-        logging.error(f"Schema Initialization Error: {error}")
         return False
     finally:
         if db:
@@ -373,8 +280,7 @@ def log_official_activity(official_id, action_desc):
         db = get_db_connection(); cursor = db.cursor()
         cursor.execute("INSERT INTO official_activities (official_id, action) VALUES (%s, %s)", (official_id, action_desc))
         db.commit()
-    except Exception as e:
-        logging.warning(f"Failed to log official activity: {e}")
+    except Exception as e: pass
     finally:
         if db:
             try: db.close()
@@ -392,30 +298,83 @@ def create_master_developer():
         cursor.execute("SELECT id FROM users WHERE username = 'abhinavgiri45'")
         if not cursor.fetchone():
             hashed_pw = generate_password_hash('123@Abhinav')
-            cursor.execute(
-                "INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                ('abhinavgiri45', 'abhinavgiri370@gmail.com', hashed_pw, 'developer', True, 'What is your favorite book?', 'gita', 'Master Admin')
-            )
-            db.commit(); logging.info("Master Developer initialized.")
-    except Exception as e:
-        pass
+            cursor.execute("INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", ('abhinavgiri45', 'abhinavgiri370@gmail.com', hashed_pw, 'developer', True, 'What is your favorite book?', 'gita', 'Master Admin'))
+            db.commit()
+    except Exception as e: pass
     finally:
         if db:
             try: db.close()
             except: pass
 
 # ==========================================
-# PUBLIC ROUTES
+# PUBLIC ROUTES & COMPREHENSIVE TERMS
 # ==========================================
+@app.route('/terms')
+def terms():
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Terms & Conditions - PustakVerse</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f7fafc; color: #2d3748; margin: 0; padding: 0; }
+            .container { max-width: 900px; margin: 40px auto; padding: 40px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
+            h1 { color: #1a202c; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; font-size: 2.2rem; }
+            h2 { color: #2b6cb0; margin-top: 35px; font-size: 1.5rem; }
+            .alert-box { background-color: #fff5f5; border-left: 5px solid #e53e3e; padding: 20px; margin: 30px 0; border-radius: 4px; }
+            .alert-box h2 { color: #c53030; margin-top: 0; }
+            ul { padding-left: 20px; }
+            li { margin-bottom: 10px; }
+            .btn { display: inline-block; padding: 12px 30px; background: #f66d2f; color: white; text-decoration: none; border-radius: 30px; font-weight: bold; transition: 0.3s; margin-top: 20px; }
+            .btn:hover { background: #dd6b20; transform: translateY(-2px); }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>PustakVerse Comprehensive Terms & Conditions</h1>
+            <p>Welcome to PustakVerse. By registering an account, accessing, or using our platform, you agree to be bound by these Terms and Conditions. Please read them carefully to understand your rights and responsibilities.</p>
+            
+            <h2>1. Terms for Readers (Users)</h2>
+            <ul>
+                <li><strong>Personal Use Guarantee:</strong> Books purchased or accessed for free on PustakVerse are strictly for your personal, non-commercial use. You may not distribute, copy, resell, or share secure PDFs outside of the platform framework.</li>
+                <li><strong>Account Integrity & Security:</strong> You are fully responsible for maintaining the confidentiality of your login credentials and Two-Factor Authentication (2FA) codes. PustakVerse is not liable for unauthorized access resulting from user negligence.</li>
+                <li><strong>Content Availability:</strong> While we strive to maintain a permanent library, PustakVerse does not guarantee that any specific author-published book will remain available indefinitely. Independent Authors retain the right to modify or remove their content.</li>
+                <li><strong>Refund Policy:</strong> All digital sales on PustakVerse are final. Refunds are only issued in verified instances of technical failure resulting in the non-delivery of purchased content. Dislike of a book's content does not qualify for a refund.</li>
+            </ul>
+
+            <h2>2. Terms for Authors (Publishers)</h2>
+            <ul>
+                <li><strong>Copyright, Ownership, & Plagiarism:</strong> By uploading a book or document to PustakVerse, you legally warrant and represent that you are the original creator or possess the explicit commercial rights to distribute the content. Plagiarism, piracy, or copyright infringement is strictly prohibited and will result in an immediate permanent ban.</li>
+                <li><strong>Content Guidelines & Lawfulness:</strong> You agree not to publish content that is illegal, incites physical violence, contains explicit illegal material, or violates local, national, and international laws.</li>
+                <li><strong>Transparent Payouts & Gateway Fees:</strong> Authors receive exactly 100% of their set list price. To facilitate secure transactions, a mandatory platform convenience fee (covering Razorpay gateway costs) is calculated and added on top of your list price, which is paid by the buyer. PustakVerse reserves the right to suspend payouts or accounts if fraudulent transaction activity is detected.</li>
+                <li><strong>Right to Review & Moderation:</strong> PustakVerse Administrators and Officials reserve the explicit right to manually review, reject, suspend, or permanently remove your books or author account at any time for violating these platform terms.</li>
+            </ul>
+
+            <div class="alert-box">
+                <h2>3. Absolute Liability Disclaimer (Crucial)</h2>
+                <p><strong>Platform Immunity:</strong> PustakVerse operates solely as a user-generated digital hosting platform. The Developers, Officials, and Administrators of PustakVerse take <strong>ABSOLUTELY NO RESPONSIBILITY OR LEGAL LIABILITY</strong> for the books, documents, text, or content uploaded by independent Authors.</p>
+                <p><strong>The "Archive" Curatorial Exception:</strong> The <em>only</em> exception to this rule is content officially published within the <strong>"Archive"</strong> catalog. The platform's Developer maintains full administrative authority, legal oversight, and management over Archive books. All other catalogs (Fiction, Non-Fiction, Educational, History, Poetry, etc.) are the sole legal and moral responsibility of the respective uploading Author.</p>
+            </div>
+
+            <h2>4. Administrative Enforcement & Termination</h2>
+            <p>PustakVerse reserves the absolute right to terminate, ban, or suspend your account, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms outlined in this agreement. Administrative decisions made by the Developer are final.</p>
+
+            <div style="text-align: center; margin-top: 40px; border-top: 1px solid #edf2f7; padding-top: 30px;">
+                <a href="javascript:window.close();" class="btn">I Understand - Close Window</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html_content
+
 @app.route('/check_username', methods=['POST'])
 def check_username():
     username = request.form.get('username', '').strip()
     if not username: return jsonify({'available': False, 'message': ''})
-    
-    # Strictly check for letters, numbers, and underscores only
-    if not re.match(r'^[a-zA-Z0-9_]+$', username):
-        return jsonify({'available': False, 'message': 'Username cannot contain spaces or special characters.'})
-
+    if not re.match(r'^[a-zA-Z0-9_]+$', username): return jsonify({'available': False, 'message': 'Username cannot contain spaces or special characters.'})
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
@@ -423,8 +382,7 @@ def check_username():
         user = cursor.fetchone()
         if user: return jsonify({'available': False, 'message': 'Username is already taken'})
         return jsonify({'available': True, 'message': 'Username is available!'})
-    except Exception as e: 
-        return jsonify({'available': False, 'message': 'Checking...'})
+    except Exception as e: return jsonify({'available': False, 'message': 'Checking...'})
     finally:
         if db:
             try: db.close()
@@ -484,7 +442,6 @@ def register():
     role = request.form['role']; sec_question = request.form['security_question']; sec_answer = request.form['security_answer'].lower().strip()
     verification_reason = request.form.get('verification_reason', '')
     
-    # ENFORCE USERNAME LIMITATION: NO SPACES & NO SPECIAL CHARACTERS
     if not re.match(r'^[a-zA-Z0-9_]+$', username):
         flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
         return redirect(url_for('login'))
@@ -529,7 +486,6 @@ def login():
                 if login_portal == 'reader' and user['role'] != 'reader': flash("Please use the 'Author / Official' tab to log in to your account.", "error"); return render_template('login.html', active_tab='reader')
                 if login_portal == 'author_official' and user['role'] not in ['author', 'official', 'developer']: flash("Readers must log in using the 'Reader Login' tab.", "error"); return render_template('login.html', active_tab='official')
 
-                # TRIGGER 2FA for Officials/Devs OR if the user manually enabled it
                 if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
                     otp = str(random.randint(100000, 999999))
                     session['login_2fa_otp'] = otp
@@ -542,7 +498,6 @@ def login():
                         flash("Failed to send 2FA email. Contact admin.", "error")
                         return render_template('login.html', active_tab=login_portal)
 
-                # Standard Login
                 session['user_id'] = user['id']
                 session['username'] = user['username']
                 session['role'] = user['role']
@@ -573,6 +528,7 @@ def login():
                 return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
                 
     return render_template('login.html', active_tab='reader')
+
 @app.route('/login/google')
 def google_login(): return google.authorize_redirect(url_for('google_authorize', _external=True))
 
@@ -604,7 +560,6 @@ def google_authorize():
                 cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
                 user = cursor.fetchone()
         except Exception as e:
-            logging.error(f"Google Callback DB error: {e}")
             flash("Database connection timeout during Google Sign-In.", "error")
             return redirect(url_for('login'))
         finally:
@@ -630,7 +585,6 @@ def google_authorize():
         session['show_telegram_popup'] = True
         return redirect(url_for('dashboard'))
     except Exception as e:
-        logging.error(f"Google OAuth callback exception: {e}")
         flash("Google Authentication failed. Please try again.", "error")
         return redirect(url_for('login'))
 
@@ -689,7 +643,6 @@ def change_username():
     if not new_username:
         flash("New username cannot be empty.", "error"); return redirect(url_for('dashboard'))
 
-    # ENFORCE USERNAME LIMITATION: NO SPACES & NO SPECIAL CHARACTERS
     if not re.match(r'^[a-zA-Z0-9_]+$', new_username):
         flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
         return redirect(url_for('dashboard'))
@@ -841,7 +794,7 @@ def buy_book(book_id):
             try: db.close()
             except: pass
 
-    if not payment_gateway_configured(): flash('Online payments are not configured yet.', 'error'); return redirect(request.referrer or url_for('index'))
+    if not payment_gateway_configured(): flash('Online payments are not configured by the developer yet.', 'error'); return redirect(request.referrer or url_for('index'))
     
     author_acc_id = book['razorpay_account_id']
     if not author_acc_id:
@@ -853,9 +806,11 @@ def buy_book(book_id):
     
     db = None
     try:
-        client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
+        settings = global_cache.get('settings', {})
+        rp_key_id = settings.get('rp_key_id')
+        rp_key_secret = settings.get('rp_key_secret')
+        client = razorpay.Client(auth=(rp_key_id, rp_key_secret))
         
-        # Payout transfers 100% of setting directly to author's Razorpay Route account
         order_data = {
             'amount': total_paise,
             'currency': 'INR',
@@ -883,7 +838,7 @@ def buy_book(book_id):
             try: db.close()
             except: pass
             
-    return render_template('checkout.html', book=book, order_id=order['id'], total_paise=total_paise, fee_paise=fee_paise, base_price=book['price_paise'], razorpay_key=os.environ['RAZORPAY_KEY_ID'])
+    return render_template('checkout.html', book=book, order_id=order['id'], total_paise=total_paise, fee_paise=fee_paise, base_price=book['price_paise'], razorpay_key=rp_key_id)
 
 @app.route('/payment/verify', methods=['POST'])
 def verify_payment():
@@ -892,7 +847,8 @@ def verify_payment():
     if not payment_gateway_configured() or not all([order_id, payment_id, signature]): abort(400)
     db = None
     try:
-        client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
+        settings = global_cache.get('settings', {})
+        client = razorpay.Client(auth=(settings.get('rp_key_id'), settings.get('rp_key_secret')))
         client.utility.verify_payment_signature({'razorpay_order_id': order_id, 'razorpay_payment_id': payment_id, 'razorpay_signature': signature})
         
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
@@ -953,12 +909,8 @@ def book_sales(book_id):
             except: pass
     return render_template('sales_history.html', sales=sales, book=book)
 
-# ==========================================
-# READ BOOK ROUTE (LOGIN REQUIRED)
-# ==========================================
 @app.route('/read_book/<int:book_id>')
 def read_book(book_id):
-    # ENFORCE LOGIN: UNREGISTERED USERS CANNOT READ OR PREVIEW BOOKS
     if 'user_id' not in session:
         flash("Please sign in or register to read or preview books.", "error")
         return redirect(url_for('login'))
@@ -981,14 +933,9 @@ def read_book(book_id):
 
     return render_template('viewer.html', book=book, can_read=can_read)
 
-# ==========================================
-# SECURE PDF SERVING & PREVIEW SLICING (MAX 10 PAGES)
-# ==========================================
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
-    # ENFORCE LOGIN ON THE BACKEND ENDPOINT
-    if 'user_id' not in session:
-        abort(401)
+    if 'user_id' not in session: abort(401)
 
     db = None; book = None; can_read = False
     try:
@@ -1018,15 +965,12 @@ def serve_secure_pdf(book_id):
     if not os.path.exists(full_path):
         abort(404)
 
-    # 1. IF PAID OR AUTHORIZED: Serve full PDF
     if can_read:
         return send_from_directory(folder, book['pdf_file'])
         
-    # 2. IF UNPAID: Dynamically slice preview pages (Enforced Maximum: 10 Pages)
     try:
         reader = PdfReader(full_path)
         writer = PdfWriter()
-        
         author_preview_setting = book.get('preview_pages') or 5
         preview_limit = min(max(1, author_preview_setting), 10)
         num_pages = min(preview_limit, len(reader.pages))
@@ -1107,7 +1051,8 @@ def dashboard():
             legal_name = request.form.get('legal_name').strip()
             phone = request.form.get('phone').strip()
             try:
-                client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
+                settings = global_cache.get('settings', {})
+                client = razorpay.Client(auth=(settings.get('rp_key_id'), settings.get('rp_key_secret')))
                 cursor.execute("SELECT email FROM users WHERE id = %s", (session['user_id'],))
                 author_email = cursor.fetchone()['email']
                 
@@ -1126,7 +1071,7 @@ def dashboard():
                 db.commit()
                 flash(f"Success! Linked Account created. Please check your email to upload KYC documents securely to Razorpay.", "success")
             except Exception as e:
-                flash(f"Razorpay Integration Error: Make sure your API keys are correct. ({str(e)})", "error")
+                flash(f"Razorpay Integration Error: Developer needs to add valid keys in settings.", "error")
             return redirect(url_for('dashboard'))
 
         if request.method == 'POST' and 'title' in request.form:
@@ -1214,7 +1159,7 @@ def dashboard():
             del_requests = cursor.fetchall()
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
-            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 100")
+            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id WHERE oa.timestamp >= NOW() - INTERVAL 30 DAY ORDER BY oa.timestamp DESC LIMIT 200")
             official_logs = cursor.fetchall()
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
@@ -1291,18 +1236,27 @@ def edit_book(book_id):
 
 @app.route('/update_front_page', methods=['POST'])
 def update_front_page():
-    if session.get('role') not in ['developer', 'official']: return redirect(url_for('dashboard'))
+    if session.get('role') != 'developer': return redirect(url_for('dashboard'))
     title = request.form.get('hero_title'); subtitle = request.form.get('hero_subtitle'); font_color = request.form.get('font_color')
     logo_file = request.files.get('logo_image'); donation_active = request.form.get('donation_active') == 'on'; donation_qr_file = request.files.get('donation_qr')
+    
+    rp_key_id = request.form.get('rp_key_id', '').strip()
+    rp_key_secret = request.form.get('rp_key_secret', '').strip()
+    
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT logo_image, donation_qr FROM front_page_settings WHERE id=1")
+        cursor.execute("SELECT logo_image, donation_qr, rp_key_id, rp_key_secret FROM front_page_settings WHERE id=1")
         settings_data = cursor.fetchone()
+        
         final_logo = settings_data['logo_image']; final_qr = settings_data['donation_qr']
         if logo_file and logo_file.filename: final_logo = secure_filename(logo_file.filename); logo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'logos', final_logo))
         if donation_qr_file and donation_qr_file.filename: final_qr = secure_filename(donation_qr_file.filename); donation_qr_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'logos', final_qr))
-        cursor.execute("UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s WHERE id=1", (title, subtitle, font_color, final_logo, donation_active, final_qr))
+        
+        final_rp_id = rp_key_id if rp_key_id else settings_data.get('rp_key_id', '')
+        final_rp_secret = rp_key_secret if rp_key_secret else settings_data.get('rp_key_secret', '')
+        
+        cursor.execute("UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s WHERE id=1", (title, subtitle, font_color, final_logo, donation_active, final_qr, final_rp_id, final_rp_secret))
         db.commit(); invalidate_cache(); flash("Platform settings updated!", "success")
     except Exception: flash("Database error.", "error")
     finally:
@@ -1397,14 +1351,34 @@ def handle_deletion(req_id, action):
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT target_user_id FROM deletion_requests WHERE id = %s", (req_id,)); req = cursor.fetchone()
+        cursor.execute("SELECT target_user_id FROM deletion_requests WHERE id = %s", (req_id,))
+        req = cursor.fetchone()
+        if not req:
+            flash("Request not found.", "error")
+            return redirect(url_for('dashboard'))
+            
         if action == 'approve':
-            uid = req['target_user_id']; tables = ['personal_library', 'interactions', 'books', 'users']
-            for table in tables: column = 'author_id' if table == 'books' else ('id' if table == 'users' else 'user_id'); cursor.execute(f"DELETE FROM {table} WHERE {column} = %s", (uid,))
+            reason = request.form.get('reason', 'Violation of platform policies.')
+            uid = req['target_user_id']
+            
+            cursor.execute("SELECT username, email FROM users WHERE id = %s", (uid,))
+            user_data = cursor.fetchone()
+            
+            tables = ['personal_library', 'interactions', 'books', 'users']
+            for table in tables: 
+                column = 'author_id' if table == 'books' else ('id' if table == 'users' else 'user_id')
+                cursor.execute(f"DELETE FROM {table} WHERE {column} = %s", (uid,))
+                
             cursor.execute("UPDATE deletion_requests SET status = 'approved' WHERE id = %s", (req_id,))
-        else: cursor.execute("UPDATE deletion_requests SET status = 'rejected' WHERE id = %s", (req_id,))
+            
+            if user_data:
+                send_account_deleted_email(user_data['email'], user_data['username'], reason)
+            flash("User deleted and notified with your reason.", "success")
+        else: 
+            cursor.execute("UPDATE deletion_requests SET status = 'rejected' WHERE id = %s", (req_id,))
+            flash("Deletion request rejected.", "info")
         db.commit()
-    except Exception: flash("Database error.", "error")
+    except Exception as e: flash("Database error.", "error")
     finally:
         if db:
             try: db.close()
@@ -1438,13 +1412,33 @@ def admin_delete_user(user_id):
 
 @app.route('/delete_book/<int:book_id>', methods=['POST'])
 def delete_book(book_id):
-    if session.get('role') in ['author', 'official', 'developer']:
+    role = session.get('role')
+    user_id = session.get('user_id')
+    if role in ['author', 'official', 'developer']:
         db = None
         try:
-            db = get_db_connection(); cursor = db.cursor()
-            cursor.execute("DELETE FROM personal_library WHERE book_id = %s", (book_id,))
-            cursor.execute("DELETE FROM books WHERE id = %s AND author_id = %s", (book_id, session['user_id']))
-            db.commit()
+            db = get_db_connection(); cursor = db.cursor(dictionary=True)
+            
+            cursor.execute("SELECT author_id FROM books WHERE id = %s", (book_id,))
+            book = cursor.fetchone()
+            if not book:
+                flash("Book not found.", "error")
+                return redirect(url_for('dashboard'))
+                
+            is_authorized = False
+            if role in ['developer', 'official']:
+                is_authorized = True
+            elif role == 'author' and book['author_id'] == user_id:
+                is_authorized = True
+                
+            if is_authorized:
+                cursor.execute("DELETE FROM personal_library WHERE book_id = %s", (book_id,))
+                cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
+                db.commit()
+                flash("Book deleted successfully.", "success")
+            else:
+                flash("Unauthorized to delete this book.", "error")
+                
         except Exception: flash("Database error.", "error")
         finally:
             if db:
