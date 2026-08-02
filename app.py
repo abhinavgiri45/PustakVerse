@@ -76,8 +76,6 @@ def inject_global_settings():
                 fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
                 fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
                 fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
-                fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
-                fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
                 
                 global_cache['settings'] = fetched_settings
                 global_cache['catalogs'] = fetched_catalogs
@@ -209,14 +207,6 @@ def get_db_connection(retries=2, delay=1.0):
             last_exception = err; time.sleep(delay)
     raise last_exception
 
-def payment_gateway_configured():
-    settings = global_cache.get('settings', {})
-    return bool(settings.get('rp_key_id') and settings.get('rp_key_secret'))
-
-def get_payment_fee_paise(price_paise):
-    rate = Decimal('0.0236')
-    return int((Decimal(price_paise) * rate / (Decimal('1') - rate)).to_integral_value(rounding=ROUND_CEILING))
-
 def ensure_payment_schema():
     db = None
     try:
@@ -224,18 +214,21 @@ def ensure_payment_schema():
         cursor = db.cursor()
         
         cursor.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100) NOT NULL UNIQUE, email VARCHAR(150) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, role ENUM('reader', 'author', 'official', 'developer') DEFAULT 'reader', is_verified BOOLEAN DEFAULT FALSE, security_question VARCHAR(255) NOT NULL, security_answer VARCHAR(255) NOT NULL, verification_reason TEXT, payout_details VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
+        
         try:
             cursor.execute("SHOW COLUMNS FROM users LIKE 'two_factor_enabled'")
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE")
         except Exception: pass
         
+        # INDIVIDUAL AUTHOR KEYS ADDED TO USERS TABLE
         try:
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'razorpay_account_id'")
-            if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN razorpay_account_id VARCHAR(100) DEFAULT NULL")
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'rp_key_id'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
+                cursor.execute("ALTER TABLE users ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
         except Exception: pass
         
         cursor.execute("CREATE TABLE IF NOT EXISTS username_requests (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, new_username VARCHAR(100) NOT NULL, reason TEXT NOT NULL, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
-        
         cursor.execute("CREATE TABLE IF NOT EXISTS books (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, author_id INT NOT NULL, catalog VARCHAR(100) NOT NULL, cover_image VARCHAR(1000) NOT NULL, pdf_file VARCHAR(1000) NOT NULL, is_paid BOOLEAN NOT NULL DEFAULT FALSE, price_paise INT NOT NULL DEFAULT 0, private_pdf BOOLEAN NOT NULL DEFAULT FALSE, preview_pages INT NOT NULL DEFAULT 5, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE)")
         
         try:
@@ -246,9 +239,7 @@ def ensure_payment_schema():
         cursor.execute("CREATE TABLE IF NOT EXISTS personal_library (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, UNIQUE(user_id, book_id))")
         cursor.execute("CREATE TABLE IF NOT EXISTS interactions (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, rating INT CHECK (rating >= 1 AND rating <= 5), review TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS deletion_requests (id INT AUTO_INCREMENT PRIMARY KEY, target_user_id INT NOT NULL, requested_by INT NOT NULL, reason TEXT, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE)")
-        
         cursor.execute("CREATE TABLE IF NOT EXISTS book_deletion_requests (id INT AUTO_INCREMENT PRIMARY KEY, book_id INT NOT NULL, requested_by INT NOT NULL, reason TEXT, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE)")
-
         cursor.execute("CREATE TABLE IF NOT EXISTS front_page_settings (id INT AUTO_INCREMENT PRIMARY KEY, hero_title VARCHAR(255) DEFAULT 'PustakVerse', hero_subtitle VARCHAR(255) DEFAULT 'Every Book. Every Mind. Free.', logo_image VARCHAR(255) DEFAULT 'PustakVerse.png', font_color VARCHAR(50) DEFAULT '#ffffff', donation_qr VARCHAR(255) DEFAULT NULL, donation_active BOOLEAN DEFAULT FALSE)")
         
         try:
@@ -354,7 +345,7 @@ def terms():
             <ul>
                 <li><strong>Copyright, Ownership, & Plagiarism:</strong> By uploading a book or document to PustakVerse, you legally warrant and represent that you are the original creator or possess the explicit commercial rights to distribute the content. Plagiarism, piracy, or copyright infringement is strictly prohibited and will result in an immediate permanent ban.</li>
                 <li><strong>Content Guidelines & Lawfulness:</strong> You agree not to publish content that is illegal, incites physical violence, contains explicit illegal material, or violates local, national, and international laws.</li>
-                <li><strong>Transparent Payouts & Gateway Fees:</strong> Authors receive exactly 100% of their set list price. To facilitate secure transactions, a mandatory platform convenience fee (covering Razorpay gateway costs) is calculated and added on top of your list price, which is paid by the buyer. PustakVerse reserves the right to suspend payouts or accounts if fraudulent transaction activity is detected.</li>
+                <li><strong>Direct Payouts & Gateway Fees:</strong> Authors operate their own individual Razorpay integrations to collect payments directly from buyers. Authors retain 100% of their set list price, minus standard Razorpay processing fees deducted by Razorpay at the time of settlement. PustakVerse takes zero commission.</li>
                 <li><strong>Right to Review & Moderation:</strong> PustakVerse Administrators and Officials reserve the explicit right to manually review, reject, suspend, or permanently remove your books or author account at any time for violating these platform terms.</li>
             </ul>
 
@@ -510,7 +501,7 @@ def login():
                 session['is_verified'] = user['is_verified']
                 session['show_telegram_popup'] = True
                 flash(f"Welcome back, {user['username']}!", "success")
-                return redirect(url_for('index')) # Redirecting to Global Library!
+                return redirect(url_for('index'))
             
             flash("Invalid username or password.", "error")
             return render_template('login.html', active_tab=login_portal)
@@ -529,7 +520,7 @@ def login():
                 session.pop('pending_2fa_user', None)
                 session['show_telegram_popup'] = True
                 flash(f"Welcome back, {pending_user['username']}!", "success")
-                return redirect(url_for('index')) # Redirecting to Global Library!
+                return redirect(url_for('index'))
             else: 
                 flash("Invalid Verification Code. Please try again.", "error")
                 return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
@@ -591,7 +582,7 @@ def google_authorize():
         session['is_verified'] = user['is_verified']
         session['show_telegram_popup'] = True
         flash(f"Welcome back, {user['username']}!", "success")
-        return redirect(url_for('index')) # Redirecting to Global Library!
+        return redirect(url_for('index'))
     except Exception as e:
         flash("Google Authentication failed. Please try again.", "error")
         return redirect(url_for('login'))
@@ -772,7 +763,7 @@ def change_password():
 def cancel_password_change(): session.pop('change_pw_otp', None); return redirect(url_for('dashboard'))
 
 # ==========================================
-# E-COMMERCE & BUY NOW LOGIC
+# E-COMMERCE & BUY NOW LOGIC (DIRECT AUTHOR PAYMENTS)
 # ==========================================
 @app.route('/buy_book/<int:book_id>', methods=['POST'])
 def buy_book(book_id):
@@ -783,7 +774,8 @@ def buy_book(book_id):
     db = None; book = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, u.razorpay_account_id, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        # Fetching INDIVIDUAL Author Keys directly from the users table!
+        cursor.execute("SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, u.rp_key_id as author_key_id, u.rp_key_secret as author_key_secret, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
         book = cursor.fetchone()
         if book:
             book['cover_image'] = book.get('cover_image') or ""
@@ -802,73 +794,79 @@ def buy_book(book_id):
             try: db.close()
             except: pass
 
-    if not payment_gateway_configured(): flash('Online payments are not configured by the developer yet.', 'error'); return redirect(request.referrer or url_for('index'))
+    # Ensure Author has set up their OWN Razorpay Keys
+    author_key_id = book.get('author_key_id')
+    author_key_secret = book.get('author_key_secret')
     
-    author_acc_id = book['razorpay_account_id']
-    if not author_acc_id:
-        flash('The author has not completed their KYC onboarding. Purchases are temporarily disabled for this book.', 'error')
+    if not author_key_id or not author_key_secret:
+        flash('The author has not configured their payment gateway. Purchases are temporarily disabled for this book.', 'error')
         return redirect(request.referrer or url_for('index'))
 
-    fee_paise = get_payment_fee_paise(book['price_paise'])
-    total_paise = book['price_paise'] + fee_paise
+    # Total Price (Author gets 100%, Razorpay deducts its own standard processing fee)
+    total_paise = book['price_paise']
     
     db = None
     try:
-        settings = global_cache.get('settings', {})
-        rp_key_id = settings.get('rp_key_id')
-        rp_key_secret = settings.get('rp_key_secret')
-        client = razorpay.Client(auth=(rp_key_id, rp_key_secret))
+        # Client initialized with INDIVIDUAL AUTHOR KEYS!
+        client = razorpay.Client(auth=(author_key_id, author_key_secret))
         
+        # Direct Order Creation (No Transfers needed, money goes straight to Author!)
         order_data = {
             'amount': total_paise,
             'currency': 'INR',
-            'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}",
-            'transfers': [
-                {
-                    'account': author_acc_id,
-                    'amount': book['price_paise'], 
-                    'currency': 'INR',
-                    'notes': {'type': 'author_payout', 'book_title': book['title']},
-                    'on_hold': 0
-                }
-            ]
+            'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
         }
         order = client.order.create(order_data)
         
         db = get_db_connection(); cursor = db.cursor()
-        cursor.execute("INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, fee_paise, status) VALUES (%s, %s, %s, %s, %s, 'pending')", (session['user_id'], book_id, order['id'], book['price_paise'], fee_paise))
+        cursor.execute("INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, fee_paise, status) VALUES (%s, %s, %s, %s, %s, 'pending')", (session['user_id'], book_id, order['id'], book['price_paise'], 0))
         db.commit()
     except Exception as e: 
-        logging.error(f"Razorpay Order Error: {e}")
-        flash('Unable to start payment. Please try again shortly.', 'error'); return redirect(request.referrer or url_for('index'))
+        logging.error(f"Razorpay Author Key Error: {e}")
+        flash('Unable to connect to the Author\'s payment gateway. Please try again shortly.', 'error'); return redirect(request.referrer or url_for('index'))
     finally:
         if db:
             try: db.close()
             except: pass
             
-    return render_template('checkout.html', book=book, order_id=order['id'], total_paise=total_paise, fee_paise=fee_paise, base_price=book['price_paise'], razorpay_key=rp_key_id)
+    return render_template('checkout.html', book=book, order_id=order['id'], total_paise=total_paise, fee_paise=0, base_price=book['price_paise'], razorpay_key=author_key_id)
 
 @app.route('/payment/verify', methods=['POST'])
 def verify_payment():
     if 'user_id' not in session: abort(401)
     order_id = request.form.get('razorpay_order_id', ''); payment_id = request.form.get('razorpay_payment_id', ''); signature = request.form.get('razorpay_signature', '')
-    if not payment_gateway_configured() or not all([order_id, payment_id, signature]): abort(400)
+    if not all([order_id, payment_id, signature]): abort(400)
+    
     db = None
     try:
-        settings = global_cache.get('settings', {})
-        client = razorpay.Client(auth=(settings.get('rp_key_id'), settings.get('rp_key_secret')))
-        client.utility.verify_payment_signature({'razorpay_order_id': order_id, 'razorpay_payment_id': payment_id, 'razorpay_signature': signature})
-        
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id, book_id FROM purchases WHERE razorpay_order_id = %s AND user_id = %s", (order_id, session['user_id']))
+        # Fetch the exact Author Keys associated with this purchase order
+        cursor.execute('''
+            SELECT p.id, p.book_id, u.rp_key_id, u.rp_key_secret 
+            FROM purchases p 
+            JOIN books b ON p.book_id = b.id 
+            JOIN users u ON b.author_id = u.id 
+            WHERE p.razorpay_order_id = %s AND p.user_id = %s
+        ''', (order_id, session['user_id']))
         purchase = cursor.fetchone()
         
-        if purchase:
+        if purchase and purchase['rp_key_id'] and purchase['rp_key_secret']:
+            # Verify signature using the INDIVIDUAL AUTHOR'S Secret Key
+            client = razorpay.Client(auth=(purchase['rp_key_id'], purchase['rp_key_secret']))
+            client.utility.verify_payment_signature({'razorpay_order_id': order_id, 'razorpay_payment_id': payment_id, 'razorpay_signature': signature})
+            
             cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
             cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
             db.commit()
-        flash('Payment successful! Book has been saved to My Library and unlocked.', 'success'); return redirect(url_for('read_book', book_id=purchase['book_id']))
-    except Exception: flash('Payment verification failed.', 'error'); return redirect(url_for('my_library'))
+            flash('Payment successful! Book has been saved to My Library and unlocked.', 'success')
+            return redirect(url_for('read_book', book_id=purchase['book_id']))
+        else:
+            flash('Payment verification failed. Author keys missing.', 'error')
+            return redirect(url_for('my_library'))
+    except Exception as e: 
+        logging.error(f"Verification error: {e}")
+        flash('Payment verification failed.', 'error')
+        return redirect(url_for('my_library'))
     finally:
         if db:
             try: db.close()
@@ -1055,31 +1053,13 @@ def dashboard():
             flash(f"Two-Step Verification has been {status_text}.", "success")
             return redirect(url_for('dashboard'))
 
-        if role == 'author' and request.method == 'POST' and 'create_route_account' in request.form:
-            legal_name = request.form.get('legal_name').strip()
-            phone = request.form.get('phone').strip()
-            try:
-                settings = global_cache.get('settings', {})
-                client = razorpay.Client(auth=(settings.get('rp_key_id'), settings.get('rp_key_secret')))
-                cursor.execute("SELECT email FROM users WHERE id = %s", (session['user_id'],))
-                author_email = cursor.fetchone()['email']
-                
-                account_data = {
-                    "email": author_email,
-                    "phone": phone,
-                    "type": "route",
-                    "reference_id": f"pv_{session['user_id']}",
-                    "legal_business_name": legal_name,
-                    "business_type": "individual"
-                }
-                route_account = client.account.create(account_data)
-                acc_id = route_account['id']
-                
-                cursor.execute("UPDATE users SET razorpay_account_id = %s WHERE id = %s", (acc_id, session['user_id']))
-                db.commit()
-                flash(f"Success! Linked Account created. Please check your email to upload KYC documents securely to Razorpay.", "success")
-            except Exception as e:
-                flash(f"Razorpay Integration Error: Developer needs to add valid keys in settings.", "error")
+        # INDIVIDUAL AUTHOR KEYS POST HANDLER
+        if role == 'author' and request.method == 'POST' and 'update_author_keys' in request.form:
+            rp_id = request.form.get('rp_key_id', '').strip()
+            rp_sec = request.form.get('rp_key_secret', '').strip()
+            cursor.execute("UPDATE users SET rp_key_id = %s, rp_key_secret = %s WHERE id = %s", (rp_id, rp_sec, session['user_id']))
+            db.commit()
+            flash("Your personal Razorpay Keys have been securely saved!", "success")
             return redirect(url_for('dashboard'))
 
         if request.method == 'POST' and 'title' in request.form:
@@ -1193,12 +1173,16 @@ def dashboard():
             return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
         if role == 'author':
-            cursor.execute("SELECT is_verified, razorpay_account_id FROM users WHERE id = %s", (session['user_id'],))
+            # FETECHING INDIVIDUAL AUTHOR KEYS FOR THE DASHBOARD
+            cursor.execute("SELECT is_verified, rp_key_id, rp_key_secret FROM users WHERE id = %s", (session['user_id'],))
             author_data = cursor.fetchone()
-            session['is_verified'] = author_data['is_verified']; razorpay_account_id = author_data['razorpay_account_id']
+            session['is_verified'] = author_data['is_verified']
+            author_rp_id = author_data['rp_key_id']
+            author_rp_secret = author_data['rp_key_secret']
+            
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
-            return render_template('dashboard.html', my_books=my_books, razorpay_account_id=razorpay_account_id, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', my_books=my_books, author_rp_id=author_rp_id, author_rp_secret=author_rp_secret, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
 
         return render_template('dashboard.html', show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
         
