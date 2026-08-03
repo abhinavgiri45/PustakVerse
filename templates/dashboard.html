@@ -148,7 +148,7 @@
                             <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
                             {% for log in official_logs %}
                             <tr>
-                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp }}</td>
+                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp | to_ist }}</td>
                                 <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
                                 <td>{{ log.action }}</td>
                             </tr>
@@ -563,7 +563,8 @@
                                 <td style="font-weight: 500;">{{ user.username }}</td>
                                 <td style="color: #4a5568;">{{ user.email }}</td>
                                 <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
-                                <td style="color: #718096; font-size: 0.85rem;">{{ user.last_activity }}</td>
+                                <!-- UPDATED: Applying the new to_ist filter here! -->
+                                <td style="color: #718096; font-size: 0.85rem;">{{ user.last_activity | to_ist }}</td>
                                 <td style="display: flex; gap: 5px; flex-wrap: wrap;">
                                     
                                     <!-- Send Warning Form -->
