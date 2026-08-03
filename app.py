@@ -230,10 +230,10 @@ def send_warning_email(to_email, username, warning_message):
     content = f"<p>Hello <strong>{username}</strong>,</p><p>This is an official warning from the PustakVerse Administration regarding your account:</p><blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'>{warning_message}</blockquote><p>Please adhere to our platform guidelines to prevent account suspension.</p>"
     return send_email_wrapper(to_email, 'URGENT: Official Warning from PustakVerse', generate_html_email("Account Warning", content))
 
-def send_promotion_broadcast(all_emails, promoted_username):
-    content = f"<p>We are thrilled to announce that <strong>{promoted_username}</strong> has been promoted to an Official Administrator on PustakVerse!</p><p>Please join us in welcoming them to the administrative team.</p>"
-    for email in all_emails:
-        send_email_wrapper(email, 'PustakVerse Community Announcement', generate_html_email("New Official Appointed!", content))
+# NEW: Send promotion email ONLY to the person promoted
+def send_promotion_notification(to_email, username):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! You have been officially promoted to an Administrator on PustakVerse.</p><p>Please log out and log back in to access your new administrative dashboard.</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Promoted to Official', generate_html_email("Promotion Notice", content))
 
 def send_mass_message(to_emails, subject, message, role_target):
     content = f"<p><strong>Official Broadcast to {role_target.capitalize()}s:</strong></p><p>{message}</p>"
@@ -718,15 +718,14 @@ def promote_user(user_id):
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         if user:
             cursor.execute("UPDATE users SET role = 'official' WHERE id = %s", (user_id,))
-            cursor.execute("SELECT email FROM users")
-            all_emails = [row['email'] for row in cursor.fetchall()]
             db.commit()
             
-            send_promotion_broadcast(all_emails, user['username'])
+            # Send notification ONLY to the person being promoted
+            send_promotion_notification(user['email'], user['username'])
             flash(f"{user['username']} has been promoted to Official!", "success")
     except Exception: flash("Database Error.", "error")
     finally:
@@ -1156,7 +1155,7 @@ def dashboard():
         if request.method == 'POST' and 'toggle_2fa' in request.form:
             current_status = request.form.get('current_status') == 'True'
             new_status = not current_status
-            cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
+            cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (session['user_id']))
             db.commit()
             status_text = "enabled" if new_status else "disabled"
             flash(f"Two-Step Verification has been {status_text}.", "success")
