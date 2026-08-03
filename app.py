@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
 from PyPDF2 import PdfReader, PdfWriter
 import requests
+from datetime import datetime, timezone, timedelta
 
 try:
     from PIL import Image
@@ -52,6 +53,29 @@ def add_header(response):
     if 'Cache-Control' not in response.headers:
         response.headers['Cache-Control'] = 'public, max-age=3600'
     return response
+
+# ==========================================
+# TIMEZONE FORMATTING (UTC TO IST)
+# ==========================================
+@app.template_filter('to_ist')
+def to_ist_filter(dt):
+    if not dt:
+        return "Never"
+    
+    # If the database returns a string, try to parse it
+    if isinstance(dt, str):
+        try:
+            dt = datetime.strptime(str(dt).split('.')[0], '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            return dt
+            
+    # Give it the UTC timezone if it doesn't have one (MySQL default)
+    if hasattr(dt, 'tzinfo') and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+        
+    # Convert to Indian Standard Time (UTC + 5:30)
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return dt.astimezone(ist).strftime('%Y-%m-%d %I:%M %p')
 
 # ==========================================
 # IN-MEMORY CACHE & DYNAMIC SETTINGS
@@ -747,7 +771,6 @@ def promote_user(user_id):
             cursor.execute("UPDATE users SET role = 'official' WHERE id = %s", (user_id,))
             db.commit()
             
-            # Send notification ONLY to the person being promoted
             send_promotion_notification(user['email'], user['username'])
             flash(f"{user['username']} has been promoted to Official!", "success")
     except Exception: flash("Database Error.", "error")
