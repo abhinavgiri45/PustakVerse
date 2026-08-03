@@ -230,7 +230,6 @@ def send_warning_email(to_email, username, warning_message):
     content = f"<p>Hello <strong>{username}</strong>,</p><p>This is an official warning from the PustakVerse Administration regarding your account:</p><blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'>{warning_message}</blockquote><p>Please adhere to our platform guidelines to prevent account suspension.</p>"
     return send_email_wrapper(to_email, 'URGENT: Official Warning from PustakVerse', generate_html_email("Account Warning", content))
 
-# NEW: Send promotion email ONLY to the person promoted
 def send_promotion_notification(to_email, username):
     content = f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! You have been officially promoted to an Administrator on PustakVerse.</p><p>Please log out and log back in to access your new administrative dashboard.</p>"
     return send_email_wrapper(to_email, 'PustakVerse - Promoted to Official', generate_html_email("Promotion Notice", content))
@@ -351,6 +350,30 @@ def log_official_activity(official_id, action_desc):
 def ensure_payment_schema_before_request():
     global payment_schema_ready
     if not payment_schema_ready: payment_schema_ready = ensure_payment_schema()
+
+# ==========================================
+# LAST ACTIVE TRACKING SYSTEM
+# ==========================================
+@app.before_request
+def update_last_activity():
+    if 'user_id' in session:
+        last_update = session.get('last_activity_update')
+        current_time = time.time()
+        
+        if not last_update or (current_time - last_update > 300):
+            db = None
+            try:
+                db = get_db_connection()
+                cursor = db.cursor()
+                cursor.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE id = %s", (session['user_id'],))
+                db.commit()
+                session['last_activity_update'] = current_time
+            except Exception:
+                pass
+            finally:
+                if db:
+                    try: db.close()
+                    except: pass
 
 def create_master_developer():
     db = None
@@ -1155,7 +1178,7 @@ def dashboard():
         if request.method == 'POST' and 'toggle_2fa' in request.form:
             current_status = request.form.get('current_status') == 'True'
             new_status = not current_status
-            cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (session['user_id']))
+            cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
             db.commit()
             status_text = "enabled" if new_status else "disabled"
             flash(f"Two-Step Verification has been {status_text}.", "success")
