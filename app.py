@@ -19,7 +19,6 @@ from authlib.integrations.flask_client import OAuth
 from PyPDF2 import PdfReader, PdfWriter
 import requests
 
-# Bulletproof import for Pillow (Image Compression)
 try:
     from PIL import Image
     HAS_PILLOW = True
@@ -39,13 +38,20 @@ UPLOAD_FOLDER = 'static/uploads'
 PRIVATE_PDF_FOLDER = 'private_uploads/pdfs'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['PRIVATE_PDF_FOLDER'] = PRIVATE_PDF_FOLDER
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000 # Cache static files for 1 year to boost speed
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000 
 payment_schema_ready = False
 
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'covers'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'logos'), exist_ok=True)
 os.makedirs(os.path.join(app.config['PRIVATE_PDF_FOLDER']), exist_ok=True)
+
+# --- SEO & PERFORMANCE CACHING HEADER ---
+@app.after_request
+def add_header(response):
+    if 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    return response
 
 # ==========================================
 # IN-MEMORY CACHE & DYNAMIC SETTINGS
@@ -104,15 +110,10 @@ def drive_img(url):
     if url and 'drive.google.com' in url:
         match = re.search(r'/d/([a-zA-Z0-9_-]+)', url)
         if not match: match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
-        # CRITICAL: This must be w300, not w1000!
         if match: return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w300"
     return url
 
-# ==========================================
-# SAFE IMAGE COMPRESSION HELPER
-# ==========================================
 def compress_cover_image(file_obj, upload_folder):
-    """Resizes and compresses images. Falls back to standard save if Pillow is missing."""
     if not HAS_PILLOW:
         safe_name = secure_filename(file_obj.filename)
         file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
@@ -120,29 +121,22 @@ def compress_cover_image(file_obj, upload_folder):
 
     try:
         img = Image.open(file_obj)
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGB")
-        
-        # Resize while maintaining aspect ratio (Max 800x1200)
+        if img.mode in ("RGBA", "P"): img = img.convert("RGB")
         img.thumbnail((800, 1200), Image.Resampling.LANCZOS)
-        
         filename = secure_filename(file_obj.filename)
         base_name, _ = os.path.splitext(filename)
         webp_filename = f"{base_name}_{secrets.token_hex(4)}.webp"
-        
         save_path = os.path.join(upload_folder, 'covers', webp_filename)
         img.save(save_path, format="WEBP", quality=75, optimize=True)
         return webp_filename
     except Exception as e:
-        logging.error(f"Image compression failed: {e}")
-        # Fallback to standard save if Pillow fails on a weird file format
         safe_name = secure_filename(file_obj.filename)
         file_obj.seek(0)
         file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
         return safe_name
 
 # ==========================================
-# GOOGLE OAUTH & GMAIL API (HYBRID EMAIL SYSTEM)
+# GOOGLE OAUTH & GMAIL API (HYBRID HTML EMAILS)
 # ==========================================
 oauth = OAuth(app)
 google = oauth.register(
@@ -153,7 +147,7 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
-def send_email_wrapper(to_email, subject, body):
+def send_email_wrapper(to_email, subject, body_html):
     client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
     refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
@@ -162,37 +156,28 @@ def send_email_wrapper(to_email, subject, body):
     if refresh_token and client_secret:
         try:
             token_url = "https://oauth2.googleapis.com/token"
-            token_data = {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token,
-                "grant_type": "refresh_token"
-            }
+            token_data = {"client_id": client_id, "client_secret": client_secret, "refresh_token": refresh_token, "grant_type": "refresh_token"}
             r = requests.post(token_url, data=token_data, timeout=5)
-            res_json = r.json()
-            access_token = res_json.get("access_token")
+            access_token = r.json().get("access_token")
 
             if access_token:
                 message = EmailMessage()
-                message.set_content(body)
+                message.set_content("Please enable HTML to view this email.")
+                message.add_alternative(body_html, subtype='html')
                 message['To'] = to_email
                 message['Subject'] = subject
                 message['From'] = "noreply.pustakverse@gmail.com"
 
                 encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
                 send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
-                headers = {
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json"
-                }
+                headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
                 send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
-                if send_res.status_code in [200, 201]:
-                    return True
-        except Exception as e: pass
+                if send_res.status_code in [200, 201]: return True
+        except Exception: pass
 
     if email_password:
         try:
-            msg = MIMEText(body)
+            msg = MIMEText(body_html, 'html')
             msg['Subject'] = subject
             msg['From'] = "noreply.pustakverse@gmail.com"
             msg['To'] = to_email
@@ -200,38 +185,76 @@ def send_email_wrapper(to_email, subject, body):
                 server.login("noreply.pustakverse@gmail.com", email_password)
                 server.send_message(msg)
             return True
-        except Exception as smtp_err: pass
+        except Exception: pass
     return True
 
+# --- HTML EMAIL TEMPLATES ---
+def generate_html_email(title, content):
+    return f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;">
+        <h2 style="color: #2d3748; border-bottom: 2px solid #f66d2f; padding-bottom: 10px;">{title}</h2>
+        <div style="color: #4a5568; font-size: 16px; line-height: 1.6;">{content}</div>
+        <p style="color: #718096; font-size: 12px; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 10px;">This is an automated message from PustakVerse. Please do not reply.</p>
+    </div>
+    """
+
 def send_otp_email(to_email, otp):
-    return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', f"Your password reset code is: {otp}")
+    content = f"<p>Your password reset code is: <strong style='font-size: 24px; color: #f66d2f;'>{otp}</strong></p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', generate_html_email("Password Reset", content))
+
+def send_account_deletion_otp(to_email, otp):
+    content = f"<p>You have requested to permanently delete your account. This action cannot be undone.</p><p>Your deletion verification code is: <strong style='font-size: 24px; color: #e53e3e;'>{otp}</strong></p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion OTP', generate_html_email("Account Deletion Request", content))
 
 def send_2fa_email(to_email, otp):
-    return send_email_wrapper(to_email, 'PustakVerse - 2-Step Login Verification', f"Your Login Verification code is: {otp}")
+    content = f"<p>Your 2-Step Login Verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Login Verification', generate_html_email("Security Verification", content))
 
 def send_welcome_reader(to_email, username):
-    return send_email_wrapper(to_email, 'Welcome to PustakVerse!', f"Hello {username},\n\nWelcome to PustakVerse! Dive into our extensive Global Library today!")
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to PustakVerse! Dive into our extensive Global Library today and discover your next favorite book.</p>"
+    return send_email_wrapper(to_email, 'Welcome to PustakVerse!', generate_html_email("Welcome to the Library", content))
 
 def send_pending_author(to_email, username):
-    return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', f"Hello {username},\n\nThank you for registering as an Author! Your account is currently under review.")
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Thank you for registering as an Author! Your account is currently under review by our administrative team. We will notify you once approved.</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', generate_html_email("Author Application Received", content))
 
 def send_approved_author(to_email, username):
-    return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', f"Hello {username},\n\nCongratulations! Your Author account is officially approved. You can now publish your books.")
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! Your Author account is officially approved. You can now access your dashboard and publish books.</p>"
+    return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', generate_html_email("Account Approved", content))
 
 def send_official_welcome(to_email, username, password):
-    return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', f"Hello {username},\n\nWelcome to the administrative team!\n\nUsername: {username}\nPassword: {password}")
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to the administrative team! Please log in and change your password immediately.</p><p>Username: <strong>{username}</strong><br>Temporary Password: <strong>{password}</strong></p>"
+    return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', generate_html_email("Official Privileges Granted", content))
+
+def send_warning_email(to_email, username, warning_message):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>This is an official warning from the PustakVerse Administration regarding your account:</p><blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'>{warning_message}</blockquote><p>Please adhere to our platform guidelines to prevent account suspension.</p>"
+    return send_email_wrapper(to_email, 'URGENT: Official Warning from PustakVerse', generate_html_email("Account Warning", content))
+
+def send_promotion_broadcast(all_emails, promoted_username):
+    content = f"<p>We are thrilled to announce that <strong>{promoted_username}</strong> has been promoted to an Official Administrator on PustakVerse!</p><p>Please join us in welcoming them to the administrative team.</p>"
+    for email in all_emails:
+        send_email_wrapper(email, 'PustakVerse Community Announcement', generate_html_email("New Official Appointed!", content))
+
+def send_mass_message(to_emails, subject, message, role_target):
+    content = f"<p><strong>Official Broadcast to {role_target.capitalize()}s:</strong></p><p>{message}</p>"
+    for email in to_emails:
+        send_email_wrapper(email, f'PustakVerse Notice: {subject}', generate_html_email(subject, content))
 
 def send_revoked_official_email(to_email, username, reason):
-    return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', f"Hello {username},\n\nYour official administrative privileges on PustakVerse have been revoked.\n\nReason: {reason}")
+    content = f"<p>Hello {username},</p><p>Your official administrative privileges on PustakVerse have been revoked.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', generate_html_email("Privileges Revoked", content))
 
 def send_account_deleted_email(to_email, username, reason):
-    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', f"Hello {username},\n\nYour PustakVerse account has been permanently deleted by an administrator.\n\nReason: {reason}\n\nIf you believe this was a mistake, please contact support.")
+    content = f"<p>Hello {username},</p><p>Your PustakVerse account has been permanently deleted by an administrator.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', generate_html_email("Account Terminated", content))
 
 def send_author_rejected_email(to_email, username, reason):
-    return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', f"Hello {username},\n\nWe regret to inform you that your application for an Author account has been rejected.\n\nReason: {reason}")
+    content = f"<p>Hello {username},</p><p>We regret to inform you that your application for an Author account has been rejected.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', generate_html_email("Application Rejected", content))
 
 def send_book_deleted_email(to_email, username, book_title, reason):
-    return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', f"Hello {username},\n\nYour book titled '{book_title}' has been removed from PustakVerse by the platform Developer.\n\nReason: {reason}\n\nPlease ensure your future publications adhere to our platform guidelines.")
+    content = f"<p>Hello {username},</p><p>Your book titled '{book_title}' has been removed from PustakVerse by the platform Developer.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', generate_html_email("Content Removed", content))
 
 # ==========================================
 # SECURE TiDB (MYSQL) DATABASE CONNECTION
@@ -252,22 +275,11 @@ def get_db_connection(retries=2, delay=1.0):
             last_exception = err; time.sleep(delay)
     raise last_exception
 
-def payment_gateway_configured():
-    settings = global_cache.get('settings', {})
-    return bool(settings.get('rp_key_id') and settings.get('rp_key_secret'))
-
-def get_payment_fee_paise(price_paise):
-    rate = Decimal('0.0236')
-    return int((Decimal(price_paise) * rate / (Decimal('1') - rate)).to_integral_value(rounding=ROUND_CEILING))
-
 def ensure_payment_schema():
     db = None
     try:
-        db = get_db_connection()
-        cursor = db.cursor()
-        
+        db = get_db_connection(); cursor = db.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100) NOT NULL UNIQUE, email VARCHAR(150) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, role ENUM('reader', 'author', 'official', 'developer') DEFAULT 'reader', is_verified BOOLEAN DEFAULT FALSE, security_question VARCHAR(255) NOT NULL, security_answer VARCHAR(255) NOT NULL, verification_reason TEXT, payout_details VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)")
-        
         try:
             cursor.execute("SHOW COLUMNS FROM users LIKE 'two_factor_enabled'")
             if not cursor.fetchone(): cursor.execute("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE")
@@ -281,7 +293,6 @@ def ensure_payment_schema():
             if not cursor.fetchone(): cursor.execute("ALTER TABLE books ADD COLUMN preview_pages INT NOT NULL DEFAULT 5")
         except Exception: pass
 
-        # ADD RAZORPAY KEYS DIRECTLY TO THE BOOKS TABLE (PER BOOK BASIS)
         try:
             cursor.execute("SHOW COLUMNS FROM books LIKE 'rp_key_id'")
             if not cursor.fetchone():
@@ -357,86 +368,24 @@ def create_master_developer():
             except: pass
 
 # ==========================================
-# PUBLIC ROUTES & COMPREHENSIVE TERMS
+# PUBLIC ROUTES
 # ==========================================
-@app.route('/terms')
-def terms():
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Terms & Conditions - PustakVerse</title>
-        <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f7fafc; color: #2d3748; margin: 0; padding: 0; }
-            .container { max-width: 900px; margin: 40px auto; padding: 40px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
-            h1 { color: #1a202c; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; font-size: 2.2rem; }
-            h2 { color: #2b6cb0; margin-top: 35px; font-size: 1.5rem; }
-            .alert-box { background-color: #fff5f5; border-left: 5px solid #e53e3e; padding: 20px; margin: 30px 0; border-radius: 4px; }
-            .alert-box h2 { color: #c53030; margin-top: 0; }
-            ul { padding-left: 20px; }
-            li { margin-bottom: 10px; }
-            .btn { display: inline-block; padding: 12px 30px; background: #f66d2f; color: white; text-decoration: none; border-radius: 30px; font-weight: bold; transition: 0.3s; margin-top: 20px; }
-            .btn:hover { background: #dd6b20; transform: translateY(-2px); }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>PustakVerse Comprehensive Terms & Conditions</h1>
-            <p>Welcome to PustakVerse. By registering an account, accessing, or using our platform, you agree to be bound by these Terms and Conditions. Please read them carefully to understand your rights and responsibilities.</p>
-            
-            <h2>1. Terms for Readers (Users)</h2>
-            <ul>
-                <li><strong>Personal Use Guarantee:</strong> Books purchased or accessed for free on PustakVerse are strictly for your personal, non-commercial use. You may not distribute, copy, resell, or share secure PDFs outside of the platform framework.</li>
-                <li><strong>Account Integrity & Security:</strong> You are fully responsible for maintaining the confidentiality of your login credentials and Two-Factor Authentication (2FA) codes. PustakVerse is not liable for unauthorized access resulting from user negligence.</li>
-                <li><strong>Content Availability:</strong> While we strive to maintain a permanent library, PustakVerse does not guarantee that any specific author-published book will remain available indefinitely. Independent Authors retain the right to modify or remove their content.</li>
-                <li><strong>Refund Policy:</strong> All digital sales on PustakVerse are final. Refunds are only issued in verified instances of technical failure resulting in the non-delivery of purchased content. Dislike of a book's content does not qualify for a refund.</li>
-            </ul>
-
-            <h2>2. Terms for Authors (Publishers)</h2>
-            <ul>
-                <li><strong>Copyright, Ownership, & Plagiarism:</strong> By uploading a book or document to PustakVerse, you legally warrant and represent that you are the original creator or possess the explicit commercial rights to distribute the content. Plagiarism, piracy, or copyright infringement is strictly prohibited and will result in an immediate permanent ban.</li>
-                <li><strong>Content Guidelines & Lawfulness:</strong> You agree not to publish content that is illegal, incites physical violence, contains explicit illegal material, or violates local, national, and international laws.</li>
-                <li><strong>Direct Payouts & Gateway Fees:</strong> Authors operate their own individual Razorpay integrations to collect payments directly from buyers. Authors retain 100% of their set list price, minus standard Razorpay processing fees deducted by Razorpay at the time of settlement. PustakVerse takes zero commission.</li>
-                <li><strong>Right to Review & Moderation:</strong> PustakVerse Administrators and Officials reserve the explicit right to manually review, reject, suspend, or permanently remove your books or author account at any time for violating these platform terms.</li>
-            </ul>
-
-            <div class="alert-box">
-                <h2>3. Absolute Liability Disclaimer (Crucial)</h2>
-                <p><strong>Platform Immunity:</strong> PustakVerse operates solely as a user-generated digital hosting platform. The Developers, Officials, and Administrators of PustakVerse take <strong>ABSOLUTELY NO RESPONSIBILITY OR LEGAL LIABILITY</strong> for the books, documents, text, or content uploaded by independent Authors.</p>
-                <p><strong>The "Archive" Curatorial Exception:</strong> The <em>only</em> exception to this rule is content officially published within the <strong>"Archive"</strong> catalog. The platform's Developer maintains full administrative authority, legal oversight, and management over Archive books. All other catalogs (Fiction, Non-Fiction, Educational, History, Poetry, etc.) are the sole legal and moral responsibility of the respective uploading Author.</p>
-            </div>
-
-            <h2>4. Administrative Enforcement & Termination</h2>
-            <p>PustakVerse reserves the absolute right to terminate, ban, or suspend your account, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms outlined in this agreement. Administrative decisions made by the Developer are final.</p>
-
-            <div style="text-align: center; margin-top: 40px; border-top: 1px solid #edf2f7; padding-top: 30px;">
-                <a href="javascript:window.close();" class="btn">I Understand - Close Window</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return html_content
-
-@app.route('/check_username', methods=['POST'])
-def check_username():
-    username = request.form.get('username', '').strip()
-    if not username: return jsonify({'available': False, 'message': ''})
-    if not re.match(r'^[a-zA-Z0-9_]+$', username): return jsonify({'available': False, 'message': 'Username cannot contain spaces or special characters.'})
-    db = None
+@app.route('/')
+def index():
+    # POPUP TRIGGER MOVED TO GLOBAL LIBRARY 
+    show_telegram_popup = session.pop('show_telegram_popup', False)
+    db = None; books = []
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
-        user = cursor.fetchone()
-        if user: return jsonify({'available': False, 'message': 'Username is already taken'})
-        return jsonify({'available': True, 'message': 'Username is available!'})
-    except Exception as e: return jsonify({'available': False, 'message': 'Checking...'})
+        cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, users.username as author_name, users.role as author_role 
+            FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC""")
+        books = clean_book_data(cursor.fetchall())
+    except Exception: flash("Database error.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
+    return render_template('index.html', books=books, show_telegram_popup=show_telegram_popup)
 
 @app.route('/category/<name>')
 def category_view(name):
@@ -468,23 +417,29 @@ def archives_view():
             except: pass
     return render_template('category.html', books=books, page_title="Archives (Free Classics)")
 
-@app.route('/')
-def index():
-    db = None; books = []
+@app.route('/check_username', methods=['POST'])
+def check_username():
+    username = request.form.get('username', '').strip()
+    if not username: return jsonify({'available': False, 'message': ''})
+    if not re.match(r'^[a-zA-Z0-9_]+$', username): return jsonify({'available': False, 'message': 'Username cannot contain spaces or special characters.'})
+    db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, users.username as author_name, users.role as author_role 
-            FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC""")
-        books = clean_book_data(cursor.fetchall())
-    except Exception: flash("Database error.", "error")
+        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+        user = cursor.fetchone()
+        if user: return jsonify({'available': False, 'message': 'Username is already taken'})
+        return jsonify({'available': True, 'message': 'Username is available!'})
+    except Exception as e: return jsonify({'available': False, 'message': 'Checking...'})
     finally:
         if db:
             try: db.close()
             except: pass
-    return render_template('index.html', books=books)
+
+@app.route('/contact')
+def contact(): return render_template('contact.html')
 
 # ==========================================
-# AUTHENTICATION & GLOBAL REDIRECT TO '/'
+# AUTHENTICATION
 # ==========================================
 @app.route('/register', methods=['POST'])
 def register():
@@ -683,6 +638,136 @@ def forgot_password():
     return render_template('forgot_password.html', show_otp_form=False)
 
 # ==========================================
+# ACCOUNT DELETION (OTP VERIFIED)
+# ==========================================
+@app.route('/send_delete_account_otp', methods=['POST'])
+def send_delete_account_otp():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    db = None
+    try:
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT email FROM users WHERE id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        if user:
+            otp = str(random.randint(100000, 999999))
+            session['delete_account_otp'] = otp
+            send_account_deletion_otp(user['email'], otp)
+            flash("An OTP has been sent to your email to confirm account deletion.", "info")
+            session['show_delete_otp_form'] = True
+    except Exception: flash("Database Error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/delete_my_account', methods=['POST'])
+def delete_my_account():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    user_otp = request.form.get('otp', '').strip()
+    valid_otp = session.pop('delete_account_otp', None)
+    session.pop('show_delete_otp_form', None)
+    
+    if user_otp and valid_otp and user_otp == valid_otp:
+        db = None
+        try:
+            db = get_db_connection(); cursor = db.cursor()
+            user_id = session['user_id']
+            tables = ['personal_library', 'interactions', 'books', 'users']
+            for table in tables:
+                column = 'author_id' if table == 'books' else ('id' if table == 'users' else 'user_id')
+                cursor.execute(f"DELETE FROM {table} WHERE {column} = %s", (user_id,))
+            db.commit()
+            session.clear()
+            flash("Your account and all associated data have been permanently deleted.", "success")
+            return redirect(url_for('index'))
+        except Exception: flash("Database Error during deletion.", "error")
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+    else:
+        flash("Invalid OTP. Account deletion aborted.", "error")
+    return redirect(url_for('dashboard'))
+
+# ==========================================
+# DEVELOPER WARNING, PROMOTION & BROADCAST
+# ==========================================
+@app.route('/warn_user/<int:user_id>', methods=['POST'])
+def warn_user(user_id):
+    if session.get('role') != 'developer': return redirect(url_for('dashboard'))
+    warning_msg = request.form.get('warning_message', '').strip()
+    db = None
+    try:
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if user and warning_msg:
+            send_warning_email(user['email'], user['username'], warning_msg)
+            flash(f"Official warning sent to {user['username']}.", "success")
+    except Exception: flash("Database Error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/promote_user/<int:user_id>', methods=['POST'])
+def promote_user(user_id):
+    if session.get('role') != 'developer': return redirect(url_for('dashboard'))
+    db = None
+    try:
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if user:
+            cursor.execute("UPDATE users SET role = 'official' WHERE id = %s", (user_id,))
+            cursor.execute("SELECT email FROM users")
+            all_emails = [row['email'] for row in cursor.fetchall()]
+            db.commit()
+            
+            send_promotion_broadcast(all_emails, user['username'])
+            flash(f"{user['username']} has been promoted to Official!", "success")
+    except Exception: flash("Database Error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/mass_message', methods=['POST'])
+def mass_message():
+    if session.get('role') != 'developer': return redirect(url_for('dashboard'))
+    target_role = request.form.get('target_role')
+    subject = request.form.get('subject', 'Official Notice')
+    message_body = request.form.get('message_body', '').strip()
+    
+    if not message_body:
+        flash("Message body cannot be empty.", "error")
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection(); cursor = db.cursor(dictionary=True)
+        if target_role == 'all':
+            cursor.execute("SELECT email FROM users")
+        else:
+            cursor.execute("SELECT email FROM users WHERE role = %s", (target_role,))
+        emails = [row['email'] for row in cursor.fetchall()]
+        
+        if emails:
+            send_mass_message(emails, subject, message_body, target_role)
+            flash(f"Mass broadcast sent successfully to {len(emails)} users.", "success")
+        else:
+            flash("No users found for that specific role.", "info")
+    except Exception: flash("Database Error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+# ==========================================
 # CHANGE USERNAME LOGIC
 # ==========================================
 @app.route('/change_username', methods=['POST'])
@@ -816,7 +901,7 @@ def change_password():
 def cancel_password_change(): session.pop('change_pw_otp', None); return redirect(url_for('dashboard'))
 
 # ==========================================
-# E-COMMERCE & BUY NOW LOGIC (DIRECT BOOK PAYMENTS NO FALLBACK)
+# E-COMMERCE & BUY NOW LOGIC 
 # ==========================================
 @app.route('/buy_book/<int:book_id>', methods=['POST'])
 def buy_book(book_id):
@@ -827,11 +912,9 @@ def buy_book(book_id):
     db = None; book = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        # Fetch keys assigned DIRECTLY to this specific book
         cursor.execute("SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
         book = cursor.fetchone()
-        if book:
-            book['cover_image'] = book.get('cover_image') or ""
+        if book: book['cover_image'] = book.get('cover_image') or ""
         
         if not book: abort(404)
 
@@ -850,7 +933,6 @@ def buy_book(book_id):
     author_key_id = book.get('author_key_id')
     author_key_secret = book.get('author_key_secret')
     
-    # NO FALLBACK: If the author didn't add keys to this book, block the sale.
     if not author_key_id or not author_key_secret:
         flash('The author has not configured their payment gateway for this specific book. Purchases are temporarily disabled.', 'error')
         return redirect(request.referrer or url_for('index'))
@@ -860,12 +942,7 @@ def buy_book(book_id):
     db = None
     try:
         client = razorpay.Client(auth=(author_key_id, author_key_secret))
-        
-        order_data = {
-            'amount': total_paise,
-            'currency': 'INR',
-            'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
-        }
+        order_data = {'amount': total_paise, 'currency': 'INR', 'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"}
         order = client.order.create(order_data)
         
         db = get_db_connection(); cursor = db.cursor()
@@ -890,18 +967,11 @@ def verify_payment():
     db = None
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute('''
-            SELECT p.id, p.book_id, b.rp_key_id, b.rp_key_secret 
-            FROM purchases p 
-            JOIN books b ON p.book_id = b.id 
-            WHERE p.razorpay_order_id = %s AND p.user_id = %s
-        ''', (order_id, session['user_id']))
+        cursor.execute('SELECT p.id, p.book_id, b.rp_key_id, b.rp_key_secret FROM purchases p JOIN books b ON p.book_id = b.id WHERE p.razorpay_order_id = %s AND p.user_id = %s', (order_id, session['user_id']))
         purchase = cursor.fetchone()
         
         if purchase:
-            key_id = purchase['rp_key_id']
-            key_secret = purchase['rp_key_secret']
-                
+            key_id = purchase['rp_key_id']; key_secret = purchase['rp_key_secret']
             if key_id and key_secret:
                 client = razorpay.Client(auth=(key_id, key_secret))
                 client.utility.verify_payment_signature({'razorpay_order_id': order_id, 'razorpay_payment_id': payment_id, 'razorpay_signature': signature})
@@ -912,11 +982,9 @@ def verify_payment():
                 flash('Payment successful! Book has been saved to My Library and unlocked.', 'success')
                 return redirect(url_for('read_book', book_id=purchase['book_id']))
             else:
-                flash('Payment verification failed. Keys missing on this book.', 'error')
-                return redirect(url_for('my_library'))
+                flash('Payment verification failed. Keys missing on this book.', 'error'); return redirect(url_for('my_library'))
         else:
-            flash('Payment verification failed. Order not found.', 'error')
-            return redirect(url_for('my_library'))
+            flash('Payment verification failed. Order not found.', 'error'); return redirect(url_for('my_library'))
     except Exception as e: 
         logging.error(f"Verification error: {e}")
         flash('Payment verification failed.', 'error')
@@ -932,11 +1000,7 @@ def payment_history():
     db = None; payments = []
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT p.razorpay_order_id, p.amount_paise, p.status, p.paid_at, b.title as book_title
-            FROM purchases p JOIN books b ON p.book_id = b.id
-            WHERE p.user_id = %s ORDER BY p.created_at DESC
-        """, (session['user_id'],))
+        cursor.execute("SELECT p.razorpay_order_id, p.amount_paise, p.status, p.paid_at, b.title as book_title FROM purchases p JOIN books b ON p.book_id = b.id WHERE p.user_id = %s ORDER BY p.created_at DESC", (session['user_id'],))
         payments = cursor.fetchall()
     except Exception: flash("Could not load payment history.", "error")
     finally:
@@ -956,11 +1020,7 @@ def book_sales(book_id):
         if not book or (book['author_id'] != session['user_id'] and session['role'] not in ['developer', 'official']):
             flash("Unauthorized access to book sales.", "error"); return redirect(url_for('dashboard'))
 
-        cursor.execute("""
-            SELECT p.razorpay_order_id, p.amount_paise, p.status, p.paid_at, u.username as buyer_name, u.email as buyer_email
-            FROM purchases p JOIN users u ON p.user_id = u.id
-            WHERE p.book_id = %s AND p.status = 'paid' ORDER BY p.paid_at DESC
-        """, (book_id,))
+        cursor.execute("SELECT p.razorpay_order_id, p.amount_paise, p.status, p.paid_at, u.username as buyer_name, u.email as buyer_email FROM purchases p JOIN users u ON p.user_id = u.id WHERE p.book_id = %s AND p.status = 'paid' ORDER BY p.paid_at DESC", (book_id,))
         sales = cursor.fetchall()
     except Exception: flash("Could not load sales history.", "error")
     finally:
@@ -1022,25 +1082,20 @@ def serve_secure_pdf(book_id):
     folder = app.config['PRIVATE_PDF_FOLDER'] if book['is_paid'] or book['private_pdf'] else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
     full_path = os.path.join(folder, book['pdf_file'])
 
-    if not os.path.exists(full_path):
-        abort(404)
+    if not os.path.exists(full_path): abort(404)
 
-    if can_read:
-        return send_from_directory(folder, book['pdf_file'])
+    if can_read: return send_from_directory(folder, book['pdf_file'])
         
     try:
-        reader = PdfReader(full_path)
-        writer = PdfWriter()
+        reader = PdfReader(full_path); writer = PdfWriter()
         author_preview_setting = book.get('preview_pages') or 5
         preview_limit = min(max(1, author_preview_setting), 10)
         num_pages = min(preview_limit, len(reader.pages))
         
-        for page_num in range(num_pages):
-            writer.add_page(reader.pages[page_num])
+        for page_num in range(num_pages): writer.add_page(reader.pages[page_num])
             
         output = io.BytesIO()
-        writer.write(output)
-        output.seek(0)
+        writer.write(output); output.seek(0)
         return send_file(output, mimetype='application/pdf', download_name=f"preview_{book['pdf_file']}")
     except Exception as e:
         logging.error(f"Error slicing PDF preview: {e}")
@@ -1086,7 +1141,7 @@ def my_library():
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     db = None
-    show_telegram_popup = session.pop('show_telegram_popup', False)
+    show_delete_otp_form = session.get('show_delete_otp_form', False)
     
     try:
         db = get_db_connection(); cursor = db.cursor(dictionary=True)
@@ -1127,7 +1182,6 @@ def dashboard():
 
             if is_paid and price_paise <= 0: flash('Paid books need a valid price.', 'error'); return redirect(url_for('dashboard'))
             
-            # Key Extraction directly from the book upload form
             book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
             book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
             
@@ -1211,17 +1265,17 @@ def dashboard():
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
 
         if role == 'official':
-            if search_query: cursor.execute("SELECT id, username, role, last_activity FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
-            else: cursor.execute("SELECT id, username, role, last_activity FROM users WHERE role IN ('reader', 'author') ORDER BY last_activity DESC")
+            if search_query: cursor.execute("SELECT id, username, email, role, last_activity FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
+            else: cursor.execute("SELECT id, username, email, role, last_activity FROM users WHERE role IN ('reader', 'author') ORDER BY last_activity DESC")
             all_users = cursor.fetchall()
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
-            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
 
         if role == 'author':
             cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
@@ -1230,12 +1284,11 @@ def dashboard():
             
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
-            return render_template('dashboard.html', my_books=my_books, show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
 
-        return render_template('dashboard.html', show_telegram_popup=show_telegram_popup, two_factor_enabled=two_factor_enabled)
+        return render_template('dashboard.html', show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
         
     except Exception as e:
-        if show_telegram_popup: session['show_telegram_popup'] = True
         flash(f"System Notice: Database schema updating. {str(e)}", "error")
         return redirect(url_for('index'))
     finally:
@@ -1544,9 +1597,6 @@ def delete_book(book_id):
                 try: db.close()
                 except: pass
     return redirect(url_for('dashboard'))
-
-@app.route('/contact')
-def contact(): return render_template('contact.html')
 
 if __name__ == '__main__':
     ensure_payment_schema()
