@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - PustakVerse</title>
+      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
         :root { --nav-bg: #2d3748; --primary-orange: #f66d2f; --bg-light: #f7fafc; --text-dark: #2d3748; --text-light: #718096; --card-bg: #ffffff; }
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-light); color: var(--text-dark); -webkit-font-smoothing: antialiased; }
@@ -21,6 +23,7 @@
         .panel { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 30px; margin-bottom: 30px; border: 1px solid #edf2f7; }
         .panel h2 { margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; margin-bottom: 20px; color: var(--nav-bg); }
 
+        /* --- CUSTOM SCROLL CONTAINER FOR ALL TABLES --- */
         .table-scroll-container {
             max-height: 400px;
             overflow-y: auto;
@@ -28,6 +31,7 @@
             border: 1px solid #edf2f7;
             border-radius: 6px;
         }
+        /* Custom scrollbar styling for a modern look */
         .table-scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll-container::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
         .table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -47,6 +51,17 @@
         .flash { padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: center; font-weight: 500; }
         .flash.success { background: #dcfce7; color: #166534; } .flash.error { background: #fee2e2; color: #991b1b; } .flash.info { background: #e0f2fe; color: #075985; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
+        .popup-box { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .popup-icon-bg { width: 80px; height: 80px; background: #e0f2fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #0284c7; }
+        .popup-box h2 { color: #0f172a; margin-top: 0; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
+        .popup-box p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+        .btn-telegram { background: linear-gradient(to right, #0ea5e9, #0284c7); color: white; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 1.1rem; display: inline-block; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-telegram:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4); color: white; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; transition: color 0.2s; }
+        .close-btn:hover { color: #0f172a; }
 
         @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .navbar { flex-direction: column; padding: 15px; gap: 15px; } }
     </style>
@@ -223,6 +238,9 @@
 
             <div class="panel" style="border-top: 4px solid var(--nav-bg);">
                 <h2>Security Settings</h2>
+                
+                <!-- Hide 2FA Toggle for Admins, Show Enforced Status Instead -->
+                {% if session.role not in ['developer', 'official'] %}
                 <div style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
                     <h3 style="margin-top: 0; font-size: 1.1rem; color: #2d3748;">Two-Step Verification (2FA)</h3>
                     <p style="font-size: 0.9rem; color: #718096;">Add an extra layer of security. When enabled, you'll need an email code to log in.</p>
@@ -238,6 +256,12 @@
                         {% endif %}
                     </form>
                 </div>
+                {% else %}
+                <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-bottom: 25px;">
+                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #166534;">Two-Step Verification (2FA)</h3>
+                    <p style="font-size: 0.9rem; color: #15803d; margin-bottom: 0;"><strong>Active.</strong> As an administrator, 2FA is permanently enforced on your account for platform security.</p>
+                </div>
+                {% endif %}
 
                 {% if session.get('change_pw_otp') %}
                     <form action="{{ url_for('change_password') }}" method="POST" style="margin-bottom: 25px;">
@@ -248,10 +272,14 @@
                         <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
                     </form>
                 {% else %}
-                    <form action="{{ url_for('send_change_password_otp') }}" method="POST" style="margin-bottom: 25px;"><button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Request Password Change</button></form>
+                    <!-- Renamed Button to "Change My Password" -->
+                    <form action="{{ url_for('send_change_password_otp') }}" method="POST" style="margin-bottom: 25px;">
+                        <button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Change My Password</button>
+                    </form>
                 {% endif %}
 
-                <!-- NEW: Delete My Account Section -->
+                <!-- Hide Delete Account Section completely for Developer -->
+                {% if session.role != 'developer' %}
                 <div style="background: #fff5f5; padding: 15px; border-radius: 6px; border: 1px solid #fed7d7; margin-top: 25px;">
                     <h3 style="margin-top: 0; font-size: 1.1rem; color: #c53030;">Danger Zone: Delete Account</h3>
                     <p style="font-size: 0.9rem; color: #718096;">Permanently delete your account and all data. Requires email verification.</p>
@@ -269,6 +297,7 @@
                         </form>
                     {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -545,7 +574,7 @@
 
                                     <!-- Promote to Official Button -->
                                     {% if user.role in ['reader', 'author'] %}
-                                    <form action="{{ url_for('promote_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Promote this user to Official Administrator? This will broadcast an email to everyone.');">
+                                    <form action="{{ url_for('promote_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Promote this user to Official Administrator? This will notify them directly via email.');">
                                         <button type="submit" class="btn-sm btn-green" style="height: 100%;">Promote</button>
                                     </form>
                                     {% endif %}
