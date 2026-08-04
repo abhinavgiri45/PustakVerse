@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions - PustakVerse</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f7fafc; color: #2d3748; margin: 0; padding: 0; }
+        .container { max-width: 900px; margin: 40px auto; padding: 40px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
+        h1 { color: #1a202c; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; font-size: 2.2rem; }
+        h2 { color: #2b6cb0; margin-top: 35px; font-size: 1.5rem; }
+        .alert-box { background-color: #fff5f5; border-left: 5px solid #e53e3e; padding: 20px; margin: 30px 0; border-radius: 4px; }
+        .alert-box h2 { color: #c53030; margin-top: 0; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if role == 'author' %}
+            <h1>PustakVerse Author Publishing Guidelines</h1>
+            <p>By registering an Author account on PustakVerse, you legally agree to the following terms and guidelines.</p>
+            
+            <h2>1. Copyright, Ownership, & Plagiarism</h2>
+            <ul>
+                <li>By uploading a book or document to PustakVerse, you legally warrant and represent that you are the original creator or possess the explicit commercial rights to distribute the content.</li>
+                <li>Plagiarism, piracy, or copyright infringement is strictly prohibited and will result in an immediate permanent ban and deletion of all uploaded materials.</li>
+            </ul>
+
+            <h2>2. Content Guidelines & Lawfulness</h2>
+            <ul>
+                <li>You agree not to publish content that is illegal, incites physical violence, contains explicit illegal material, or violates local, national, and international laws.</li>
+            </ul>
+
+            <h2>3. Direct Payouts & Gateway Fees</h2>
+            <ul>
+                <li>Authors operate their own individual Razorpay integrations to collect payments directly from buyers.</li>
+                <li>Authors retain 100% of their set list price, minus standard Razorpay processing fees deducted by Razorpay at the time of settlement. PustakVerse takes zero commission.</li>
+            </ul>
+
+            <div class="alert-box">
+                <h2>4. Right to Review & Moderation</h2>
+                <p>PustakVerse Administrators and Officials reserve the explicit right to manually review, reject, suspend, or permanently remove your books or author account at any time for violating these platform terms. Platform Developer decisions are final.</p>
+            </div>
+            
+        {% else %}
+            <h1>PustakVerse Reader Terms & Conditions</h1>
+            <p>Welcome to PustakVerse. By registering a Reader account, accessing, or using our platform, you agree to the following terms.</p>
+            
+            <h2>1. Personal Use Guarantee</h2>
+            <ul>
+                <li>Books purchased or accessed for free on PustakVerse are strictly for your personal, non-commercial use.</li>
+                <li>You may not distribute, copy, resell, or share secure PDFs outside of the platform framework.</li>
+            </ul>
+
+            <h2>2. Account Integrity & Security</h2>
+            <ul>
+                <li>You are fully responsible for maintaining the confidentiality of your login credentials.</li>
+                <li>PustakVerse is not liable for unauthorized access resulting from user negligence.</li>
+            </ul>
+
+            <h2>3. Content Availability & Refund Policy</h2>
+            <ul>
+                <li>While we strive to maintain a permanent library, PustakVerse does not guarantee that any specific author-published book will remain available indefinitely. Independent Authors retain the right to modify or remove their content.</li>
+                <li>All digital sales on PustakVerse are final. Refunds are only issued in verified instances of technical failure resulting in the non-delivery of purchased content.</li>
+            </ul>
+
+            <div class="alert-box">
+                <h2>4. Absolute Liability Disclaimer (Crucial)</h2>
+                <p><strong>Platform Immunity:</strong> PustakVerse operates solely as a user-generated digital hosting platform. The Developers, Officials, and Administrators of PustakVerse take <strong>ABSOLUTELY NO RESPONSIBILITY OR LEGAL LIABILITY</strong> for the books, documents, text, or content uploaded by independent Authors.</p>
+                <p>The <em>only</em> exception to this rule is content officially published within the "Archive" catalog.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
