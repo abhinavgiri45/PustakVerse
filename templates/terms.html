@@ -16,13 +16,17 @@
         li { margin-bottom: 10px; }
         p { margin-top: 5px; margin-bottom: 15px; }
         .date { font-weight: bold; color: #718096; margin-bottom: 30px; display: block; }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #f66d2f; text-decoration: none; font-weight: bold; }
-        .back-link:hover { text-decoration: underline; }
+        
+        /* UPDATED BACK LINK STYLES */
+        .back-link { display: inline-flex; align-items: center; margin-bottom: 20px; color: #ffffff; background-color: #2d3748; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        .back-link:hover { background-color: #f66d2f; transform: translateY(-2px); }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="javascript:history.back()" class="back-link">← Go Back</a>
+        
+        <!-- FIXED: Foolproof link to return to the homepage instead of relying on browser history -->
+        <a href="/" class="back-link">← Return to PustakVerse</a>
 
         {% if role == 'author' %}
             <h1>Terms and Conditions for Authors on Pustak Verse</h1>
@@ -63,7 +67,7 @@
 
             <div class="alert-box">
                 <h2>10. Developer and Pustak Verse Not Responsible for Copyright Infringement by Authors</h2>
-                <p>The developer, Abhinav Giri, and Pustak Verse shall not be responsible for any book uploaded without proper copyright permission. The Platform acts purely as an intermediary host. The entire legal, financial, and moral responsibility for any unauthorized, infringing, or illegal content remains solely with the uploading author.</p>
+                <p>The developer, Abhinav Giri, and Pustak Verse shall not be responsible for any book uploaded without proper copyright permission. The Platform acts purely as an intermediary host. <strong>The entire legal, financial, and moral responsibility for any unauthorized, infringing, or illegal content remains solely with the uploading author.</strong></p>
             </div>
 
             <h2>11. Copyright Complaint and Takedown Policy</h2>
