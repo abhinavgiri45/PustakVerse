@@ -4,21 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms & Conditions - PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f7fafc; color: #2d3748; margin: 0; padding: 0; }
-        .container { max-width: 900px; margin: 40px auto; padding: 40px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
+        .container { max-width: 900px; margin: 40px auto; padding: 50px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
         h1 { color: #1a202c; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; font-size: 2.2rem; margin-top: 0;}
         h2 { color: #2b6cb0; margin-top: 35px; font-size: 1.3rem; margin-bottom: 10px; }
         .alert-box { background-color: #fff5f5; border-left: 5px solid #e53e3e; padding: 20px; margin: 30px 0; border-radius: 4px; }
         .alert-box h2 { color: #c53030; margin-top: 0; }
-        ul { padding-left: 20px; margin-top: 5px; }
+        ul, ol { padding-left: 20px; margin-top: 5px; }
         li { margin-bottom: 10px; }
         p { margin-top: 5px; margin-bottom: 15px; }
         .date { font-weight: bold; color: #718096; margin-bottom: 30px; display: block; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #f66d2f; text-decoration: none; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="javascript:history.back()" class="back-link">← Go Back</a>
+
         {% if role == 'author' %}
             <h1>Terms and Conditions for Authors on Pustak Verse</h1>
             <span class="date">Last Updated: August 4, 2026</span>
@@ -58,7 +63,7 @@
 
             <div class="alert-box">
                 <h2>10. Developer and Pustak Verse Not Responsible for Copyright Infringement by Authors</h2>
-                <p>The developer, Abhinav Giri, and Pustak Verse shall not be responsible for any book uploaded without proper copyright permission. The Platform acts purely as an intermediary host. <strong>The entire legal, financial, and moral responsibility for any unauthorized, infringing, or illegal content remains solely with the uploading author.</strong></p>
+                <p>The developer, Abhinav Giri, and Pustak Verse shall not be responsible for any book uploaded without proper copyright permission. The Platform acts purely as an intermediary host. The entire legal, financial, and moral responsibility for any unauthorized, infringing, or illegal content remains solely with the uploading author.</p>
             </div>
 
             <h2>11. Copyright Complaint and Takedown Policy</h2>
@@ -222,7 +227,8 @@
                 <li><strong>Reporting:</strong> If you suspect an Author has plagiarized a work or infringed on copyrights, you are encouraged to report it via our dedicated support channels.</li>
             </ul>
             <div class="alert-box">
-                <p><strong>Important Disclaimer Regarding Author Content:</strong> The developer, Abhinav Giri, and Pustak Verse act purely as a hosting platform and intermediary. We do not manually review, endorse, or guarantee the legality of every uploaded work. Therefore, Pustak Verse shall not be responsible for any book uploaded by an author without proper copyright permission. The entire legal responsibility remains with the uploading author.</p>
+                <h2>Important Disclaimer Regarding Author Content</h2>
+                <p>The developer, Abhinav Giri, and Pustak Verse act purely as a hosting platform and intermediary. We do not manually review, endorse, or guarantee the legality of every uploaded work. <strong>Therefore, Pustak Verse shall not be responsible for any book uploaded by an author without proper copyright permission. The entire legal responsibility remains with the uploading author.</strong></p>
             </div>
 
             <h2>10. Prohibited Conduct for Readers</h2>
