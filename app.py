@@ -571,6 +571,11 @@ def check_username():
 @app.route('/contact')
 def contact(): return render_template('contact.html')
 
+@app.route('/terms')
+def terms():
+    role = request.args.get('role', 'reader')
+    return render_template('terms.html', role=role)
+
 # ==========================================
 # AUTHENTICATION
 # ==========================================
