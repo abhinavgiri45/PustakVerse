@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PustakVerse is a global digital library offering free and premium books.">
+    
+    <!-- SEO & Best Practices: Guaranteed HTTPS Canonical -->
+    <meta name="description" content="PustakVerse is a global digital library offering free and premium books, educational resources, and classic archives. Discover and read your next favorite book today.">
     <meta name="theme-color" content="#2d3748">
     <meta name="format-detection" content="telephone=no">
+    <meta name="google-site-verification" content="uC9A0kYiSE4aOQnf-wxSjyNCkF0UM5bGxMBt_ItJES4" />
     <link rel="canonical" href="https://pustakverse.onrender.com/">
     
     <title>{{ site_settings.hero_title }} - Global Library</title>
@@ -13,11 +16,13 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     
+    <!-- Performance: Strict Preconnects -->
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
     <link rel="dns-prefetch" href="https://drive.google.com">
     <link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
 
+    <!-- THE SPEED INDEX NUKE: Preload ONLY the Logo and the EXACT First Book Cover -->
     <link rel="preload" as="image" href="{{ url_for('static', filename='PustakVerse.png') }}" fetchpriority="high">
     {% if books and books|length > 0 %}
         {% set first_cover = books[0].cover_image %}
@@ -30,12 +35,16 @@
     
     <style>
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+        
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #1e293b; font-size: 16px; }
+        
         .navbar { background-color: #2d3748; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
         .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; object-fit: contain; }
+        
         .navbar-links { display: flex; gap: 16px; align-items: center; margin-left: auto; }
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 1rem; transition: 0.2s; padding: 12px 16px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box; }
         .navbar-links a:hover { color: #992b00; }
+        
         .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #992b00; }
         .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
         .hero-section p { font-size: 1.2rem; color: #cbd5e1; margin-top: 10px; }
@@ -62,9 +71,11 @@
         
         .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
         .book-tag { color: #992b00; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-        .book-title { font-size: 1.15rem; color: #1e293b; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; text-decoration: none; }
+        
+        .book-title { font-size: 1.15rem; color: #1e293b; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
         .book-title a { color: inherit; text-decoration: none; }
         .book-title a:hover { color: #992b00; }
+        
         .book-author { font-size: 1rem; color: #334155; margin: 0 0 20px 0; }
         
         .book-actions { display: flex; gap: 12px; margin-top: auto; }
@@ -76,8 +87,12 @@
 
         .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 40px 0; }
         
+        .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 40px 0; }
+        .no-results h2 { color: #1e293b; margin-bottom: 10px; font-size: 1.8rem;}
+        .no-results p { color: #334155; }
+
+        /* Telegram Popup Styles Migrated to Index */
         .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
         .popup-box { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -85,10 +100,23 @@
         .popup-box h2 { color: #0f172a; margin-top: 0; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
         .popup-box p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
         .btn-telegram { background: linear-gradient(to right, #0ea5e9, #0284c7); color: white; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 1.1rem; display: inline-block; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-telegram:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4); color: white; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; transition: color 0.2s; }
+        .close-btn:hover { color: #0f172a; }
+
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; padding: 15px; }
+            .navbar-links { width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+            .hero-section { padding: 40px 20px; }
+            .hero-section h1 { font-size: 2.5rem; }
+            .container { padding: 20px; }
+            .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+            .book-actions { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
+
     {% if show_telegram_popup %}
     <div id="telegramPopup" class="popup-overlay">
         <div class="popup-box">
@@ -107,7 +135,10 @@
 
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" width="150" height="45" fetchpriority="high" loading="eager"></a>
+            <a href="/" aria-label="PustakVerse Homepage">
+                <!-- Fetch priority high added to Logo -->
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" width="150" height="45" fetchpriority="high" loading="eager">
+            </a>
         </div>
         <div class="navbar-links">
             <a href="{{ url_for('contact') }}">Contact</a>
@@ -126,7 +157,13 @@
         <p>{{ site_settings.hero_subtitle }}</p>
         
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
-            <input type="search" id="searchInput" name="search" placeholder="Search for a book or author...">
+            <input type="search" id="searchInput" name="search" placeholder="Search for a book or author..." aria-label="Search for a book or author">
+            
+            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
         </form>
     </div>
 
@@ -148,9 +185,11 @@
         {% endif %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for category, message in messages %}
-                <div style="padding: 15px; margin-bottom: 30px; text-align: center; border-radius: 8px; background: #fed7d7; color: #991b1b; font-weight: bold;">{{ message }}</div>
-            {% endfor %}{% endif %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div style="padding: 15px; margin-bottom: 30px; text-align: center; border-radius: 8px; background: #fed7d7; color: #991b1b; font-weight: bold;">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
         <div class="book-grid" id="bookGrid">
@@ -159,12 +198,21 @@
                 
                 {% set cover = book.cover_image %}
                 
-                <!-- NEW: Wrap image in link to the details page -->
                 <a href="{{ url_for('view_book', book_id=book.id) }}" class="book-cover-link" style="display: block;">
+                    <!-- Speed Index Fix: ONLY the absolute first image gets network priority. All others wait. -->
                     {% if loop.index == 1 %}
-                        <img src="{{ cover | drive_img if cover.startswith('http') else url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" loading="eager" width="250" height="320">
+                        {% if cover.startswith('http') %}
+                            <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" loading="eager" width="250" height="320">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" fetchpriority="high" loading="eager" width="250" height="320">
+                        {% endif %}
                     {% else %}
-                        <img src="{{ cover | drive_img if cover.startswith('http') else url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        <!-- Speed Index Fix: Aggressively lazy load every other image with async decoding -->
+                        {% if cover.startswith('http') %}
+                            <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        {% endif %}
                     {% endif %}
                 </a>
 
@@ -189,9 +237,15 @@
                 </div>
             </div>
             {% else %}
-                <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;"><h2 style="color: #334155;">No books available yet. Check back soon!</h2></div>
+                <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
+                    <h2 style="color: #334155;">No books available yet. Check back soon!</h2>
+                </div>
             {% endfor %}
-            <div class="no-results" id="noResultsMsg"><h2>No matches found.</h2></div>
+
+            <div class="no-results" id="noResultsMsg">
+                <h2>No matches found in the library.</h2>
+                <p>Try searching for a different title or author.</p>
+            </div>
         </div>
     </div>
 
@@ -200,16 +254,73 @@
             let input = document.getElementById('searchInput').value.toLowerCase();
             let cards = document.querySelectorAll('.book-card');
             let visibleCount = 0;
+            
             cards.forEach(card => {
-                let title = card.getAttribute('data-title'); let author = card.getAttribute('data-author'); let catalog = card.getAttribute('data-catalog');
-                if (title.includes(input) || author.includes(input) || catalog.includes(input)) { card.style.display = 'flex'; visibleCount++; } 
-                else { card.style.display = 'none'; }
+                let title = card.getAttribute('data-title'); 
+                let author = card.getAttribute('data-author'); 
+                let catalog = card.getAttribute('data-catalog');
+                
+                if (title.includes(input) || author.includes(input) || catalog.includes(input)) { 
+                    card.style.display = 'flex'; 
+                    visibleCount++;
+                } else { 
+                    card.style.display = 'none'; 
+                }
             });
+            
             let noResults = document.getElementById('noResultsMsg');
-            if (noResults) noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+            if (noResults) {
+                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+            }
         }
-        document.getElementById('searchInput').addEventListener('keyup', filterBooks);
-        document.getElementById('searchForm').addEventListener('submit', (e) => { filterBooks(); document.getElementById('searchInput').blur(); });
+
+        const searchInput = document.getElementById('searchInput');
+        const searchForm = document.getElementById('searchForm');
+        const micBtn = document.getElementById('micBtn');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', filterBooks);
+        }
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', (e) => {
+                filterBooks();
+                searchInput.blur();
+            });
+        }
+
+        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+            
+            micBtn.addEventListener('click', () => { 
+                recognition.start(); 
+                micBtn.style.color = '#992b00'; 
+                micBtn.style.transform = 'scale(1.2)'; 
+                searchInput.placeholder = "Listening..."; 
+            });
+            
+            recognition.onresult = (event) => { 
+                searchInput.value = event.results[0][0].transcript; 
+                filterBooks(); 
+            };
+            
+            recognition.onerror = (event) => { 
+                console.error("Speech error", event.error); 
+                resetMic(); 
+            };
+            
+            recognition.onend = () => { resetMic(); };
+            
+            function resetMic() { 
+                micBtn.style.color = '#334155'; 
+                micBtn.style.transform = 'scale(1)'; 
+                searchInput.placeholder = "Search for a book or author..."; 
+            }
+        } else if (micBtn) { 
+            micBtn.style.display = 'none'; 
+        }
     </script>
 </body>
 </html>
