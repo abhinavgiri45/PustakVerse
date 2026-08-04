@@ -106,21 +106,27 @@
             <h2>Community Reviews</h2>
             
             {% if session.user_id %}
-            <div class="review-form">
-                <form action="{{ url_for('submit_review', book_id=book.id) }}" method="POST">
-                    <label>Rate this book</label>
-                    <select name="rating" required>
-                        <option value="5">★★★★★ - Excellent</option>
-                        <option value="4">★★★★☆ - Very Good</option>
-                        <option value="3">★★★☆☆ - Average</option>
-                        <option value="2">★★☆☆☆ - Below Average</option>
-                        <option value="1">★☆☆☆☆ - Poor</option>
-                    </select>
-                    <label>Your Review</label>
-                    <textarea name="review" rows="3" placeholder="What did you think of the book?" required></textarea>
-                    <button type="submit" class="btn btn-dark" style="width: auto; padding: 10px 25px;">Post Review</button>
-                </form>
-            </div>
+                {% if can_read %}
+                <div class="review-form">
+                    <form action="{{ url_for('submit_review', book_id=book.id) }}" method="POST">
+                        <label>Rate this book</label>
+                        <select name="rating" required>
+                            <option value="5">★★★★★ - Excellent</option>
+                            <option value="4">★★★★☆ - Very Good</option>
+                            <option value="3">★★★☆☆ - Average</option>
+                            <option value="2">★★☆☆☆ - Below Average</option>
+                            <option value="1">★☆☆☆☆ - Poor</option>
+                        </select>
+                        <label>Your Review</label>
+                        <textarea name="review" rows="3" placeholder="What did you think of the book?" required></textarea>
+                        <button type="submit" class="btn btn-dark" style="width: auto; padding: 10px 25px;">Post Review</button>
+                    </form>
+                </div>
+                {% else %}
+                <div style="background: #e2e8f0; padding: 15px; border-left: 4px solid #94a3b8; margin-bottom: 30px;">
+                    <p style="color: #334155; margin: 0; font-weight: bold;">You must purchase this book or add it to your library to leave a review.</p>
+                </div>
+                {% endif %}
             {% else %}
             <div style="background: #fffbeb; padding: 15px; border-left: 4px solid #f59e0b; margin-bottom: 30px;">
                 <a href="{{ url_for('login') }}" style="color: #b45309; font-weight: bold;">Log in to leave a review</a>
@@ -131,8 +137,15 @@
                 {% for r in reviews %}
                 <div class="review-card">
                     <div class="review-header">
-                        <span class="reviewer-name">{{ r.username }}</span>
-                        <span class="review-date">{{ r.created_at | to_ist }}</span>
+                        <div>
+                            <span class="reviewer-name">{{ r.username }}</span>
+                            <span class="review-date" style="margin-left: 10px;">{{ r.created_at | to_ist }}</span>
+                        </div>
+                        {% if session.user_id == r.user_id %}
+                        <form action="{{ url_for('delete_review', review_id=r.id, book_id=book.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your review?');">
+                            <button type="submit" style="background: none; border: none; color: #e53e3e; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: underline;">Delete My Review</button>
+                        </form>
+                        {% endif %}
                     </div>
                     <div class="stars">
                         {% for _ in range(r.rating) %}★{% endfor %}{% for _ in range(5 - r.rating) %}☆{% endfor %}
