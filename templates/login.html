@@ -85,6 +85,12 @@
 
         #usernameStatus { display: block; margin-top: 5px; font-size: 0.85rem; font-weight: 600; }
 
+        /* Custom Checkbox */
+        .terms-checkbox-group { display: flex; align-items: flex-start; gap: 10px; margin-top: 25px; margin-bottom: 20px; padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; }
+        .terms-checkbox-group input { width: auto; margin-top: 4px; cursor: pointer; transform: scale(1.2); }
+        .terms-checkbox-group label { font-size: 0.85rem; color: #166534; line-height: 1.4; margin-bottom: 0; cursor: pointer; }
+        .terms-checkbox-group a { color: #047857; font-weight: bold; text-decoration: underline; }
+
         @media (max-width: 768px) {
             .navbar { padding: 15px; }
             .auth-container { padding: 20px 10px; }
@@ -254,6 +260,14 @@
                             <input type="text" name="security_answer" required placeholder="Keep this safe">
                         </div>
 
+                        <!-- MANDATORY DYNAMIC TERMS AND CONDITIONS -->
+                        <div class="terms-checkbox-group">
+                            <input type="checkbox" name="accept_terms" id="accept_terms" required>
+                            <label for="accept_terms">
+                                I verify that I am over 13 years of age and I accept the <a href="/terms?role=reader" id="termsLink" target="_blank">Reader Terms and Conditions</a>.
+                            </label>
+                        </div>
+
                         <button type="submit" class="btn-submit orange">Create Account</button>
                     </form>
                     
@@ -282,14 +296,20 @@
             event.currentTarget.classList.add('active');
         }
 
-        // Toggle Author Reason Field
+        // Toggle Author Reason Field & Swap Terms link
         function toggleAuthorReason() {
             var role = document.getElementById('roleSelect').value;
             var reasonGroup = document.getElementById('authorReasonGroup');
+            var termsLink = document.getElementById('termsLink');
+
             if (role === 'author') {
                 reasonGroup.style.display = 'block';
+                termsLink.href = "/terms?role=author";
+                termsLink.innerText = "Author Publishing Guidelines & Terms";
             } else {
                 reasonGroup.style.display = 'none';
+                termsLink.href = "/terms?role=reader";
+                termsLink.innerText = "Reader Terms and Conditions";
             }
         }
 
