@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - PustakVerse</title>
       <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
         :root { --nav-bg: #2d3748; --primary-orange: #f66d2f; --bg-light: #f7fafc; --text-dark: #2d3748; --text-light: #718096; --card-bg: #ffffff; }
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-light); color: var(--text-dark); -webkit-font-smoothing: antialiased; }
@@ -22,10 +23,19 @@
         .panel { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 30px; margin-bottom: 30px; border: 1px solid #edf2f7; }
         .panel h2 { margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; margin-bottom: 20px; color: var(--nav-bg); }
 
-        .table-scroll-container { max-height: 400px; overflow-y: auto; overflow-x: auto; border: 1px solid #edf2f7; border-radius: 6px; }
+        /* --- CUSTOM SCROLL CONTAINER FOR ALL TABLES --- */
+        .table-scroll-container {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #edf2f7;
+            border-radius: 6px;
+        }
         .table-scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll-container::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
         .table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .table-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 0; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; vertical-align: middle;}
         th { background: #f8fafc; color: var(--text-light); text-transform: uppercase; font-size: 0.85rem; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #edf2f7;}
@@ -35,11 +45,12 @@
         
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
-        input[type="text"], input[type="password"], input[type="email"], input[type="file"], select, textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc; font-family: inherit;}
+        input[type="text"], input[type="password"], input[type="email"], input[type="file"], select, textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc; font-family: inherit; }
         
         .flash { padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: center; font-weight: 500; }
         .flash.success { background: #dcfce7; color: #166534; } .flash.error { background: #fee2e2; color: #991b1b; } .flash.info { background: #e0f2fe; color: #075985; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+
         @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .navbar { flex-direction: column; padding: 15px; gap: 15px; } }
     </style>
 </head>
@@ -62,6 +73,7 @@
 
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
         {% if session.role == 'developer' %}
+            
             <div class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
@@ -78,30 +90,44 @@
                     <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
                         <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="{{ site_settings.hero_title }}"></div>
                         <div class="form-group"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}"></div>
+                        
                         <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
                             <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
                             <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
-                            <label style="display: flex; align-items: center; gap: 8px;"><input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> Show 'Donate' button to users</label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> Show 'Donate' button to users
+                            </label>
                         </div>
+                        
                         <button type="submit" class="btn-sm btn-dark">Update Settings</button>
                     </form>
                 </div>
 
                 <div class="panel" style="border-left: 5px solid #805ad5;">
-                    <h2 style="color: #805ad5;">Broadcast Formal Email</h2>
+                    <h2 style="color: #805ad5;">Broadcast Formal Email (Mass Messaging)</h2>
                     <form action="{{ url_for('mass_message') }}" method="POST">
-                        <div class="form-group"><label>Target Audience</label>
+                        <div class="form-group">
+                            <label>Target Audience</label>
                             <select name="target_role" required>
-                                <option value="all">Everyone</option><option value="reader">Readers</option><option value="author">Authors</option><option value="official">Officials</option>
+                                <option value="all">Everyone (All Registered Users)</option>
+                                <option value="reader">Readers Only</option>
+                                <option value="author">Authors Only</option>
+                                <option value="official">Officials Only</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Subject Line</label><input type="text" name="subject" required></div>
-                        <div class="form-group"><label>Message Body</label><textarea name="message_body" required style="min-height: 120px;"></textarea></div>
-                        <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;" onclick="return confirm('Are you absolutely sure you want to broadcast this email?');">Send Broadcast</button>
+                        <div class="form-group">
+                            <label>Subject Line</label>
+                            <input type="text" name="subject" required placeholder="Official PustakVerse Notice">
+                        </div>
+                        <div class="form-group">
+                            <label>Message Body (Formal HTML wrapper will be applied automatically)</label>
+                            <textarea name="message_body" required placeholder="Write your official announcement here..." style="min-height: 120px;"></textarea>
+                        </div>
+                        <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;" onclick="return confirm('Are you absolutely sure you want to broadcast this email to the selected group?');">Send Broadcast Email</button>
                     </form>
                 </div>
             </div>
-            
+
             <div class="panel" style="border-left: 5px solid #805ad5;">
                 <h2 style="color: #805ad5;">Official Activity Logs (Last 30 Days)</h2>
                 {% if official_logs %}
@@ -109,111 +135,89 @@
                         <table>
                             <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
                             {% for log in official_logs %}
-                            <tr><td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp | to_ist }}</td><td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td><td>{{ log.action }}</td></tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}<p>No official activity logged.</p>{% endif %}
-            </div>
-
-            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
-            <div class="panel" style="border-left: 5px solid #2b6cb0;">
-                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
-                </div>
-                {% if archive_books %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
-                            {% for book in archive_books %}
-                            <tr class="archive-row">
-                                <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
-                                <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
-                                <td>
-                                    <div style="display: flex; gap: 5px;">
-                                        <button type="button" class="btn-sm btn-dark" 
-                                            data-id="{{ book.id }}" 
-                                            data-title="{{ book.title | escape }}" 
-                                            data-catalog="{{ book.catalog }}" 
-                                            data-ispaid="false" 
-                                            data-price="0" 
-                                            data-desc="{{ book.description | escape }}"
-                                            onclick="openEditModal(this)">Edit</button>
-                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
-                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}<p>No books in Archives.</p>{% endif %}
-            </div>
-
-            <div class="panel" style="border-left: 5px solid #d97706;">
-                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
-                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
-                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
-                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
-
-                {% if searched_users %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr><th>Username</th><th>Email Address</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
-                            {% for user in searched_users %}
                             <tr>
-                                <td style="font-weight: 500;">{{ user.username }}</td>
-                                <td style="color: #4a5568;">{{ user.email }}</td>
-                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
-                                <td style="color: #718096; font-size: 0.85rem;">{{ user.last_activity | to_ist }}</td>
-                                <td style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                        <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-warn">Warn</button>
+                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp | to_ist }}</td>
+                                <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
+                                <td>{{ log.action }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <p>No official activity logged in the last 30 days.</p>
+                {% endif %}
+            </div>
+
+            <div class="panel" style="border-left: 5px solid #f6ad55;">
+                <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for platform books.</p>
+                {% if book_del_requests %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr><th>Reported Book</th><th>Author</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
+                            {% for req in book_del_requests %}
+                            <tr>
+                                <td style="font-weight: bold;">{{ req.book_title }}</td>
+                                <td>{{ req.author_name }}</td>
+                                <td>{{ req.official_name }}</td>
+                                <td style="color: #c53030;">{{ req.reason }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='approve') }}" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Approve & Delete Book</button>
                                     </form>
-                                    {% if user.role in ['reader', 'author'] %}
-                                    <form action="{{ url_for('promote_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Promote this user to Official Administrator? This will notify them directly via email.');">
-                                        <button type="submit" class="btn-sm btn-green" style="height: 100%;">Promote</button>
-                                    </form>
-                                    {% endif %}
-                                    {% if user.role == 'official' %}
-                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');">
-                                            <input type="hidden" name="reason" value="Administrative Decision.">
-                                            <button type="submit" class="btn-sm btn-dark" style="height: 100%;">Revoke</button>
-                                        </form>
-                                    {% endif %}
-                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Delete</button>
+                                    <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='reject') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-dark">Reject Report</button>
                                     </form>
                                 </td>
                             </tr>
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No users found matching that filter.</p>{% endif %}
+                {% else %}<p>No pending book deletion requests.</p>{% endif %}
+            </div>
+
+            <div class="panel" style="border-left: 5px solid #e53e3e;">
+                <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for user termination.</p>
+                {% if del_requests %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr><th>Reported User</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
+                            {% for req in del_requests %}
+                            <tr>
+                                <td style="font-weight: bold;">{{ req.target_name }}</td>
+                                <td>{{ req.official_name }}</td>
+                                <td style="color: #c53030;">{{ req.reason }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    <form action="{{ url_for('handle_deletion', req_id=req.id, action='approve') }}" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Reason to send to user..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Approve & Delete User</button>
+                                    </form>
+                                    <form action="{{ url_for('handle_deletion', req_id=req.id, action='reject') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-dark">Reject Report</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No pending user deletion requests.</p>{% endif %}
             </div>
         {% endif %}
 
-        <!-- ACCOUNT MANAGEMENT & SECURITY -->
         <div class="grid-2">
             <div class="panel" style="border-top: 4px solid var(--primary-orange);">
                 <h2>Change Username</h2>
                 <form action="{{ url_for('change_username') }}" method="POST">
                     <div class="form-group"><label>New Username</label><input type="text" name="new_username" required></div>
                     {% if session.role in ['author', 'official'] %}
-                        <div class="form-group"><label>Reason</label><input type="text" name="reason" required></div>
+                        <div class="form-group">
+                            <label>Reason for Change (Required for approval)</label>
+                            <input type="text" name="reason" required placeholder="Why do you want to change your username?">
+                        </div>
                         <button type="submit" class="btn-sm btn-orange">Submit Request</button>
+                        <p style="color: #718096; font-size: 0.85rem; margin-top: 10px;">Your request will be reviewed by an administrator.</p>
                     {% else %}
                         <button type="submit" class="btn-sm btn-orange">Change Username</button>
                     {% endif %}
@@ -222,34 +226,47 @@
 
             <div class="panel" style="border-top: 4px solid var(--nav-bg);">
                 <h2>Security Settings</h2>
+                
+                <!-- Hide 2FA Toggle for Admins, Show Enforced Status Instead -->
                 {% if session.role not in ['developer', 'official'] %}
                 <div style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
-                    <h3 style="margin-top: 0; font-size: 1.1rem;">Two-Step Verification (2FA)</h3>
-                    <form action="/dashboard" method="POST">
-                        <input type="hidden" name="toggle_2fa" value="1"><input type="hidden" name="current_status" value="{{ 'True' if two_factor_enabled else 'False' }}">
-                        {% if two_factor_enabled %}<button type="submit" class="btn-sm btn-red">Disable 2FA</button><span style="color: #38a169; font-weight: bold; margin-left: 10px;">Enabled</span>
-                        {% else %}<button type="submit" class="btn-sm btn-green">Enable 2FA</button>{% endif %}
+                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #2d3748;">Two-Step Verification (2FA)</h3>
+                    <p style="font-size: 0.9rem; color: #718096;">Add an extra layer of security. When enabled, you'll need an email code to log in.</p>
+                    <form action="/dashboard" method="POST" style="margin-top: 10px;">
+                        <input type="hidden" name="toggle_2fa" value="1">
+                        <input type="hidden" name="current_status" value="{{ 'True' if two_factor_enabled else 'False' }}">
+                        {% if two_factor_enabled %}
+                            <button type="submit" class="btn-sm btn-red">Disable 2FA</button>
+                            <span style="color: #38a169; font-weight: bold; margin-left: 10px;">Currently Enabled</span>
+                        {% else %}
+                            <button type="submit" class="btn-sm btn-green">Enable 2FA</button>
+                            <span style="color: #718096; margin-left: 10px;">Currently Disabled</span>
+                        {% endif %}
                     </form>
                 </div>
                 {% else %}
                 <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-bottom: 25px;">
-                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #166534;">Two-Step Verification (2FA)</h3><p style="font-size: 0.9rem; color: #15803d; margin-bottom: 0;"><strong>Active.</strong></p>
+                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #166534;">Two-Step Verification (2FA)</h3>
+                    <p style="font-size: 0.9rem; color: #15803d; margin-bottom: 0;"><strong>Active.</strong> As an administrator, 2FA is permanently enforced on your account for platform security.</p>
                 </div>
                 {% endif %}
 
                 {% if session.get('change_pw_otp') %}
                     <form action="{{ url_for('change_password') }}" method="POST" style="margin-bottom: 25px;">
-                        <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required></div>
+                        <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
                         <div class="form-group"><label>Current Password</label><input type="password" name="old_password" required></div>
                         <div class="form-group"><label>New Password</label><input type="password" name="new_password" required minlength="6"></div>
                         <button type="submit" class="btn-sm btn-green">Update Password</button>
                         <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
                     </form>
                 {% else %}
-                    <form action="{{ url_for('send_change_password_otp') }}" method="POST" style="margin-bottom: 25px;"><button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Change My Password</button></form>
+                    <!-- Renamed Button to "Change My Password" -->
+                    <form action="{{ url_for('send_change_password_otp') }}" method="POST" style="margin-bottom: 25px;">
+                        <button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Change My Password</button>
+                    </form>
                 {% endif %}
 
-                <!-- Delete Account Section (Hidden for Developer) -->
+                <!-- Hide Delete Account Section completely for Developer -->
                 {% if session.role != 'developer' %}
                 <div style="background: #fff5f5; padding: 15px; border-radius: 6px; border: 1px solid #fed7d7; margin-top: 25px;">
                     <h3 style="margin-top: 0; font-size: 1.1rem; color: #c53030;">Danger Zone: Delete Account</h3>
@@ -272,35 +289,63 @@
             </div>
         </div>
 
+        {% if session.role == 'reader' %}
+            <div class="panel" style="text-align: center; padding: 60px;">
+                <h2 style="border: none;">Start Reading</h2>
+                <p style="color: var(--text-light); margin-bottom: 30px;">Head over to the Global Library to discover amazing books.</p>
+                <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library</a>
+            </div>
+        {% endif %}
+
+        {% if session.role == 'author' and not session.is_verified %}
+            <div class="panel" style="border-left: 5px solid var(--primary-orange);">
+                <h2 style="color: var(--primary-orange);">Account Under Review</h2>
+                <p>Thank you for signing up to be an author! Our administrative team is currently reviewing your application.</p>
+                <p>You will receive an email as soon as you are approved and can begin publishing your books.</p>
+            </div>
+        {% endif %}
+
         {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
             <div class="grid-2">
                 <div class="panel">
                     <h2>Publish a New Book</h2>
                     <form action="/dashboard" method="POST" enctype="multipart/form-data">
                         <div class="form-group"><label>Book Title</label><input type="text" name="title" required></div>
-                        <div class="form-group"><label>Catalog</label>
-                            <select name="catalog" required>{% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}</select>
+                        <div class="form-group">
+                            <label>Catalog</label>
+                            <select name="catalog" required>
+                                {% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}
+                                {% if session.role in ['official', 'developer'] %}<option value="Archives">Archives (Free Only)</option>{% endif %}
+                            </select>
                         </div>
-                        
+
+                        <!-- NEW: Book Description / Synopsis -->
                         <div class="form-group">
                             <label>Book Description / Synopsis</label>
                             <textarea name="description" rows="4" placeholder="What is this book about?..." required></textarea>
                         </div>
 
                         <div class="form-group" style="background: #fdf2f8; padding: 15px; border-radius: 6px; border: 1px solid #fce7f3; margin-bottom: 25px;">
-                            <label style="color: #9d174d;">Cover Image & PDF</label>
+                            <label style="color: #9d174d;">Cover Image & PDF Uploads</label>
+                            <small style="color: #be185d; display: block; font-weight: 600; margin-bottom: 15px;">Recommendation: Use Google Drive Links instead of direct uploads.</small>
                             <input type="file" name="cover_image" accept="image/*"><input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;">
                             <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;"><input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;">
                         </div>
                         
                         <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
                             <label><input type="checkbox" name="is_paid" id="is_paid_checkbox"> Premium/Paid Book</label>
+                            
+                            <!-- DYNAMIC RAZORPAY SETTINGS FOR THIS BOOK -->
                             <div id="paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
                                 <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
-                                <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Live Key ID (rzp_live_...)" style="margin-bottom: 10px;">
-                                <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Secret Key">
+                                
+                                <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Author's Razorpay Payment Keys (For this book)</label>
+                                <small style="color: #15803d; display: block; margin-bottom: 8px;">100% of sales will go directly to your linked account.</small>
+                                <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Your Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                                <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="border-color: #bbf7d0;">
                             </div>
                         </div>
+                        
                         <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;">Publish Book</button>
                     </form>
                 </div>
@@ -308,19 +353,31 @@
                 <div>
                     <div class="panel">
                         <h2>{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
-                        <input type="text" id="librarySearch" placeholder="Search books by title..." onkeyup="filterLibrary()" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 6px;">
+                        
+                        <!-- INSTANT SEARCH BAR -->
+                        <div style="margin-bottom: 20px;">
+                            <input type="text" id="librarySearch" placeholder="Search books by title..." onkeyup="filterLibrary()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
+                        </div>
+
                         {% if my_books %}
                             <div class="table-scroll-container">
                                 <table>
                                     <tr><th>Cover</th><th>Title</th><th>Type</th><th>Action</th></tr>
                                     {% for book in my_books %}
                                     <tr class="library-row">
-                                        <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover;"></td>
-                                        <td class="book-title-cell">{{ book.title }}</td>
+                                        <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                        <td style="font-weight: 500;" class="book-title-cell">
+                                            {{ book.title }} 
+                                            {% if session.role in ['official', 'developer'] %}<br><small style="color: #718096;">by {{ book.author_name }}</small>{% endif %}
+                                        </td>
                                         <td>{% if book.is_paid %}<span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>{% else %}Free{% endif %}</td>
                                         <td>
                                             <div style="display: flex; gap: 5px; align-items: flex-start; flex-wrap: wrap;">
-                                                {% if book.is_paid %}<a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>{% endif %}
+                                                {% if book.is_paid %}
+                                                <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
+                                                {% endif %}
+                                                
+                                                <!-- NEW: data-desc attribute securely loads the description for editing -->
                                                 <button type="button" class="btn-sm btn-dark edit-btn" 
                                                         data-id="{{ book.id }}" 
                                                         data-title="{{ book.title | escape }}" 
@@ -331,6 +388,7 @@
                                                         data-keysecret="{{ book.rp_key_secret or '' }}"
                                                         data-desc="{{ book.description | escape }}"
                                                         onclick="openEditModal(this)">Edit</button>
+                                                
                                                 {% if session.role == 'official' %}
                                                     <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;">
                                                         <input type="text" name="reason" placeholder="Reason for Dev..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
@@ -350,30 +408,212 @@
                                     {% endfor %}
                                 </table>
                             </div>
-                        {% endif %}
+                        {% else %}<p>No books available.</p>{% endif %}
                     </div>
                 </div>
             </div>
         {% endif %}
 
         {% if session.role in ['official', 'developer'] %}
-            <div class="panel">
-                <h2>Manage Platform Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px;"><input type="text" name="search" placeholder="Search..."><button type="submit" class="btn-sm btn-dark">Search</button></form>
-                {% if searched_users %}
+            <!-- Pending Username Requests -->
+            <div class="panel" style="border-left: 5px solid #3182ce;"><h2>Pending Username Requests</h2>
+                {% if username_requests %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Username</th><th>Role</th><th>Actions</th></tr>
-                            {% for user in searched_users %}
+                            <tr><th>Current Username</th><th>Requested Username</th><th>Reason</th><th>Action</th></tr>
+                            {% for req in username_requests %}
                             <tr>
-                                <td>{{ user.username }}</td><td style="text-transform: capitalize;">{{ user.role }}</td>
-                                <td><form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST"><input type="hidden" name="reason" value="Violation"><button type="submit" class="btn-sm btn-red">Delete</button></form></td>
+                                <td>{{ req.current_username }}</td>
+                                <td>{{ req.new_username }}</td>
+                                <td>{{ req.reason }}</td>
+                                <td style="display: flex; gap: 10px;">
+                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='approve') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-green">Approve</button>
+                                    </form>
+                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='reject') }}" method="POST">
+                                        <button type="submit" class="btn-sm btn-red">Reject</button>
+                                    </form>
+                                </td>
                             </tr>
                             {% endfor %}
                         </table>
                     </div>
-                {% endif %}
+                {% else %}<p>No pending username requests.</p>{% endif %}
             </div>
+
+            <!-- Approvals (Both Admins) -->
+            <div class="panel" style="border-left: 5px solid #38a169;"><h2>Pending Author Approvals</h2>
+                {% if pending_authors %}
+                <div class="table-scroll-container">
+                    <table>
+                        <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+                        {% for user in pending_authors %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td style="display: flex; gap: 15px;">
+                                <form action="/dashboard" method="POST">
+                                    <input type="hidden" name="approve_author_id" value="{{ user.id }}">
+                                    <button type="submit" class="btn-sm btn-green">Approve</button>
+                                </form>
+                                <form action="/dashboard" method="POST" style="display: flex; gap: 5px;">
+                                    <input type="hidden" name="reject_author_id" value="{{ user.id }}">
+                                    <input type="text" name="reject_reason" placeholder="Reason for rejection..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
+                                    <button type="submit" class="btn-sm btn-red">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% else %}<p>No pending authors.</p>{% endif %}
+            </div>
+        {% endif %}
+
+        <!-- OFFICIAL USER MANAGEMENT -->
+        {% if session.role == 'official' %}
+            <div class="panel">
+                <h2>Manage Platform Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search readers or authors..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Readers & Authors</option>
+                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
+                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                </form>
+
+                {% if all_users %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr><th>Username</th><th>Email Address</th><th>Role</th><th>Action</th></tr>
+                            {% for user in all_users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td style="color: #4a5568;">{{ user.email }}</td>
+                                <td style="text-transform: capitalize;">{{ user.role }}</td>
+                                <td>
+                                    <!-- OFFICIALS ONLY SEND REQUESTS TO THE DEVELOPER -->
+                                    <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Report Reason to Dev..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-orange">Submit Report</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No users found matching that filter.</p>{% endif %}
+            </div>
+        {% endif %}
+
+        <!-- BOTTOM DEVELOPER SECTION -->
+        {% if session.role == 'developer' %}
+        <div class="grid-2">
+            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
+            <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
+                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
+                
+                <!-- NEW SEARCH BAR FOR ARCHIVES -->
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
+                </div>
+
+                {% if archive_books %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
+                            {% for book in archive_books %}
+                            <tr class="archive-row">
+                                <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 5px;">
+                                        <!-- NEW: Edit Button handles descriptions -->
+                                        <button type="button" class="btn-sm btn-dark edit-btn" 
+                                                data-id="{{ book.id }}" 
+                                                data-title="{{ book.title | escape }}" 
+                                                data-catalog="{{ book.catalog }}" 
+                                                data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
+                                                data-price="{{ book.price_paise }}" 
+                                                data-keyid="{{ book.rp_key_id or '' }}" 
+                                                data-keysecret="{{ book.rp_key_secret or '' }}"
+                                                data-desc="{{ book.description | escape }}"
+                                                onclick="openEditModal(this)">Edit</button>
+                                        
+                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
+                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No books in Archives.</p>{% endif %}
+            </div>
+
+            <!-- DEVELOPER USER MANAGEMENT -->
+            <div class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
+                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
+                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
+                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
+                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                </form>
+
+                {% if searched_users %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr><th>Username</th><th>Email Address</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
+                            {% for user in searched_users %}
+                            <tr>
+                                <td style="font-weight: 500;">{{ user.username }}</td>
+                                <td style="color: #4a5568;">{{ user.email }}</td>
+                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
+                                
+                                <!-- TIMEZONE FIX: Applying the to_ist filter here -->
+                                <td style="color: #718096; font-size: 0.85rem;">{{ user.last_activity | to_ist }}</td>
+                                
+                                <td style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
+                                        <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-warn">Warn</button>
+                                    </form>
+
+                                    {% if user.role in ['reader', 'author'] %}
+                                    <form action="{{ url_for('promote_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Promote this user to Official Administrator? This will notify them directly via email.');">
+                                        <button type="submit" class="btn-sm btn-green" style="height: 100%;">Promote</button>
+                                    </form>
+                                    {% endif %}
+
+                                    {% if user.role == 'official' %}
+                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');">
+                                            <input type="hidden" name="reason" value="Administrative Decision.">
+                                            <button type="submit" class="btn-sm btn-dark" style="height: 100%;">Revoke</button>
+                                        </form>
+                                    {% endif %}
+                                    
+                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; gap: 5px;">
+                                        <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                        <button type="submit" class="btn-sm btn-red">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}<p>No users found matching that filter.</p>{% endif %}
+            </div>
+        </div>
         {% endif %}
 
     </div>
@@ -386,12 +626,18 @@
             <form id="editBookForm" method="POST" enctype="multipart/form-data">
                 <div class="form-group"><input type="text" name="title" id="edit_title" required></div>
                 <div class="form-group"><select name="catalog" id="edit_catalog" required>{% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}</select></div>
-                <div class="form-group"><label>Book Description / Synopsis</label><textarea name="description" id="edit_description" rows="4" required></textarea></div>
+                
+                <!-- NEW: Edit Description -->
+                <div class="form-group">
+                    <label>Book Description / Synopsis</label>
+                    <textarea name="description" id="edit_description" rows="4" required></textarea>
+                </div>
+                
                 <div class="form-group">
                     <input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book
                     <div id="edit_paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
                         <input type="text" name="price_inr" id="edit_price_inr" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
-                        <input type="text" name="rp_key_id" id="edit_rp_key_id" placeholder="Live Key ID" style="margin-bottom: 10px;">
+                        <input type="text" name="rp_key_id" id="edit_rp_key_id" placeholder="Live Key ID (rzp_live_...)" style="margin-bottom: 10px;">
                         <input type="password" name="rp_key_secret" id="edit_rp_key_secret" placeholder="Secret Key">
                     </div>
                 </div>
@@ -401,48 +647,114 @@
     </div>
 
     <script>
+        // Real-time Library Search Filter
         function filterLibrary() {
             let input = document.getElementById('librarySearch').value.toLowerCase();
             let rows = document.querySelectorAll('.library-row');
-            rows.forEach(row => { row.style.display = row.querySelector('.book-title-cell').innerText.toLowerCase().includes(input) ? '' : 'none'; });
+            rows.forEach(row => {
+                let titleText = row.querySelector('.book-title-cell').innerText.toLowerCase();
+                if (titleText.includes(input)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
+
+        // Real-time Archive Search Filter
         function filterArchives() {
             let input = document.getElementById('archiveSearch').value.toLowerCase();
             let rows = document.querySelectorAll('.archive-row');
-            rows.forEach(row => { row.style.display = row.querySelector('.archive-title-cell').innerText.toLowerCase().includes(input) ? '' : 'none'; });
+            rows.forEach(row => {
+                let titleText = row.querySelector('.archive-title-cell').innerText.toLowerCase();
+                if (titleText.includes(input)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
         
-        const paidCheckbox = document.getElementById('is_paid_checkbox'); const paidSettings = document.getElementById('paid_settings');
-        const priceInput = document.getElementById('price_inr_input'); const rpKeyIdInput = document.getElementById('rp_key_id_input'); const rpKeySecretInput = document.getElementById('rp_key_secret_input');
+        // Setup Publish Book Form Toggles
+        const paidCheckbox = document.getElementById('is_paid_checkbox'); 
+        const paidSettings = document.getElementById('paid_settings');
+        const priceInput = document.getElementById('price_inr_input');
+        const rpKeyIdInput = document.getElementById('rp_key_id_input');
+        const rpKeySecretInput = document.getElementById('rp_key_secret_input');
+        
         if(paidCheckbox) { 
             paidCheckbox.addEventListener('change', function() { 
-                if(this.checked) { paidSettings.style.display = 'block'; priceInput.required = true; rpKeyIdInput.required = true; rpKeySecretInput.required = true; } 
-                else { paidSettings.style.display = 'none'; priceInput.required = false; rpKeyIdInput.required = false; rpKeySecretInput.required = false; }
+                if(this.checked) { 
+                    paidSettings.style.display = 'block'; 
+                    priceInput.required = true; 
+                    rpKeyIdInput.required = true;
+                    rpKeySecretInput.required = true;
+                } else { 
+                    paidSettings.style.display = 'none'; 
+                    priceInput.required = false; 
+                    rpKeyIdInput.required = false;
+                    rpKeySecretInput.required = false;
+                }
             }); 
         }
 
+        // Updated Modal Logic to securely pull from data- attributes
         function openEditModal(btn) {
             document.getElementById('editBookForm').action = "/edit_book/" + btn.dataset.id; 
             document.getElementById('edit_title').value = btn.dataset.title; 
             document.getElementById('edit_catalog').value = btn.dataset.catalog;
+            
+            // Populate the new description field
             document.getElementById('edit_description').value = btn.dataset.desc;
-            const isPaidCheck = document.getElementById('edit_is_paid'); const editPaidSettings = document.getElementById('edit_paid_settings');
-            const pInput = document.getElementById('edit_price_inr'); const keyIdInput = document.getElementById('edit_rp_key_id'); const keySecretInput = document.getElementById('edit_rp_key_secret');
-            let isPaid = btn.dataset.ispaid === 'true'; isPaidCheck.checked = isPaid; 
+            
+            const isPaidCheck = document.getElementById('edit_is_paid'); 
+            const editPaidSettings = document.getElementById('edit_paid_settings');
+            const pInput = document.getElementById('edit_price_inr');
+            const keyIdInput = document.getElementById('edit_rp_key_id');
+            const keySecretInput = document.getElementById('edit_rp_key_secret');
+            
+            let isPaid = btn.dataset.ispaid === 'true';
+            isPaidCheck.checked = isPaid; 
+            
             if(isPaid) { 
-                editPaidSettings.style.display = 'block'; pInput.value = (parseInt(btn.dataset.price) / 100).toFixed(2); pInput.required = true;
-                keyIdInput.value = btn.dataset.keyid; keyIdInput.required = true; keySecretInput.value = btn.dataset.keysecret; keySecretInput.required = true;
+                editPaidSettings.style.display = 'block'; 
+                pInput.value = (parseInt(btn.dataset.price) / 100).toFixed(2); 
+                pInput.required = true;
+                keyIdInput.value = btn.dataset.keyid; 
+                keyIdInput.required = true;
+                keySecretInput.value = btn.dataset.keysecret; 
+                keySecretInput.required = true;
             } else { 
-                editPaidSettings.style.display = 'none'; pInput.value = ''; pInput.required = false; keyIdInput.value = ''; keyIdInput.required = false; keySecretInput.value = ''; keySecretInput.required = false;
+                editPaidSettings.style.display = 'none'; 
+                pInput.value = ''; 
+                pInput.required = false;
+                keyIdInput.value = ''; 
+                keyIdInput.required = false;
+                keySecretInput.value = ''; 
+                keySecretInput.required = false;
             }
+            
             document.getElementById('editBookModal').style.display = 'flex';
         }
 
         function toggleEditPrice() { 
-            const isPaidCheck = document.getElementById('edit_is_paid'); const editPaidSettings = document.getElementById('edit_paid_settings');
-            const pInput = document.getElementById('edit_price_inr'); const keyIdInput = document.getElementById('edit_rp_key_id'); const keySecretInput = document.getElementById('edit_rp_key_secret');
-            if(isPaidCheck.checked) { editPaidSettings.style.display = 'block'; pInput.required = true; keyIdInput.required = true; keySecretInput.required = true; } 
-            else { editPaidSettings.style.display = 'none'; pInput.required = false; keyIdInput.required = false; keySecretInput.required = false; } 
+            const isPaidCheck = document.getElementById('edit_is_paid'); 
+            const editPaidSettings = document.getElementById('edit_paid_settings');
+            const pInput = document.getElementById('edit_price_inr'); 
+            const keyIdInput = document.getElementById('edit_rp_key_id');
+            const keySecretInput = document.getElementById('edit_rp_key_secret');
+            
+            if(isPaidCheck.checked) { 
+                editPaidSettings.style.display = 'block'; 
+                pInput.required = true; 
+                keyIdInput.required = true;
+                keySecretInput.required = true;
+            } else { 
+                editPaidSettings.style.display = 'none'; 
+                pInput.required = false; 
+                keyIdInput.required = false;
+                keySecretInput.required = false;
+            } 
         }
     </script>
 </body>
