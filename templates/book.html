@@ -139,13 +139,17 @@
                     <div class="review-header">
                         <div>
                             <span class="reviewer-name">{{ r.username }}</span>
+                            <!-- Applying the to_ist filter for India Time! -->
                             <span class="review-date" style="margin-left: 10px;">{{ r.created_at | to_ist }}</span>
                         </div>
+                        
+                        <!-- Delete Review logic: only shows if the logged-in user wrote it -->
                         {% if session.user_id == r.user_id %}
                         <form action="{{ url_for('delete_review', review_id=r.id, book_id=book.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your review?');">
                             <button type="submit" style="background: none; border: none; color: #e53e3e; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: underline;">Delete My Review</button>
                         </form>
                         {% endif %}
+                        
                     </div>
                     <div class="stars">
                         {% for _ in range(r.rating) %}★{% endfor %}{% for _ in range(5 - r.rating) %}☆{% endfor %}
