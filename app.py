@@ -47,19 +47,33 @@ os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'logos'), exist_ok=True)
 os.makedirs(os.path.join(app.config['PRIVATE_PDF_FOLDER']), exist_ok=True)
 
+# --- SEO & PERFORMANCE CACHING HEADER ---
 @app.after_request
 def add_header(response):
     if 'Cache-Control' not in response.headers:
         response.headers['Cache-Control'] = 'public, max-age=3600'
     return response
 
+# ==========================================
+# TIMEZONE FORMATTING (UTC TO IST)
+# ==========================================
 @app.template_filter('to_ist')
 def to_ist_filter(dt):
-    if not dt: return "Never"
+    if not dt:
+        return "Never"
+    
+    # If the database returns a string, try to parse it
     if isinstance(dt, str):
-        try: dt = datetime.strptime(str(dt).split('.')[0], '%Y-%m-%d %H:%M:%S')
-        except Exception: return dt
-    if hasattr(dt, 'tzinfo') and dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
+        try:
+            dt = datetime.strptime(str(dt).split('.')[0], '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            return dt
+            
+    # Give it the UTC timezone if it doesn't have one (MySQL default)
+    if hasattr(dt, 'tzinfo') and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+        
+    # Convert to Indian Standard Time (UTC + 5:30)
     ist = timezone(timedelta(hours=5, minutes=30))
     return dt.astimezone(ist).strftime('%Y-%m-%d %I:%M %p')
 
@@ -81,7 +95,6 @@ def clean_book_data(books):
         b['cover_image'] = str(b.get('cover_image') or "")
         b['pdf_file'] = str(b.get('pdf_file') or "")
         b['author_name'] = str(b.get('author_name') or "Unknown")
-        b['description'] = str(b.get('description') or "")
     return books
 
 @app.context_processor
@@ -90,9 +103,12 @@ def inject_global_settings():
     if current_time - global_cache['last_update'] > 60:
         db = None
         try:
-            db = get_db_connection(); cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM front_page_settings WHERE id = 1"); fetched_settings = cursor.fetchone()
-            cursor.execute("SELECT * FROM catalogs"); fetched_catalogs = cursor.fetchall()
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
+            fetched_settings = cursor.fetchone()
+            cursor.execute("SELECT * FROM catalogs")
+            fetched_catalogs = cursor.fetchall()
             
             if fetched_settings and fetched_catalogs:
                 fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
@@ -105,7 +121,8 @@ def inject_global_settings():
                 global_cache['settings'] = fetched_settings
                 global_cache['catalogs'] = fetched_catalogs
                 global_cache['last_update'] = current_time
-        except Exception: pass
+        except Exception as e:
+            logging.error(f"Context Processor Cache Error: {e}")
         finally:
             if db:
                 try: db.close()
@@ -123,41 +140,58 @@ def drive_img(url):
 def compress_cover_image(file_obj, upload_folder):
     if not HAS_PILLOW:
         safe_name = secure_filename(file_obj.filename)
-        file_obj.save(os.path.join(upload_folder, 'covers', safe_name)); return safe_name
+        file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
+        return safe_name
+
     try:
         img = Image.open(file_obj)
         if img.mode in ("RGBA", "P"): img = img.convert("RGB")
         img.thumbnail((800, 1200), Image.Resampling.LANCZOS)
-        filename = secure_filename(file_obj.filename); base_name, _ = os.path.splitext(filename)
+        filename = secure_filename(file_obj.filename)
+        base_name, _ = os.path.splitext(filename)
         webp_filename = f"{base_name}_{secrets.token_hex(4)}.webp"
         save_path = os.path.join(upload_folder, 'covers', webp_filename)
-        img.save(save_path, format="WEBP", quality=75, optimize=True); return webp_filename
-    except Exception:
+        img.save(save_path, format="WEBP", quality=75, optimize=True)
+        return webp_filename
+    except Exception as e:
         safe_name = secure_filename(file_obj.filename)
-        file_obj.seek(0); file_obj.save(os.path.join(upload_folder, 'covers', safe_name)); return safe_name
+        file_obj.seek(0)
+        file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
+        return safe_name
 
 # ==========================================
-# GOOGLE OAUTH & GMAIL API 
+# GOOGLE OAUTH & GMAIL API (HYBRID HTML EMAILS)
 # ==========================================
 oauth = OAuth(app)
 google = oauth.register(
-    name='google', client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(), client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', '').strip(),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration', client_kwargs={'scope': 'openid email profile'}
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', '').strip(),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
 )
 
 def send_email_wrapper(to_email, subject, body_html):
-    client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip(); client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
-    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip(); email_password = os.environ.get('EMAIL_PASSWORD', '').replace(' ', '').strip()
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
+    email_password = os.environ.get('EMAIL_PASSWORD', '').replace(' ', '').strip()
 
     if refresh_token and client_secret:
         try:
             token_url = "https://oauth2.googleapis.com/token"
             token_data = {"client_id": client_id, "client_secret": client_secret, "refresh_token": refresh_token, "grant_type": "refresh_token"}
-            r = requests.post(token_url, data=token_data, timeout=5); access_token = r.json().get("access_token")
+            r = requests.post(token_url, data=token_data, timeout=5)
+            access_token = r.json().get("access_token")
 
             if access_token:
-                message = EmailMessage(); message.set_content("Please enable HTML to view this email."); message.add_alternative(body_html, subtype='html')
-                message['To'] = to_email; message['Subject'] = subject; message['From'] = "noreply.pustakverse@gmail.com"
+                message = EmailMessage()
+                message.set_content("Please enable HTML to view this email.")
+                message.add_alternative(body_html, subtype='html')
+                message['To'] = to_email
+                message['Subject'] = subject
+                message['From'] = "noreply.pustakverse@gmail.com"
+
                 encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
                 send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
                 headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
@@ -167,32 +201,83 @@ def send_email_wrapper(to_email, subject, body_html):
 
     if email_password:
         try:
-            msg = MIMEText(body_html, 'html'); msg['Subject'] = subject; msg['From'] = "noreply.pustakverse@gmail.com"; msg['To'] = to_email
+            msg = MIMEText(body_html, 'html')
+            msg['Subject'] = subject
+            msg['From'] = "noreply.pustakverse@gmail.com"
+            msg['To'] = to_email
             with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5) as server:
-                server.login("noreply.pustakverse@gmail.com", email_password); server.send_message(msg)
+                server.login("noreply.pustakverse@gmail.com", email_password)
+                server.send_message(msg)
             return True
         except Exception: pass
     return True
 
+# --- HTML EMAIL TEMPLATES ---
 def generate_html_email(title, content):
-    return f'<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;"><h2 style="color: #2d3748; border-bottom: 2px solid #f66d2f; padding-bottom: 10px;">{title}</h2><div style="color: #4a5568; font-size: 16px; line-height: 1.6;">{content}</div><p style="color: #718096; font-size: 12px; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 10px;">This is an automated message from PustakVerse.</p></div>'
+    return f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;">
+        <h2 style="color: #2d3748; border-bottom: 2px solid #f66d2f; padding-bottom: 10px;">{title}</h2>
+        <div style="color: #4a5568; font-size: 16px; line-height: 1.6;">{content}</div>
+        <p style="color: #718096; font-size: 12px; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 10px;">This is an automated message from PustakVerse. Please do not reply.</p>
+    </div>
+    """
 
-def send_otp_email(to_email, otp): return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', generate_html_email("Password Reset", f"<p>Your password reset code is: <strong style='font-size: 24px; color: #f66d2f;'>{otp}</strong></p>"))
-def send_account_deletion_otp(to_email, otp): return send_email_wrapper(to_email, 'PustakVerse - Account Deletion OTP', generate_html_email("Account Deletion Request", f"<p>Your deletion verification code is: <strong style='font-size: 24px; color: #e53e3e;'>{otp}</strong></p>"))
-def send_2fa_email(to_email, otp): return send_email_wrapper(to_email, 'PustakVerse - Login Verification', generate_html_email("Security Verification", f"<p>Your 2-Step Login Verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
-def send_welcome_reader(to_email, username): return send_email_wrapper(to_email, 'Welcome to PustakVerse!', generate_html_email("Welcome to the Library", f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to PustakVerse! Dive into our extensive Global Library today.</p>"))
-def send_pending_author(to_email, username): return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', generate_html_email("Author Application Received", f"<p>Hello <strong>{username}</strong>,</p><p>Thank you for registering as an Author! Your account is currently under review.</p>"))
-def send_approved_author(to_email, username): return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', generate_html_email("Account Approved", f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! Your Author account is officially approved.</p>"))
-def send_official_welcome(to_email, username, password): return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', generate_html_email("Official Privileges Granted", f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to the administrative team!</p><p>Username: <strong>{username}</strong><br>Temporary Password: <strong>{password}</strong></p>"))
-def send_warning_email(to_email, username, warning_message): return send_email_wrapper(to_email, 'URGENT: Official Warning from PustakVerse', generate_html_email("Account Warning", f"<p>Hello <strong>{username}</strong>,</p><blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'>{warning_message}</blockquote>"))
-def send_promotion_notification(to_email, username): return send_email_wrapper(to_email, 'PustakVerse - Promoted to Official', generate_html_email("Promotion Notice", f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! You have been officially promoted to an Administrator on PustakVerse.</p>"))
+def send_otp_email(to_email, otp):
+    content = f"<p>Your password reset code is: <strong style='font-size: 24px; color: #f66d2f;'>{otp}</strong></p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', generate_html_email("Password Reset", content))
+
+def send_account_deletion_otp(to_email, otp):
+    content = f"<p>You have requested to permanently delete your account. This action cannot be undone.</p><p>Your deletion verification code is: <strong style='font-size: 24px; color: #e53e3e;'>{otp}</strong></p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion OTP', generate_html_email("Account Deletion Request", content))
+
+def send_2fa_email(to_email, otp):
+    content = f"<p>Your 2-Step Login Verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Login Verification', generate_html_email("Security Verification", content))
+
+def send_welcome_reader(to_email, username):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to PustakVerse! Dive into our extensive Global Library today and discover your next favorite book.</p>"
+    return send_email_wrapper(to_email, 'Welcome to PustakVerse!', generate_html_email("Welcome to the Library", content))
+
+def send_pending_author(to_email, username):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Thank you for registering as an Author! Your account is currently under review by our administrative team. We will notify you once approved.</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Author Account Under Review', generate_html_email("Author Application Received", content))
+
+def send_approved_author(to_email, username):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! Your Author account is officially approved. You can now access your dashboard and publish books.</p>"
+    return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', generate_html_email("Account Approved", content))
+
+def send_official_welcome(to_email, username, password):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to the administrative team! Please log in and change your password immediately.</p><p>Username: <strong>{username}</strong><br>Temporary Password: <strong>{password}</strong></p>"
+    return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', generate_html_email("Official Privileges Granted", content))
+
+def send_warning_email(to_email, username, warning_message):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>This is an official warning from the PustakVerse Administration regarding your account:</p><blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'>{warning_message}</blockquote><p>Please adhere to our platform guidelines to prevent account suspension.</p>"
+    return send_email_wrapper(to_email, 'URGENT: Official Warning from PustakVerse', generate_html_email("Account Warning", content))
+
+def send_promotion_notification(to_email, username):
+    content = f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! You have been officially promoted to an Administrator on PustakVerse.</p><p>Please log out and log back in to access your new administrative dashboard.</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Promoted to Official', generate_html_email("Promotion Notice", content))
+
 def send_mass_message(to_emails, subject, message, role_target):
     content = f"<p><strong>Official Broadcast to {role_target.capitalize()}s:</strong></p><p>{message}</p>"
-    for email in to_emails: send_email_wrapper(email, f'PustakVerse Notice: {subject}', generate_html_email(subject, content))
-def send_revoked_official_email(to_email, username, reason): return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', generate_html_email("Privileges Revoked", f"<p>Hello {username},</p><p>Your official administrative privileges have been revoked.</p><p><strong>Reason:</strong> {reason}</p>"))
-def send_account_deleted_email(to_email, username, reason): return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', generate_html_email("Account Terminated", f"<p>Hello {username},</p><p>Your PustakVerse account has been permanently deleted.</p><p><strong>Reason:</strong> {reason}</p>"))
-def send_author_rejected_email(to_email, username, reason): return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', generate_html_email("Application Rejected", f"<p>Hello {username},</p><p>Your application for an Author account has been rejected.</p><p><strong>Reason:</strong> {reason}</p>"))
-def send_book_deleted_email(to_email, username, book_title, reason): return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', generate_html_email("Content Removed", f"<p>Hello {username},</p><p>Your book titled '{book_title}' has been removed from PustakVerse.</p><p><strong>Reason:</strong> {reason}</p>"))
+    for email in to_emails:
+        send_email_wrapper(email, f'PustakVerse Notice: {subject}', generate_html_email(subject, content))
+
+def send_revoked_official_email(to_email, username, reason):
+    content = f"<p>Hello {username},</p><p>Your official administrative privileges on PustakVerse have been revoked.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Administrative Privileges Revoked', generate_html_email("Privileges Revoked", content))
+
+def send_account_deleted_email(to_email, username, reason):
+    content = f"<p>Hello {username},</p><p>Your PustakVerse account has been permanently deleted by an administrator.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion Notice', generate_html_email("Account Terminated", content))
+
+def send_author_rejected_email(to_email, username, reason):
+    content = f"<p>Hello {username},</p><p>We regret to inform you that your application for an Author account has been rejected.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Author Application Status', generate_html_email("Application Rejected", content))
+
+def send_book_deleted_email(to_email, username, book_title, reason):
+    content = f"<p>Hello {username},</p><p>Your book titled '{book_title}' has been removed from PustakVerse by the platform Developer.</p><p><strong>Reason:</strong> {reason}</p>"
+    return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', generate_html_email("Content Removed", content))
 
 # ==========================================
 # SECURE TiDB (MYSQL) DATABASE CONNECTION
@@ -323,7 +408,7 @@ def create_master_developer():
             hashed_pw = generate_password_hash('123@Abhinav')
             cursor.execute("INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", ('abhinavgiri45', 'abhinavgiri370@gmail.com', hashed_pw, 'developer', True, 'What is your favorite book?', 'gita', 'Master Admin'))
             db.commit()
-    except Exception: pass
+    except Exception as e: pass
     finally:
         if db:
             try: db.close()
@@ -442,6 +527,28 @@ def submit_review(book_id):
             except: pass
     return redirect(url_for('view_book', book_id=book_id))
 
+# NEW ROUTE: DELETE REVIEW
+@app.route('/delete_review/<int:review_id>/<int:book_id>', methods=['POST'])
+def delete_review(review_id, book_id):
+    if 'user_id' not in session:
+        flash("Please log in.", "error")
+        return redirect(url_for('login'))
+    
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        # Ensure the user is only deleting their own review
+        cursor.execute("DELETE FROM interactions WHERE id = %s AND user_id = %s", (review_id, session['user_id']))
+        db.commit()
+        flash("Your review has been successfully deleted.", "success")
+    except Exception as e:
+        flash("Database error deleting review.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('view_book', book_id=book_id))
 
 @app.route('/check_username', methods=['POST'])
 def check_username():
