@@ -4,51 +4,209 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Library - PustakVerse</title>
-      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333; }
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f4f6f9; 
+            color: #1e293b; 
+            font-size: 16px; 
+        }
         
-        .navbar { background-color: #34495e; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; }
-        .navbar-links { display: flex; gap: 20px; align-items: center; margin-left: auto;}
-        .navbar-links a, .navbar-links button { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; background: none; border: none; cursor: pointer; font-family: inherit; }
-        .navbar-links a:hover, .navbar-links button:hover { color: #f66d2f; }
+        .navbar { 
+            background-color: #2d3748; 
+            padding: 10px 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 16px; 
+        }
         
-        .page-header { background: white; padding: 30px 40px; text-align: center; border-bottom: 1px solid #e0e0e0; margin-bottom: 30px; }
-        .page-header h1 { margin: 0; color: #34495e; font-size: 2.2rem; }
-
-        .page-search-wrapper { max-width: 500px; margin: -10px auto 30px auto; display: flex; align-items: center; background: white; border-radius: 8px; padding: 5px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        .page-search-wrapper input { flex: 1; border: none; outline: none; padding: 10px; font-size: 1rem; color: #333; font-family: inherit; }
-        .icon-btn { background: none; border: none; cursor: pointer; color: #718096; transition: all 0.2s ease; padding: 8px; display: flex; align-items: center; justify-content: center; }
-        .icon-btn:hover { color: #f66d2f; transform: scale(1.05); }
-
-        .container { max-width: 1400px; margin: 0 auto; padding: 0 40px 50px 40px; }
-        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+        .navbar-brand img { 
+            height: 45px; 
+            background: white; 
+            padding: 5px; 
+            border-radius: 4px; 
+            object-fit: contain; 
+        }
         
-        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;}
-        .book-cover { width: 100%; height: 320px; object-fit: cover; background: #e9ecef; }
-        .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-        .book-tag { color: #f66d2f; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
-        .book-title { font-size: 1.15rem; color: #2d3748; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
-        .book-author { font-size: 0.85rem; color: #718096; margin: 0 0 20px 0; }
+        .navbar-links { 
+            display: flex; 
+            gap: 16px; 
+            align-items: center; 
+            margin-left: auto; 
+        }
         
-        .btn-read { display: block; width: 100%; padding: 12px 0; text-align: center; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; border: none; background-color: #f66d2f; color: white; text-decoration: none; margin-top: auto; transition: opacity 0.2s; box-sizing: border-box;}
-        .btn-read:hover { opacity: 0.9; }
+        .navbar-links a { 
+            color: white; 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 1rem; 
+            transition: 0.2s; 
+            padding: 12px 16px; 
+            min-height: 48px; 
+            display: inline-flex; 
+            align-items: center; 
+            box-sizing: border-box; 
+        }
+        
+        .navbar-links a:hover { 
+            color: #f66d2f; 
+        }
+        
+        .hero-section { 
+            background: #1a202c; 
+            color: white; 
+            padding: 40px 20px; 
+            text-align: center; 
+            border-bottom: 4px solid #f66d2f; 
+        }
+        
+        .hero-section h1 { 
+            margin: 0; 
+            font-size: 2.5rem; 
+            letter-spacing: -0.5px; 
+        }
+        
+        .hero-section p { 
+            font-size: 1.1rem; 
+            color: #cbd5e1; 
+            margin-top: 10px; 
+        }
 
-        .flash { padding: 15px; margin-bottom: 20px; border-radius: 6px; text-align: center; font-weight: 500; }
-        .flash.error { background: #fee2e2; color: #991b1b; }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 40px; 
+        }
+        
+        .book-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+            gap: 25px; 
+        }
+        
+        .book-card { 
+            background: white; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+            border: 1px solid #e2e8f0; 
+            transition: transform 0.2s; 
+        }
+        
+        .book-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+        }
+        
+        .book-cover { 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 250 / 320; 
+            object-fit: cover; 
+            background: #e2e8f0; 
+            display: block; 
+            transition: opacity 0.2s; 
+        }
+        
+        .book-cover-link:hover .book-cover { 
+            opacity: 0.85; 
+        }
+        
+        .book-info { 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            flex: 1; 
+        }
+        
+        .book-tag { 
+            color: #f66d2f; 
+            font-size: 0.85rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+        }
+        
+        .book-title { 
+            font-size: 1.15rem; 
+            color: #1e293b; 
+            margin: 0 0 5px 0; 
+            font-weight: bold; 
+            line-height: 1.3; 
+        }
+        
+        .book-title a { 
+            color: inherit; 
+            text-decoration: none; 
+        }
+        
+        .book-title a:hover { 
+            color: #f66d2f; 
+        }
+        
+        .book-author { 
+            font-size: 1rem; 
+            color: #334155; 
+            margin: 0 0 20px 0; 
+        }
+        
+        .book-actions { 
+            display: flex; 
+            gap: 12px; 
+            margin-top: auto; 
+        }
+        
+        .btn { 
+            flex: 1; 
+            padding: 12px 0; 
+            min-height: 48px; 
+            text-align: center; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            border: none; 
+            transition: 0.2s; 
+            text-decoration: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-sizing: border-box; 
+        }
+        
+        .btn:hover { 
+            opacity: 0.85; 
+        }
+        
+        .btn-read { 
+            background-color: #2d3748; 
+            color: white; 
+        }
 
-        .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 30px 0; }
-        .no-results h2 { color: #34495e; margin-bottom: 10px; font-size: 1.5rem;}
+        .flash { 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            text-align: center; 
+            font-weight: 500; 
+        }
+        
+        .flash.success { background: #dcfce7; color: #166534; } 
+        .flash.error { background: #fee2e2; color: #991b1b; } 
 
         @media (max-width: 768px) {
             .navbar { flex-direction: column; padding: 15px; }
-            .navbar-links { width: 100%; justify-content: center; margin-top: 10px; margin-left: 0;}
+            .navbar-links { width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
             .container { padding: 20px; }
             .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-            .book-cover { height: 220px; }
-            .page-search-wrapper { margin: 0 20px 25px 20px; }
+            .book-actions { flex-direction: column; }
         }
     </style>
 </head>
@@ -56,42 +214,23 @@
 
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="Logo"></a>
+            <a href="/">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" width="150" height="45">
+            </a>
         </div>
         <div class="navbar-links">
-            <a href="/">← Global Library</a>
+            <a href="/">← Back to Library</a>
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            
-            {% if session.user_id %}
-                <a href="{{ url_for('payment_history') }}">Payment History</a>
-                <a href="{{ url_for('logout') }}" style="background: #e53e3e; padding: 6px 15px; border-radius: 20px; color: white;">Logout</a>
-            {% else %}
-                <a href="{{ url_for('login') }}" style="background: #f66d2f; padding: 8px 20px; border-radius: 20px; color: white;">Sign In / Login</a>
-            {% endif %}
+            <a href="{{ url_for('logout') }}" style="background: #e53e3e; border-radius: 25px;">Logout</a>
         </div>
     </nav>
 
-    <div class="page-header">
+    <div class="hero-section">
         <h1>My Personal Library</h1>
-        <p style="color: #718096; margin-top: 5px;">Your securely saved and purchased collection.</p>
+        <p>Books you have saved, purchased, or published.</p>
     </div>
-
-    {% if saved_books %}
-    <div class="page-search-wrapper">
-        <input type="text" id="searchInput" placeholder="Search my library..." onkeyup="filterBooks()">
-        <button type="button" id="micBtn" class="icon-btn" title="Search by Voice">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-            </svg>
-        </button>
-        <button type="button" class="icon-btn" onclick="filterBooks()">
-            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        </button>
-    </div>
-    {% endif %}
 
     <div class="container">
-        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -100,75 +239,40 @@
             {% endif %}
         {% endwith %}
 
-        <div class="book-grid" id="bookGrid">
+        <div class="book-grid">
             {% for book in saved_books %}
-            <div class="book-card" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}">
+            <div class="book-card">
                 
-                {% if book.cover_image.startswith('http') %}
-                    <img src="{{ book.cover_image | drive_img }}" alt="Cover" class="book-cover">
-                {% else %}
-                    <img src="{{ url_for('static', filename='uploads/covers/' + book.cover_image) }}" alt="Cover" class="book-cover">
-                {% endif %}
+                {% set cover = book.cover_image %}
+                
+                <a href="{{ url_for('view_book', book_id=book.id) }}" class="book-cover-link" style="display: block;">
+                    {% if cover.startswith('http') %}
+                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
+                    {% endif %}
+                </a>
 
                 <div class="book-info">
                     <div class="book-tag">{{ book.catalog }}</div>
-                    <h3 class="book-title">{{ book.title }}</h3>
+                    
+                    <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
-                    <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn-read">Open Book</a>
+                    <div class="book-actions">
+                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Read Full Book</a>
+                    </div>
                 </div>
             </div>
             {% else %}
                 <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
-                    <h2 style="color: #34495e; margin-bottom: 10px;">Your library is empty!</h2>
-                    <p style="color: #718096; font-size: 1.1rem; margin-bottom: 20px;">Explore the Global Library and save your favorite books here.</p>
-                    <a href="/" style="background: #f66d2f; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold;">Browse Library</a>
+                    <h2 style="color: #334155;">Your library is currently empty.</h2>
+                    <p style="color: #64748b; margin-bottom: 20px;">Head over to the Global Library to find your next great read!</p>
+                    <a href="/" style="display: inline-block; background: #f66d2f; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 6px;">Browse Books</a>
                 </div>
             {% endfor %}
-
-            <div class="no-results" id="noResultsMsg">
-                <h2>No matches found in your library.</h2>
-            </div>
         </div>
     </div>
 
-    <script>
-        function filterBooks() {
-            let input = document.getElementById('searchInput').value.toLowerCase();
-            let cards = document.querySelectorAll('.book-card');
-            let visibleCount = 0;
-            
-            cards.forEach(card => {
-                let title = card.getAttribute('data-title'); let author = card.getAttribute('data-author'); let catalog = card.getAttribute('data-catalog');
-                if (title.includes(input) || author.includes(input) || catalog.includes(input)) { 
-                    card.style.display = 'flex'; 
-                    visibleCount++;
-                } else { 
-                    card.style.display = 'none'; 
-                }
-            });
-            document.getElementById('noResultsMsg').style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
-        }
-
-        const micBtn = document.getElementById('micBtn');
-        const searchInput = document.getElementById('searchInput');
-
-        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
-            recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
-            
-            micBtn.addEventListener('click', () => { 
-                recognition.start(); 
-                micBtn.style.color = '#f66d2f'; micBtn.style.transform = 'scale(1.1)'; searchInput.placeholder = "Listening..."; 
-            });
-            
-            recognition.onresult = (event) => { searchInput.value = event.results[0][0].transcript; filterBooks(); };
-            recognition.onerror = (event) => { console.error("Speech error", event.error); alert("Microphone error."); resetMic(); };
-            recognition.onend = () => { resetMic(); };
-            
-            function resetMic() { micBtn.style.color = '#718096'; micBtn.style.transform = 'scale(1)'; searchInput.placeholder = "Search my library..."; }
-        } else if (micBtn) { micBtn.style.display = 'none'; }
-    </script>
 </body>
 </html>
