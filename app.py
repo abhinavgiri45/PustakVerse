@@ -218,6 +218,34 @@ def send_email_wrapper(to_email, subject, body_html):
     def send_registration_otp(to_email, otp): 
     return send_email_wrapper(to_email, 'PustakVerse - Verify Your Email', generate_html_email("Account Verification", f"<p>Your registration verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
 
+def send_pending_author(to_email, username):
+    subject = "PustakVerse - Author Account Under Review"
+    content = (
+        f"<p>Hello <strong>{username}</strong>,</p>"
+        f"<p>Thank you for verifying your email! Your Author account is currently <strong>under review</strong> by our administrative team.</p>"
+        f"<p>We will notify you as soon as you are approved so you can start publishing.</p>"
+    )
+    return send_email_wrapper(to_email, subject, generate_html_email("Account Under Review", content))
+
+def send_author_approved(to_email, username, approver_name):
+    subject = "PustakVerse - Author Account Approved!"
+    content = (
+        f"<p>Congratulations <strong>{username}</strong>!</p>"
+        f"<p>Your Author application has been officially <strong>approved by {approver_name}</strong>.</p>"
+        f"<p>You can now log into your dashboard and publish your first book to the Global Library.</p>"
+    )
+    return send_email_wrapper(to_email, subject, generate_html_email("Account Approved", content))
+
+def send_author_rejected(to_email, username, rejector_name, reason):
+    subject = "PustakVerse - Author Application Update"
+    content = (
+        f"<p>Hello <strong>{username}</strong>,</p>"
+        f"<p>We have reviewed your application to become an author on PustakVerse. Unfortunately, your request has been <strong>declined by {rejector_name}</strong>.</p>"
+        f"<p><strong>Reason provided:</strong> {reason}</p>"
+        f"<p>Your account has been switched to a standard Reader account so you can still enjoy the Global Library. If you have any questions, please contact support.</p>"
+    )
+    return send_email_wrapper(to_email, subject, generate_html_email("Application Declined", content))
+    
 def generate_html_email(title, content):
     return f'<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;"><h2 style="color: #2d3748; border-bottom: 2px solid #f66d2f; padding-bottom: 10px;">{title}</h2><div style="color: #4a5568; font-size: 16px; line-height: 1.6;">{content}</div><p style="color: #718096; font-size: 12px; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 10px;">This is an automated message from PustakVerse.</p></div>'
 
@@ -1607,6 +1635,62 @@ def dashboard():
                 if catalog.lower() == 'archives': 
                     flash("Cannot publish to Archives.", "error")
                     return redirect(url_for('dashboard'))
+
+# ADMIN APPROVE AUTHOR REQUEST
+        if request.method == 'POST' and 'approve_author_id' in request.form:
+            approve_author_id = request.form.get('approve_author_id')
+            if session.get('role') not in ['developer', 'official']:
+                flash("Unauthorized action.", "error")
+                return redirect(url_for('dashboard'))
+            
+            try:
+                # 1. Get the author's details first
+                cursor.execute("SELECT username, email FROM users WHERE id = %s", (approve_author_id,))
+                author = cursor.fetchone()
+                
+                if author:
+                    # 2. Update database to make them verified
+                    cursor.execute("UPDATE users SET is_verified = TRUE WHERE id = %s", (approve_author_id,))
+                    db.commit()
+                    
+                    # 3. Trigger the approval email using YOUR username
+                    approver_name = session.get('username', 'an Administrator')
+                    send_author_approved(author['email'], author['username'], approver_name)
+                    
+                    flash(f"Success! {author['username']} has been approved and an email has been sent.", "success")
+            except Exception as e:
+                flash("Database error during approval.", "error")
+            
+            return redirect(url_for('dashboard'))
+
+        # ADMIN REJECT AUTHOR REQUEST
+        if request.method == 'POST' and 'reject_author_id' in request.form:
+            reject_author_id = request.form.get('reject_author_id')
+            reject_reason = request.form.get('reject_reason', 'Did not meet platform guidelines.')
+            
+            if session.get('role') not in ['developer', 'official']:
+                flash("Unauthorized action.", "error")
+                return redirect(url_for('dashboard'))
+            
+            try:
+                # 1. Get the author's details first
+                cursor.execute("SELECT username, email FROM users WHERE id = %s", (reject_author_id,))
+                author = cursor.fetchone()
+                
+                if author:
+                    # 2. Demote them to a reader so they aren't locked out of the site completely
+                    cursor.execute("UPDATE users SET role = 'reader', is_verified = TRUE WHERE id = %s", (reject_author_id,))
+                    db.commit()
+                    
+                    # 3. Trigger the rejection email using YOUR username and the reason you typed
+                    rejector_name = session.get('username', 'an Administrator')
+                    send_author_rejected(author['email'], author['username'], rejector_name, reject_reason)
+                    
+                    flash(f"{author['username']}'s application was rejected. They have been notified via email.", "info")
+            except Exception as e:
+                flash("Database error during rejection.", "error")
+            
+            return redirect(url_for('dashboard'))
 
             description = request.form.get('description', '').strip()
             c_link = request.form.get('cover_link', '').strip()
