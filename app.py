@@ -1616,122 +1616,24 @@ def dashboard():
         two_factor_enabled = tf_data['two_factor_enabled'] if tf_data else False
         
         if request.method == 'POST' and 'toggle_2fa' in request.form:
-                    current_status = request.form.get('current_status') == 'True'
-                    new_status = not current_status
-                    cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
-                    db.commit()
-                    status_text = "enabled" if new_status else "disabled"
-                    flash(f"Two-Step Verification has been {status_text}.", "success")
-                    return redirect(url_for('dashboard'))
-
-                if request.method == 'POST' and 'title' in request.form:
-                    catalog = request.form.get('catalog', '')
-                    if role == 'author':
-                        cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
-                        if not cursor.fetchone()['is_verified']: 
-                            flash("Must be verified to publish.", "error")
-                            return redirect(url_for('dashboard'))
-                        if catalog.lower() == 'archives': 
-                            flash("Cannot publish to Archives.", "error")
-                            return redirect(url_for('dashboard'))
-
-                # ADMIN APPROVE AUTHOR REQUEST
-                if request.method == 'POST' and 'approve_author_id' in request.form:
-                    approve_author_id = request.form.get('approve_author_id')
-                    if session.get('role') not in ['developer', 'official']:
-                        flash("Unauthorized action.", "error")
-                        return redirect(url_for('dashboard'))
-                    
-                    try:
-                        cursor.execute("SELECT username, email FROM users WHERE id = %s", (approve_author_id,))
-                        author = cursor.fetchone()
-                        
-                        if author:
-                            cursor.execute("UPDATE users SET is_verified = TRUE, two_factor_enabled = TRUE WHERE id = %s", (approve_author_id,))
-                            db.commit()
-                            
-                            approver_name = session.get('username', 'an Administrator')
-                            send_author_approved(author['email'], author['username'], approver_name)
-                            
-                            flash(f"Success! {author['username']} has been approved, 2FA enabled, and an email sent.", "success")
-                    except Exception as e:
-                        flash("Database error during approval.", "error")
-                    
-                    return redirect(url_for('dashboard'))
-
-                # ADMIN REJECT AUTHOR REQUEST
-                if request.method == 'POST' and 'reject_author_id' in request.form:
-                    reject_author_id = request.form.get('reject_author_id')
-                    reject_reason = request.form.get('reject_reason', 'Did not meet platform guidelines.')
-                    
-                    if session.get('role') not in ['developer', 'official']:
-                        flash("Unauthorized action.", "error")
-                        return redirect(url_for('dashboard'))
-                    
-                    try:
-                        cursor.execute("SELECT username, email FROM users WHERE id = %s", (reject_author_id,))
-                        author = cursor.fetchone()
-                        
-                        if author:
-                            cursor.execute("UPDATE users SET role = 'reader', is_verified = TRUE WHERE id = %s", (reject_author_id,))
-                            db.commit()
-                            
-                            rejector_name = session.get('username', 'an Administrator')
-                            send_author_rejected(author['email'], author['username'], rejector_name, reject_reason)
-                            
-                            flash(f"{author['username']}'s application was rejected. They have been notified via email.", "info")
-                    except Exception as e:
-                        flash("Database error during rejection.", "error")
-                    
-                    return redirect(url_for('dashboard'))
-            
-            try:
-                # 1. Get the author's details first
-                cursor.execute("SELECT username, email FROM users WHERE id = %s", (reject_author_id,))
-                author = cursor.fetchone()
-                
-                if author:
-                    # 2. Demote them to a reader
-                    cursor.execute("UPDATE users SET role = 'reader', is_verified = TRUE WHERE id = %s", (reject_author_id,))
-                    db.commit()
-                    
-                    # 3. Trigger the rejection email
-                    rejector_name = session.get('username', 'an Administrator')
-                    send_author_rejected(author['email'], author['username'], rejector_name, reject_reason)
-                    
-                    flash(f"{author['username']}'s application was rejected. They have been notified via email.", "info")
-            except Exception as e:
-                flash("Database error during rejection.", "error")
-            
+            current_status = request.form.get('current_status') == 'True'
+            new_status = not current_status
+            cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
+            db.commit()
+            status_text = "enabled" if new_status else "disabled"
+            flash(f"Two-Step Verification has been {status_text}.", "success")
             return redirect(url_for('dashboard'))
-        # ADMIN REJECT AUTHOR REQUEST
-        if request.method == 'POST' and 'reject_author_id' in request.form:
-            reject_author_id = request.form.get('reject_author_id')
-            reject_reason = request.form.get('reject_reason', 'Did not meet platform guidelines.')
-            
-            if session.get('role') not in ['developer', 'official']:
-                flash("Unauthorized action.", "error")
-                return redirect(url_for('dashboard'))
-            
-            try:
-                # 1. Get the author's details first
-                cursor.execute("SELECT username, email FROM users WHERE id = %s", (reject_author_id,))
-                author = cursor.fetchone()
-                
-                if author:
-                    # 2. Demote them to a reader so they aren't locked out of the site completely
-                    cursor.execute("UPDATE users SET role = 'reader', is_verified = TRUE WHERE id = %s", (reject_author_id,))
-                    db.commit()
-                    
-                    # 3. Trigger the rejection email using YOUR username and the reason you typed
-                    rejector_name = session.get('username', 'an Administrator')
-                    send_author_rejected(author['email'], author['username'], rejector_name, reject_reason)
-                    
-                    flash(f"{author['username']}'s application was rejected. They have been notified via email.", "info")
-            except Exception as e:
-                flash("Database error during rejection.", "error")
-            
-            return redirect(url_for('dashboard'))
+
+        if request.method == 'POST' and 'title' in request.form:
+            catalog = request.form.get('catalog', '')
+            if role == 'author':
+                cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
+                if not cursor.fetchone()['is_verified']:
+                    flash("Must be verified to publish.", "error")
+                    return redirect(url_for('dashboard'))
+                if catalog.lower() == 'archives':
+                    flash("Cannot publish to Archives.", "error")
+                    return redirect(url_for('dashboard'))
 
             description = request.form.get('description', '').strip()
             c_link = request.form.get('cover_link', '').strip()
@@ -1739,34 +1641,34 @@ def dashboard():
             c_file = request.files.get('cover_image')
             p_file = request.files.get('pdf_file')
             is_paid = request.form.get('is_paid') == 'on'
-            
-            if catalog.lower() == 'archives': 
+
+            if catalog.lower() == 'archives':
                 is_paid = False
 
-            try: 
+            try:
                 price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
-            except (InvalidOperation, ValueError): 
+            except (InvalidOperation, ValueError):
                 price_paise = -1
 
             raw_preview = int(request.form.get('preview_pages', 5) or 5)
             preview_pages = min(max(1, raw_preview), 10)
-            
-            if is_paid and price_paise <= 0: 
+
+            if is_paid and price_paise <= 0:
                 flash('Paid books need a valid price.', 'error')
                 return redirect(url_for('dashboard'))
-            
+
             book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
             book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
-            
+
             f_cov = c_link if c_link else ""
-            if c_file and c_file.filename and not c_link: 
+            if c_file and c_file.filename and not c_link:
                 f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
-                
+
             f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
             if p_file and not p_link:
                 pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
                 p_file.save(os.path.join(pdf_folder, f_pdf))
-                
+
             if f_cov and f_pdf:
                 cursor.execute("INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret, description))
                 db.commit()
