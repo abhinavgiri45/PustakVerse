@@ -1631,7 +1631,7 @@ def dashboard():
                 if not cursor.fetchone()['is_verified']: 
                     flash("Must be verified to publish.", "error")
                     return redirect(url_for('dashboard'))
-                if catalog.lower() == 'archives': 
+            if catalog.lower() == 'archives': 
                     flash("Cannot publish to Archives.", "error")
                     return redirect(url_for('dashboard'))
 
