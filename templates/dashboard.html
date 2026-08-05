@@ -4,26 +4,109 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - PustakVerse</title>
-      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
-        :root { --nav-bg: #2d3748; --primary-orange: #f66d2f; --bg-light: #f7fafc; --text-dark: #2d3748; --text-light: #718096; --card-bg: #ffffff; }
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-light); color: var(--text-dark); -webkit-font-smoothing: antialiased; }
-        .navbar { background-color: var(--nav-bg); padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; }
-        .navbar-brand img { height: 45px; object-fit: contain; }
-        .navbar-links { display: flex; gap: 25px; align-items: center; }
-        .navbar-links a { color: white; text-decoration: none; font-weight: 500; font-size: 0.95rem; }
-        .navbar-links a:hover { color: var(--primary-orange); }
-        .btn-logout { background: transparent; border: 1px solid #e2e8f0; color: white; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.2s;}
-        .btn-logout:hover { background: #e2e8f0; color: var(--nav-bg); }
+        :root { 
+            --nav-bg: #2d3748; 
+            --primary-orange: #f66d2f; 
+            --bg-light: #f7fafc; 
+            --text-dark: #2d3748; 
+            --text-light: #718096; 
+            --card-bg: #ffffff; 
+        }
         
-        .dashboard-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 30px 40px; margin-bottom: 30px; }
-        .dashboard-header h1 { margin: 0; font-size: 2rem; color: var(--nav-bg); }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px 50px 20px;}
-        .panel { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 30px; margin-bottom: 30px; border: 1px solid #edf2f7; }
-        .panel h2 { margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; margin-bottom: 20px; color: var(--nav-bg); }
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: var(--bg-light); 
+            color: var(--text-dark); 
+            -webkit-font-smoothing: antialiased; 
+        }
+        
+        .navbar { 
+            background-color: var(--nav-bg); 
+            padding: 12px 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .navbar-brand img { 
+            height: 45px; 
+            object-fit: contain; 
+        }
+        
+        .navbar-links { 
+            display: flex; 
+            gap: 25px; 
+            align-items: center; 
+        }
+        
+        .navbar-links a { 
+            color: white; 
+            text-decoration: none; 
+            font-weight: 500; 
+            font-size: 0.95rem; 
+        }
+        
+        .navbar-links a:hover { 
+            color: var(--primary-orange); 
+        }
+        
+        .btn-logout { 
+            background: transparent; 
+            border: 1px solid #e2e8f0; 
+            color: white; 
+            padding: 8px 20px; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: 0.2s;
+        }
+        
+        .btn-logout:hover { 
+            background: #e2e8f0; 
+            color: var(--nav-bg); 
+        }
+        
+        .dashboard-header { 
+            background: white; 
+            border-bottom: 1px solid #e2e8f0; 
+            padding: 30px 40px; 
+            margin-bottom: 30px; 
+        }
+        
+        .dashboard-header h1 { 
+            margin: 0; 
+            font-size: 2rem; 
+            color: var(--nav-bg); 
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 0 20px 50px 20px;
+        }
+        
+        .panel { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            padding: 30px; 
+            margin-bottom: 30px; 
+            border: 1px solid #edf2f7; 
+        }
+        
+        .panel h2 { 
+            margin-top: 0; 
+            border-bottom: 2px solid #edf2f7; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+            color: var(--nav-bg); 
+        }
 
-        /* --- CUSTOM SCROLL CONTAINER FOR ALL TABLES --- */
         .table-scroll-container {
             max-height: 400px;
             overflow-y: auto;
@@ -31,34 +114,135 @@
             border: 1px solid #edf2f7;
             border-radius: 6px;
         }
-        .table-scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
-        .table-scroll-container::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
-        .table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .table-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .table-scroll-container::-webkit-scrollbar { 
+            width: 8px; 
+            height: 8px; 
+        }
+        
+        .table-scroll-container::-webkit-scrollbar-track { 
+            background: #f8fafc; 
+            border-radius: 4px; 
+        }
+        
+        .table-scroll-container::-webkit-scrollbar-thumb { 
+            background: #cbd5e1; 
+            border-radius: 4px; 
+        }
+        
+        .table-scroll-container::-webkit-scrollbar-thumb:hover { 
+            background: #94a3b8; 
+        }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 0; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; vertical-align: middle;}
-        th { background: #f8fafc; color: var(--text-light); text-transform: uppercase; font-size: 0.85rem; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #edf2f7;}
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 0; 
+        }
         
-        .btn-sm { padding: 8px 12px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; color: white;}
-        .btn-green { background: #38a169; } .btn-red { background: #e53e3e; } .btn-orange { background: var(--primary-orange); } .btn-dark { background: var(--nav-bg); } .btn-warn { background: #d97706; }
+        th, td { 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #edf2f7; 
+            vertical-align: middle;
+        }
         
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
-        input[type="text"], input[type="password"], input[type="email"], input[type="file"], select, textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc; font-family: inherit; }
+        th { 
+            background: #f8fafc; 
+            color: var(--text-light); 
+            text-transform: uppercase; 
+            font-size: 0.85rem; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+            box-shadow: 0 1px 0 #edf2f7;
+        }
         
-        .flash { padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: center; font-weight: 500; }
-        .flash.success { background: #dcfce7; color: #166534; } .flash.error { background: #fee2e2; color: #991b1b; } .flash.info { background: #e0f2fe; color: #075985; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .btn-sm { 
+            padding: 8px 12px; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            color: white;
+        }
+        
+        .btn-green { background: #38a169; } 
+        .btn-red { background: #e53e3e; } 
+        .btn-orange { background: var(--primary-orange); } 
+        .btn-dark { background: var(--nav-bg); } 
+        .btn-warn { background: #d97706; }
+        
+        .form-group { 
+            margin-bottom: 20px; 
+        }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            font-size: 0.9rem; 
+        }
+        
+        input[type="text"], 
+        input[type="password"], 
+        input[type="email"], 
+        input[type="file"], 
+        select, 
+        textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            background: #f8fafc; 
+            font-family: inherit; 
+        }
+        
+        .flash { 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            text-align: center; 
+            font-weight: 500; 
+        }
+        
+        .flash.success { background: #dcfce7; color: #166534; } 
+        .flash.error { background: #fee2e2; color: #991b1b; } 
+        .flash.info { background: #e0f2fe; color: #075985; }
+        
+        .grid-2 { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+        }
 
-        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .navbar { flex-direction: column; padding: 15px; gap: 15px; } }
+        @media (max-width: 768px) { 
+            .grid-2 { 
+                grid-template-columns: 1fr; 
+            } 
+            .navbar { 
+                flex-direction: column; 
+                padding: 15px; gap: 15px; 
+            } 
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div class="navbar-brand"><a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}"></a></div>
-        <div class="navbar-links"><a href="/">Global Library</a> <a href="{{ url_for('my_library') }}">My Library</a> <a href="{{ url_for('logout') }}"><button class="btn-logout">Logout</button></a></div>
+        <div class="navbar-brand">
+            <a href="/">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}">
+            </a>
+        </div>
+        <div class="navbar-links">
+            <a href="/">Global Library</a> 
+            <a href="{{ url_for('my_library') }}">My Library</a> 
+            <a href="{{ url_for('logout') }}">
+                <button class="btn-logout">Logout</button>
+            </a>
+        </div>
     </nav>
 
     <div class="dashboard-header">
@@ -68,7 +252,11 @@
 
     <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
@@ -77,9 +265,18 @@
             <div class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Username</label><input type="text" name="username" required></div>
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Email</label><input type="email" name="email" required></div>
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;"><label>Password</label><input type="password" name="password" required></div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                        <label>Username</label>
+                        <input type="text" name="username" required>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                        <label>Email</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                        <label>Password</label>
+                        <input type="password" name="password" required>
+                    </div>
                     <button type="submit" class="btn-sm btn-green" style="padding: 12px 25px; height: 43px;">Create Official</button>
                 </form>
             </div>
@@ -88,14 +285,21 @@
                 <div class="panel">
                     <h2>Website Settings & Payments</h2>
                     <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
-                        <div class="form-group"><label>Hero Title</label><input type="text" name="hero_title" value="{{ site_settings.hero_title }}"></div>
-                        <div class="form-group"><label>Hero Subtitle</label><input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}"></div>
+                        <div class="form-group">
+                            <label>Hero Title</label>
+                            <input type="text" name="hero_title" value="{{ site_settings.hero_title }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Hero Subtitle</label>
+                            <input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}">
+                        </div>
                         
                         <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
                             <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
                             <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
                             <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> Show 'Donate' button to users
+                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> 
+                                Show 'Donate' button to users
                             </label>
                         </div>
                         
@@ -133,7 +337,11 @@
                 {% if official_logs %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Timestamp</th><th>Official Name</th><th>Action Taken</th></tr>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Official Name</th>
+                                <th>Action Taken</th>
+                            </tr>
                             {% for log in official_logs %}
                             <tr>
                                 <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp | to_ist }}</td>
@@ -154,7 +362,13 @@
                 {% if book_del_requests %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Reported Book</th><th>Author</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
+                            <tr>
+                                <th>Reported Book</th>
+                                <th>Author</th>
+                                <th>Reported By (Official)</th>
+                                <th>Reason Given</th>
+                                <th>Your Decision</th>
+                            </tr>
                             {% for req in book_del_requests %}
                             <tr>
                                 <td style="font-weight: bold;">{{ req.book_title }}</td>
@@ -174,7 +388,9 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No pending book deletion requests.</p>{% endif %}
+                {% else %}
+                    <p>No pending book deletion requests.</p>
+                {% endif %}
             </div>
 
             <div class="panel" style="border-left: 5px solid #e53e3e;">
@@ -183,7 +399,12 @@
                 {% if del_requests %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Reported User</th><th>Reported By (Official)</th><th>Reason Given</th><th>Your Decision</th></tr>
+                            <tr>
+                                <th>Reported User</th>
+                                <th>Reported By (Official)</th>
+                                <th>Reason Given</th>
+                                <th>Your Decision</th>
+                            </tr>
                             {% for req in del_requests %}
                             <tr>
                                 <td style="font-weight: bold;">{{ req.target_name }}</td>
@@ -202,7 +423,9 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No pending user deletion requests.</p>{% endif %}
+                {% else %}
+                    <p>No pending user deletion requests.</p>
+                {% endif %}
             </div>
         {% endif %}
 
@@ -210,7 +433,10 @@
             <div class="panel" style="border-top: 4px solid var(--primary-orange);">
                 <h2>Change Username</h2>
                 <form action="{{ url_for('change_username') }}" method="POST">
-                    <div class="form-group"><label>New Username</label><input type="text" name="new_username" required></div>
+                    <div class="form-group">
+                        <label>New Username</label>
+                        <input type="text" name="new_username" required>
+                    </div>
                     {% if session.role in ['author', 'official'] %}
                         <div class="form-group">
                             <label>Reason for Change (Required for approval)</label>
@@ -253,9 +479,18 @@
 
                 {% if session.get('change_pw_otp') %}
                     <form action="{{ url_for('change_password') }}" method="POST" style="margin-bottom: 25px;">
-                        <div class="form-group"><label>Enter 6-Digit Code</label><input type="text" name="otp" required placeholder="• • • • • •"></div>
-                        <div class="form-group"><label>Current Password</label><input type="password" name="old_password" required></div>
-                        <div class="form-group"><label>New Password</label><input type="password" name="new_password" required minlength="6"></div>
+                        <div class="form-group">
+                            <label>Enter 6-Digit Code</label>
+                            <input type="text" name="otp" required placeholder="• • • • • •">
+                        </div>
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" name="old_password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" name="new_password" required minlength="6">
+                        </div>
                         <button type="submit" class="btn-sm btn-green">Update Password</button>
                         <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
                     </form>
@@ -310,12 +545,19 @@
                 <div class="panel">
                     <h2>Publish a New Book</h2>
                     <form action="/dashboard" method="POST" enctype="multipart/form-data">
-                        <div class="form-group"><label>Book Title</label><input type="text" name="title" required></div>
+                        <div class="form-group">
+                            <label>Book Title</label>
+                            <input type="text" name="title" required>
+                        </div>
                         <div class="form-group">
                             <label>Catalog</label>
                             <select name="catalog" required>
-                                {% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}
-                                {% if session.role in ['official', 'developer'] %}<option value="Archives">Archives (Free Only)</option>{% endif %}
+                                {% for cat in site_catalogs %}
+                                    <option value="{{ cat.name }}">{{ cat.name }}</option>
+                                {% endfor %}
+                                {% if session.role in ['official', 'developer'] %}
+                                    <option value="Archives">Archives (Free Only)</option>
+                                {% endif %}
                             </select>
                         </div>
 
@@ -328,12 +570,17 @@
                         <div class="form-group" style="background: #fdf2f8; padding: 15px; border-radius: 6px; border: 1px solid #fce7f3; margin-bottom: 25px;">
                             <label style="color: #9d174d;">Cover Image & PDF Uploads</label>
                             <small style="color: #be185d; display: block; font-weight: 600; margin-bottom: 15px;">Recommendation: Use Google Drive Links instead of direct uploads.</small>
-                            <input type="file" name="cover_image" accept="image/*"><input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;">
-                            <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;"><input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;">
+                            <input type="file" name="cover_image" accept="image/*">
+                            <input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;">
+                            <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;">
+                            <input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;">
                         </div>
                         
                         <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                            <label><input type="checkbox" name="is_paid" id="is_paid_checkbox"> Premium/Paid Book</label>
+                            <label>
+                                <input type="checkbox" name="is_paid" id="is_paid_checkbox"> 
+                                Premium/Paid Book
+                            </label>
                             
                             <!-- DYNAMIC RAZORPAY SETTINGS FOR THIS BOOK -->
                             <div id="paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
@@ -362,15 +609,30 @@
                         {% if my_books %}
                             <div class="table-scroll-container">
                                 <table>
-                                    <tr><th>Cover</th><th>Title</th><th>Type</th><th>Action</th></tr>
+                                    <tr>
+                                        <th>Cover</th>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Action</th>
+                                    </tr>
                                     {% for book in my_books %}
                                     <tr class="library-row">
-                                        <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                        <td>
+                                            <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
+                                        </td>
                                         <td style="font-weight: 500;" class="book-title-cell">
                                             {{ book.title }} 
-                                            {% if session.role in ['official', 'developer'] %}<br><small style="color: #718096;">by {{ book.author_name }}</small>{% endif %}
+                                            {% if session.role in ['official', 'developer'] %}
+                                                <br><small style="color: #718096;">by {{ book.author_name }}</small>
+                                            {% endif %}
                                         </td>
-                                        <td>{% if book.is_paid %}<span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>{% else %}Free{% endif %}</td>
+                                        <td>
+                                            {% if book.is_paid %}
+                                                <span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                                            {% else %}
+                                                Free
+                                            {% endif %}
+                                        </td>
                                         <td>
                                             <div style="display: flex; gap: 5px; align-items: flex-start; flex-wrap: wrap;">
                                                 {% if book.is_paid %}
@@ -400,7 +662,9 @@
                                                         <button type="submit" class="btn-sm btn-red">Force Delete</button>
                                                     </form>
                                                 {% else %}
-                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');"><button type="submit" class="btn-sm btn-red">Del</button></form>
+                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');">
+                                                        <button type="submit" class="btn-sm btn-red">Del</button>
+                                                    </form>
                                                 {% endif %}
                                             </div>
                                         </td>
@@ -408,7 +672,9 @@
                                     {% endfor %}
                                 </table>
                             </div>
-                        {% else %}<p>No books available.</p>{% endif %}
+                        {% else %}
+                            <p>No books available.</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -416,11 +682,17 @@
 
         {% if session.role in ['official', 'developer'] %}
             <!-- Pending Username Requests -->
-            <div class="panel" style="border-left: 5px solid #3182ce;"><h2>Pending Username Requests</h2>
+            <div class="panel" style="border-left: 5px solid #3182ce;">
+                <h2>Pending Username Requests</h2>
                 {% if username_requests %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Current Username</th><th>Requested Username</th><th>Reason</th><th>Action</th></tr>
+                            <tr>
+                                <th>Current Username</th>
+                                <th>Requested Username</th>
+                                <th>Reason</th>
+                                <th>Action</th>
+                            </tr>
                             {% for req in username_requests %}
                             <tr>
                                 <td>{{ req.current_username }}</td>
@@ -438,15 +710,22 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No pending username requests.</p>{% endif %}
+                {% else %}
+                    <p>No pending username requests.</p>
+                {% endif %}
             </div>
 
             <!-- Approvals (Both Admins) -->
-            <div class="panel" style="border-left: 5px solid #38a169;"><h2>Pending Author Approvals</h2>
+            <div class="panel" style="border-left: 5px solid #38a169;">
+                <h2>Pending Author Approvals</h2>
                 {% if pending_authors %}
                 <div class="table-scroll-container">
                     <table>
-                        <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Action</th>
+                        </tr>
                         {% for user in pending_authors %}
                         <tr>
                             <td>{{ user.username }}</td>
@@ -466,7 +745,9 @@
                         {% endfor %}
                     </table>
                 </div>
-                {% else %}<p>No pending authors.</p>{% endif %}
+                {% else %}
+                    <p>No pending authors.</p>
+                {% endif %}
             </div>
         {% endif %}
 
@@ -487,7 +768,12 @@
                 {% if all_users %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Username</th><th>Email Address</th><th>Role</th><th>Action</th></tr>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email Address</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                            </tr>
                             {% for user in all_users %}
                             <tr>
                                 <td>{{ user.username }}</td>
@@ -504,7 +790,9 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No users found matching that filter.</p>{% endif %}
+                {% else %}
+                    <p>No users found matching that filter.</p>
+                {% endif %}
             </div>
         {% endif %}
 
@@ -524,10 +812,16 @@
                 {% if archive_books %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Cover</th><th>Title</th><th>Action</th></tr>
+                            <tr>
+                                <th>Cover</th>
+                                <th>Title</th>
+                                <th>Action</th>
+                            </tr>
                             {% for book in archive_books %}
                             <tr class="archive-row">
-                                <td><img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;"></td>
+                                <td>
+                                    <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
+                                </td>
                                 <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
                                 <td>
                                     <div style="display: flex; gap: 5px;">
@@ -553,7 +847,9 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No books in Archives.</p>{% endif %}
+                {% else %}
+                    <p>No books in Archives.</p>
+                {% endif %}
             </div>
 
             <!-- DEVELOPER USER MANAGEMENT -->
@@ -573,7 +869,13 @@
                 {% if searched_users %}
                     <div class="table-scroll-container">
                         <table>
-                            <tr><th>Username</th><th>Email Address</th><th>Role</th><th>Last Active</th><th>Actions</th></tr>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email Address</th>
+                                <th>Role</th>
+                                <th>Last Active</th>
+                                <th>Actions</th>
+                            </tr>
                             {% for user in searched_users %}
                             <tr>
                                 <td style="font-weight: 500;">{{ user.username }}</td>
@@ -611,7 +913,9 @@
                             {% endfor %}
                         </table>
                     </div>
-                {% else %}<p>No users found matching that filter.</p>{% endif %}
+                {% else %}
+                    <p>No users found matching that filter.</p>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -624,8 +928,16 @@
             <button type="button" onclick="document.getElementById('editBookModal').style.display='none'" style="position: absolute; top: 15px; right: 20px; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
             <h2 style="margin-top: 0;">Edit Book</h2>
             <form id="editBookForm" method="POST" enctype="multipart/form-data">
-                <div class="form-group"><input type="text" name="title" id="edit_title" required></div>
-                <div class="form-group"><select name="catalog" id="edit_catalog" required>{% for cat in site_catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}</select></div>
+                <div class="form-group">
+                    <input type="text" name="title" id="edit_title" required>
+                </div>
+                <div class="form-group">
+                    <select name="catalog" id="edit_catalog" required>
+                        {% for cat in site_catalogs %}
+                            <option value="{{ cat.name }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 
                 <!-- NEW: Edit Description -->
                 <div class="form-group">
