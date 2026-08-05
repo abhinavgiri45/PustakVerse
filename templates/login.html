@@ -124,8 +124,31 @@
                 {% endwith %}
             </div>
 
-            <!-- 2-STEP VERIFICATION PANEL -->
-            {% if show_2fa_form %}
+            <!-- REGISTRATION OTP VERIFICATION PANEL -->
+            {% if show_reg_otp_form %}
+                <div class="form-area active" style="padding-top: 20px;">
+                    <h2>
+                        <span style="font-size: 2.5rem; margin-bottom: 10px;">✉️</span>
+                        Verify Your Email
+                    </h2>
+                    <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
+                        We sent a 6-digit verification code to <strong>{{ reg_email }}</strong>.
+                    </p>
+                    <form action="/register" method="POST">
+                        <input type="hidden" name="action" value="verify_otp">
+                        <div class="form-group">
+                            <label>Verification Code</label>
+                            <input type="text" name="otp" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.2rem; text-align: center;">
+                        </div>
+                        <button type="submit" class="btn-submit orange">Verify & Create Account</button>
+                    </form>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="{{ url_for('login') }}" class="forgot-link" style="text-align: center;">Cancel Registration</a>
+                    </div>
+                </div>
+
+            <!-- 2-STEP VERIFICATION PANEL FOR OFFICIALS -->
+            {% elif show_2fa_form %}
                 <div class="form-area active" style="padding-top: 20px;">
                     <h2>
                         <span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>
@@ -218,6 +241,9 @@
                         Join PustakVerse
                     </h2>
                     <form action="/register" method="POST">
+                        <!-- THIS HIDDEN INPUT IS REQUIRED FOR THE APP.PY LOGIC -->
+                        <input type="hidden" name="action" value="register">
+                        
                         <div class="form-group">
                             <label>Choose Username</label>
                             <input type="text" name="username" id="reg_username" required placeholder="Used for login">
@@ -268,7 +294,7 @@
                             </label>
                         </div>
 
-                        <button type="submit" class="btn-submit orange">Create Account</button>
+                        <button type="submit" class="btn-submit orange">Verify Email & Create Account</button>
                     </form>
                     
                     <div class="divider">or quickly join with</div>
