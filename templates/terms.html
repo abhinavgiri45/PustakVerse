@@ -17,16 +17,16 @@
         p { margin-top: 5px; margin-bottom: 15px; }
         .date { font-weight: bold; color: #718096; margin-bottom: 30px; display: block; }
         
-        /* UPDATED BACK LINK STYLES */
-        .back-link { display: inline-flex; align-items: center; margin-bottom: 20px; color: #ffffff; background-color: #2d3748; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        /* UPDATED BACK LINK STYLES FOR BUTTON */
+        .back-link { display: inline-flex; align-items: center; margin-bottom: 20px; color: #ffffff; background-color: #2d3748; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; border: none; font-family: inherit; font-size: 1rem; cursor: pointer; }
         .back-link:hover { background-color: #f66d2f; transform: translateY(-2px); }
     </style>
 </head>
 <body>
     <div class="container">
         
-        <!-- FIXED: Foolproof link to return to the homepage instead of relying on browser history -->
-        <a href="/" class="back-link">← Return to PustakVerse</a>
+        <!-- SMART GO BACK BUTTON -->
+        <button onclick="smartGoBack()" class="back-link">← Go Back</button>
 
         {% if role == 'author' %}
             <h1>Terms and Conditions for Authors on Pustak Verse</h1>
@@ -319,5 +319,18 @@
             <p>If you have any questions, concerns, or feedback regarding these Terms and Conditions, or if you need technical support regarding your Reader account, please contact us via the official support channels listed on the Pustak Verse website.</p>
         {% endif %}
     </div>
+
+    <!-- SMART GO BACK SCRIPT -->
+    <script>
+        function smartGoBack() {
+            // Check if there is a valid history to go back to AND a referrer
+            if (window.history.length > 1 && document.referrer !== "") {
+                window.history.back();
+            } else {
+                // If they opened the terms in a brand new tab, send them to the homepage
+                window.location.href = '/';
+            }
+        }
+    </script>
 </body>
 </html>
