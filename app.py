@@ -1615,63 +1615,75 @@ def dashboard():
         tf_data = cursor.fetchone()
         two_factor_enabled = tf_data['two_factor_enabled'] if tf_data else False
         
-            if request.method == 'POST' and 'toggle_2fa' in request.form:
-            current_status = request.form.get('current_status') == 'True'
-            new_status = not current_status
-            cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
-            db.commit()
-            status_text = "enabled" if new_status else "disabled"
-            flash(f"Two-Step Verification has been {status_text}.", "success")
-            return redirect(url_for('dashboard'))
-
-        if request.method == 'POST' and 'title' in request.form:
-            catalog = request.form.get('catalog', '')
-            if role == 'author':
-                cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
-                if not cursor.fetchone()['is_verified']: 
-                    flash("Must be verified to publish.", "error")
-                    return redirect(url_for('dashboard'))
-            if catalog.lower() == 'archives': 
-                flash("Cannot publish to Archives.", "error")
-                return redirect(url_for('dashboard'))
-            
-            # (Your other book publishing variables like description, c_link, p_link will continue right here)
-
-        # ADMIN APPROVE AUTHOR REQUEST
-        if request.method == 'POST' and 'approve_author_id' in request.form:
-            approve_author_id = request.form.get('approve_author_id')
-            if session.get('role') not in ['developer', 'official']:
-                flash("Unauthorized action.", "error")
-                return redirect(url_for('dashboard'))
-            
-            try:
-                # 1. Get the author's details first
-                cursor.execute("SELECT username, email FROM users WHERE id = %s", (approve_author_id,))
-                author = cursor.fetchone()
-                
-                if author:
-                    # 2. Update database to make them verified AND auto-enable 2FA
-                    cursor.execute("UPDATE users SET is_verified = TRUE, two_factor_enabled = TRUE WHERE id = %s", (approve_author_id,))
+        if request.method == 'POST' and 'toggle_2fa' in request.form:
+                    current_status = request.form.get('current_status') == 'True'
+                    new_status = not current_status
+                    cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
                     db.commit()
-                    
-                    # 3. Trigger the approval email using YOUR username
-                    approver_name = session.get('username', 'an Administrator')
-                    send_author_approved(author['email'], author['username'], approver_name)
-                    
-                    flash(f"Success! {author['username']} has been approved, 2FA enabled, and an email sent.", "success")
-            except Exception as e:
-                flash("Database error during approval.", "error")
-            
-            return redirect(url_for('dashboard'))
+                    status_text = "enabled" if new_status else "disabled"
+                    flash(f"Two-Step Verification has been {status_text}.", "success")
+                    return redirect(url_for('dashboard'))
 
-        # ADMIN REJECT AUTHOR REQUEST
-        if request.method == 'POST' and 'reject_author_id' in request.form:
-            reject_author_id = request.form.get('reject_author_id')
-            reject_reason = request.form.get('reject_reason', 'Did not meet platform guidelines.')
-            
-            if session.get('role') not in ['developer', 'official']:
-                flash("Unauthorized action.", "error")
-                return redirect(url_for('dashboard'))
+                if request.method == 'POST' and 'title' in request.form:
+                    catalog = request.form.get('catalog', '')
+                    if role == 'author':
+                        cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
+                        if not cursor.fetchone()['is_verified']: 
+                            flash("Must be verified to publish.", "error")
+                            return redirect(url_for('dashboard'))
+                        if catalog.lower() == 'archives': 
+                            flash("Cannot publish to Archives.", "error")
+                            return redirect(url_for('dashboard'))
+
+                # ADMIN APPROVE AUTHOR REQUEST
+                if request.method == 'POST' and 'approve_author_id' in request.form:
+                    approve_author_id = request.form.get('approve_author_id')
+                    if session.get('role') not in ['developer', 'official']:
+                        flash("Unauthorized action.", "error")
+                        return redirect(url_for('dashboard'))
+                    
+                    try:
+                        cursor.execute("SELECT username, email FROM users WHERE id = %s", (approve_author_id,))
+                        author = cursor.fetchone()
+                        
+                        if author:
+                            cursor.execute("UPDATE users SET is_verified = TRUE, two_factor_enabled = TRUE WHERE id = %s", (approve_author_id,))
+                            db.commit()
+                            
+                            approver_name = session.get('username', 'an Administrator')
+                            send_author_approved(author['email'], author['username'], approver_name)
+                            
+                            flash(f"Success! {author['username']} has been approved, 2FA enabled, and an email sent.", "success")
+                    except Exception as e:
+                        flash("Database error during approval.", "error")
+                    
+                    return redirect(url_for('dashboard'))
+
+                # ADMIN REJECT AUTHOR REQUEST
+                if request.method == 'POST' and 'reject_author_id' in request.form:
+                    reject_author_id = request.form.get('reject_author_id')
+                    reject_reason = request.form.get('reject_reason', 'Did not meet platform guidelines.')
+                    
+                    if session.get('role') not in ['developer', 'official']:
+                        flash("Unauthorized action.", "error")
+                        return redirect(url_for('dashboard'))
+                    
+                    try:
+                        cursor.execute("SELECT username, email FROM users WHERE id = %s", (reject_author_id,))
+                        author = cursor.fetchone()
+                        
+                        if author:
+                            cursor.execute("UPDATE users SET role = 'reader', is_verified = TRUE WHERE id = %s", (reject_author_id,))
+                            db.commit()
+                            
+                            rejector_name = session.get('username', 'an Administrator')
+                            send_author_rejected(author['email'], author['username'], rejector_name, reject_reason)
+                            
+                            flash(f"{author['username']}'s application was rejected. They have been notified via email.", "info")
+                    except Exception as e:
+                        flash("Database error during rejection.", "error")
+                    
+                    return redirect(url_for('dashboard'))
             
             try:
                 # 1. Get the author's details first
