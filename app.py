@@ -1614,8 +1614,8 @@ def dashboard():
         cursor.execute("SELECT two_factor_enabled FROM users WHERE id = %s", (session['user_id'],))
         tf_data = cursor.fetchone()
         two_factor_enabled = tf_data['two_factor_enabled'] if tf_data else False
-
-      if request.method == 'POST' and 'toggle_2fa' in request.form:
+        
+                if request.method == 'POST' and 'toggle_2fa' in request.form:
             current_status = request.form.get('current_status') == 'True'
             new_status = not current_status
             cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
