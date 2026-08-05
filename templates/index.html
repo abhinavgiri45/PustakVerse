@@ -92,7 +92,7 @@
         .no-results h2 { color: #1e293b; margin-bottom: 10px; font-size: 1.8rem;}
         .no-results p { color: #334155; }
 
-        /* Telegram Popup Styles Migrated to Index */
+        /* Telegram Popup Styles */
         .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
         .popup-box { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -218,6 +218,7 @@
 
                 <div class="book-info">
                     <div class="book-tag">{{ book.catalog }}</div>
+                    
                     <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
