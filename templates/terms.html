@@ -17,7 +17,7 @@
         p { margin-top: 5px; margin-bottom: 15px; }
         .date { font-weight: bold; color: #718096; margin-bottom: 30px; display: block; }
         
-        /* UPDATED BACK LINK STYLES FOR BUTTON */
+        /* SMART GO BACK BUTTON STYLES */
         .back-link { display: inline-flex; align-items: center; margin-bottom: 20px; color: #ffffff; background-color: #2d3748; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; border: none; font-family: inherit; font-size: 1rem; cursor: pointer; }
         .back-link:hover { background-color: #f66d2f; transform: translateY(-2px); }
     </style>
@@ -30,7 +30,7 @@
 
         {% if role == 'author' %}
             <h1>Terms and Conditions for Authors on Pustak Verse</h1>
-            <span class="date">Last Updated: August 4, 2026</span>
+            <span class="date">Last Updated: August 5, 2026</span>
             
             <h2>1. Introduction and Definitions</h2>
             <p>Welcome to Pustak Verse. This document governs your relationship with Pustak Verse as an author, writer, or content creator uploading materials to the platform.</p>
@@ -50,14 +50,14 @@
             <h2>4. Account Security</h2>
             <p>You are solely responsible for maintaining the confidentiality of your account credentials (username and password). Pustak Verse is not liable for any loss or damage arising from your failure to secure your account. You must notify us immediately if you suspect unauthorized access to your account.</p>
 
-            <h2>5. Author Rights</h2>
-            <p>You retain all ownership rights, including copyrights, to the original content you submit, upload, or publish on Pustak Verse. By uploading your work, you grant Pustak Verse a non-exclusive, worldwide, royalty-free license to display, distribute, and facilitate the sale of your book to readers on the Platform.</p>
+            <h2>5. Author Rights & Non-Exclusivity</h2>
+            <p>You retain all ownership rights, including copyrights, to the original content you submit, upload, or publish on Pustak Verse. By uploading your work, you grant Pustak Verse a <strong>non-exclusive</strong>, worldwide, royalty-free license to display, distribute, and facilitate the sale of your book to readers on the Platform. Because this is non-exclusive, you are completely free to publish and sell your work on other platforms, websites, or in physical print simultaneously.</p>
 
-            <h2>6. Author Responsibilities</h2>
+            <h2>6. Platform Marketing and Promotional Rights</h2>
+            <p>By publishing your book on Pustak Verse, you grant the Platform the right to use your book's title, cover image, author name, and short excerpts (snippets) for the purpose of marketing and promoting Pustak Verse. This includes, but is not limited to, featuring your book on the homepage, in email newsletters, or on official social media channels, without requiring additional explicit permission.</p>
+
+            <h2>7. Author Responsibilities</h2>
             <p>Authors are responsible for ensuring their uploaded content is lawful, accurate, and free of malicious software. You are responsible for marketing your work, maintaining correct metadata, and engaging respectfully with the Pustak Verse community.</p>
-
-            <h2>7. Copyright Ownership</h2>
-            <p>Authors hold 100% of the copyright to their original works. Pustak Verse makes no claim to the intellectual property of any author. The relationship between the Author and Pustak Verse is strictly that of a creator and a distributing platform.</p>
 
             <h2>8. Original Content Declaration</h2>
             <p>By publishing on Pustak Verse, you declare that the content is your original creation or that you possess the explicit legal rights to publish and monetize it.</p>
@@ -66,7 +66,7 @@
             <p>If your book contains third-party content (e.g., quotes, lyrics, images, or translated materials), you must ensure you have secured the necessary licenses or permissions, or that the use falls strictly under "Fair Use" guidelines.</p>
 
             <div class="alert-box">
-                <h2>10. Developer and Pustak Verse Not Responsible for Copyright Infringement by Authors</h2>
+                <h2>10. Developer and Pustak Verse Not Responsible for Copyright Infringement</h2>
                 <p>The developer, Abhinav Giri, and Pustak Verse shall not be responsible for any book uploaded without proper copyright permission. The Platform acts purely as an intermediary host. <strong>The entire legal, financial, and moral responsibility for any unauthorized, infringing, or illegal content remains solely with the uploading author.</strong></p>
             </div>
 
@@ -79,8 +79,8 @@
             <h2>13. No Charges by Developers or Officials on Author Profits</h2>
             <p>No official, employee, administrator, moderator, or developer of Pustak Verse shall charge, demand, or deduct any fee, commission, service charge, hidden charge, royalty percentage, or share from the profits earned by an author through the sale of their books on the Platform. The only exceptions to this are deductions required by applicable law (such as governmental taxes) or unavoidable third-party payment processor fees (e.g., Stripe, PayPal, or bank transfer fees).</p>
 
-            <h2>14. Payment Terms</h2>
-            <p>Payments will be processed on a regular, predefined schedule (e.g., monthly) once an author's earnings reach the platform's minimum payout threshold. Authors must maintain valid and supported payment information to receive funds.</p>
+            <h2>14. Payout Thresholds and Schedules</h2>
+            <p>To minimize transaction fees for both the Platform and the Author, payments will be processed on a regular, predefined schedule (e.g., the first week of every month) only after an author's earnings reach the platform's minimum payout threshold (e.g., ₹500 INR or equivalent). If your earnings have not reached this threshold by the payout date, they will roll over to the next month.</p>
 
             <h2>15. Book Pricing</h2>
             <p>Authors have the complete freedom to set the retail price of their books within the minimum and maximum parameters established by the Platform to prevent spam or system abuse.</p>
@@ -117,61 +117,64 @@
 
             <h2>26. Account Suspension and Termination</h2>
             <p>Pustak Verse reserves the right to suspend or permanently terminate an author's account for severe or repeated violations of these Terms and Conditions. In cases of fraud or copyright theft, unpaid balances may be withheld to refund defrauded readers.</p>
+            
+            <h2>27. Account Inactivity</h2>
+            <p>If an author account remains completely inactive (no logins, no new uploads, and no updates) for a continuous period of 24 months, Pustak Verse reserves the right to suspend the account. Unpaid royalties that remain below the minimum payout threshold at the time of an inactive account closure may be permanently forfeited to cover platform maintenance costs.</p>
 
-            <h2>27. Content Removal Policy</h2>
+            <h2>28. Content Removal Policy</h2>
             <p>Authors may remove their books from the platform at any time. However, readers who have already purchased the book will retain access to their purchased copy in their digital libraries.</p>
 
-            <h2>28. Refund and Cancellation Rules</h2>
+            <h2>29. Refund and Cancellation Rules</h2>
             <p>If a reader requests a valid refund within the platform's refund window (e.g., due to file corruption or accidental purchase), the refunded amount will be deducted from the author's pending sales balance. High refund rates may trigger an investigation into book quality.</p>
 
-            <h2>29. Reader Complaints</h2>
+            <h2>30. Reader Complaints</h2>
             <p>Pustak Verse handles reader complaints. If multiple readers flag a book for poor formatting, missing chapters, or deceptive descriptions, the author will be asked to rectify the issue within a given timeframe, failing which the book may be suspended.</p>
 
-            <h2>30. Privacy and Data Protection</h2>
+            <h2>31. Privacy and Data Protection</h2>
             <p>Author data is handled in accordance with the Pustak Verse Privacy Policy. We collect only the data necessary to facilitate account management, payments, and platform security.</p>
 
-            <h2>31. Intellectual Property of Pustak Verse</h2>
+            <h2>32. Intellectual Property of Pustak Verse</h2>
             <p>The Pustak Verse platform itself including its code, logo, brand name, design, and proprietary algorithms is the exclusive intellectual property of Abhinav Giri. Authors may not use the Pustak Verse logo or branding to imply official endorsement without written permission.</p>
 
-            <h2>32. Limitation of Liability</h2>
+            <h2>33. Limitation of Liability</h2>
             <p>Pustak Verse is provided on an "as is" and "as available" basis. Abhinav Giri and Pustak Verse shall not be liable for any indirect, incidental, or consequential damages, including loss of data, loss of anticipated profits, or technical downtime affecting book sales.</p>
 
-            <h2>33. Indemnification Clause</h2>
+            <h2>34. Indemnification Clause</h2>
             <p>Authors agree to fully indemnify, defend, and hold harmless Pustak Verse and its owner, Abhinav Giri, against any and all claims, damages, liabilities, costs, and expenses (including legal fees) arising from any copyright infringement, plagiarism, trademark violation, or intellectual property claims resulting from their uploaded content.</p>
 
-            <h2>34. Disclaimer of Warranties</h2>
+            <h2>35. Disclaimer of Warranties</h2>
             <p>Pustak Verse makes no guarantees regarding the number of sales, volume of traffic, or financial success an author will achieve by publishing on the Platform.</p>
 
-            <h2>35. Force Majeure</h2>
+            <h2>36. Force Majeure</h2>
             <p>Neither Pustak Verse nor the author shall be held liable for failure to perform obligations under these Terms due to events beyond reasonable control, including natural disasters, internet infrastructure failures, government actions, or acts of war.</p>
 
-            <h2>36. Amendments to Terms</h2>
+            <h2>37. Amendments to Terms</h2>
             <p>Pustak Verse reserves the right to modify these Terms and Conditions at any time. Authors will be notified of significant changes via email or platform announcements. Continued use of the platform after changes are enacted constitutes acceptance of the new terms. (Note: The 0% commission policy will remain unless explicitly amended through this process).</p>
 
-            <h2>37. Governing Law (India)</h2>
+            <h2>38. Governing Law (India)</h2>
             <p>These Terms and Conditions shall be governed by and construed in accordance with the laws of India, without regard to its conflict of law principles.</p>
 
-            <h2>38. Worldwide Availability</h2>
+            <h2>39. Worldwide Availability</h2>
             <p>Pustak Verse operates worldwide. Authors and readers from any country (unless restricted by international sanctions or local laws) are welcome to use the platform. However, authors are responsible for ensuring their participation complies with their local laws.</p>
 
-            <h2>39. Dispute Resolution</h2>
+            <h2>40. Dispute Resolution</h2>
             <p>Any disputes arising from these Terms shall first be attempted to be resolved amicably through customer support. If unresolved, disputes shall be subject to the exclusive jurisdiction of the competent courts located in India.</p>
 
-            <h2>40. Severability</h2>
+            <h2>41. Severability</h2>
             <p>If any provision of these Terms is found to be unenforceable or invalid by a court of competent jurisdiction, that provision shall be limited or eliminated to the minimum extent necessary so that the remaining Terms shall otherwise remain in full force and effect.</p>
 
-            <h2>41. Entire Agreement</h2>
+            <h2>42. Entire Agreement</h2>
             <p>These Terms and Conditions constitute the entire agreement between you (the Author) and Pustak Verse regarding the use of the platform for publishing and supersede all prior agreements or understandings.</p>
 
-            <h2>42. Contact Information</h2>
+            <h2>43. Contact Information</h2>
             <p>For any questions, concerns, or legal notices regarding these Terms, authors may contact the support team via the official Pustak Verse contact channels provided on the website.</p>
 
-            <h2>43. Acceptance of Terms</h2>
+            <h2>44. Acceptance of Terms</h2>
             <p>By creating an author account, uploading a manuscript, or utilizing any publishing features on Pustak Verse, you explicitly acknowledge that you have read, understood, and agreed to be bound by all the provisions within these Terms and Conditions.</p>
 
         {% else %}
             <h1>Terms and Conditions for Readers on Pustak Verse</h1>
-            <span class="date">Effective Date: August 4, 2026</span>
+            <span class="date">Effective Date: August 5, 2026</span>
             
             <h2>1. Introduction and Acceptance of Terms</h2>
             <p>Welcome to Pustak Verse! These Terms and Conditions ("Terms," "Agreement") constitute a legally binding contract between you, the user or reader ("You," "User," "Reader"), and Pustak Verse ("Platform," "We," "Us," "Our"), which is proudly owned, developed, and operated by Abhinav Giri.</p>
@@ -205,17 +208,23 @@
                 <li><strong>Unauthorized Access:</strong> Pustak Verse and Abhinav Giri are not liable for any loss or damage resulting from a compromised account due to your failure to secure your credentials.</li>
             </ul>
 
-            <h2>6. Worldwide Accessibility and Local Laws</h2>
+            <h2>6. Anti-Account Sharing Policy</h2>
+            <p>Your Reader Account is strictly for your personal, non-commercial use. <strong>You are explicitly prohibited from sharing your login credentials with other individuals to grant them free access to your purchased library.</strong> Pustak Verse monitors accounts for suspicious login behaviors. Simultaneous logins from vastly different geographic locations or multiple disparate IP addresses may trigger automatic security locks or permanent account termination without a refund.</p>
+
+            <h2>7. Worldwide Accessibility and Local Laws</h2>
             <p>Pustak Verse operates worldwide. We welcome readers from across the globe. However, it is your responsibility to ensure that accessing our Platform and reading specific content complies with your local, state, and national laws. We reserve the right to geo-block specific books if mandated by regional legal authorities.</p>
 
-            <h2>7. Content Consumption and License to Read</h2>
-            <p>When you "purchase" a book on Pustak Verse, you are not buying the copyright or the digital file itself. Instead, you are purchasing a non-exclusive, non-transferable, revocable license to access and view the Digital Content for your personal, non-commercial use.</p>
+            <h2>8. Content Consumption and License to Read (Digital Ownership)</h2>
+            <p>When you "purchase" a premium book on Pustak Verse, you are not buying the copyright, the physical text, or a permanent, downloadable digital file. Instead, you are purchasing a non-exclusive, non-transferable, revocable <strong>license to access and view the Digital Content</strong> through your personal Library on our platform.</p>
             <ul>
                 <li>You may not download, copy, scrape, distribute, broadcast, or publicly display the Digital Content.</li>
                 <li>You may not attempt to bypass, modify, or defeat any Digital Rights Management (DRM) protocols implemented on the Platform.</li>
             </ul>
 
-            <h2>8. Purchasing, Payments, and Strict No-Refund Policy</h2>
+            <h2>9. Service Interruptions and Server Downtime</h2>
+            <p>While we strive to keep Pustak Verse and your digital Library accessible 24 hours a day, 7 days a week, the platform relies on external web hosting and database providers. We do not guarantee uninterrupted access. We reserve the right to modify, suspend, or discontinue the Platform (or any part thereof) for scheduled maintenance or unexpected technical upgrades. Abhinav Giri and Pustak Verse shall not be held financially or legally liable if you temporarily lose access to your purchased books due to server outages.</p>
+
+            <h2>10. Purchasing, Payments, and Strict No-Refund Policy</h2>
             <p>Pustak Verse partners with secure third-party payment processors to handle transactions.</p>
             <ul>
                 <li>All prices for Digital Content are set by the respective Authors, not by Pustak Verse. Prices are displayed in the applicable local currency or a standard international currency (e.g., USD, INR) and may be subject to applicable taxes (like GST or VAT) based on your location.</li>
@@ -223,55 +232,52 @@
                 <li><strong>NO REFUNDS:</strong> All sales of Digital Content on Pustak Verse are final. Due to the immediate access and digital nature of the content provided on the Platform, we do not offer refunds, returns, or cancellations under any circumstances once a purchase is successfully completed. Please review book descriptions, tags, and any available free sample chapters carefully before making a purchase.</li>
             </ul>
 
-            <h2>9. Intellectual Property and Copyright Protections</h2>
+            <h2>11. Intellectual Property and Copyright Protections</h2>
             <p>Pustak Verse takes copyright infringement incredibly seriously.</p>
             <ul>
                 <li><strong>Author IP:</strong> All books, stories, and images uploaded by Authors remain the sole intellectual property of those Authors.</li>
                 <li><strong>No Copying:</strong> Readers are strictly prohibited from copying text, taking screenshots for mass distribution, or pirating content found on Pustak Verse.</li>
                 <li><strong>Reporting:</strong> If you suspect an Author has plagiarized a work or infringed on copyrights, you are encouraged to report it via our dedicated support channels.</li>
             </ul>
+            
             <div class="alert-box">
                 <h2>Important Disclaimer Regarding Author Content</h2>
                 <p>The developer, Abhinav Giri, and Pustak Verse act purely as a hosting platform and intermediary. We do not manually review, endorse, or guarantee the legality of every uploaded work. <strong>Therefore, Pustak Verse shall not be responsible for any book uploaded by an author without proper copyright permission. The entire legal responsibility remains with the uploading author.</strong></p>
             </div>
 
-            <h2>10. Prohibited Conduct for Readers</h2>
+            <h2>12. Prohibited Conduct for Readers</h2>
             <p>To maintain a safe and respectful community, you agree NOT to engage in any of the following activities:</p>
             <ol>
                 <li><strong>Harassment:</strong> Stalking, bullying, or harassing Authors or other Readers.</li>
                 <li><strong>Hate Speech:</strong> Posting reviews or comments that promote violence, discrimination, or hatred against protected classes.</li>
                 <li><strong>Spam:</strong> Flooding comment sections with promotional material, links, or repetitive text.</li>
-                <li><strong>System Abuse:</strong> Using bots, spiders, or scrapers to harvest data or books from the Platform.</li>
                 <li><strong>Piracy Promotion:</strong> Sharing links to pirated versions of Pustak Verse books anywhere on the internet.</li>
             </ol>
 
-            <h2>11. Reviews, Comments, and User-Generated Content</h2>
-            <p>Readers may have the opportunity to leave reviews, ratings, and comments on Author works.</p>
+            <h2>13. Strict Ban on AI Scraping and Data Mining</h2>
+            <p>You explicitly agree not to use, deploy, or operate any automated systems, including but not limited to "robots," "spiders," "offline readers," or "AI scrapers," that access the Platform in a manner that sends more request messages to the Pustak Verse servers than a human can reasonably produce in the same period using a conventional web browser. Harvesting text from our books to train Artificial Intelligence models (LLMs) or build external databases is strictly prohibited and will result in an immediate IP ban and potential legal action.</p>
+
+            <h2>14. Reviews, Comments, and User-Generated Content</h2>
+            <p>Readers have the opportunity to leave reviews and star ratings on Author works to guide the community.</p>
             <ul>
-                <li>By submitting a review, you grant Pustak Verse a perpetual, royalty-free license to display, modify, and use your review for promotional purposes.</li>
+                <li><strong>Licensing:</strong> By submitting a review, rating, or public comment on Pustak Verse, you grant the Platform a perpetual, non-exclusive, worldwide, royalty-free license to display, modify, adapt, and use your review for promotional purposes on the site or marketing materials.</li>
                 <li>Reviews must be honest and pertain strictly to the content of the book.</li>
                 <li>Pustak Verse reserves the right to delete reviews that are abusive, contain spoilers without proper warning tags, or violate our community guidelines.</li>
             </ul>
 
-            <h2>12. Content Warnings and Age-Restricted Materials</h2>
+            <h2>15. Content Warnings and Age-Restricted Materials</h2>
             <p>Authors are required to appropriately tag their content for mature themes (e.g., violence, explicit language, sexual content). However, Pustak Verse cannot guarantee that all tags are perfectly accurate. Readers are advised to use their own discretion. Pustak Verse is not liable for any psychological distress caused by reading fictional or non-fictional works on the platform.</p>
 
-            <h2>13. Privacy and Data Collection</h2>
+            <h2>16. Privacy and Data Collection</h2>
             <p>Your privacy is paramount. By using Pustak Verse, you consent to the collection and use of your data as outlined in our Privacy Policy. We collect necessary data (such as reading preferences, purchase history, and device information) to personalize your experience, process payments, and improve platform stability. Pustak Verse will never sell your personal reading data to malicious third-party data brokers.</p>
 
-            <h2>14. Third-Party Links and Services</h2>
+            <h2>17. Third-Party Links and Services</h2>
             <p>The Platform may contain links to third-party websites (e.g., an Author's personal social media or website). Pustak Verse has no control over, and assumes no responsibility for, the content, privacy policies, or practices of any third-party web sites or services.</p>
 
-            <h2>15. Platform Availability and Modifications</h2>
-            <p>We strive to keep Pustak Verse running 24/7. However, we do not guarantee uninterrupted access. We reserve the right to modify, suspend, or discontinue the Platform (or any part thereof) for scheduled maintenance or upgrades without prior notice.</p>
-            <ul>
-                <li>Abhinav Giri and Pustak Verse shall not be held liable if your digital library is temporarily unavailable due to server outages.</li>
-            </ul>
-
-            <h2>16. Disclaimer of Warranties</h2>
+            <h2>18. Disclaimer of Warranties</h2>
             <p>THE PLATFORM AND ALL CONTENT ARE PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS. To the maximum extent permitted by applicable law, Pustak Verse and its developer explicitly disclaim all warranties, whether express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant that the content provided by Authors is accurate, reliable, or free of errors.</p>
 
-            <h2>17. Limitation of Liability</h2>
+            <h2>19. Limitation of Liability</h2>
             <p>In no event shall Abhinav Giri, Pustak Verse, or its affiliates be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</p>
             <ul>
                 <li>Your access to or use of or inability to access or use the Platform.</li>
@@ -279,7 +285,7 @@
                 <li>Unauthorized access, use, or alteration of your transmissions or content.</li>
             </ul>
 
-            <h2>18. Indemnification</h2>
+            <h2>20. Indemnification</h2>
             <p>You agree to defend, indemnify, and hold harmless Pustak Verse, its developer Abhinav Giri, and its affiliates from and against any claims, damages, obligations, losses, liabilities, costs, or debt, and expenses (including but not limited to attorney's fees) arising from:</p>
             <ul>
                 <li>Your use of and access to the Platform.</li>
@@ -287,35 +293,35 @@
                 <li>Your violation of any third-party right, including without limitation any copyright, property, or privacy right.</li>
             </ul>
 
-            <h2>19. Force Majeure</h2>
+            <h2>21. Force Majeure</h2>
             <p>Pustak Verse shall not be liable for any failure or delay in performance under these Terms resulting from conditions beyond our reasonable control, including but not limited to acts of God, natural disasters, war, terrorism, riots, governmental action, internet infrastructure breakdowns, or power grid failures.</p>
 
-            <h2>20. Termination of Reader Accounts</h2>
+            <h2>22. Termination of Reader Accounts</h2>
             <ul>
                 <li>You may terminate your account at any time by contacting support.</li>
                 <li>Pustak Verse reserves the right to suspend or permanently terminate your account, without prior notice or liability, for any reason, including a breach of these Terms.</li>
-                <li>Upon termination due to a violation of Terms (e.g., piracy, harassment), you will lose access to all purchased Digital Content in your Library, as no refunds are provided under any circumstances.</li>
+                <li>Upon termination due to a violation of Terms (e.g., account sharing, piracy, harassment), you will immediately lose access to all purchased Digital Content in your Library, as no refunds are provided under any circumstances.</li>
             </ul>
 
-            <h2>21. Dispute Resolution and Arbitration</h2>
+            <h2>23. Dispute Resolution and Arbitration</h2>
             <p>In the interest of resolving disputes in the most expedient and cost-effective manner, you and Pustak Verse agree that every dispute arising in connection with these Terms will be resolved by binding arbitration, rather than in court, except that either party may assert claims in small claims court if the claims qualify.</p>
 
-            <h2>22. Governing Law and Jurisdiction (India)</h2>
+            <h2>24. Governing Law and Jurisdiction (India)</h2>
             <p>These Terms and Conditions, and any separate agreements whereby we provide you services, shall be governed by and construed in accordance with the laws of India. Any legal action or proceeding arising under these Terms will be brought exclusively in the competent courts of India, and the parties hereby irrevocably consent to the personal jurisdiction and venue therein.</p>
 
-            <h2>23. Severability and Waiver</h2>
+            <h2>25. Severability and Waiver</h2>
             <ul>
                 <li><strong>Severability:</strong> If any provision of these Terms is held to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in full force and effect.</li>
                 <li><strong>Waiver:</strong> Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.</li>
             </ul>
 
-            <h2>24. Changes to these Terms</h2>
+            <h2>26. Changes to these Terms</h2>
             <p>Pustak Verse reserves the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion. By continuing to access or use our Platform after those revisions become effective, you agree to be bound by the revised terms.</p>
 
-            <h2>25. Entire Agreement</h2>
+            <h2>27. Entire Agreement</h2>
             <p>These Terms constitute the entire agreement between you and Pustak Verse regarding our Platform and supersede and replace any prior agreements we might have had between us regarding the Platform.</p>
 
-            <h2>26. Contact Information</h2>
+            <h2>28. Contact Information</h2>
             <p>If you have any questions, concerns, or feedback regarding these Terms and Conditions, or if you need technical support regarding your Reader account, please contact us via the official support channels listed on the Pustak Verse website.</p>
         {% endif %}
     </div>
