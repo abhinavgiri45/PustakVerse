@@ -1637,7 +1637,7 @@ def dashboard():
                     return redirect(url_for('dashboard'))
 
 # ADMIN APPROVE AUTHOR REQUEST
-        if request.method == 'POST' and 'approve_author_id' in request.form:
+if request.method == 'POST' and 'approve_author_id' in request.form:
             approve_author_id = request.form.get('approve_author_id')
             if session.get('role') not in ['developer', 'official']:
                 flash("Unauthorized action.", "error")
@@ -1649,15 +1649,15 @@ def dashboard():
                 author = cursor.fetchone()
                 
                 if author:
-                    # 2. Update database to make them verified
-                    cursor.execute("UPDATE users SET is_verified = TRUE WHERE id = %s", (approve_author_id,))
+                    # 2. Update database to make them verified AND auto-enable 2FA
+                    cursor.execute("UPDATE users SET is_verified = TRUE, two_factor_enabled = TRUE WHERE id = %s", (approve_author_id,))
                     db.commit()
                     
                     # 3. Trigger the approval email using YOUR username
                     approver_name = session.get('username', 'an Administrator')
                     send_author_approved(author['email'], author['username'], approver_name)
                     
-                    flash(f"Success! {author['username']} has been approved and an email has been sent.", "success")
+                    flash(f"Success! {author['username']} has been approved, 2FA enabled, and an email sent.", "success")
             except Exception as e:
                 flash("Database error during approval.", "error")
             
