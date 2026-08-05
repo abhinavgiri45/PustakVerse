@@ -495,6 +495,23 @@ def view_book(book_id):
         cursor.execute("SELECT i.*, u.username FROM interactions i JOIN users u ON i.user_id = u.id WHERE i.book_id = %s ORDER BY i.created_at DESC", (book_id,))
         reviews = cursor.fetchall()
         
+        # SMART SORTING: If the logged-in user wrote a review, move it to the very top!
+        user_id = session.get('user_id')
+        if user_id:
+            reviews.sort(key=lambda x: x['user_id'] != user_id)
+            
+        # AVERAGE RATING MATH
+        review_count = len(reviews)
+        avg_rating = 0.0
+        rating_counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+        
+        if review_count > 0:
+            total_stars = sum(r['rating'] for r in reviews)
+            avg_rating = round(total_stars / review_count, 1)
+            for r in reviews:
+                if r['rating'] in rating_counts:
+                    rating_counts[r['rating']] += 1
+        
         can_read = False
         if 'user_id' in session:
             if not book['is_paid'] or session['user_id'] == book['author_id'] or session.get('role') in ['official', 'developer']:
@@ -503,7 +520,7 @@ def view_book(book_id):
                 cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
                 can_read = bool(cursor.fetchone())
                 
-        return render_template('book.html', book=book, reviews=reviews, can_read=can_read)
+        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts)
     except Exception as e:
         flash("Error loading book details.", "error")
         return redirect(url_for('index'))
