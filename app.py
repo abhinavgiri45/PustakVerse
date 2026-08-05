@@ -215,7 +215,7 @@ def send_email_wrapper(to_email, subject, body_html):
         except Exception: 
             pass
     return True
-   def send_registration_otp(to_email, otp): 
+def send_registration_otp(to_email, otp): 
     return send_email_wrapper(to_email, 'PustakVerse - Verify Your Email', generate_html_email("Account Verification", f"<p>Your registration verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
 def send_pending_author(to_email, username):
     subject = "PustakVerse - Author Account Under Review"
