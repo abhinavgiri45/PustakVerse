@@ -215,6 +215,8 @@ def send_email_wrapper(to_email, subject, body_html):
         except Exception: 
             pass
     return True
+    def send_registration_otp(to_email, otp): 
+    return send_email_wrapper(to_email, 'PustakVerse - Verify Your Email', generate_html_email("Account Verification", f"<p>Your registration verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
 
 def generate_html_email(title, content):
     return f'<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;"><h2 style="color: #2d3748; border-bottom: 2px solid #f66d2f; padding-bottom: 10px;">{title}</h2><div style="color: #4a5568; font-size: 16px; line-height: 1.6;">{content}</div><p style="color: #718096; font-size: 12px; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 10px;">This is an automated message from PustakVerse.</p></div>'
@@ -621,43 +623,106 @@ def terms():
 # ==========================================
 @app.route('/register', methods=['POST'])
 def register():
-    username = request.form['username'].strip()
-    email = request.form['email'].strip()
-    password = request.form['password']
-    role = request.form['role']
-    sec_question = request.form['security_question']
-    sec_answer = request.form['security_answer'].lower().strip()
-    verification_reason = request.form.get('verification_reason', '')
-    
-    if not re.match(r'^[a-zA-Z0-9_]+$', username):
-        flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
-        return redirect(url_for('login'))
+    action = request.form.get('action', 'register')
 
-    if role not in ['reader', 'author']: 
-        role = 'reader'
+    # STEP 1: Process initial form and send OTP
+    if action == 'register':
+        username = request.form['username'].strip()
+        email = request.form['email'].strip()
+        password = request.form['password']
+        role = request.form['role']
+        sec_question = request.form['security_question']
+        sec_answer = request.form['security_answer'].lower().strip()
+        verification_reason = request.form.get('verification_reason', '')
         
-    hashed_pw = generate_password_hash(password)
-    db = None
-    try:
-        db = get_db_connection()
-        cursor = db.cursor()
-        is_verified = (role == 'reader')
-        cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (username, email, hashed_pw, role, is_verified, sec_question, sec_answer, verification_reason))
-        db.commit()
-        if role == 'reader': 
-            send_welcome_reader(email, username)
-            flash("Account created successfully! Please sign in.", "success")
-        elif role == 'author': 
-            send_pending_author(email, username)
-            flash("Author Account created! Wait for approval.", "success")
-    except mysql.connector.IntegrityError: 
-        flash("Username or Email already exists. Please choose another.", "error")
-    except Exception: 
-        flash("Network error occurred during registration. Please try again.", "error")
-    finally:
-        if db:
-            try: db.close()
-            except: pass
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            flash("Username can only contain letters, numbers, and underscores.", "error")
+            return redirect(url_for('login'))
+
+        if role not in ['reader', 'author']: 
+            role = 'reader'
+
+        # Check if user already exists BEFORE sending OTP
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor()
+            cursor.execute("SELECT id FROM users WHERE username = %s OR email = %s", (username, email))
+            if cursor.fetchone():
+                flash("Username or Email already exists. Please choose another.", "error")
+                return redirect(url_for('login'))
+        except Exception:
+            flash("Database connection error. Please try again.", "error")
+            return redirect(url_for('login'))
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+        # Generate OTP and store user data temporarily in session
+        otp = str(random.randint(100000, 999999))
+        session['reg_otp'] = otp
+        session['reg_data'] = {
+            'username': username,
+            'email': email,
+            'password_hash': generate_password_hash(password),
+            'role': role,
+            'sec_question': sec_question,
+            'sec_answer': sec_answer,
+            'verification_reason': verification_reason
+        }
+
+        # Send the verification email
+        if send_registration_otp(email, otp):
+            flash("An OTP has been sent to your email. Please verify to complete registration.", "info")
+            # Render the login page but tell it to show the OTP form
+            return render_template('login.html', show_reg_otp_form=True, reg_email=email)
+        else:
+            flash("Failed to send OTP email. Please check your email address.", "error")
+            return redirect(url_for('login'))
+
+    # STEP 2: Verify the OTP and create the account
+    elif action == 'verify_otp':
+        user_otp = request.form.get('otp', '').replace(' ', '').strip()
+        correct_otp = session.get('reg_otp')
+        reg_data = session.get('reg_data')
+
+        if user_otp and correct_otp and user_otp == correct_otp and reg_data:
+            db = None
+            try:
+                db = get_db_connection()
+                cursor = db.cursor()
+                is_verified = (reg_data['role'] == 'reader')
+                
+                cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
+                               (reg_data['username'], reg_data['email'], reg_data['password_hash'], reg_data['role'], is_verified, reg_data['sec_question'], reg_data['sec_answer'], reg_data['verification_reason']))
+                db.commit()
+
+                if reg_data['role'] == 'reader': 
+                    send_welcome_reader(reg_data['email'], reg_data['username'])
+                    flash("Account created and verified successfully! Please sign in.", "success")
+                elif reg_data['role'] == 'author': 
+                    send_pending_author(reg_data['email'], reg_data['username'])
+                    flash("Author Account verified! Please wait for admin approval.", "success")
+                
+                # Clear the temporary session data
+                session.pop('reg_otp', None)
+                session.pop('reg_data', None)
+
+            except mysql.connector.IntegrityError: 
+                flash("Username or Email was taken while you were verifying. Please start over.", "error")
+            except Exception: 
+                flash("Network error occurred during registration. Please try again.", "error")
+            finally:
+                if db:
+                    try: db.close()
+                    except: pass
+            
+            return redirect(url_for('login'))
+        else:
+            flash("Invalid Verification Code. Please try again.", "error")
+            return render_template('login.html', show_reg_otp_form=True, reg_email=reg_data.get('email', ''))
+
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
