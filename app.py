@@ -923,10 +923,10 @@ def forgot_password():
                     try: db.close()
                     except: pass
                     
-            if user and user['role'] == 'developer':
+         if user and user['role'] == 'developer':
             flash("Developer accounts cannot be reset via this page. ", "error")
             return render_template('forgot_password.html', show_otp_form=False)
-            elif user:
+         elif user:
             otp = str(random.randint(100000, 999999))
             session['reset_otp'] = otp
             session['reset_email'] = email
@@ -934,8 +934,7 @@ def forgot_password():
                 flash("An OTP has been sent.", "success")
                 return render_template('forgot_password.html', show_otp_form=True, email=email)
         else:
-            flash("If this email exists, an OTP will be sent.", "info") 
-                
+                flash("If this email exists, an OTP will be sent.", "info")
         elif action == 'verify_otp':
             user_otp = request.form.get('otp')
             new_password = request.form.get('new_password')
