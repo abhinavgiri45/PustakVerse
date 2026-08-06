@@ -33,7 +33,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super_secret_pustakverse_fallback_key')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 
 UPLOAD_FOLDER = 'static/uploads'
 PRIVATE_PDF_FOLDER = 'private_uploads/pdfs'
@@ -297,11 +297,11 @@ def send_book_deleted_email(to_email, username, book_title, reason):
 # ==========================================
 def get_db_connection(retries=2, delay=1.0):
     last_exception = None
-    db_host = os.environ.get('DB_HOST', "gateway01.ap-southeast-1.prod.aws.tidbcloud.com")
+    db_host = os.environ.get('DB_HOST')
     db_port = int(os.environ.get('DB_PORT', 4000))
-    db_user = os.environ.get('DB_USER', "39proe1L4PTbJ3X.root")
-    db_pass = os.environ.get('DB_PASSWORD', "cOXI6Co9lYTGuTsM")
-    db_name = os.environ.get('DB_NAME', "test")
+    db_user = os.environ.get('DB_USER')
+    db_pass = os.environ.get('DB_PASSWORD')
+    db_name = os.environ.get('DB_NAME')
 
     for attempt in range(retries):
         try:
