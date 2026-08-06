@@ -442,7 +442,7 @@ def create_master_developer():
         cursor = db.cursor()
         cursor.execute("SELECT id FROM users WHERE username = 'abhinavgiri45'")
         if not cursor.fetchone():
-            hashed_pw = generate_password_hash('123@Abhinav')
+            hashed_pw = generate_password_hash(os.environ.get('MASTER_ADMIN_PASSWORD'))
             cursor.execute("INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", ('abhinavgiri45', 'abhinavgiri370@gmail.com', hashed_pw, 'developer', True, 'What is your favorite book?', 'gita', 'Master Admin'))
             db.commit()
     except Exception as e: 
