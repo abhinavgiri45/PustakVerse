@@ -93,6 +93,24 @@
         .pdf-container { height: calc(100vh - 48px); }
         .pdf-container.with-warning { height: calc(100vh - 93px); }
 
+        /* --- NEW: Google Drive Clipping Wrapper --- */
+        .drive-wrapper {
+            width: 100%;
+            overflow: hidden; /* Hides anything pushed outside this box */
+            position: relative;
+        }
+        .drive-wrapper.standard { height: calc(100vh - 48px); }
+        .drive-wrapper.with-warning { height: calc(100vh - 93px); }
+
+        .drive-iframe {
+            position: absolute;
+            top: -56px; /* Pushes the iframe up to hide the Google Drive pop-out toolbar */
+            left: 0;
+            width: 100%;
+            height: calc(100% + 56px); /* Compensates for the height lost at the top */
+            border: none;
+        }
+
         /* Lock Screen for Drive Links */
         .drive-block { 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
@@ -132,9 +150,11 @@
     <!-- Determine how to serve the file based on link type and purchase status -->
     {% if book.pdf_file.startswith('http') %}
         
-        <!-- Google Drive Links -->
+        <!-- Google Drive Links (Clipped to hide pop-out) -->
         {% if can_read %}
-            <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="pdf-container {% if not can_read %}with-warning{% endif %}" allow="autoplay"></iframe>
+            <div class="drive-wrapper {% if not can_read %}with-warning{% else %}standard{% endif %}">
+                <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="drive-iframe" allow="autoplay"></iframe>
+            </div>
         {% else %}
             <!-- Block Drive Links if Unpaid -->
             <div class="drive-block">
@@ -165,9 +185,9 @@
             }
         }
 
-        // Disable common keyboard shortcuts used for saving/printing/inspecting[cite: 7]
+        // Disable common keyboard shortcuts used for saving/printing/inspecting
         document.addEventListener('keydown', function(e) {
-            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C[cite: 7]
+            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -179,7 +199,7 @@
             }
         });
 
-        // Prevent Dragging elements (like images)[cite: 7]
+        // Prevent Dragging elements (like images)
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();
         });
