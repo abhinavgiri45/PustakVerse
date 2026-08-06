@@ -34,6 +34,12 @@
                 {% endif %}
             </a>
         </div>
+        <div class="nav-search" aria-label="Global search">
+            <form class="nav-search-form" role="search" id="globalSearchForm" action="javascript:void(0);">
+                <input type="search" id="globalSearchInput" placeholder="Search books, authors, categories..." aria-label="Search books">
+                <button type="button" id="globalMicBtn" class="nav-search-btn" title="Search by Voice" aria-label="Search by Voice">🎤</button>
+            </form>
+        </div>
         <div class="nav-links">
             <a href="{{ url_for('index') }}">Global Library</a>
             {% if session.username %}
@@ -95,6 +101,75 @@
             document.getElementById('myBar').style.width = height > 0 ? (winScroll / height) * 100 + '%' : '0%';
             document.getElementById('backToTop').classList.toggle('is-visible', winScroll > 400);
         });
+
+        const globalSearchInput = document.getElementById('globalSearchInput');
+        const globalSearchForm = document.getElementById('globalSearchForm');
+        const globalMicBtn = document.getElementById('globalMicBtn');
+
+        function filterVisibleCards(query) {
+            const cards = document.querySelectorAll('.book-card');
+            let visibleCount = 0;
+            const normalized = (query || '').toLowerCase();
+
+            cards.forEach(card => {
+                const title = (card.getAttribute('data-title') || '').toLowerCase();
+                const author = (card.getAttribute('data-author') || '').toLowerCase();
+                const catalog = (card.getAttribute('data-catalog') || '').toLowerCase();
+                const matches = title.includes(normalized) || author.includes(normalized) || catalog.includes(normalized);
+                card.style.display = matches ? 'flex' : 'none';
+                if (matches) visibleCount++;
+            });
+
+            const noResults = document.getElementById('noResultsMsg');
+            if (noResults) {
+                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+            }
+        }
+
+        if (globalSearchInput) {
+            globalSearchInput.addEventListener('keyup', function() {
+                filterVisibleCards(this.value);
+            });
+        }
+
+        if (globalSearchForm) {
+            globalSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                filterVisibleCards(globalSearchInput?.value || '');
+                globalSearchInput?.blur();
+            });
+        }
+
+        if (globalMicBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            globalMicBtn.addEventListener('click', () => {
+                recognition.start();
+                globalMicBtn.textContent = '🎙️';
+                globalSearchInput.placeholder = 'Listening...';
+            });
+
+            recognition.onresult = (event) => {
+                globalSearchInput.value = event.results[0][0].transcript;
+                filterVisibleCards(globalSearchInput.value);
+            };
+
+            recognition.onerror = () => {
+                globalMicBtn.textContent = '🎤';
+                globalSearchInput.placeholder = 'Search books, authors, categories...';
+            };
+
+            recognition.onend = () => {
+                globalMicBtn.textContent = '🎤';
+                globalSearchInput.placeholder = 'Search books, authors, categories...';
+            };
+        } else if (globalMicBtn) {
+            globalMicBtn.style.display = 'none';
+        }
     </script>
 </body>
 </html>
