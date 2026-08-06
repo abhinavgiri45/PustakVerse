@@ -14,6 +14,8 @@
         th { background: #f8fafc; color: #718096; }
         .btn-back { display: inline-block; padding: 10px 20px; background: #2d3748; color: white; text-decoration: none; border-radius: 6px; margin-bottom: 20px; }
         .status-paid { color: #38a169; font-weight: bold; }
+        .status-pending { color: #d97706; font-weight: bold; }
+        .status-failed { color: #e53e3e; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -37,7 +39,9 @@
                     <td style="font-weight: 600;">{{ payment.book_title }}</td>
                     <td style="font-family: monospace; font-size: 0.9em; color: #718096;">{{ payment.razorpay_order_id }}</td>
                     <td>₹{{ "%.2f"|format(payment.amount_paise/100) }}</td>
-                    <td class="status-paid">PAID</td>
+                    <td class="{% if payment.status == 'paid' %}status-paid{% elif payment.status == 'pending' %}status-pending{% else %}status-failed{% endif %}">
+                        {{ payment.status|capitalize }}
+                    </td>
                 </tr>
                 {% endfor %}
             </table>
