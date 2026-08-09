@@ -96,6 +96,195 @@ def clean_book_data(books):
         b['description'] = str(b.get('description') or "")
     return books
 
+STOP_WORDS = {
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'have', 'in', 'is', 'it',
+    'its', 'of', 'on', 'or', 'that', 'the', 'their', 'this', 'to', 'was', 'were', 'with', 'your', 'about',
+    'into', 'them', 'then', 'than', 'through', 'using', 'you', 'yourself', 'will', 'how', 'what', 'when',
+    'why', 'who', 'which', 'while', 'also', 'after', 'before', 'between', 'within', 'without'
+}
+
+
+def suggest_concept(book_title, description='', book_text=''):
+    source = ' '.join(filter(None, [book_title, description, book_text])).lower()
+    keyword_map = {
+        'loop': ['loop', 'loops', 'iteration', 'repetition'],
+        'function': ['function', 'method', 'routine', 'procedure'],
+        'variable': ['variable', 'constant', 'data', 'parameter'],
+        'algorithm': ['algorithm', 'logic', 'process', 'steps'],
+        'theme': ['theme', 'message', 'moral', 'idea'],
+        'character': ['character', 'hero', 'villain', 'narrator'],
+        'grammar': ['grammar', 'sentence', 'verb', 'noun', 'pronoun'],
+        'market': ['market', 'sales', 'customer', 'demand', 'pricing'],
+        'strategy': ['strategy', 'plan', 'approach', 'model'],
+        'history': ['history', 'war', 'empire', 'revolution', 'civilization'],
+        'economics': ['economics', 'money', 'trade', 'income', 'growth'],
+        'science': ['science', 'experiment', 'theory', 'discovery'],
+        'motivation': ['motivation', 'focus', 'discipline', 'growth', 'success'],
+        'story': ['story', 'plot', 'chapter', 'narrative']
+    }
+
+    for concept, terms in keyword_map.items():
+        if any(term in source for term in terms):
+            return concept
+
+    words = re.findall(r"[a-zA-Z][a-zA-Z0-9-]{2,}", source)
+    freq = {}
+    for word in words:
+        clean_word = word.lower()
+        if clean_word in STOP_WORDS or len(clean_word) <= 3:
+            continue
+        freq[clean_word] = freq.get(clean_word, 0) + 1
+
+    if freq:
+        return sorted(freq.items(), key=lambda item: (-item[1], item[0]))[0][0]
+    return 'core concept'
+
+
+def build_ai_learning_response(book_title, book_description='', concept_query='', book_text=''):
+    concept = (concept_query or suggest_concept(book_title, book_description, book_text) or 'core concept').strip()
+    concept_label = concept.strip().capitalize()
+    title_text = book_title or 'this book'
+    context = (book_description or book_text or '').strip()
+    context_snippet = context[:600]
+
+    if 'loop' in concept.lower() or 'iteration' in concept.lower():
+        explanation = (
+            f"{concept_label} is the idea of repeating a task until a condition is met. In {title_text}, this usually helps you avoid writing the same instruction over and over while still processing many items. "
+            "Think of it like a repeated instruction: do the task, check the condition, and repeat only when needed."
+        )
+        key_points = [
+            'A loop repeats actions using a clear condition.',
+            'It saves time and reduces repeated code.',
+            'It is useful when you need to process multiple values or steps.'
+        ]
+        example = 'If you are reading a list of books, a loop can visit each one, check a rule, and move to the next one automatically.'
+        questions = [
+            'What is the main job of a loop in simple words?',
+            'How is a loop different from writing the same instructions manually?',
+            'Can you describe one real-world example where looping is useful?'
+        ]
+    elif 'function' in concept.lower() or 'method' in concept.lower() or 'routine' in concept.lower():
+        explanation = (
+            f"{concept_label} means creating a reusable block of logic that performs one job. In {title_text}, this helps keep ideas organized so the same process can be used again without rewriting it. "
+            "A function is like a mini-tool: you define it once and call it whenever needed."
+        )
+        key_points = [
+            'Functions group related instructions together.',
+            'They make code or explanations easier to reuse and maintain.',
+            'A good function usually does one focused job.'
+        ]
+        example = 'A study helper function might summarize a chapter, extract key ideas, and give quiz questions using the same steps each time.'
+        questions = [
+            'Why is a function useful when solving a problem more than once?',
+            'What happens when a function has a clear goal?',
+            'Can you think of a function you already use in daily learning or work?'
+        ]
+    elif 'variable' in concept.lower() or 'data' in concept.lower():
+        explanation = (
+            f"{concept_label} is a labeled container for information. In {title_text}, it lets the reader keep track of values, inputs, or facts that can change or be reused. "
+            "Instead of memorizing everything as plain text, you store it under a meaningful name and use it when needed."
+        )
+        key_points = [
+            'A variable stores meaningful information.',
+            'It can be updated or reused in different situations.',
+            'Naming matters because clear names make learning easier.'
+        ]
+        example = 'A student can store a chapter title in a variable called chapter_name and reuse it in summaries, notes, or flashcards.'
+        questions = [
+            'What does a variable help you remember?',
+            'Why do meaningful names make understanding easier?',
+            'How is a variable different from static text in a book?'
+        ]
+    elif 'algorithm' in concept.lower() or 'logic' in concept.lower() or 'process' in concept.lower():
+        explanation = (
+            f"{concept_label} is simply a step-by-step way to solve a problem. In {title_text}, it gives structure: understand the goal, take the next step, and repeat or adjust until you reach the result. "
+            "This is how complex ideas become easier to think through."
+        )
+        key_points = [
+            'Algorithms break big tasks into manageable steps.',
+            'They help you understand order and sequence.',
+            'Good logic makes difficult ideas easier to follow.'
+        ]
+        example = 'To understand a chapter, you can first read the summary, then note the main points, then compare them with examples and finally explain them in your own words.'
+        questions = [
+            'What makes an algorithm easier to follow?',
+            'Why does step-by-step thinking help learning?',
+            'Can you outline a simple process for understanding this chapter?'
+        ]
+    elif 'theme' in concept.lower() or 'story' in concept.lower() or 'character' in concept.lower():
+        explanation = (
+            f"{concept_label} in {title_text} helps explain the deeper meaning behind the events or ideas. A theme is the central message, while a character or plot helps show that message in action. "
+            "When you understand the theme, you can connect the book's details to the bigger idea."
+        )
+        key_points = [
+            'Themes show the main message or lesson.',
+            'Stories use characters and events to express that message.',
+            'Looking for patterns makes understanding clearer.'
+        ]
+        example = 'If a story focuses on courage, the plot may show a character making hard decisions to reveal that bigger idea.'
+        questions = [
+            'What message does the book seem to carry?',
+            'Which character or scene best shows that message?',
+            'How does the story support the book’s bigger idea?'
+        ]
+    else:
+        explanation = (
+            f"{concept_label} is a key idea in {title_text}. In simple language, it is the main building block that helps you understand the subject clearly. "
+            "Instead of trying to memorize everything at once, focus on what it means, why it matters, and how it connects to the examples in the book."
+        )
+        key_points = [
+            'Focus on the meaning before the details.',
+            'Connect the idea to examples from the book or real life.',
+            'Try to explain it in your own words to test understanding.'
+        ]
+        example = f'If you are learning {concept_label}, write a short explanation using one real example from {title_text} and one everyday example.'
+        questions = [
+            f'How would you explain {concept_label} in one sentence?',
+            'Why does this idea matter in the context of the book?',
+            'Can you give one example that makes this idea easier to understand?'
+        ]
+
+    if context_snippet:
+        supported_hint = (
+            f"From the book context: {context_snippet[:240]}"
+            + ('...' if len(context_snippet) > 240 else '')
+        )
+    else:
+        supported_hint = 'No detailed description was found, so this explanation is based on the topic and general learning principles.'
+
+    return {
+        'concept': concept_label,
+        'explanation': explanation,
+        'key_points': key_points,
+        'example': example,
+        'practice_questions': questions,
+        'book_context': supported_hint,
+        'study_tip': 'Read the idea once, explain it in your own words, then test yourself with the practice questions.'
+    }
+
+
+def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
+    if not pdf_name or pdf_name.startswith('http'):
+        return ''
+
+    folder = app.config['PRIVATE_PDF_FOLDER'] if private_pdf else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
+    full_path = os.path.join(folder, pdf_name)
+    if not os.path.exists(full_path):
+        return ''
+
+    try:
+        reader = PdfReader(full_path)
+        text_chunks = []
+        for page in reader.pages[:6]:
+            page_text = page.extract_text() or ''
+            if page_text:
+                text_chunks.append(page_text)
+        return ' '.join(text_chunks)[:4000]
+    except Exception:
+        logging.exception('Failed to extract PDF text for learning assistant')
+        return ''
+
+
 @app.context_processor
 def inject_global_settings():
     current_time = time.time()
@@ -557,6 +746,41 @@ def view_book(book_id):
         if db:
             try: db.close()
             except: pass
+
+@app.route('/book/<int:book_id>/learn', methods=['GET', 'POST'])
+def learn_book(book_id):
+    db = None
+    book = None
+    concept = request.form.get('concept', '').strip() or request.args.get('concept', '').strip()
+
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT b.*, u.username AS author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        book = cursor.fetchone()
+    except Exception:
+        flash("AI study assistant could not load this book right now.", "error")
+        return redirect(url_for('index'))
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    if not book:
+        abort(404)
+
+    book_text = extract_pdf_text_for_learning(book.get('pdf_file') or '', bool(book.get('private_pdf')))
+    if not concept:
+        concept = suggest_concept(book.get('title') or '', book.get('description') or '', book_text)
+
+    ai_response = build_ai_learning_response(
+        book_title=book.get('title') or 'This book',
+        book_description=book.get('description') or '',
+        concept_query=concept,
+        book_text=book_text
+    )
+
+    return render_template('learn_book.html', book=book, concept=concept, ai_response=ai_response)
 
 @app.route('/submit_review/<int:book_id>', methods=['POST'])
 def submit_review(book_id):
