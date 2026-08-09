@@ -263,6 +263,50 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
     }
 
 
+def build_ai_free_response(question, book_title='', book_description=''):
+    cleaned_question = (question or '').strip()
+    if not cleaned_question:
+        return 'Please ask a question about this book or a concept you want explained.'
+
+    context = ""
+    if book_title:
+        context += f"Book title: {book_title}. "
+    if book_description:
+        context += f"Book description: {book_description[:500]}. "
+
+    prompt = (
+        "You are a kind student tutor. Explain in simple language for a beginner. "
+        "Keep it clear, short, and useful. "
+        f"Context: {context} "
+        f"Question: {cleaned_question} "
+        "Give a concise explanation, 3 short key points, and a simple example."
+    )
+
+    model_name = os.environ.get('OLLAMA_MODEL', 'llama3.2').strip() or 'llama3.2'
+    try:
+        response = requests.post(
+            'http://localhost:11434/api/generate',
+            json={'model': model_name, 'prompt': prompt, 'stream': False},
+            timeout=20
+        )
+        if response.status_code == 200:
+            data = response.json()
+            answer = (data.get('response') or '').strip()
+            if answer:
+                return answer
+    except Exception:
+        logging.warning('Ollama free model not available; using local tutor fallback.')
+
+    answer = (
+        f"Here is the easiest way to understand this: {cleaned_question}. "
+        "Break the idea into small parts, look for the main goal, and connect it to a real example. "
+        "If the concept is unfamiliar, learn the definition first, then understand why it matters in the book."
+    )
+    if book_title:
+        answer += f" For {book_title}, focus on the main idea and explain it in your own words before moving on."
+    return answer
+
+
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
     if not pdf_name or pdf_name.startswith('http'):
         return ''
@@ -732,7 +776,7 @@ def view_book(book_id):
         
         can_read = False
         if 'user_id' in session:
-            if not book['is_paid'] or session['user_id'] == book['author_id'] or session.get('role') in ['official', 'developer']:
+            if not book['is_paid'] or session['user_id'] == book['author_id'] or session.get('role') == 'developer':
                 can_read = True
             else:
                 cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
@@ -781,6 +825,32 @@ def learn_book(book_id):
     )
 
     return render_template('learn_book.html', book=book, concept=concept, ai_response=ai_response)
+
+@app.route('/ask_ai', methods=['GET', 'POST'])
+def ask_ai():
+    book_id = request.args.get('book_id', type=int)
+    question = request.form.get('question', '').strip() or request.args.get('question', '').strip()
+    book = None
+
+    if book_id:
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT b.*, u.username AS author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+            book = cursor.fetchone()
+        except Exception:
+            book = None
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+    answer = ''
+    if question:
+        answer = build_ai_free_response(question, book_title=(book or {}).get('title') or '', book_description=(book or {}).get('description') or '')
+
+    return render_template('ask_ai.html', book=book, question=question, answer=answer)
 
 @app.route('/submit_review/<int:book_id>', methods=['POST'])
 def submit_review(book_id):
@@ -1694,7 +1764,7 @@ def read_book(book_id):
         if not book: 
             abort(404)
             
-        can_read = not book['is_paid'] or session.get('user_id') == book['author_id'] or session.get('role') in ('official', 'developer')
+        can_read = not book['is_paid'] or session.get('user_id') == book['author_id'] or session.get('role') == 'developer'
         
         if book['is_paid'] and not can_read and session.get('user_id'):
             cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
@@ -1727,7 +1797,7 @@ def serve_secure_pdf(book_id):
             
         user_id = session.get('user_id')
         user_role = session.get('role')
-        can_read = not book['is_paid'] or user_id == book['author_id'] or user_role in ('official', 'developer')
+        can_read = not book['is_paid'] or user_id == book['author_id'] or user_role == 'developer'
         
         if book['is_paid'] and not can_read and user_id: 
             cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))

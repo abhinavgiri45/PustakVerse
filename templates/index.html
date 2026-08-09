@@ -177,6 +177,14 @@
     </div>
 
     <div class="container">
+        <div style="margin-bottom: 24px; padding: 22px 24px; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fdba74; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div>
+                <div style="font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9a4d12; font-weight: 800;">AI Learning Assistant</div>
+                <h2 style="margin: 8px 0 0; color: #7c2d12; font-size: clamp(1.5rem, 2vw, 2.2rem);">Ask any doubt for free</h2>
+            </div>
+            <a href="{{ url_for('ask_ai') }}" class="btn btn-read" style="background: #f97316; border-radius: 12px; padding: 14px 24px; min-width: 220px;">Ask AI Tutor</a>
+        </div>
+
         {% if site_settings.donation_active and site_settings.donation_qr %}
         <div class="donation-banner">
             <h2 style="color: #14532d; margin-top: 0;">Support PustakVerse!</h2>

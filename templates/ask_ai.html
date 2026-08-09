@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask AI Tutor</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f8fafc; color: #0f172a; }
+        .navbar { background: #1e293b; padding: 12px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar img { width: 150px; background: white; border-radius: 6px; padding: 4px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 600; }
+        .container { max-width: 1000px; margin: 36px auto; padding: 0 18px 40px; }
+        .panel { background: white; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06); padding: 26px; }
+        .title { margin: 0 0 16px; font-size: 2rem; }
+        form { display: flex; flex-direction: column; gap: 14px; }
+        textarea { width: 100%; box-sizing: border-box; min-height: 120px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; font-size: 1rem; font-family: inherit; }
+        .btn { display: inline-block; padding: 12px 18px; border-radius: 10px; font-weight: 700; text-decoration: none; cursor: pointer; border: none; }
+        .btn-primary { background: #f97316; color: white; }
+        .answer-box { margin-top: 24px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 20px; white-space: pre-line; line-height: 1.7; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            {% if book %}
+                <a href="{{ url_for('view_book', book_id=book.id) }}">← Back to Book</a>
+            {% else %}
+                <a href="/">← Back to Library</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="panel">
+            <h1 class="title">Ask AI Tutor</h1>
+            {% if book %}
+                <p style="margin: 0 0 18px; color: #475569;">Book: <strong>{{ book.title }}</strong></p>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('ask_ai', book_id=(book.id if book else '' )) }}">
+                <textarea name="question" placeholder="Ask any doubt about this book or any concept you want to understand...">{{ question or '' }}</textarea>
+                <button type="submit" class="btn btn-primary">Ask AI</button>
+            </form>
+
+            {% if answer %}
+                <div class="answer-box">{{ answer }}</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
