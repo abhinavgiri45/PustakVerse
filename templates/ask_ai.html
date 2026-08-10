@@ -30,6 +30,13 @@
         .upload-row input[type="file"] { flex: 1; }
         .btn { display: inline-block; padding: 12px 18px; border-radius: 10px; font-weight: 700; text-decoration: none; cursor: pointer; border: none; }
         .btn-primary { background: #f97316; color: white; }
+        .btn-secondary { background: #e2e8f0; color: #1e293b; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+        .typing-indicator { display: none; align-items: center; gap: 6px; padding: 10px 14px; background: white; border: 1px solid #e2e8f0; border-radius: 999px; color: #475569; width: fit-content; }
+        .typing-indicator span { width: 8px; height: 8px; background: #f97316; border-radius: 50%; display: inline-block; animation: blink 1.4s infinite both; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
         .hint { color: #64748b; font-size: 0.92rem; }
     </style>
 </head>
@@ -60,7 +67,12 @@
                 {% endif %}
             </div>
 
-            <div class="chat-area">
+            <div class="toolbar">
+                <div></div>
+                <button type="button" class="btn btn-secondary" id="newChatBtn">New Chat</button>
+            </div>
+
+            <div class="chat-area" id="chatArea">
                 {% if chat_history %}
                     {% for message in chat_history %}
                         <div class="message-row {{ message.role }}">
@@ -79,9 +91,14 @@
                 {% endif %}
             </div>
 
+            <div class="typing-indicator" id="typingIndicator" aria-live="polite">
+                <span></span><span></span><span></span>
+                <strong>AI is thinking...</strong>
+            </div>
+
             <div class="composer">
-                <form method="POST" action="{{ url_for('ask_ai', book_id=(book.id if book else '' )) }}" enctype="multipart/form-data">
-                    <textarea name="question" placeholder="Type your question here...">{{ question or '' }}</textarea>
+                <form id="chatForm" method="POST" action="{{ url_for('ask_ai', book_id=(book.id if book else '' )) }}" enctype="multipart/form-data">
+                    <textarea id="questionInput" name="question" placeholder="Type your question here...">{{ question or '' }}</textarea>
                     <div class="upload-row">
                         <input type="file" name="screenshot" accept="image/*">
                         <button type="submit" class="btn btn-primary">Send</button>
@@ -91,5 +108,110 @@
             </div>
         </div>
     </div>
+
+    <script>
+        const chatForm = document.getElementById('chatForm');
+        const chatArea = document.getElementById('chatArea');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const newChatBtn = document.getElementById('newChatBtn');
+
+        function addMessage(role, text, screenshot = '') {
+            const row = document.createElement('div');
+            row.className = `message-row ${role}`;
+
+            const msg = document.createElement('div');
+            msg.className = 'message';
+
+            if (screenshot) {
+                const img = document.createElement('img');
+                img.src = `/static/uploads/ai_screenshots/${screenshot}`;
+                img.alt = 'Uploaded screenshot';
+                msg.appendChild(img);
+            }
+
+            const textNode = document.createTextNode(text);
+            msg.appendChild(textNode);
+            row.appendChild(msg);
+            chatArea.appendChild(row);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function setTyping(active) {
+            typingIndicator.style.display = active ? 'flex' : 'none';
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        newChatBtn.addEventListener('click', async function () {
+            try {
+                const response = await fetch('{{ url_for("clear_ai_chat", book_id=(book.id if book else 0)) }}', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (response.ok) {
+                    chatArea.innerHTML = `
+                        <div class="message-row assistant">
+                            <div class="message">Hi! Ask me anything about this book, a concept, or upload a screenshot of a confusing question and I will explain it simply.</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to reset AI chat', error);
+            }
+        });
+
+        chatForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(chatForm);
+            const question = (formData.get('question') || '').toString().trim();
+            const file = formData.get('screenshot');
+
+            if (!question && (!file || !file.name)) {
+                return;
+            }
+
+            if (question) {
+                addMessage('user', question);
+            }
+
+            chatForm.reset();
+            const submitButton = chatForm.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sending...';
+            }
+            setTyping(true);
+
+            try {
+                const response = await fetch(chatForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const result = await response.json();
+                setTyping(false);
+
+                if (!response.ok || !result.success) {
+                    addMessage('assistant', result.message || 'Something went wrong. Please try again.');
+                    return;
+                }
+
+                if (result.answer) {
+                    addMessage('assistant', result.answer);
+                }
+            } catch (error) {
+                setTyping(false);
+                addMessage('assistant', 'The AI tutor is temporarily unavailable. Please try again in a moment.');
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Send';
+                }
+            }
+        });
+    </script>
 </body>
 </html>

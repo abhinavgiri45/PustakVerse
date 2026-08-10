@@ -963,6 +963,10 @@ def learn_book(book_id):
 
 @app.route('/ask_ai', methods=['GET', 'POST'])
 def ask_ai():
+    if 'user_id' not in session:
+        flash('Please log in to access the AI tutor.', 'error')
+        return redirect(url_for('login'))
+
     book_id = request.args.get('book_id', type=int)
     question = request.form.get('question', '').strip() or request.args.get('question', '').strip()
     book = None
@@ -981,7 +985,8 @@ def ask_ai():
                 try: db.close()
                 except: pass
 
-    chat_history = session.get('ai_chat_history', [])
+    chat_key = f"ai_chat_history_{book_id if book_id else 'general'}"
+    chat_history = session.get(chat_key, [])
     screenshot_path = ''
     screenshot_text = ''
 
@@ -994,7 +999,10 @@ def ask_ai():
                 screenshot_text = extract_text_from_uploaded_image(screenshot_path)
 
         if not question and not screenshot_text:
-            flash('Ask a question or upload a screenshot to continue the conversation.', 'error')
+            message = 'Ask a question or upload a screenshot to continue the conversation.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': message}), 400
+            flash(message, 'error')
             return render_template('ask_ai.html', book=book, question='', answer='', chat_history=chat_history)
 
         prompt_text = question or 'Explain this screenshot in the simplest possible way.'
@@ -1015,10 +1023,28 @@ def ask_ai():
             'text': answer,
             'screenshot': ''
         })
-        session['ai_chat_history'] = chat_history[-12:]
-        return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=session['ai_chat_history'])
+        session[chat_key] = chat_history[-12:]
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'answer': answer,
+                'history': session[chat_key]
+            })
+
+        return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=session[chat_key])
 
     return render_template('ask_ai.html', book=book, question=question, answer='', chat_history=chat_history)
+
+@app.route('/clear_ai_chat', methods=['POST'])
+def clear_ai_chat():
+    if 'user_id' not in session:
+        return jsonify({'success': False}), 401
+
+    book_id = request.args.get('book_id', type=int)
+    chat_key = f"ai_chat_history_{book_id if book_id else 'general'}"
+    session.pop(chat_key, None)
+    return jsonify({'success': True})
 
 @app.route('/submit_review/<int:book_id>', methods=['POST'])
 def submit_review(book_id):
