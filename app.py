@@ -21,6 +21,13 @@ import requests
 from datetime import datetime, timezone, timedelta
 
 try:
+    import pytesseract
+    HAS_TESSERACT = True
+except ImportError:
+    pytesseract = None
+    HAS_TESSERACT = False
+
+try:
     from PIL import Image
     HAS_PILLOW = True
 except ImportError:
@@ -45,6 +52,7 @@ payment_schema_ready = False
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'covers'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'logos'), exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots'), exist_ok=True)
 os.makedirs(os.path.join(app.config['PRIVATE_PDF_FOLDER']), exist_ok=True)
 
 # --- SEO & PERFORMANCE CACHING HEADER ---
@@ -263,7 +271,126 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
     }
 
 
-def build_ai_free_response(question, book_title='', book_description=''):
+def save_uploaded_screenshot(file_obj):
+    if not file_obj or not getattr(file_obj, 'filename', None):
+        return ''
+
+    allowed_exts = {'.png', '.jpg', '.jpeg', '.webp'}
+    filename = secure_filename(file_obj.filename)
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in allowed_exts:
+        return ''
+
+    folder = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots')
+    os.makedirs(folder, exist_ok=True)
+    safe_name = f"{secrets.token_hex(8)}{ext}"
+    save_path = os.path.join(folder, safe_name)
+    file_obj.save(save_path)
+    return safe_name
+
+
+def extract_text_from_uploaded_image(image_path):
+    if not image_path or not os.path.exists(image_path):
+        return ''
+
+    if not HAS_TESSERACT or not pytesseract:
+        return ''
+
+    try:
+        from PIL import Image
+        text = pytesseract.image_to_string(Image.open(image_path))
+        cleaned = ' '.join(text.split())
+        return cleaned[:3000]
+    except Exception:
+        logging.exception('Failed to OCR uploaded screenshot for the AI tutor.')
+        return ''
+
+
+def generate_free_ai_response(prompt):
+    provider = (os.environ.get('FREE_AI_PROVIDER') or os.environ.get('AI_PROVIDER') or 'openrouter').strip().lower()
+    key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+
+    if provider == 'openrouter':
+        key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+        if key:
+            model = (os.environ.get('FREE_AI_MODEL') or os.environ.get('AI_MODEL') or 'meta-llama/llama-3.1-8b-instruct:free').strip()
+            try:
+                response = requests.post(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    headers={
+                        'Authorization': f'Bearer {key}',
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://pustakverse.onrender.com',
+                        'X-Title': 'PustakVerse AI Tutor'
+                    },
+                    json={
+                        'model': model,
+                        'messages': [{'role': 'user', 'content': prompt}],
+                        'temperature': 0.7
+                    },
+                    timeout=30
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    if content:
+                        return str(content).strip()
+                else:
+                    logging.warning('OpenRouter free AI request failed: %s - %s', response.status_code, response.text[:300])
+            except Exception:
+                logging.exception('OpenRouter free AI request error.')
+
+    if provider == 'huggingface':
+        key = (os.environ.get('HUGGINGFACE_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+        if key:
+            model = (os.environ.get('HUGGINGFACE_MODEL') or 'google/flan-t5-base').strip()
+            try:
+                response = requests.post(
+                    f'https://api-inference.huggingface.co/models/{model}',
+                    headers={'Authorization': f'Bearer {key}'},
+                    json={'inputs': prompt, 'parameters': {'max_new_tokens': 250, 'temperature': 0.7}},
+                    timeout=30
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list) and data and isinstance(data[0], dict):
+                        text = data[0].get('generated_text') or data[0].get('summary_text')
+                        if text:
+                            return str(text).strip()
+                    if isinstance(data, dict):
+                        text = data.get('generated_text') or data.get('summary_text')
+                        if text:
+                            return str(text).strip()
+                else:
+                    logging.warning('Hugging Face request failed: %s - %s', response.status_code, response.text[:300])
+            except Exception:
+                logging.exception('Hugging Face free AI request error.')
+
+    if provider == 'groq':
+        key = (os.environ.get('GROQ_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+        if key:
+            model = (os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile').strip()
+            try:
+                response = requests.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+                    json={'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.7},
+                    timeout=30
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    if content:
+                        return str(content).strip()
+                else:
+                    logging.warning('Groq request failed: %s - %s', response.status_code, response.text[:300])
+            except Exception:
+                logging.exception('Groq free AI request error.')
+
+    return ''
+
+
+def build_ai_free_response(question, book_title='', book_description='', screenshot_text=''):
     cleaned_question = (question or '').strip()
     if not cleaned_question:
         return 'Please ask a question about this book or a concept you want explained.'
@@ -273,14 +400,20 @@ def build_ai_free_response(question, book_title='', book_description=''):
         context += f"Book title: {book_title}. "
     if book_description:
         context += f"Book description: {book_description[:500]}. "
+    if screenshot_text:
+        context += f"Screenshot text: {screenshot_text[:3000]}. "
 
     prompt = (
-        "You are a kind student tutor. Explain in simple language for a beginner. "
+        "You are a warm, patient AI tutor. Explain in very simple language for a beginner. "
         "Keep it clear, short, and useful. "
         f"Context: {context} "
         f"Question: {cleaned_question} "
         "Give a concise explanation, 3 short key points, and a simple example."
     )
+
+    free_answer = generate_free_ai_response(prompt)
+    if free_answer:
+        return free_answer
 
     model_name = os.environ.get('OLLAMA_MODEL', 'llama3.2').strip() or 'llama3.2'
     try:
@@ -302,6 +435,8 @@ def build_ai_free_response(question, book_title='', book_description=''):
         "Break the idea into small parts, look for the main goal, and connect it to a real example. "
         "If the concept is unfamiliar, learn the definition first, then understand why it matters in the book."
     )
+    if screenshot_text:
+        answer += " The uploaded screenshot is being treated as visual context, so look at the labels, arrows, and key words first."
     if book_title:
         answer += f" For {book_title}, focus on the main idea and explain it in your own words before moving on."
     return answer
@@ -846,11 +981,44 @@ def ask_ai():
                 try: db.close()
                 except: pass
 
-    answer = ''
-    if question:
-        answer = build_ai_free_response(question, book_title=(book or {}).get('title') or '', book_description=(book or {}).get('description') or '')
+    chat_history = session.get('ai_chat_history', [])
+    screenshot_path = ''
+    screenshot_text = ''
 
-    return render_template('ask_ai.html', book=book, question=question, answer=answer)
+    if request.method == 'POST':
+        uploaded_file = request.files.get('screenshot')
+        if uploaded_file and uploaded_file.filename:
+            screenshot_name = save_uploaded_screenshot(uploaded_file)
+            if screenshot_name:
+                screenshot_path = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots', screenshot_name)
+                screenshot_text = extract_text_from_uploaded_image(screenshot_path)
+
+        if not question and not screenshot_text:
+            flash('Ask a question or upload a screenshot to continue the conversation.', 'error')
+            return render_template('ask_ai.html', book=book, question='', answer='', chat_history=chat_history)
+
+        prompt_text = question or 'Explain this screenshot in the simplest possible way.'
+        answer = build_ai_free_response(
+            prompt_text,
+            book_title=(book or {}).get('title') or '',
+            book_description=(book or {}).get('description') or '',
+            screenshot_text=screenshot_text
+        )
+
+        chat_history.append({
+            'role': 'user',
+            'text': prompt_text,
+            'screenshot': os.path.basename(screenshot_path) if screenshot_path else ''
+        })
+        chat_history.append({
+            'role': 'assistant',
+            'text': answer,
+            'screenshot': ''
+        })
+        session['ai_chat_history'] = chat_history[-12:]
+        return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=session['ai_chat_history'])
+
+    return render_template('ask_ai.html', book=book, question=question, answer='', chat_history=chat_history)
 
 @app.route('/submit_review/<int:book_id>', methods=['POST'])
 def submit_review(book_id):
