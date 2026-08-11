@@ -419,6 +419,9 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         "You are PustakVerse's careful AI tutor. Answer the student's latest question using the provided book "
         "context whenever it is relevant. Do not invent facts, quotations, page numbers, or details not supported by the "
         "context. If the context does not contain the answer, say so clearly and give only general guidance. "
+        "Before answering, check that each claim and calculation directly answers the question. For mathematics, verify the "
+        "formula, signs, fractions, and exponents before responding; do not include an advanced formula unless it helps the student. "
+        "If you are uncertain, say what is uncertain instead of guessing. "
         "Use this exact readable format: a short direct answer, then headings `Key points` and `Example` with concise bullets. "
         "For math, wrap inline expressions in `$...$` and displayed equations in `$$...$$`; use LaTex commands such as `\\frac{a}{b}` and `x^{2}` inside those delimiters. "
         "Use simple language, but keep subject-specific terms accurate. "
@@ -1032,6 +1035,12 @@ def learn_book(book_id):
 @app.route('/ask_ai', methods=['GET', 'POST'])
 def ask_ai():
     if 'user_id' not in session:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': False,
+                'message': 'Your session has expired. Please sign in again.',
+                'redirect_url': url_for('login')
+            }), 401
         flash('Please log in to access the AI tutor.', 'error')
         return redirect(url_for('login'))
 
