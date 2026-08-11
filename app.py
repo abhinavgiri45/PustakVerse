@@ -390,7 +390,7 @@ def generate_free_ai_response(prompt):
     return ''
 
 
-def build_ai_free_response(question, book_title='', book_description='', screenshot_text=''):
+def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None):
     cleaned_question = (question or '').strip()
     if not cleaned_question:
         return 'Please ask a question about this book or a concept you want explained.'
@@ -402,13 +402,25 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         context += f"Book description: {book_description[:500]}. "
     if screenshot_text:
         context += f"Screenshot text: {screenshot_text[:3000]}. "
+    if book_text:
+        context += f"Relevant passages from the book: {book_text[:6000]}. "
+
+    recent_messages = (chat_history or [])[-6:]
+    conversation = '\n'.join(
+        f"{'Student' if item.get('role') == 'user' else 'Tutor'}: {item.get('text', '')[:1000]}"
+        for item in recent_messages
+        if item.get('text')
+    )
 
     prompt = (
-        "You are a warm, patient AI tutor. Explain in very simple language for a beginner. "
-        "Keep it clear, short, and useful. "
-        f"Context: {context} "
-        f"Question: {cleaned_question} "
-        "Give a concise explanation, 3 short key points, and a simple example."
+        "You are PustakVerse's careful AI tutor. Answer the student's latest question using the provided book "
+        "context whenever it is relevant. Do not invent facts, quotations, page numbers, or details not supported by the "
+        "context. If the context does not contain the answer, say so clearly and give only general guidance. "
+        "Use this exact readable format: a short direct answer, then headings `Key points` and `Example` with concise bullets. "
+        "Use simple language, but keep subject-specific terms accurate. "
+        f"Book context: {context}\n"
+        f"Recent conversation:\n{conversation or 'No earlier messages.'}\n"
+        f"Student's latest question: {cleaned_question}"
     )
 
     free_answer = generate_free_ai_response(prompt)
@@ -547,7 +559,11 @@ def send_email_wrapper(to_email, subject, body_html):
     refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
     email_password = os.environ.get('EMAIL_PASSWORD', '').replace(' ', '').strip()
 
-    if refresh_token and client_secret:
+    from_email = os.environ.get('EMAIL_FROM', 'noreply.pustakverse@gmail.com').strip()
+    smtp_username = os.environ.get('EMAIL_SMTP_USERNAME', from_email).strip()
+    delivery_errors = []
+
+    if client_id and refresh_token and client_secret:
         try:
             token_url = "https://oauth2.googleapis.com/token"
             token_data = {"client_id": client_id, "client_secret": client_secret, "refresh_token": refresh_token, "grant_type": "refresh_token"}
@@ -560,29 +576,34 @@ def send_email_wrapper(to_email, subject, body_html):
                 message.add_alternative(body_html, subtype='html')
                 message['To'] = to_email
                 message['Subject'] = subject
-                message['From'] = "noreply.pustakverse@gmail.com"
+                message['From'] = from_email
                 encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
                 send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
                 headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
                 send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
-                if send_res.status_code in [200, 201]: 
+                if send_res.status_code in [200, 201]:
                     return True
-        except Exception: 
-            pass
+                delivery_errors.append(f'Gmail API returned {send_res.status_code}: {send_res.text[:200]}')
+        except Exception as error:
+            delivery_errors.append(f'Gmail API error: {error}')
 
     if email_password:
         try:
             msg = MIMEText(body_html, 'html')
             msg['Subject'] = subject
-            msg['From'] = "noreply.pustakverse@gmail.com"
+            msg['From'] = from_email
             msg['To'] = to_email
             with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5) as server:
-                server.login("noreply.pustakverse@gmail.com", email_password)
+                server.login(smtp_username, email_password)
                 server.send_message(msg)
             return True
-        except Exception: 
-            pass
-    return True
+        except Exception as error:
+            delivery_errors.append(f'SMTP error: {error}')
+
+    if not delivery_errors:
+        delivery_errors.append('No email provider is configured.')
+    logging.error('Email delivery to %s failed. %s', to_email, ' | '.join(delivery_errors))
+    return False
 def send_registration_otp(to_email, otp): 
     return send_email_wrapper(to_email, 'PustakVerse - Verify Your Email', generate_html_email("Account Verification", f"<p>Your registration verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
 def send_pending_author(to_email, username):
@@ -750,6 +771,7 @@ def ensure_payment_schema():
         cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES ('Fiction'), ('Non-Fiction'), ('Educational'), ('History'), ('Poetry')")
         cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS ai_chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NULL, role ENUM('user', 'assistant') NOT NULL, message_text TEXT NOT NULL, screenshot VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, INDEX idx_ai_chat_user_book (user_id, book_id, id))")
         
         db.commit()
         return True
@@ -771,6 +793,47 @@ def log_official_activity(official_id, action_desc):
         db.commit()
     except Exception: 
         pass
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+def get_ai_chat_history(user_id, book_id):
+    """Return a user's saved tutor conversation for one book (or the general tutor)."""
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT role, message_text AS text, COALESCE(screenshot, '') AS screenshot "
+            "FROM ai_chat_messages WHERE user_id = %s AND book_id <=> %s ORDER BY id ASC LIMIT 100",
+            (user_id, book_id)
+        )
+        return cursor.fetchall()
+    except Exception:
+        logging.exception('Could not load AI chat history.')
+        return []
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+def save_ai_chat_message(user_id, book_id, role, text, screenshot=''):
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute(
+            "INSERT INTO ai_chat_messages (user_id, book_id, role, message_text, screenshot) VALUES (%s, %s, %s, %s, %s)",
+            (user_id, book_id, role, text, screenshot or None)
+        )
+        db.commit()
+    except Exception:
+        if db:
+            db.rollback()
+        logging.exception('Could not save AI chat message.')
     finally:
         if db:
             try: db.close()
@@ -985,8 +1048,7 @@ def ask_ai():
                 try: db.close()
                 except: pass
 
-    chat_key = f"ai_chat_history_{book_id if book_id else 'general'}"
-    chat_history = session.get(chat_key, [])
+    chat_history = get_ai_chat_history(session['user_id'], book_id)
     screenshot_path = ''
     screenshot_text = ''
 
@@ -1006,33 +1068,32 @@ def ask_ai():
             return render_template('ask_ai.html', book=book, question='', answer='', chat_history=chat_history)
 
         prompt_text = question or 'Explain this screenshot in the simplest possible way.'
+        book_text = extract_pdf_text_for_learning(
+            (book or {}).get('pdf_file') or '',
+            bool((book or {}).get('private_pdf'))
+        ) if book else ''
         answer = build_ai_free_response(
             prompt_text,
             book_title=(book or {}).get('title') or '',
             book_description=(book or {}).get('description') or '',
-            screenshot_text=screenshot_text
+            screenshot_text=screenshot_text,
+            book_text=book_text,
+            chat_history=chat_history
         )
 
-        chat_history.append({
-            'role': 'user',
-            'text': prompt_text,
-            'screenshot': os.path.basename(screenshot_path) if screenshot_path else ''
-        })
-        chat_history.append({
-            'role': 'assistant',
-            'text': answer,
-            'screenshot': ''
-        })
-        session[chat_key] = chat_history[-12:]
+        screenshot_name = os.path.basename(screenshot_path) if screenshot_path else ''
+        save_ai_chat_message(session['user_id'], book_id, 'user', prompt_text, screenshot_name)
+        save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
+        chat_history = get_ai_chat_history(session['user_id'], book_id)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
                 'success': True,
                 'answer': answer,
-                'history': session[chat_key]
+                'history': chat_history
             })
 
-        return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=session[chat_key])
+        return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=chat_history)
 
     return render_template('ask_ai.html', book=book, question=question, answer='', chat_history=chat_history)
 
@@ -1042,8 +1103,26 @@ def clear_ai_chat():
         return jsonify({'success': False}), 401
 
     book_id = request.args.get('book_id', type=int)
-    chat_key = f"ai_chat_history_{book_id if book_id else 'general'}"
-    session.pop(chat_key, None)
+    if book_id == 0:
+        book_id = None
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute(
+            "DELETE FROM ai_chat_messages WHERE user_id = %s AND book_id <=> %s",
+            (session['user_id'], book_id)
+        )
+        db.commit()
+    except Exception:
+        if db:
+            db.rollback()
+        logging.exception('Could not clear AI chat history.')
+        return jsonify({'success': False, 'message': 'Could not clear this chat. Please try again.'}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
     return jsonify({'success': True})
 
 @app.route('/submit_review/<int:book_id>', methods=['POST'])
