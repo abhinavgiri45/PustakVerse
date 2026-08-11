@@ -308,6 +308,8 @@ def extract_text_from_uploaded_image(image_path):
 
 def generate_free_ai_response(prompt):
     provider = (os.environ.get('FREE_AI_PROVIDER') or os.environ.get('AI_PROVIDER') or 'openrouter').strip().lower()
+    ai_timeout = max(5, min(int(os.environ.get('AI_TIMEOUT_SECONDS', '15')), 30))
+    max_tokens = max(100, min(int(os.environ.get('AI_MAX_TOKENS', '450')), 800))
     key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
 
     if provider == 'openrouter':
@@ -326,9 +328,10 @@ def generate_free_ai_response(prompt):
                     json={
                         'model': model,
                         'messages': [{'role': 'user', 'content': prompt}],
-                        'temperature': 0.7
+                        'temperature': 0.35,
+                        'max_tokens': max_tokens
                     },
-                    timeout=30
+                    timeout=ai_timeout
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -348,8 +351,8 @@ def generate_free_ai_response(prompt):
                 response = requests.post(
                     f'https://api-inference.huggingface.co/models/{model}',
                     headers={'Authorization': f'Bearer {key}'},
-                    json={'inputs': prompt, 'parameters': {'max_new_tokens': 250, 'temperature': 0.7}},
-                    timeout=30
+                    json={'inputs': prompt, 'parameters': {'max_new_tokens': min(max_tokens, 350), 'temperature': 0.35}},
+                    timeout=ai_timeout
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -374,8 +377,8 @@ def generate_free_ai_response(prompt):
                 response = requests.post(
                     'https://api.groq.com/openai/v1/chat/completions',
                     headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
-                    json={'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.7},
-                    timeout=30
+                    json={'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.35, 'max_tokens': max_tokens},
+                    timeout=ai_timeout
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -417,6 +420,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         "context whenever it is relevant. Do not invent facts, quotations, page numbers, or details not supported by the "
         "context. If the context does not contain the answer, say so clearly and give only general guidance. "
         "Use this exact readable format: a short direct answer, then headings `Key points` and `Example` with concise bullets. "
+        "For math, wrap inline expressions in `$...$` and displayed equations in `$$...$$`; use LaTex commands such as `\\frac{a}{b}` and `x^{2}` inside those delimiters. "
         "Use simple language, but keep subject-specific terms accurate. "
         f"Book context: {context}\n"
         f"Recent conversation:\n{conversation or 'No earlier messages.'}\n"
@@ -427,20 +431,21 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if free_answer:
         return free_answer
 
-    model_name = os.environ.get('OLLAMA_MODEL', 'llama3.2').strip() or 'llama3.2'
-    try:
-        response = requests.post(
-            'http://localhost:11434/api/generate',
-            json={'model': model_name, 'prompt': prompt, 'stream': False},
-            timeout=20
-        )
-        if response.status_code == 200:
-            data = response.json()
-            answer = (data.get('response') or '').strip()
-            if answer:
-                return answer
-    except Exception:
-        logging.warning('Ollama free model not available; using local tutor fallback.')
+    if os.environ.get('OLLAMA_ENABLED', '').strip().lower() in ('1', 'true', 'yes'):
+        model_name = os.environ.get('OLLAMA_MODEL', 'llama3.2').strip() or 'llama3.2'
+        try:
+            response = requests.post(
+                'http://localhost:11434/api/generate',
+                json={'model': model_name, 'prompt': prompt, 'stream': False},
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                answer = (data.get('response') or '').strip()
+                if answer:
+                    return answer
+        except Exception:
+            logging.warning('Ollama free model not available; using local tutor fallback.')
 
     answer = (
         f"Here is the easiest way to understand this: {cleaned_question}. "
