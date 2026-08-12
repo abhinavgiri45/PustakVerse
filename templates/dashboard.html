@@ -629,7 +629,12 @@
                                         </td>
                                         <td>
                                             {% if book.is_paid %}
-                                                <span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                                                <span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span><br>
+                                                {% if book.rp_verified %}
+                                                    <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#dcfce7; color:#166534;">✓ Payments verified</span>
+                                                {% else %}
+                                                    <span title="{{ book.rp_verify_message or 'Razorpay details have not been verified yet. Edit the book to fix this.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#fef3c7; color:#92400e;">⚠ Payments unverified</span>
+                                                {% endif %}
                                             {% else %}
                                                 Free
                                             {% endif %}
@@ -649,6 +654,8 @@
                                                         data-price="{{ book.price_paise }}" 
                                                         data-keyid="{{ book.rp_key_id or '' }}" 
                                                         data-keysecret="{{ book.rp_key_secret or '' }}"
+                                                        data-verified="{{ 'true' if book.rp_verified else 'false' }}"
+                                                        data-verifymsg="{{ book.rp_verify_message or '' | escape }}"
                                                         data-desc="{{ book.description | escape }}"
                                                         onclick="openEditModal(this)">Edit</button>
                                                 
@@ -950,8 +957,10 @@
                     <input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book
                     <div id="edit_paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
                         <input type="text" name="price_inr" id="edit_price_inr" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
+                        <div id="edit_rp_status" style="display:none; margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem;"></div>
                         <input type="text" name="rp_key_id" id="edit_rp_key_id" placeholder="Live Key ID (rzp_live_...)" style="margin-bottom: 10px;">
                         <input type="password" name="rp_key_secret" id="edit_rp_key_secret" placeholder="Secret Key">
+                        <small style="color:#64748b; display:block; margin-top:6px;">Changing either key re-verifies your Razorpay details when you save. You can update these any time.</small>
                     </div>
                 </div>
                 <button type="submit" class="btn-sm btn-orange">Save Changes</button>
@@ -1025,6 +1034,7 @@
             const pInput = document.getElementById('edit_price_inr');
             const keyIdInput = document.getElementById('edit_rp_key_id');
             const keySecretInput = document.getElementById('edit_rp_key_secret');
+            const rpStatus = document.getElementById('edit_rp_status');
             
             let isPaid = btn.dataset.ispaid === 'true';
             isPaidCheck.checked = isPaid; 
@@ -1037,6 +1047,14 @@
                 keyIdInput.required = true;
                 keySecretInput.value = btn.dataset.keysecret; 
                 keySecretInput.required = true;
+
+                const isVerified = btn.dataset.verified === 'true';
+                rpStatus.style.display = 'block';
+                rpStatus.textContent = isVerified
+                    ? '✓ Payment details currently verified.'
+                    : ('⚠ Payment details not verified yet.' + (btn.dataset.verifymsg ? ' ' + btn.dataset.verifymsg : ' Save again after checking your keys.'));
+                rpStatus.style.background = isVerified ? '#dcfce7' : '#fef3c7';
+                rpStatus.style.color = isVerified ? '#166534' : '#92400e';
             } else { 
                 editPaidSettings.style.display = 'none'; 
                 pInput.value = ''; 
@@ -1045,6 +1063,7 @@
                 keyIdInput.required = false;
                 keySecretInput.value = ''; 
                 keySecretInput.required = false;
+                rpStatus.style.display = 'none';
             }
             
             document.getElementById('editBookModal').style.display = 'flex';

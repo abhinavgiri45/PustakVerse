@@ -281,12 +281,16 @@ def save_uploaded_screenshot(file_obj):
     if ext not in allowed_exts:
         return ''
 
-    folder = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots')
-    os.makedirs(folder, exist_ok=True)
-    safe_name = f"{secrets.token_hex(8)}{ext}"
-    save_path = os.path.join(folder, safe_name)
-    file_obj.save(save_path)
-    return safe_name
+    try:
+        folder = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots')
+        os.makedirs(folder, exist_ok=True)
+        safe_name = f"{secrets.token_hex(8)}{ext}"
+        save_path = os.path.join(folder, safe_name)
+        file_obj.save(save_path)
+        return safe_name
+    except Exception:
+        logging.exception('Failed to save an uploaded AI tutor screenshot.')
+        return ''
 
 
 def extract_text_from_uploaded_image(image_path):
@@ -306,89 +310,130 @@ def extract_text_from_uploaded_image(image_path):
         return ''
 
 
-def generate_free_ai_response(prompt):
-    provider = (os.environ.get('FREE_AI_PROVIDER') or os.environ.get('AI_PROVIDER') or 'openrouter').strip().lower()
-    ai_timeout = max(5, min(int(os.environ.get('AI_TIMEOUT_SECONDS', '15')), 30))
-    max_tokens = max(100, min(int(os.environ.get('AI_MAX_TOKENS', '450')), 800))
+def _call_openrouter(prompt, timeout, max_tokens):
     key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+    if not key:
+        return ''
+    model = (os.environ.get('FREE_AI_MODEL') or os.environ.get('AI_MODEL') or 'meta-llama/llama-3.1-8b-instruct:free').strip()
+    try:
+        response = requests.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {key}',
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://pustakverse.onrender.com',
+                'X-Title': 'PustakVerse AI Tutor'
+            },
+            json={
+                'model': model,
+                'messages': [{'role': 'user', 'content': prompt}],
+                'temperature': 0.3,
+                'max_tokens': max_tokens
+            },
+            timeout=timeout
+        )
+        if response.status_code == 200:
+            data = response.json()
+            content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+            return str(content).strip() if content else ''
+        logging.warning('OpenRouter free AI request failed: %s - %s', response.status_code, response.text[:300])
+    except Exception:
+        logging.exception('OpenRouter free AI request error.')
+    return ''
 
-    if provider == 'openrouter':
-        key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
-        if key:
-            model = (os.environ.get('FREE_AI_MODEL') or os.environ.get('AI_MODEL') or 'meta-llama/llama-3.1-8b-instruct:free').strip()
-            try:
-                response = requests.post(
-                    'https://openrouter.ai/api/v1/chat/completions',
-                    headers={
-                        'Authorization': f'Bearer {key}',
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://pustakverse.onrender.com',
-                        'X-Title': 'PustakVerse AI Tutor'
-                    },
-                    json={
-                        'model': model,
-                        'messages': [{'role': 'user', 'content': prompt}],
-                        'temperature': 0.35,
-                        'max_tokens': max_tokens
-                    },
-                    timeout=ai_timeout
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                    if content:
-                        return str(content).strip()
-                else:
-                    logging.warning('OpenRouter free AI request failed: %s - %s', response.status_code, response.text[:300])
-            except Exception:
-                logging.exception('OpenRouter free AI request error.')
 
-    if provider == 'huggingface':
-        key = (os.environ.get('HUGGINGFACE_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
-        if key:
-            model = (os.environ.get('HUGGINGFACE_MODEL') or 'google/flan-t5-base').strip()
-            try:
-                response = requests.post(
-                    f'https://api-inference.huggingface.co/models/{model}',
-                    headers={'Authorization': f'Bearer {key}'},
-                    json={'inputs': prompt, 'parameters': {'max_new_tokens': min(max_tokens, 350), 'temperature': 0.35}},
-                    timeout=ai_timeout
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    if isinstance(data, list) and data and isinstance(data[0], dict):
-                        text = data[0].get('generated_text') or data[0].get('summary_text')
-                        if text:
-                            return str(text).strip()
-                    if isinstance(data, dict):
-                        text = data.get('generated_text') or data.get('summary_text')
-                        if text:
-                            return str(text).strip()
-                else:
-                    logging.warning('Hugging Face request failed: %s - %s', response.status_code, response.text[:300])
-            except Exception:
-                logging.exception('Hugging Face free AI request error.')
+def _call_groq(prompt, timeout, max_tokens):
+    key = (os.environ.get('GROQ_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+    if not key:
+        return ''
+    model = (os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile').strip()
+    try:
+        response = requests.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+            json={'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': max_tokens},
+            timeout=timeout
+        )
+        if response.status_code == 200:
+            data = response.json()
+            content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+            return str(content).strip() if content else ''
+        logging.warning('Groq request failed: %s - %s', response.status_code, response.text[:300])
+    except Exception:
+        logging.exception('Groq free AI request error.')
+    return ''
 
-    if provider == 'groq':
-        key = (os.environ.get('GROQ_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
-        if key:
-            model = (os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile').strip()
-            try:
-                response = requests.post(
-                    'https://api.groq.com/openai/v1/chat/completions',
-                    headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
-                    json={'model': model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.35, 'max_tokens': max_tokens},
-                    timeout=ai_timeout
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                    if content:
-                        return str(content).strip()
-                else:
-                    logging.warning('Groq request failed: %s - %s', response.status_code, response.text[:300])
-            except Exception:
-                logging.exception('Groq free AI request error.')
+
+def _call_huggingface(prompt, timeout, max_tokens):
+    key = (os.environ.get('HUGGINGFACE_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
+    if not key:
+        return ''
+    model = (os.environ.get('HUGGINGFACE_MODEL') or 'google/flan-t5-base').strip()
+    try:
+        response = requests.post(
+            f'https://api-inference.huggingface.co/models/{model}',
+            headers={'Authorization': f'Bearer {key}'},
+            json={'inputs': prompt, 'parameters': {'max_new_tokens': min(max_tokens, 350), 'temperature': 0.3}},
+            timeout=timeout
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and data and isinstance(data[0], dict):
+                text = data[0].get('generated_text') or data[0].get('summary_text')
+                if text:
+                    return str(text).strip()
+            if isinstance(data, dict):
+                text = data.get('generated_text') or data.get('summary_text')
+                if text:
+                    return str(text).strip()
+        else:
+            logging.warning('Hugging Face request failed: %s - %s', response.status_code, response.text[:300])
+    except Exception:
+        logging.exception('Hugging Face free AI request error.')
+    return ''
+
+
+_AI_PROVIDER_CALLERS = {
+    'openrouter': _call_openrouter,
+    'groq': _call_groq,
+    'huggingface': _call_huggingface,
+}
+
+# Groq's LPU inference is consistently the fastest of the three, so it leads the
+# fallback order unless the operator explicitly configured a different preferred provider.
+_DEFAULT_PROVIDER_ORDER = ['groq', 'openrouter', 'huggingface']
+
+
+def generate_free_ai_response(prompt):
+    """
+    Try each configured free-tier AI provider in order until one returns a real answer.
+
+    Speed: each provider gets its own short timeout, and providers with no API key
+    configured are skipped instantly (no network round trip wasted on them), so a
+    typical request either answers fast from the first working provider or fails over
+    to the next one within a few seconds rather than hanging.
+
+    Accuracy: we no longer give up the moment the operator's chosen provider is
+    rate-limited or briefly down — the question still gets answered by a real model
+    whenever any configured provider is reachable, instead of silently degrading to
+    the generic canned fallback.
+    """
+    preferred = (os.environ.get('FREE_AI_PROVIDER') or os.environ.get('AI_PROVIDER') or '').strip().lower()
+    ai_timeout = max(5, min(int(os.environ.get('AI_TIMEOUT_SECONDS', '12')), 30))
+    max_tokens = max(100, min(int(os.environ.get('AI_MAX_TOKENS', '450')), 800))
+
+    order = list(_DEFAULT_PROVIDER_ORDER)
+    if preferred in _AI_PROVIDER_CALLERS:
+        order = [preferred] + [p for p in order if p != preferred]
+
+    for i, provider_name in enumerate(order):
+        caller = _AI_PROVIDER_CALLERS[provider_name]
+        # Give the first (preferred/fastest) provider the full timeout budget; trim the
+        # budget slightly for later fallbacks so a chain of failures still stays snappy.
+        per_call_timeout = ai_timeout if i == 0 else max(5, ai_timeout - 3)
+        result = caller(prompt, per_call_timeout, max_tokens)
+        if result:
+            return result
 
     return ''
 
@@ -450,15 +495,26 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         except Exception:
             logging.warning('Ollama free model not available; using local tutor fallback.')
 
+    # Last resort: every online provider was unreachable. Use the built-in rule-based
+    # tutor instead of a generic one-liner, so the student still gets a structured,
+    # book-aware answer (concept explanation, key points, worked example, practice
+    # questions) rather than filler text.
+    fallback = build_ai_learning_response(
+        book_title=book_title or 'this book',
+        book_description=f"{book_description} {cleaned_question}".strip(),
+        concept_query='',
+        book_text=book_text
+    )
+    key_points_text = '\n'.join(f"- {point}" for point in fallback['key_points'])
     answer = (
-        f"Here is the easiest way to understand this: {cleaned_question}. "
-        "Break the idea into small parts, look for the main goal, and connect it to a real example. "
-        "If the concept is unfamiliar, learn the definition first, then understand why it matters in the book."
+        f"{fallback['explanation']}\n\n"
+        f"**Key points**\n{key_points_text}\n\n"
+        f"**Example**\n{fallback['example']}\n\n"
+        "_The AI tutor's online providers are briefly unavailable, so this answer comes from PustakVerse's "
+        "built-in study guide instead — ask again in a moment for a fully tailored response._"
     )
     if screenshot_text:
-        answer += " The uploaded screenshot is being treated as visual context, so look at the labels, arrows, and key words first."
-    if book_title:
-        answer += f" For {book_title}, focus on the main idea and explain it in your own words before moving on."
+        answer += " Your uploaded screenshot is being kept as context for the next question, too."
     return answer
 
 
@@ -747,7 +803,15 @@ def ensure_payment_schema():
                 cursor.execute("ALTER TABLE books ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
                 cursor.execute("ALTER TABLE books ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
         except Exception: pass
-        
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'rp_verified'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN rp_verified BOOLEAN NOT NULL DEFAULT FALSE")
+                cursor.execute("ALTER TABLE books ADD COLUMN rp_verify_message VARCHAR(500) DEFAULT NULL")
+                cursor.execute("ALTER TABLE books ADD COLUMN rp_verified_at TIMESTAMP NULL DEFAULT NULL")
+        except Exception: pass
+
         try:
             cursor.execute("SHOW COLUMNS FROM books LIKE 'description'")
             if not cursor.fetchone():
@@ -791,6 +855,70 @@ def ensure_payment_schema():
         if db:
             try: db.close()
             except: pass
+
+RAZORPAY_KEY_ID_PATTERN = re.compile(r'^rzp_(live|test)_[A-Za-z0-9]{8,}$')
+
+
+def verify_razorpay_keys(key_id, key_secret):
+    """
+    Validate a Razorpay Key ID / Secret pair supplied by an author for a paid book.
+
+    This performs two layers of checking:
+      1. A format check (Razorpay key ids always look like rzp_live_XXXX / rzp_test_XXXX,
+         and secrets are never blank/trivially short) so obvious typos are caught instantly.
+      2. A live check against the Razorpay API (a cheap, read-only "list orders" call) so we
+         can confirm the credentials actually authenticate, without ever charging anything
+         or needing to know a customer's card details.
+
+    Returns a dict: {'status': 'valid' | 'invalid' | 'unverified', 'message': str}
+      - 'valid'      -> credentials were confirmed to work against the Razorpay API right now.
+      - 'invalid'    -> the details are clearly wrong (bad format, or Razorpay rejected them).
+                        These should NOT be saved as-is; the author needs to fix them.
+      - 'unverified' -> the format looks fine but we could not reach Razorpay to confirm it
+                        (network hiccup, Razorpay outage, etc). We still allow saving so a
+                        temporary connectivity issue never blocks an author from publishing,
+                        but we flag it clearly so they know to double-check.
+
+    Nothing about this check is permanent: whatever the result, the author can always come
+    back to Edit Book and update these details again later.
+    """
+    key_id = (key_id or '').strip()
+    key_secret = (key_secret or '').strip()
+
+    if not key_id or not key_secret:
+        return {'status': 'invalid', 'message': 'Both a Razorpay Key ID and Secret Key are required for a paid book.'}
+
+    if not RAZORPAY_KEY_ID_PATTERN.match(key_id):
+        return {
+            'status': 'invalid',
+            'message': "That Key ID doesn't look right. It should look like rzp_live_XXXXXXXXXXXX (or rzp_test_... for testing)."
+        }
+
+    if len(key_secret) < 10:
+        return {'status': 'invalid', 'message': 'That Secret Key looks too short to be a real Razorpay secret. Please check it and try again.'}
+
+    try:
+        client = razorpay.Client(auth=(key_id, key_secret))
+        client.order.all({'count': 1})
+        return {'status': 'valid', 'message': 'Razorpay payment details verified successfully.'}
+    except razorpay.errors.BadRequestError as e:
+        # Razorpay returns 4xx (including authentication failures) as BadRequestError.
+        return {
+            'status': 'invalid',
+            'message': f'Razorpay rejected this Key ID / Secret Key combination ({str(e)[:150]}). Please re-check them in your Razorpay dashboard.'
+        }
+    except (razorpay.errors.ServerError, razorpay.errors.GatewayError):
+        return {
+            'status': 'unverified',
+            'message': "Razorpay's servers could not be reached to verify these keys just now. They were saved, but please confirm they work before relying on this book for sales."
+        }
+    except Exception:
+        logging.exception('Unexpected error verifying Razorpay keys for an author.')
+        return {
+            'status': 'unverified',
+            'message': 'Could not automatically verify these Razorpay keys right now. They were saved, but please double-check them.'
+        }
+
 
 def log_official_activity(official_id, action_desc):
     db = None
@@ -1067,47 +1195,60 @@ def ask_ai():
     screenshot_text = ''
 
     if request.method == 'POST':
-        uploaded_file = request.files.get('screenshot')
-        if uploaded_file and uploaded_file.filename:
-            screenshot_name = save_uploaded_screenshot(uploaded_file)
-            if screenshot_name:
-                screenshot_path = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots', screenshot_name)
-                screenshot_text = extract_text_from_uploaded_image(screenshot_path)
+        try:
+            uploaded_file = request.files.get('screenshot')
+            if uploaded_file and uploaded_file.filename:
+                screenshot_name = save_uploaded_screenshot(uploaded_file)
+                if screenshot_name:
+                    screenshot_path = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots', screenshot_name)
+                    screenshot_text = extract_text_from_uploaded_image(screenshot_path)
 
-        if not question and not screenshot_text:
-            message = 'Ask a question or upload a screenshot to continue the conversation.'
+            if not question and not screenshot_text:
+                message = 'Ask a question or upload a screenshot to continue the conversation.'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'message': message}), 400
+                flash(message, 'error')
+                return render_template('ask_ai.html', book=book, question='', answer='', chat_history=chat_history)
+
+            prompt_text = question or 'Explain this screenshot in the simplest possible way.'
+            book_text = extract_pdf_text_for_learning(
+                (book or {}).get('pdf_file') or '',
+                bool((book or {}).get('private_pdf'))
+            ) if book else ''
+            answer = build_ai_free_response(
+                prompt_text,
+                book_title=(book or {}).get('title') or '',
+                book_description=(book or {}).get('description') or '',
+                screenshot_text=screenshot_text,
+                book_text=book_text,
+                chat_history=chat_history
+            )
+
+            screenshot_name = os.path.basename(screenshot_path) if screenshot_path else ''
+            save_ai_chat_message(session['user_id'], book_id, 'user', prompt_text, screenshot_name)
+            save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
+            chat_history = get_ai_chat_history(session['user_id'], book_id)
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'message': message}), 400
-            flash(message, 'error')
+                return jsonify({
+                    'success': True,
+                    'answer': answer,
+                    'history': chat_history
+                })
+
+            return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=chat_history)
+        except Exception:
+            # Never let an unexpected error surface as a raw error page: that is what forces
+            # the frontend into its generic "please refresh / sign in again" fallback message.
+            # Instead, always answer with valid JSON (for the chat widget) or a normal page
+            # (for a plain form submit), so the student sees a clear, friendly message and can
+            # simply try again without reloading anything.
+            logging.exception('AI tutor request failed unexpectedly.')
+            friendly_message = "The AI tutor hit a snag answering that. Please try asking again — no need to refresh the page."
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': friendly_message}), 200
+            flash(friendly_message, 'error')
             return render_template('ask_ai.html', book=book, question='', answer='', chat_history=chat_history)
-
-        prompt_text = question or 'Explain this screenshot in the simplest possible way.'
-        book_text = extract_pdf_text_for_learning(
-            (book or {}).get('pdf_file') or '',
-            bool((book or {}).get('private_pdf'))
-        ) if book else ''
-        answer = build_ai_free_response(
-            prompt_text,
-            book_title=(book or {}).get('title') or '',
-            book_description=(book or {}).get('description') or '',
-            screenshot_text=screenshot_text,
-            book_text=book_text,
-            chat_history=chat_history
-        )
-
-        screenshot_name = os.path.basename(screenshot_path) if screenshot_path else ''
-        save_ai_chat_message(session['user_id'], book_id, 'user', prompt_text, screenshot_name)
-        save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
-        chat_history = get_ai_chat_history(session['user_id'], book_id)
-
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                'success': True,
-                'answer': answer,
-                'history': chat_history
-            })
-
-        return render_template('ask_ai.html', book=book, question='', answer=answer, chat_history=chat_history)
 
     return render_template('ask_ai.html', book=book, question=question, answer='', chat_history=chat_history)
 
@@ -2243,6 +2384,19 @@ def dashboard():
             book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
             book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
 
+            rp_verified = False
+            rp_verify_message = None
+            if is_paid:
+                verification = verify_razorpay_keys(book_key_id, book_key_secret)
+                rp_verified = verification['status'] == 'valid'
+                rp_verify_message = verification['message']
+                if verification['status'] == 'invalid':
+                    flash(f"Payment details could not be saved: {verification['message']} "
+                          "You can fix this and publish again, or edit the book afterwards.", 'error')
+                    return redirect(url_for('dashboard'))
+                elif verification['status'] == 'unverified':
+                    flash(verification['message'], 'error')
+
             f_cov = c_link if c_link else ""
             if c_file and c_file.filename and not c_link:
                 f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
@@ -2253,9 +2407,20 @@ def dashboard():
                 p_file.save(os.path.join(pdf_folder, f_pdf))
 
             if f_cov and f_pdf:
-                cursor.execute("INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret, description))
+                cursor.execute(
+                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid,
+                     price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret,
+                     rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description)
+                )
                 db.commit()
-                flash("Book published successfully!", "success")
+                if is_paid and rp_verified:
+                    flash("Book published successfully! Your Razorpay payment details were verified.", "success")
+                elif is_paid:
+                    flash("Book published. Note: your Razorpay details couldn't be fully verified — edit the book to fix this before relying on it for sales.", "success")
+                else:
+                    flash("Book published successfully!", "success")
                 return redirect(url_for('dashboard'))
 
         if role in ['developer', 'official'] and request.method == 'POST':
@@ -2325,10 +2490,10 @@ def dashboard():
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id WHERE oa.timestamp >= NOW() - INTERVAL 30 DAY ORDER BY oa.timestamp DESC LIMIT 200")
             official_logs = cursor.fetchall()
             
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.rp_key_id, books.rp_key_secret, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
             archive_books = clean_book_data(cursor.fetchall())
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, description FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
             return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
@@ -2344,7 +2509,7 @@ def dashboard():
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, description FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
             return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
@@ -2354,7 +2519,7 @@ def dashboard():
             author_data = cursor.fetchone()
             session['is_verified'] = author_data['is_verified']
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, description FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
             return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
@@ -2413,7 +2578,31 @@ def edit_book(book_id):
         
         book_key_id = request.form.get('rp_key_id', '').strip() if is_paid else None
         book_key_secret = request.form.get('rp_key_secret', '').strip() if is_paid else None
-        
+
+        rp_verified = bool(book.get('rp_verified'))
+        rp_verify_message = book.get('rp_verify_message')
+        rp_verified_at_sql = ", rp_verified_at=rp_verified_at"
+        rp_verified_at_param = None
+        keys_changed = is_paid and (book_key_id != (book.get('rp_key_id') or '') or book_key_secret != (book.get('rp_key_secret') or ''))
+
+        if is_paid and (keys_changed or not book.get('rp_key_id')):
+            verification = verify_razorpay_keys(book_key_id, book_key_secret)
+            if verification['status'] == 'invalid':
+                flash(f"Payment details were not updated: {verification['message']} "
+                      "Everything else about the book can still be edited — just fix these keys and save again.", 'error')
+                return redirect(url_for('dashboard'))
+            rp_verified = verification['status'] == 'valid'
+            rp_verify_message = verification['message']
+            rp_verified_at_sql = ", rp_verified_at=%s"
+            rp_verified_at_param = datetime.now() if rp_verified else None
+            if verification['status'] == 'unverified':
+                flash(verification['message'], 'error')
+        elif not is_paid:
+            rp_verified = False
+            rp_verify_message = None
+            rp_verified_at_sql = ", rp_verified_at=%s"
+            rp_verified_at_param = None
+
         f_cov = book['cover_image']
         if c_link: 
             f_cov = c_link
@@ -2427,10 +2616,24 @@ def edit_book(book_id):
             f_pdf = secure_filename(p_file.filename)
             pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
             p_file.save(os.path.join(pdf_folder, f_pdf))
-            
-        cursor.execute("UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, private_pdf=%s, preview_pages=%s, rp_key_id=%s, rp_key_secret=%s, description=%s WHERE id=%s", (title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret, description, book_id))
+
+        update_sql = (
+            "UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, "
+            "private_pdf=%s, preview_pages=%s, rp_key_id=%s, rp_key_secret=%s, rp_verified=%s, rp_verify_message=%s"
+            + rp_verified_at_sql + ", description=%s WHERE id=%s"
+        )
+        params = [title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages,
+                  book_key_id, book_key_secret, rp_verified, rp_verify_message]
+        if rp_verified_at_sql.strip().startswith(", rp_verified_at=%s"):
+            params.append(rp_verified_at_param)
+        params.extend([description, book_id])
+
+        cursor.execute(update_sql, tuple(params))
         db.commit()
-        flash("Book updated!", "success")
+        if is_paid and keys_changed and rp_verified:
+            flash("Book updated! Your Razorpay payment details were verified.", "success")
+        else:
+            flash("Book updated!", "success")
     except Exception: 
         flash("Database error.", "error")
     finally:
