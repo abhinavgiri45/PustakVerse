@@ -443,12 +443,20 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if not cleaned_question:
         return 'Please ask a question about this book or a concept you want explained.'
 
-    # Feature: Pre-existing answers for the creator
     query_lower = cleaned_question.lower()
+    
+    # 1. Hardcoded Creator Answer
     if any(kw in query_lower for kw in ["who created you", "who made you", "abhinav giri", "who is abhinav giri", "creator", "owner"]):
         return (
             "I was created by Abhinav Giri. Abhinav is a passionate software developer and tech enthusiast "
             "behind PustakVerse. You can connect with him on Instagram: https://www.instagram.com/abhinavgiri45/"
+        )
+
+    # 2. Hardcoded Model Identity Answer (GranthMind)
+    if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you"]):
+        return (
+            "My name is GranthMind. I am a specialized AI model created and named by Abhinav Giri, "
+            "developed exclusively for PustakVerse to help readers learn and explore our library."
         )
 
     context = ""
@@ -468,9 +476,9 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         if item.get('text')
     )
 
-    # Improved Prompt for Independent, Detailed Answers inside and outside the context
+    # Improved Prompt for Independent, Detailed Answers
     prompt = (
-        "You are PustakVerse's highly knowledgeable and independent AI Assistant. Provide a clear, perfect, and deeply detailed answer. "
+        "You are GranthMind, PustakVerse's highly knowledgeable and independent AI Assistant. Provide a clear, perfect, and deeply detailed answer. "
         "You must synthesize information from both the provided website context below AND your own extensive outside knowledge to give a comprehensive response. "
         "Use this exact readable format: a clear and detailed explanation, then headings `Key points` and `Example` with concise bullets. "
         "For math, wrap inline expressions in $...$ and displayed equations in $$...$$. "
@@ -513,7 +521,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         f"{fallback['explanation']}\n\n"
         f"**Key points**\n{key_points_text}\n\n"
         f"**Example**\n{fallback['example']}\n\n"
-        "_The AI tutor's online providers are briefly unavailable, so this answer comes from PustakVerse's "
+        "_GranthMind's online providers are briefly unavailable, so this answer comes from PustakVerse's "
         "built-in study guide instead — ask again in a moment for a fully tailored response._"
     )
     if screenshot_text:
