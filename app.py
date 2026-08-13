@@ -445,8 +445,8 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 
     query_lower = cleaned_question.lower()
     
-    # 1. Hardcoded Creator Answer
-    if any(kw in query_lower for kw in ["who created you", "who made you", "abhinav giri", "who is abhinav giri", "creator", "owner"]):
+    # 1. Hardcoded Creator Answer (Now includes "why were you made")
+    if any(kw in query_lower for kw in ["who created you", "who made you", "why were you made", "abhinav giri", "who is abhinav giri", "creator", "owner"]):
         return (
             "I was created by Abhinav Giri. Abhinav is a passionate software developer and tech enthusiast "
             "behind PustakVerse. You can connect with him on Instagram: https://www.instagram.com/abhinavgiri45/"
@@ -490,24 +490,6 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     free_answer = generate_free_ai_response(prompt)
     if free_answer:
         return free_answer
-
-    if os.environ.get('OLLAMA_ENABLED', '').strip().lower() in ('1', 'true', 'yes'):
-        model_name = os.environ.get('OLLAMA_MODEL', 'llama3.2').strip() or 'llama3.2'
-        try:
-            import requests
-            response = requests.post(
-                'http://localhost:11434/api/generate',
-                json={'model': model_name, 'prompt': prompt, 'stream': False},
-                timeout=120
-            )
-            if response.status_code == 200:
-                data = response.json()
-                answer = (data.get('response') or '').strip()
-                if answer:
-                    return answer
-        except Exception:
-            import logging
-            logging.warning('Ollama free model not available; using local tutor fallback.')
 
     # Fallback response
     fallback = build_ai_learning_response(
