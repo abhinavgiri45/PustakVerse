@@ -443,6 +443,14 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if not cleaned_question:
         return 'Please ask a question about this book or a concept you want explained.'
 
+    # Feature: Pre-existing answers for the creator
+    query_lower = cleaned_question.lower()
+    if any(kw in query_lower for kw in ["who created you", "who made you", "abhinav giri", "who is abhinav giri", "creator", "owner"]):
+        return (
+            "I was created by Abhinav Giri. Abhinav is a passionate software developer and tech enthusiast "
+            "behind PustakVerse. You can connect with him on Instagram: https://www.instagram.com/abhinavgiri45/"
+        )
+
     context = ""
     if book_title:
         context += f"Book title: {book_title}. "
@@ -460,16 +468,12 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         if item.get('text')
     )
 
+    # Improved Prompt for Independent, Detailed Answers inside and outside the context
     prompt = (
-        "You are PustakVerse's careful AI tutor. Answer the student's latest question using the provided book "
-        "context whenever it is relevant. Do not invent facts, quotations, page numbers, or details not supported by the "
-        "context. If the context does not contain the answer, say so clearly and give only general guidance. "
-        "Before answering, check that each claim and calculation directly answers the question. For mathematics, verify the "
-        "formula, signs, fractions, and exponents before responding; do not include an advanced formula unless it helps the student. "
-        "If you are uncertain, say what is uncertain instead of guessing. "
-        "Use this exact readable format: a short direct answer, then headings `Key points` and `Example` with concise bullets. "
-        "For math, wrap inline expressions in `$...$` and displayed equations in `$$...$$`; use LaTex commands such as `\\frac{a}{b}` and `x^{2}` inside those delimiters. "
-        "Use simple language, but keep subject-specific terms accurate. "
+        "You are PustakVerse's highly knowledgeable and independent AI Assistant. Provide a clear, perfect, and deeply detailed answer. "
+        "You must synthesize information from both the provided website context below AND your own extensive outside knowledge to give a comprehensive response. "
+        "Use this exact readable format: a clear and detailed explanation, then headings `Key points` and `Example` with concise bullets. "
+        "For math, wrap inline expressions in $...$ and displayed equations in $$...$$. "
         f"Book context: {context}\n"
         f"Recent conversation:\n{conversation or 'No earlier messages.'}\n"
         f"Student's latest question: {cleaned_question}"
@@ -482,10 +486,11 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if os.environ.get('OLLAMA_ENABLED', '').strip().lower() in ('1', 'true', 'yes'):
         model_name = os.environ.get('OLLAMA_MODEL', 'llama3.2').strip() or 'llama3.2'
         try:
+            import requests
             response = requests.post(
                 'http://localhost:11434/api/generate',
                 json={'model': model_name, 'prompt': prompt, 'stream': False},
-                timeout=10
+                timeout=120
             )
             if response.status_code == 200:
                 data = response.json()
@@ -493,12 +498,10 @@ def build_ai_free_response(question, book_title='', book_description='', screens
                 if answer:
                     return answer
         except Exception:
+            import logging
             logging.warning('Ollama free model not available; using local tutor fallback.')
 
-    # Last resort: every online provider was unreachable. Use the built-in rule-based
-    # tutor instead of a generic one-liner, so the student still gets a structured,
-    # book-aware answer (concept explanation, key points, worked example, practice
-    # questions) rather than filler text.
+    # Fallback response
     fallback = build_ai_learning_response(
         book_title=book_title or 'this book',
         book_description=f"{book_description} {cleaned_question}".strip(),
@@ -516,7 +519,6 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if screenshot_text:
         answer += " Your uploaded screenshot is being kept as context for the next question, too."
     return answer
-
 
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
     if not pdf_name or pdf_name.startswith('http'):
@@ -2301,12 +2303,13 @@ def my_library():
         cursor = db.cursor(dictionary=True)
         role = session.get('role')
         
+        # We MUST SELECT 'books.created_at' and 'personal_library.added_at' so the HTML can display them!
         if role == 'author': 
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.author_id = %s ORDER BY books.created_at DESC", (session['user_id'],))
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.created_at, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.author_id = %s ORDER BY books.created_at DESC", (session['user_id'],))
         elif role in ['official', 'developer']: 
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.created_at, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
         else: 
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role FROM personal_library JOIN books ON personal_library.book_id = books.id JOIN users ON books.author_id = users.id WHERE personal_library.user_id = %s ORDER BY personal_library.added_at DESC", (session['user_id'],))
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, personal_library.added_at, users.username as author_name, users.role as author_role FROM personal_library JOIN books ON personal_library.book_id = books.id JOIN users ON books.author_id = users.id WHERE personal_library.user_id = %s ORDER BY personal_library.added_at DESC", (session['user_id'],))
             
         saved_books = clean_book_data(cursor.fetchall())
     except Exception: 

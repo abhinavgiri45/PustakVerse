@@ -126,20 +126,6 @@
             padding: 0; 
         }
 
-        .icon-btn { 
-            background: none; 
-            border: none; 
-            cursor: pointer; 
-            color: #334155; 
-            min-width: 48px; 
-            min-height: 48px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: 0.2s; 
-            padding: 0; 
-        }
-
         .icon-btn:hover { 
             color: #f66d2f; 
             transform: scale(1.1); 
@@ -222,7 +208,7 @@
         .book-author { 
             font-size: 1rem; 
             color: #334155; 
-            margin: 0 0 20px 0; 
+            margin: 0 0 10px 0; 
         }
         
         .book-actions { 
@@ -353,6 +339,11 @@
                     
                     <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
+                    
+                    <!-- Added Date Feature: Uses safe to_ist filter instead of strftime to prevent crashes -->
+                    <p style="color: #64748b; font-size: 0.9em; margin-bottom: 20px;">
+                        Added: <strong>{{ (book.added_at or book.created_at) | to_ist }}</strong>
+                    </p>
                     
                     <div class="book-actions">
                         <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Read Full Book</a>
