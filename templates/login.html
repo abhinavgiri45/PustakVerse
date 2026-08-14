@@ -306,6 +306,148 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.form-area').forEach(form => form.classList.remove('active'));
+                            <input type="hidden" name="login_portal" value="reader">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" name="username" required placeholder="Enter your username">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="password" id="login_pass_reader" required placeholder="Enter your password">
+                            <span class="toggle-password" onclick="togglePassword('login_pass_reader', this)">👁️</span>
+                        </div>
+                        <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
+                        <button type="submit" class="btn-submit orange">Sign In as Reader</button>
+                    </form>
+
+                    <div class="divider">or continue with</div>
+                    <a href="/login/google" class="btn-google">
+                        <svg class="google-icon" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        Sign in with Google
+                    </a>
+                </div>
+
+                <!-- AUTHOR / OFFICIAL LOGIN -->
+                <div id="official" class="form-area {% if active_tab == 'official' %}active{% endif %}">
+                    <h2>
+                        <span style="font-size: 2.2rem;">🏛️</span>
+                        Creator / Admin Portal
+                    </h2>
+                    <form action="/login" method="POST">
+                        <input type="hidden" name="action" value="login">
+                        <input type="hidden" name="login_portal" value="author_official">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" name="username" required placeholder="Enter your registered username">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="password" id="login_pass_admin" required placeholder="Enter your secure password">
+                            <span class="toggle-password" onclick="togglePassword('login_pass_admin', this)">👁️</span>
+                        </div>
+                        <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
+                        <button type="submit" class="btn-submit dark">Secure Sign In</button>
+                    </form>
+                </div>
+
+                <!-- REGISTRATION FORM WITH AJAX -->
+                <div id="register" class="form-area">
+                    <h2>
+                        <span style="font-size: 2.2rem;">✨</span>
+                        Join PustakVerse
+                    </h2>
+
+                    <!-- Main Reg Form -->
+                    <form id="registrationForm" onsubmit="submitRegistration(event)">
+                        <div class="form-group">
+                            <label>Choose Username</label>
+                            <input type="text" id="reg_username" required placeholder="Used for login">
+                            <span id="usernameStatus"></span>
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="reg_email" required placeholder="e.g., name@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="reg_password" required minlength="6" placeholder="Minimum 6 characters">
+                            <span class="toggle-password" onclick="togglePassword('reg_password', this)">👁️</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Account Type</label>
+                            <select id="roleSelect" onchange="toggleAuthorReason()">
+                                <option value="reader">Reader (Access Global Library)</option>
+                                <option value="author">Author (Publish Books)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="authorReasonGroup" style="display: none; background: #fffaf0; padding: 15px; border-radius: 6px; border: 1px solid #fbd38d;">
+                            <label style="color: #c05621;">Why do you want an Author Account?</label>
+                            <input type="text" id="reg_ver_reason" placeholder="Briefly describe your writing/books" style="border-color: #f6ad55;">
+                            <small style="color: #dd6b20; display: block; margin-top: 5px;">Author accounts require manual review by administrators.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Security Question (For Account Recovery)</label>
+                            <select id="reg_sec_q" required>
+                                <option value="What is your favorite book?">What is your favorite book?</option>
+                                <option value="What city were you born in?">What city were you born in?</option>
+                                <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Security Answer</label>
+                            <input type="text" id="reg_sec_a" required placeholder="Keep this safe">
+                        </div>
+
+                        <div class="terms-checkbox-group">
+                            <input type="checkbox" id="accept_terms" required>
+                            <label for="accept_terms">
+                                I verify that I am over 13 years of age and I accept the <a href="/terms?role=reader" id="termsLink" target="_blank">Reader Terms and Conditions</a>.
+                            </label>
+                        </div>
+
+                        <button type="submit" id="btnSendOtp" class="btn-submit orange">Verify Email & Create Account</button>
+                        
+                        <div class="divider">or quickly join with</div>
+                        <a href="/login/google" class="btn-google">
+                            <svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                            Sign up with Google
+                        </a>
+                    </form>
+
+                    <!-- AJAX OTP Verification Section (Same Page) -->
+                    <div id="otpSection" style="display: none; padding-top: 10px;">
+                        <h3 style="margin-top: 0; color: var(--navy); text-align: center;">Verify Your Email</h3>
+                        <p style="text-align: center; color: #718096; font-size: 0.95rem;">Enter the 6-digit code sent to your email.</p>
+                        
+                        <!-- 5 Minute Timer -->
+                        <div id="otpTimerDisplay" style="text-align: center; font-weight: bold; color: #e53e3e; margin-bottom: 15px; font-size: 1.1rem;">
+                            Time remaining: 05:00
+                        </div>
+                        
+                        <div class="form-group">
+                            <input type="text" id="reg_otp_input" placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.2rem; text-align: center;">
+                        </div>
+                        <button type="button" id="btnVerifyOtp" onclick="verifyOtp()" class="btn-submit orange" style="margin-bottom: 10px;">Submit Code & Join</button>
+                        
+                        <!-- Resend Button -->
+                        <button type="button" id="btnResendOtp" onclick="resendOtp()" class="btn-submit dark" disabled style="opacity: 0.5;">Resend Code (wait 60s)</button>
+                    </div>
+
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Tab Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.form-area').forEach(form => form.classList.remove('active'));
                             </form>
                     <div style="text-align: center; margin-top: 20px;">
                         <a href="{{ url_for('login') }}" class="forgot-link" style="text-align: center;">Cancel and go back</a>
