@@ -7,6 +7,7 @@ import re
 import time
 import threading
 from datetime import timedelta
+import google.generativeai as genai
 import io
 import base64
 import razorpay
