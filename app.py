@@ -662,6 +662,12 @@ def send_email_wrapper(to_email, subject, body_html):
         delivery_errors.append('No email provider is configured.')
     logging.error('Email delivery to %s failed. %s', to_email, ' | '.join(delivery_errors))
     return False
+
+def send_email_async(func, *args):
+    """Runs email sending in a background thread to prevent SMTP connection throttling and UI freezing."""
+    thread = threading.Thread(target=func, args=args)
+    thread.start()
+    
 def send_registration_otp(to_email, otp): 
     return send_email_wrapper(to_email, 'PustakVerse - Verify Your Email', generate_html_email("Account Verification", f"<p>Your registration verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
 def send_pending_author(to_email, username):
@@ -780,6 +786,13 @@ def ensure_payment_schema():
             cursor.execute("SHOW COLUMNS FROM users LIKE 'two_factor_enabled'")
             if not cursor.fetchone(): 
                 cursor.execute("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'failed_attempts'")
+            if not cursor.fetchone(): 
+                cursor.execute("ALTER TABLE users ADD COLUMN failed_attempts INT DEFAULT 0")
+                cursor.execute("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP NULL")
         except Exception: pass
         
         cursor.execute("CREATE TABLE IF NOT EXISTS username_requests (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, new_username VARCHAR(100) NOT NULL, reason TEXT NOT NULL, status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
@@ -1510,18 +1523,201 @@ def login():
                         flash("Failed to send 2FA email. Contact admin.", "error")
                         return render_template('login.html', active_tab=login_portal)
 
-                session['user_id'] = user['id']
-                session['username'] = user['username']
-                session['role'] = user['role']
-                session['is_verified'] = user['is_verified']
-                session['show_telegram_popup'] = True
+@app.route('/register', methods=['POST'])
+def register():
+    # Handle AJAX JSON requests from the frontend
+    data = request.json if request.is_json else request.form
+    action = data.get('action', 'send_otp')
+
+    if action == 'send_otp':
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        role = data.get('role', 'reader')
+        sec_question = data.get('security_question', '')
+        sec_answer = data.get('security_answer', '').lower().strip()
+        verification_reason = data.get('verification_reason', '')
+        
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            return jsonify({'success': False, 'message': 'Username can only contain letters, numbers, and underscores.'})
+
+        if role not in ['reader', 'author']: 
+            role = 'reader'
+
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor()
+            cursor.execute("SELECT id FROM users WHERE username = %s OR email = %s", (username, email))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Username or Email is already registered.'})
+        except Exception:
+            return jsonify({'success': False, 'message': 'Database connection error.'})
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+        otp = str(random.randint(100000, 999999))
+        session['reg_otp'] = otp
+        session['reg_otp_expiry'] = time.time() + 300 # 5 Minute Expiration limit
+        session['last_otp_sent'] = time.time()
+        session['reg_data'] = {
+            'username': username, 'email': email, 'password_hash': generate_password_hash(password),
+            'role': role, 'sec_question': sec_question, 'sec_answer': sec_answer, 'verification_reason': verification_reason
+        }
+
+        if send_registration_otp(email, otp):
+            return jsonify({'success': True, 'message': 'Verification code sent to your email.'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to send OTP. Check your email address.'})
+
+    elif action == 'resend_otp':
+        reg_data = session.get('reg_data')
+        if not reg_data:
+            return jsonify({'success': False, 'message': 'Session expired. Please refresh the page.'})
+        
+        # 60 second cooldown for resending
+        last_sent = session.get('last_otp_sent', 0)
+        if time.time() - last_sent < 60:
+            return jsonify({'success': False, 'message': 'Please wait 60 seconds before resending.'})
+            
+        otp = str(random.randint(100000, 999999))
+        session['reg_otp'] = otp
+        session['reg_otp_expiry'] = time.time() + 300
+        session['last_otp_sent'] = time.time()
+        
+        if send_registration_otp(reg_data['email'], otp):
+            return jsonify({'success': True, 'message': 'A new OTP has been sent.'})
+        return jsonify({'success': False, 'message': 'Failed to send OTP.'})
+
+    elif action == 'verify_otp':
+        user_otp = data.get('otp', '').replace(' ', '').strip()
+        correct_otp = session.get('reg_otp')
+        expiry = session.get('reg_otp_expiry', 0)
+        reg_data = session.get('reg_data')
+
+        if not correct_otp or not reg_data:
+            return jsonify({'success': False, 'message': 'Session expired. Please restart registration.'})
+        
+        if time.time() > expiry:
+            return jsonify({'success': False, 'message': 'OTP has expired. Please click Resend.'})
+
+        if user_otp == correct_otp:
+            db = None
+            try:
+                db = get_db_connection()
+                cursor = db.cursor()
+                is_verified = (reg_data['role'] == 'reader')
                 
-                flash(f"Welcome back, {user['username']}!", "success")
-                return redirect(url_for('index'))
-            
-            flash("Invalid username or password.", "error")
-            return render_template('login.html', active_tab=login_portal)
-            
+                cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
+                               (reg_data['username'], reg_data['email'], reg_data['password_hash'], reg_data['role'], is_verified, reg_data['sec_question'], reg_data['sec_answer'], reg_data['verification_reason']))
+                db.commit()
+
+                # Fix for missing emails: Run Welcome Emails Asynchronously to avoid SMTP blocking
+                if reg_data['role'] == 'reader': 
+                    send_email_async(send_welcome_reader, reg_data['email'], reg_data['username'])
+                elif reg_data['role'] == 'author': 
+                    send_email_async(send_pending_author, reg_data['email'], reg_data['username'])
+                
+                session.pop('reg_otp', None)
+                session.pop('reg_data', None)
+                
+                msg = "Account created! Please sign in." if reg_data['role'] == 'reader' else "Author account created! Please wait for approval."
+                return jsonify({'success': True, 'message': msg, 'redirect': url_for('login')})
+                
+            except mysql.connector.IntegrityError: 
+                return jsonify({'success': False, 'message': 'Email or Username was taken while verifying.'})
+            except Exception: 
+                return jsonify({'success': False, 'message': 'Database error.'})
+            finally:
+                if db:
+                    try: db.close()
+                    except: pass
+        else:
+            return jsonify({'success': False, 'message': 'Invalid Verification Code.'})
+
+    return jsonify({'success': False, 'message': 'Invalid action.'})
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        action = request.form.get('action', 'login')
+        
+        if action == 'login':
+            login_portal = request.form.get('login_portal', 'reader')
+            db = None
+            try:
+                db = get_db_connection()
+                cursor = db.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM users WHERE username = %s", (request.form['username'].strip(),))
+                user = cursor.fetchone()
+                
+                if user:
+                    # MAX 5 PASSWORD ATTEMPTS LOCKOUT
+                    if user.get('locked_until') and user['locked_until'] > datetime.now():
+                        diff = user['locked_until'] - datetime.now()
+                        mins = int(diff.total_seconds() / 60) + 1
+                        flash(f"Account temporarily locked due to 5 failed attempts. Please try again in {mins} minutes.", "error")
+                        return render_template('login.html', active_tab=login_portal)
+
+                    if check_password_hash(user['password_hash'], request.form['password']):
+                        # Reset failed attempts on success
+                        if user.get('failed_attempts', 0) > 0:
+                            cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user['id'],))
+                            db.commit()
+
+                        if login_portal == 'reader' and user['role'] != 'reader': 
+                            flash("Please use the 'Author / Official' tab to log in to your account.", "error")
+                            return render_template('login.html', active_tab='reader')
+                        if login_portal == 'author_official' and user['role'] not in ['author', 'official', 'developer']: 
+                            flash("Readers must log in using the 'Reader Login' tab.", "error")
+                            return render_template('login.html', active_tab='official')
+
+                        if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
+                            otp = str(random.randint(100000, 999999))
+                            session['login_2fa_otp'] = otp
+                            session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
+                            
+                            if send_2fa_email(user['email'], otp): 
+                                flash("A 2-Step Verification code has been sent to your email.", "info")
+                                return render_template('login.html', show_2fa_form=True, email=user['email'])
+                            else: 
+                                flash("Failed to send 2FA email. Contact admin.", "error")
+                                return render_template('login.html', active_tab=login_portal)
+
+                        session['user_id'] = user['id']
+                        session['username'] = user['username']
+                        session['role'] = user['role']
+                        session['is_verified'] = user['is_verified']
+                        session['show_telegram_popup'] = True
+                        
+                        flash(f"Welcome back, {user['username']}!", "success")
+                        return redirect(url_for('index'))
+                    else:
+                        # INCORRECT PASSWORD: Add Strike
+                        attempts = user.get('failed_attempts', 0) + 1
+                        if attempts >= 5:
+                            lock_time = datetime.now() + timedelta(minutes=15)
+                            cursor.execute("UPDATE users SET failed_attempts = %s, locked_until = %s WHERE id = %s", (attempts, lock_time, user['id']))
+                            flash("Account locked for 15 minutes due to 5 consecutive failed attempts.", "error")
+                        else:
+                            cursor.execute("UPDATE users SET failed_attempts = %s WHERE id = %s", (attempts, user['id']))
+                            flash(f"Invalid username or password. {5 - attempts} attempts remaining.", "error")
+                        db.commit()
+                        return render_template('login.html', active_tab=login_portal)
+                else:
+                    flash("Invalid username or password.", "error")
+                    return render_template('login.html', active_tab=login_portal)
+            except Exception:
+                flash("Secure connection to the database timed out.", "error")
+                return render_template('login.html', active_tab=login_portal)
+            finally:
+                if db:
+                    try: db.close()
+                    except: pass
+                    
         elif action == 'verify_2fa':
             user_otp = request.form.get('otp', '').replace(' ', '').strip()
             pending_user = session.get('pending_2fa_user')
@@ -1544,7 +1740,6 @@ def login():
                 return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
                 
     return render_template('login.html', active_tab='reader')
-
 @app.route('/login/google')
 def google_login(): 
     return google.authorize_redirect(url_for('google_authorize', _external=True))
