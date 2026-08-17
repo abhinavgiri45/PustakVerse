@@ -2,9 +2,13 @@
 {% block content %}
 
 <style>
-    /* INSTANTLY HIDE UNNECESSARY NAVBAR ELEMENTS FROM BASE.HTML */
-    .nav-search { display: none !important; }
-    .nav-links a { display: none !important; } 
+    /* INSTANTLY HIDE UNNECESSARY BASE.HTML ELEMENTS (Search, Menu, Telegram Popup) */
+    .nav-search, .search-container, .search-bar { display: none !important; }
+    .nav-links a:not(.custom-back-btn) { display: none !important; } 
+    .menu-btn, .menu-toggle, .hamburger, .sidebar-toggle, .menu-icon { display: none !important; pointer-events: none; }
+    .sidebar, .side-menu, #sidebar, .mobile-menu { display: none !important; }
+    .overlay, .sidebar-overlay, #sidebar-overlay, .blur-overlay { display: none !important; }
+    #telegramPopup, .telegram-popup, #telegram-modal { display: none !important; }
     
     /* CUSTOM 'BACK' BUTTON STYLING */
     .nav-links .custom-back-btn { 
@@ -29,7 +33,7 @@
         --card-bg: #ffffff;
     }
 
-    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 20px; }
+    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 20px; z-index: 10; position: relative; }
     .auth-box { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; margin: 0 auto; }
 
     .flash-wrapper { padding: 15px 20px 0 20px; }
@@ -254,12 +258,20 @@
 </div>
 
 <script>
-    // INJECT THE CLEAN BACK BUTTON INTO THE MAIN NAVBAR
+    // INJECT THE CLEAN BACK BUTTON AND FORCE-CLOSE SIDEBAR/MODALS
     document.addEventListener('DOMContentLoaded', () => {
         const navLinks = document.querySelector('.nav-links');
         if (navLinks) {
             navLinks.insertAdjacentHTML('beforeend', '<a href="/" class="custom-back-btn">← Back to Library</a>');
         }
+
+        // Force hide telegram popup and overlay just in case CSS misses it
+        const telegramPopup = document.getElementById('telegramPopup');
+        const overlay = document.querySelector('.overlay');
+        const sidebar = document.querySelector('.sidebar');
+        if (telegramPopup) telegramPopup.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
 
         // Check if user came from Cinematic Intro
         const urlParams = new URLSearchParams(window.location.search);

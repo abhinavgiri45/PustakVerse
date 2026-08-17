@@ -537,20 +537,11 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     pustakverse_knowledge = """
 --- PUSTAKVERSE PLATFORM KNOWLEDGE BASE ---
 * Platform Name: PustakVerse (A Global Digital Library).
-* Creator & Developer: Abhinav Giri (Instagram: https://www.instagram.com/abhinavgiri45/).
-* AI Identity: You are 'GranthMind', the official AI Assistant of PustakVerse, created by Abhinav Giri.
+* Creator & Developer: Abhinav Giri.
+* AI Identity: You are 'GranthMind', the official AI Assistant of PustakVerse.
 * Mission: "Every Book. Every Mind. Free. Read More. Grow More. Inspire India."
-* Core Features: 
-  - Free & Premium books available.
-  - 0% Commission Policy for Authors (Authors keep 100% of their earnings).
-  - Direct secure payments via Razorpay.
-  - Integrated AI Study Tutor (GranthMind) to explain concepts and images.
-  - Strict Anti-Piracy and Copyright protection (no downloading/printing allowed, only online reading).
-* User Roles:
-  1. Reader: Can browse, save free books, purchase premium books, and read.
-  2. Author: Can publish books, set prices, and earn directly.
-  3. Official: Administrators who moderate content, approve authors, and handle reports.
-  4. Developer: Abhinav Giri, the ultimate admin.
+* Core Features: Free & Premium books, 0% Commission Policy for Authors, Secure payments.
+* User Roles: Reader, Author, Official, Developer.
 -------------------------------------------
 """
 
@@ -581,7 +572,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         import logging
         logging.warning(f"Gemini API failed, falling back to free providers: {str(e)}")
 
-    # 4. Secondary Engine: Fallback to other configured providers (Groq, OpenRouter, etc.)
+    # 4. Secondary Engine: Fallback to other configured providers
     free_answer = generate_free_ai_response(prompt)
     if free_answer:
         return free_answer
@@ -647,6 +638,8 @@ def inject_global_settings():
                 fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
                 fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
                 fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
+                fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Free.")
+                fetched_settings['intro_sub_tagline'] = str(fetched_settings.get('intro_sub_tagline') or "Prepare to explore the universe of knowledge...")
                 
                 global_cache['settings'] = fetched_settings
                 global_cache['catalogs'] = fetched_catalogs
@@ -938,6 +931,23 @@ def ensure_payment_schema():
         except Exception: pass
 
         cursor.execute("INSERT IGNORE INTO front_page_settings (id) VALUES (1)")
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'rp_key_id'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
+        except Exception: pass
+
+        # ---> NEW INTRO TEXT COLUMNS ADDED HERE <---
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'intro_tagline'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN intro_tagline VARCHAR(255) DEFAULT 'Every Book. Every Mind. Free.'")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN intro_sub_tagline VARCHAR(255) DEFAULT 'Prepare to explore the universe of knowledge...'")
+        except Exception: pass
+
+        cursor.execute("INSERT IGNORE INTO front_page_settings (id) VALUES (1)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES ('Fiction'), ('Non-Fiction'), ('Educational'), ('History'), ('Poetry')")
         cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
@@ -1143,9 +1153,6 @@ def index():
 
 @app.route('/intro')
 def intro():
-    # If a user is already logged in, they shouldn't see the intro
-    if 'user_id' in session:
-        return redirect(url_for('index'))
     return render_template('intro.html')
 
 @app.route('/category/<name>')
@@ -2726,6 +2733,19 @@ def dashboard():
             try: db.close()
             except: pass
 
+@app.route('/verify_razorpay_ajax', methods=['POST'])
+def verify_razorpay_ajax():
+    if session.get('role') not in ['author', 'developer', 'official']:
+        return jsonify({'status': 'invalid', 'message': 'Unauthorized.'}), 401
+    
+    data = request.json or {}
+    key_id = data.get('key_id', '').strip()
+    key_secret = data.get('key_secret', '').strip()
+    
+    # Calls your existing robust verifier function
+    result = verify_razorpay_keys(key_id, key_secret)
+    return jsonify(result)
+
 @app.route('/edit_book/<int:book_id>', methods=['POST'])
 def edit_book(book_id):
     if 'user_id' not in session: 
@@ -2848,6 +2868,10 @@ def update_front_page():
     rp_key_id = request.form.get('rp_key_id', '').strip()
     rp_key_secret = request.form.get('rp_key_secret', '').strip()
     
+    # Capture the new intro texts
+    intro_tagline = request.form.get('intro_tagline', '').strip()
+    intro_sub_tagline = request.form.get('intro_sub_tagline', '').strip()
+    
     db = None
     try:
         db = get_db_connection()
@@ -2869,7 +2893,11 @@ def update_front_page():
         final_rp_id = rp_key_id if rp_key_id else settings_data.get('rp_key_id', '')
         final_rp_secret = rp_key_secret if rp_key_secret else settings_data.get('rp_key_secret', '')
         
-        cursor.execute("UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s WHERE id=1", (title, subtitle, font_color, final_logo, donation_active, final_qr, final_rp_id, final_rp_secret))
+        # Save everything to the database
+        cursor.execute(
+            "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
+            (title, subtitle, font_color, final_logo, donation_active, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
+        )
         db.commit()
         invalidate_cache()
         flash("Platform settings updated!", "success")

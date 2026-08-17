@@ -9,16 +9,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <!-- SMART ONBOARDING REDIRECT -->
+    <!-- SMART ONBOARDING REDIRECT -->
     <script>
-        // Use Jinja to check if the user has an active session on the backend
-        const isLoggedIn = {{ 'true' if session.get('user_id') else 'false' }};
-        
-        // If they are logged in, silently mark them as onboarded so the intro never bothers them
-        if (isLoggedIn) {
-            localStorage.setItem('pustakverse_onboarded', 'true');
-        } 
-        // If they are NOT logged in AND it is their first time, route them to the cinematic intro
-        else if (!localStorage.getItem('pustakverse_onboarded')) {
+        // Trigger for ALL users (logged in or not) on their first visit
+        if (!localStorage.getItem('pustakverse_onboarded')) {
             const currentPath = window.location.pathname;
             const allowedPaths = ['/intro', '/login', '/register', '/forgot-password'];
             

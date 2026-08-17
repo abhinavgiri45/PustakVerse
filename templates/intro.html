@@ -84,25 +84,32 @@
     </style>
 </head>
 <body>
-
     <div class="cinematic-container">
         <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo">
-        <h1 class="tagline">Every Book. Every Mind. Free.</h1>
-        <p class="sub-tagline">Prepare to explore the universe of knowledge...</p>
+        <!-- These now pull directly from your Developer Dashboard! -->
+        <h1 class="tagline">{{ site_settings.intro_tagline }}</h1>
+        <p class="sub-tagline">{{ site_settings.intro_sub_tagline }}</p>
     </div>
 
-    <button class="skip-btn" onclick="goToLogin()">Skip Intro</button>
+    <!-- Smart button text based on session status -->
+    <button class="skip-btn" onclick="goToNext()">
+        {% if session.get('user_id') %} Skip to Library {% else %} Skip Intro {% endif %}
+    </button>
 
     <script>
-        // Fallback timeout: Go to login after 5.5 seconds automatically
         const timeoutId = setTimeout(() => {
-            goToLogin();
+            goToNext();
         }, 5500);
 
-        function goToLogin() {
+        function goToNext() {
             clearTimeout(timeoutId);
-            // Using .replace() means they can't hit the back button and get stuck in the intro
-            window.location.replace("/login?first_time=true"); 
+            // If they are logged in, go straight to the library! 
+            // If they are logged out, push to login page.
+            {% if session.get('user_id') %}
+                window.location.replace("/"); 
+            {% else %}
+                window.location.replace("/login?first_time=true"); 
+            {% endif %}
         }
     </script>
 </body>

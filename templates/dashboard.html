@@ -589,8 +589,15 @@
                                 
                                 <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Author's Razorpay Payment Keys (For this book)</label>
                                 <small style="color: #15803d; display: block; margin-bottom: 8px;">100% of sales will go directly to your linked account.</small>
+                                
+                                <!-- New Dynamic Status Box -->
+                                <div id="publish_rp_status" style="display: none; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;"></div>
+                                
                                 <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Your Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
-                                <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="border-color: #bbf7d0;">
+                                <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                                
+                                <!-- New Verify Button -->
+                                <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('publish')">Test / Verify Keys</button>
                             </div>
                         </div>
                         
@@ -957,10 +964,17 @@
                     <input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book
                     <div id="edit_paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
                         <input type="text" name="price_inr" id="edit_price_inr" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
-                        <div id="edit_rp_status" style="display:none; margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem;"></div>
+                        
+                        <!-- Dynamic Status Box -->
+                        <div id="edit_rp_status" style="display:none; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;"></div>
+                        
                         <input type="text" name="rp_key_id" id="edit_rp_key_id" placeholder="Live Key ID (rzp_live_...)" style="margin-bottom: 10px;">
-                        <input type="password" name="rp_key_secret" id="edit_rp_key_secret" placeholder="Secret Key">
-                        <small style="color:#64748b; display:block; margin-top:6px;">Changing either key re-verifies your Razorpay details when you save. You can update these any time.</small>
+                        <input type="password" name="rp_key_secret" id="edit_rp_key_secret" placeholder="Secret Key" style="margin-bottom: 10px;">
+                        
+                        <!-- New Verify Button -->
+                        <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('edit')">Test / Verify Keys</button>
+                        
+                        <small style="color:#64748b; display:block; margin-top:10px;">Changing either key re-verifies your Razorpay details when you save. You can update these any time.</small>
                     </div>
                 </div>
                 <button type="submit" class="btn-sm btn-orange">Save Changes</button>
@@ -1088,6 +1102,72 @@
                 keySecretInput.required = false;
             } 
         }
+        
+    // Instant Live Verification for Razorpay Keys
+        async function verifyRazorpayKeys(context) {
+            let keyIdInput, keySecretInput, statusDiv;
+            const btn = event.target;
+            
+            if (context === 'publish') {
+                keyIdInput = document.getElementById('rp_key_id_input');
+                keySecretInput = document.getElementById('rp_key_secret_input');
+                statusDiv = document.getElementById('publish_rp_status');
+            } else {
+                keyIdInput = document.getElementById('edit_rp_key_id');
+                keySecretInput = document.getElementById('edit_rp_key_secret');
+                statusDiv = document.getElementById('edit_rp_status');
+            }
+
+            const keyId = keyIdInput.value.trim();
+            const keySecret = keySecretInput.value.trim();
+
+            if (!keyId || !keySecret) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.color = '#991b1b';
+                statusDiv.textContent = 'Please enter both Key ID and Secret Key to verify.';
+                return;
+            }
+
+            // UI Loading state
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = 'Verifying...';
+            statusDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/verify_razorpay_ajax', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key_id: keyId, key_secret: keySecret })
+                });
+                const data = await response.json();
+
+                statusDiv.style.display = 'block';
+                if (data.status === 'valid') {
+                    statusDiv.style.background = '#dcfce7';
+                    statusDiv.style.color = '#166534';
+                    statusDiv.innerHTML = '✓ ' + data.message;
+                } else if (data.status === 'unverified') {
+                    statusDiv.style.background = '#fef3c7';
+                    statusDiv.style.color = '#92400e';
+                    statusDiv.innerHTML = '⚠ ' + data.message;
+                } else {
+                    statusDiv.style.background = '#fee2e2';
+                    statusDiv.style.color = '#991b1b';
+                    statusDiv.innerHTML = '✗ ' + data.message;
+                }
+            } catch (err) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.color = '#991b1b';
+                statusDiv.textContent = 'Network error. Could not reach server to verify.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
     </script>
 </body>
 </html>
