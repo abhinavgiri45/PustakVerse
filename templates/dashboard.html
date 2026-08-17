@@ -1,500 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <style>
-        :root { 
-            --nav-bg: #2d3748; 
-            --primary-orange: #f66d2f; 
-            --bg-light: #f7fafc; 
-            --text-dark: #2d3748; 
-            --text-light: #718096; 
-            --card-bg: #ffffff; 
-        }
-        
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', sans-serif; 
-            background-color: var(--bg-light); 
-            color: var(--text-dark); 
-            -webkit-font-smoothing: antialiased; 
-        }
-        
-        .navbar { 
-            background-color: var(--nav-bg); 
-            padding: 12px 40px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        
-        .navbar-brand img { 
-            height: 45px; 
-            object-fit: contain; 
-        }
-        
-        .navbar-links { 
-            display: flex; 
-            gap: 25px; 
-            align-items: center; 
-        }
-        
-        .navbar-links a { 
-            color: white; 
-            text-decoration: none; 
-            font-weight: 500; 
-            font-size: 0.95rem; 
-        }
-        
-        .navbar-links a:hover { 
-            color: var(--primary-orange); 
-        }
-        
-        .btn-logout { 
-            background: transparent; 
-            border: 1px solid #e2e8f0; 
-            color: white; 
-            padding: 8px 20px; 
-            border-radius: 25px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: 0.2s;
-        }
-        
-        .btn-logout:hover { 
-            background: #e2e8f0; 
-            color: var(--nav-bg); 
-        }
-        
-        .dashboard-header { 
-            background: white; 
-            border-bottom: 1px solid #e2e8f0; 
-            padding: 30px 40px; 
-            margin-bottom: 30px; 
-        }
-        
-        .dashboard-header h1 { 
-            margin: 0; 
-            font-size: 2rem; 
-            color: var(--nav-bg); 
-        }
-        
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            padding: 0 20px 50px 20px;
-        }
-        
-        .panel { 
-            background: var(--card-bg); 
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-            padding: 30px; 
-            margin-bottom: 30px; 
-            border: 1px solid #edf2f7; 
-        }
-        
-        .panel h2 { 
-            margin-top: 0; 
-            border-bottom: 2px solid #edf2f7; 
-            padding-bottom: 10px; 
-            margin-bottom: 20px; 
-            color: var(--nav-bg); 
-        }
+{% extends 'base.html' %}
 
-        .table-scroll-container {
-            max-height: 400px;
-            overflow-y: auto;
-            overflow-x: auto;
-            border: 1px solid #edf2f7;
-            border-radius: 6px;
-        }
-        
-        .table-scroll-container::-webkit-scrollbar { 
-            width: 8px; 
-            height: 8px; 
-        }
-        
-        .table-scroll-container::-webkit-scrollbar-track { 
-            background: #f8fafc; 
-            border-radius: 4px; 
-        }
-        
-        .table-scroll-container::-webkit-scrollbar-thumb { 
-            background: #cbd5e1; 
-            border-radius: 4px; 
-        }
-        
-        .table-scroll-container::-webkit-scrollbar-thumb:hover { 
-            background: #94a3b8; 
-        }
+{% block title %}Dashboard · {{ session.username }} · PustakVerse{% endblock %}
 
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 0; 
-        }
-        
-        th, td { 
-            padding: 15px; 
-            text-align: left; 
-            border-bottom: 1px solid #edf2f7; 
-            vertical-align: middle;
-        }
-        
-        th { 
-            background: #f8fafc; 
-            color: var(--text-light); 
-            text-transform: uppercase; 
-            font-size: 0.85rem; 
-            position: sticky; 
-            top: 0; 
-            z-index: 10; 
-            box-shadow: 0 1px 0 #edf2f7;
-        }
-        
-        .btn-sm { 
-            padding: 8px 12px; 
-            border: none; 
-            border-radius: 4px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            color: white;
-        }
-        
-        .btn-green { background: #38a169; } 
-        .btn-red { background: #e53e3e; } 
-        .btn-orange { background: var(--primary-orange); } 
-        .btn-dark { background: var(--nav-bg); } 
-        .btn-warn { background: #d97706; }
-        
-        .form-group { 
-            margin-bottom: 20px; 
-        }
-        
-        label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: 600; 
-            font-size: 0.9rem; 
-        }
-        
-        input[type="text"], 
-        input[type="password"], 
-        input[type="email"], 
-        input[type="file"], 
-        select, 
-        textarea { 
-            width: 100%; 
-            padding: 12px; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            background: #f8fafc; 
-            font-family: inherit; 
-        }
-        
-        .flash { 
-            padding: 15px; 
-            border-radius: 6px; 
-            margin-bottom: 20px; 
-            text-align: center; 
-            font-weight: 500; 
-        }
-        
-        .flash.success { background: #dcfce7; color: #166534; } 
-        .flash.error { background: #fee2e2; color: #991b1b; } 
-        .flash.info { background: #e0f2fe; color: #075985; }
-        
-        .grid-2 { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 30px; 
-        }
+{% block content %}
+<div class="container">
+    <!-- USER WELCOME PROFILE HERO -->
+    <div class="card" style="padding: 32px; margin-bottom: 28px; background: linear-gradient(135deg, var(--navy) 0%, #1e293b 100%); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 18px;">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 800; color: #ffffff; box-shadow: 0 4px 14px var(--orange-glow);">
+                    {{ session.username[0]|upper }}
+                </div>
+                <div>
+                    <h1 style="font-family: var(--font-serif); font-size: 2rem; margin: 0 0 4px; color: #ffffff;">
+                        Welcome, {{ session.username }}
+                    </h1>
+                    <div style="display: flex; gap: 10px; align-items: center; font-size: 0.9rem; color: #cbd5e1;">
+                        <span>Account Role: <strong style="color: var(--orange); text-transform: uppercase;">{{ session.role }}</strong></span>
+                        <span>•</span>
+                        {% if session.is_verified %}
+                            <span style="color: #6ee7b7;">✓ Verified Status</span>
+                        {% else %}
+                            <span style="color: #fde047;">⏳ Standard Reader</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
-        @media (max-width: 768px) { 
-            .grid-2 { 
-                grid-template-columns: 1fr; 
-            } 
-            .navbar { 
-                flex-direction: column; 
-                padding: 15px; gap: 15px; 
-            } 
-        }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}">
-            </a>
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ url_for('my_library') }}" class="btn btn-outline" style="color: #ffffff; border-color: rgba(255, 255, 255, 0.2);">
+                    📚 My Library
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger">
+                    Logout
+                </a>
+            </div>
         </div>
-        <div class="navbar-links">
-            <a href="/">Global Library</a> 
-            <a href="{{ url_for('my_library') }}">My Library</a>
-            <a href="{{ url_for('payment_history') }}">Payment History</a>
-            <a href="{{ url_for('logout') }}">
-                <button class="btn-logout">Logout</button>
-            </a>
-        </div>
-    </nav>
-
-    <div class="dashboard-header">
-        <h1>Welcome, {{ session.username }}</h1>
-        <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
     </div>
 
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <!-- DASHBOARD TABS NAVIGATION -->
+    <div style="display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 28px; overflow-x: auto; padding-bottom: 2px;">
+        <button type="button" class="btn btn-outline dash-tab-btn active" onclick="switchDashTab('profileSec', this)" style="border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom: none; font-weight: 600;">
+            👤 Profile & Security
+        </button>
 
-        <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
-        {% if session.role == 'developer' %}
-            
-            <div class="panel" style="border-left: 5px solid #38a169;">
-                <h2 style="color: #2f855a;">Appoint New Official</h2>
-                <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-                        <label>Username</label>
-                        <input type="text" name="username" required>
-                    </div>
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-                        <label>Email</label>
-                        <input type="email" name="email" required>
-                    </div>
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-                        <label>Password</label>
-                        <input type="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn-sm btn-green" style="padding: 12px 25px; height: 43px;">Create Official</button>
-                </form>
-            </div>
-
-            <div class="grid-2">
-                <div class="panel">
-                    <h2>Website Settings & Payments</h2>
-                    <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Hero Title</label>
-                            <input type="text" name="hero_title" value="{{ site_settings.hero_title }}">
-                        </div>
-                        <div class="form-group">
-                            <label>Hero Subtitle</label>
-                            <input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}">
-                        </div>
-                        
-                        <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
-                            <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
-                            <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
-                            <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> 
-                                Show 'Donate' button to users
-                            </label>
-                        </div>
-                        
-                        <!-- NEW CINEMATIC INTRO SETTINGS -->
-                        <div class="form-group">
-                            <label>Cinematic Intro Main Tagline</label>
-                            <input type="text" name="intro_tagline" value="{{ site_settings.intro_tagline }}" required placeholder="Every Book. Every Mind. Free.">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Cinematic Intro Sub-Tagline</label>
-                            <input type="text" name="intro_sub_tagline" value="{{ site_settings.intro_sub_tagline }}" required placeholder="Prepare to explore the universe of knowledge...">
-                        </div>
-                        <!-- END OF NEW SETTINGS -->
-                        
-                        <button type="submit" class="btn-sm btn-dark">Update Settings</button>
-                    </form>
-                </div>
-
-                <div class="panel" style="border-left: 5px solid #805ad5;">
-                    <h2 style="color: #805ad5;">Broadcast Formal Email (Mass Messaging)</h2>
-                    <form action="{{ url_for('mass_message') }}" method="POST">
-                        <div class="form-group">
-                            <label>Target Audience</label>
-                            <select name="target_role" required>
-                                <option value="all">Everyone (All Registered Users)</option>
-                                <option value="reader">Readers Only</option>
-                                <option value="author">Authors Only</option>
-                                <option value="official">Officials Only</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Subject Line</label>
-                            <input type="text" name="subject" required placeholder="Official PustakVerse Notice">
-                        </div>
-                        <div class="form-group">
-                            <label>Message Body (Formal HTML wrapper will be applied automatically)</label>
-                            <textarea name="message_body" required placeholder="Write your official announcement here..." style="min-height: 120px;"></textarea>
-                        </div>
-                        <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;" onclick="return confirm('Are you absolutely sure you want to broadcast this email to the selected group?');">Send Broadcast Email</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="panel" style="border-left: 5px solid #805ad5;">
-                <h2 style="color: #805ad5;">Official Activity Logs (Last 30 Days)</h2>
-                {% if official_logs %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Official Name</th>
-                                <th>Action Taken</th>
-                            </tr>
-                            {% for log in official_logs %}
-                            <tr>
-                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp | to_ist }}</td>
-                                <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
-                                <td>{{ log.action }}</td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No official activity logged in the last 30 days.</p>
-                {% endif %}
-            </div>
-
-            <div class="panel" style="border-left: 5px solid #f6ad55;">
-                <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for platform books.</p>
-                {% if book_del_requests %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Reported Book</th>
-                                <th>Author</th>
-                                <th>Reported By (Official)</th>
-                                <th>Reason Given</th>
-                                <th>Your Decision</th>
-                            </tr>
-                            {% for req in book_del_requests %}
-                            <tr>
-                                <td style="font-weight: bold;">{{ req.book_title }}</td>
-                                <td>{{ req.author_name }}</td>
-                                <td>{{ req.official_name }}</td>
-                                <td style="color: #c53030;">{{ req.reason }}</td>
-                                <td style="display: flex; gap: 10px;">
-                                    <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='approve') }}" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Approve & Delete Book</button>
-                                    </form>
-                                    <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='reject') }}" method="POST">
-                                        <button type="submit" class="btn-sm btn-dark">Reject Report</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No pending book deletion requests.</p>
-                {% endif %}
-            </div>
-
-            <div class="panel" style="border-left: 5px solid #e53e3e;">
-                <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for user termination.</p>
-                {% if del_requests %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Reported User</th>
-                                <th>Reported By (Official)</th>
-                                <th>Reason Given</th>
-                                <th>Your Decision</th>
-                            </tr>
-                            {% for req in del_requests %}
-                            <tr>
-                                <td style="font-weight: bold;">{{ req.target_name }}</td>
-                                <td>{{ req.official_name }}</td>
-                                <td style="color: #c53030;">{{ req.reason }}</td>
-                                <td style="display: flex; gap: 10px;">
-                                    <form action="{{ url_for('handle_deletion', req_id=req.id, action='approve') }}" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Reason to send to user..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Approve & Delete User</button>
-                                    </form>
-                                    <form action="{{ url_for('handle_deletion', req_id=req.id, action='reject') }}" method="POST">
-                                        <button type="submit" class="btn-sm btn-dark">Reject Report</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No pending user deletion requests.</p>
-                {% endif %}
-            </div>
+        {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
+        <button type="button" class="btn btn-outline dash-tab-btn" onclick="switchDashTab('publicationsSec', this)" style="border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom: none; font-weight: 600;">
+            📚 My Publications & Upload
+        </button>
         {% endif %}
 
-        <div class="grid-2">
-            <div class="panel" style="border-top: 4px solid var(--primary-orange);">
-                <h2>Change Username</h2>
+        {% if session.role in ['official', 'developer'] %}
+        <button type="button" class="btn btn-outline dash-tab-btn" onclick="switchDashTab('moderationSec', this)" style="border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom: none; font-weight: 600;">
+            🛡️ Platform Moderation
+        </button>
+        {% endif %}
+
+        {% if session.role == 'developer' %}
+        <button type="button" class="btn btn-outline dash-tab-btn" onclick="switchDashTab('developerSec', this)" style="border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom: none; font-weight: 600;">
+            ⚙️ Developer Control Center
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- TAB 1: PROFILE & SECURITY -->
+    <div id="profileSec" class="dash-tab-content">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+            <!-- Username Settings Card -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Change Username</h3>
                 <form action="{{ url_for('change_username') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-group">
-                        <label>New Username</label>
-                        <input type="text" name="new_username" required>
+                        <label for="new_username">New Username</label>
+                        <input type="text" id="new_username" name="new_username" required placeholder="Enter new username">
                     </div>
                     {% if session.role in ['author', 'official'] %}
                         <div class="form-group">
-                            <label>Reason for Change (Required for approval)</label>
-                            <input type="text" name="reason" required placeholder="Why do you want to change your username?">
+                            <label for="username_reason">Reason for Change (Admin Review)</label>
+                            <input type="text" id="username_reason" name="reason" required placeholder="Why do you wish to change username?">
                         </div>
-                        <button type="submit" class="btn-sm btn-orange">Submit Request</button>
-                        <p style="color: #718096; font-size: 0.85rem; margin-top: 10px;">Your request will be reviewed by an administrator.</p>
+                        <button type="submit" class="btn btn-primary">Submit Change Request</button>
                     {% else %}
-                        <button type="submit" class="btn-sm btn-orange">Change Username</button>
+                        <button type="submit" class="btn btn-primary">Update Username</button>
                     {% endif %}
                 </form>
             </div>
 
-            <div class="panel" style="border-top: 4px solid var(--nav-bg);">
-                <h2>Security Settings</h2>
-                
-                <!-- Hide 2FA Toggle for Admins, Show Enforced Status Instead -->
+            <!-- Password & Security Card -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Two-Factor Authentication (2FA)</h3>
                 {% if session.role not in ['developer', 'official'] %}
-                <div style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
-                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #2d3748;">Two-Step Verification (2FA)</h3>
-                    <p style="font-size: 0.9rem; color: #718096;">Add an extra layer of security. When enabled, you'll need an email code to log in.</p>
-                    <form action="/dashboard" method="POST" style="margin-top: 10px;">
+                    <p style="color: var(--muted); font-size: 0.95rem; margin-bottom: 16px;">
+                        Add an extra layer of protection. When 2FA is enabled, you'll receive a 6-digit email code upon logging in.
+                    </p>
+                    <form action="/dashboard" method="POST" style="margin-bottom: 24px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="toggle_2fa" value="1">
                         <input type="hidden" name="current_status" value="{{ 'True' if two_factor_enabled else 'False' }}">
                         {% if two_factor_enabled %}
-                            <button type="submit" class="btn-sm btn-red">Disable 2FA</button>
-                            <span style="color: #38a169; font-weight: bold; margin-left: 10px;">Currently Enabled</span>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="color: #059669; font-weight: 700; font-size: 0.95rem;">✓ 2FA is Enabled</span>
+                                <button type="submit" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">Disable 2FA</button>
+                            </div>
                         {% else %}
-                            <button type="submit" class="btn-sm btn-green">Enable 2FA</button>
-                            <span style="color: #718096; margin-left: 10px;">Currently Disabled</span>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="color: var(--muted); font-size: 0.95rem;">2FA is Disabled</span>
+                                <button type="submit" class="btn btn-primary">Enable 2FA Protection</button>
+                            </div>
                         {% endif %}
                     </form>
-                </div>
                 {% else %}
-                <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-bottom: 25px;">
-                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #166534;">Two-Step Verification (2FA)</h3>
-                    <p style="font-size: 0.9rem; color: #15803d; margin-bottom: 0;"><strong>Active.</strong> As an administrator, 2FA is permanently enforced on your account for platform security.</p>
-                </div>
+                    <div style="background: var(--green-light); border: 1px solid #a7f3d0; padding: 14px 18px; border-radius: var(--radius-sm); margin-bottom: 24px;">
+                        <strong style="color: #065f46;">2FA Enforced</strong>
+                        <p style="margin: 4px 0 0; color: #047857; font-size: 0.9rem;">As an administrator, Two-Step Verification is active on your account.</p>
+                    </div>
                 {% endif %}
 
+                <h3 style="margin: 20px 0 12px; font-family: var(--font-serif); color: var(--text-main);">Password Security</h3>
                 {% if session.get('change_pw_otp') %}
-                    <form action="{{ url_for('change_password') }}" method="POST" style="margin-bottom: 25px;">
+                    <form action="{{ url_for('change_password') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="form-group">
-                            <label>Enter 6-Digit Code</label>
-                            <input type="text" name="otp" required placeholder="• • • • • •">
+                            <label>Verification OTP sent to Email</label>
+                            <input type="text" name="otp" required placeholder="• • • • • •" style="text-align:center; font-size:1.2rem; letter-spacing:4px;">
                         </div>
                         <div class="form-group">
                             <label>Current Password</label>
@@ -504,682 +133,323 @@
                             <label>New Password</label>
                             <input type="password" name="new_password" required minlength="6">
                         </div>
-                        <button type="submit" class="btn-sm btn-green">Update Password</button>
-                        <a href="{{ url_for('cancel_password_change') }}" class="btn-sm btn-red" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn btn-primary">Confirm New Password</button>
+                            <a href="{{ url_for('cancel_password_change') }}" class="btn btn-outline">Cancel</a>
+                        </div>
                     </form>
                 {% else %}
-                    <!-- Renamed Button to "Change My Password" -->
-                    <form action="{{ url_for('send_change_password_otp') }}" method="POST" style="margin-bottom: 25px;">
-                        <button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Change My Password</button>
+                    <form action="{{ url_for('send_change_password_otp') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline">Change Password via Email OTP</button>
                     </form>
                 {% endif %}
+            </div>
 
-                <!-- Hide Delete Account Section completely for Developer -->
-                {% if session.role != 'developer' %}
-                <div style="background: #fff5f5; padding: 15px; border-radius: 6px; border: 1px solid #fed7d7; margin-top: 25px;">
-                    <h3 style="margin-top: 0; font-size: 1.1rem; color: #c53030;">Danger Zone: Delete Account</h3>
-                    <p style="font-size: 0.9rem; color: #718096;">Permanently delete your account and all data. Requires email verification.</p>
-                    {% if show_delete_otp_form %}
-                        <form action="{{ url_for('delete_my_account') }}" method="POST">
-                            <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" name="otp" required placeholder="Enter 6-Digit Verification OTP">
-                            </div>
-                            <button type="submit" class="btn-sm btn-red">Confirm Account Deletion</button>
-                            <a href="/dashboard" class="btn-sm btn-dark" style="text-decoration: none; padding: 10px; margin-left: 10px;">Cancel</a>
-                        </form>
-                    {% else %}
-                        <form action="{{ url_for('send_delete_account_otp') }}" method="POST">
-                            <button type="submit" class="btn-sm btn-red" style="padding: 10px 20px;">Request Deletion OTP</button>
-                        </form>
-                    {% endif %}
-                </div>
+            <!-- Danger Zone Card (Non-Developer) -->
+            {% if session.role != 'developer' %}
+            <div class="card" style="border-color: #fecaca; background: var(--danger-light);">
+                <h3 style="margin: 0 0 10px; font-family: var(--font-serif); color: #991b1b;">Danger Zone: Delete Account</h3>
+                <p style="color: #7f1d1d; font-size: 0.9rem; margin-bottom: 16px;">
+                    Permanently delete your account, published titles, and personal reading library.
+                </p>
+                {% if show_delete_otp_form %}
+                    <form action="{{ url_for('delete_my_account') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="form-group">
+                            <input type="text" name="otp" required placeholder="Enter 6-Digit Deletion OTP">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn btn-danger">Confirm Account Deletion</button>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Cancel</a>
+                        </div>
+                    </form>
+                {% else %}
+                    <form action="{{ url_for('send_delete_account_otp') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Request Account Deletion OTP</button>
+                    </form>
                 {% endif %}
             </div>
+            {% endif %}
         </div>
+    </div>
 
-        {% if session.role == 'reader' %}
-            <div class="panel" style="text-align: center; padding: 60px;">
-                <h2 style="border: none;">Start Reading</h2>
-                <p style="color: var(--text-light); margin-bottom: 30px;">Head over to the Global Library to discover amazing books.</p>
-                <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library</a>
-            </div>
-        {% endif %}
-
-        {% if session.role == 'author' and not session.is_verified %}
-            <div class="panel" style="border-left: 5px solid var(--primary-orange);">
-                <h2 style="color: var(--primary-orange);">Account Under Review</h2>
-                <p>Thank you for signing up to be an author! Our administrative team is currently reviewing your application.</p>
-                <p>You will receive an email as soon as you are approved and can begin publishing your books.</p>
-            </div>
-        {% endif %}
-
-        {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
-            <div class="grid-2">
-                <div class="panel">
-                    <h2>Publish a New Book</h2>
-                    <form action="/dashboard" method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Book Title</label>
-                            <input type="text" name="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Catalog</label>
-                            <select name="catalog" required>
-                                {% for cat in site_catalogs %}
-                                    <option value="{{ cat.name }}">{{ cat.name }}</option>
-                                {% endfor %}
-                                {% if session.role in ['official', 'developer'] %}
-                                    <option value="Archives">Archives (Free Only)</option>
-                                {% endif %}
-                            </select>
-                        </div>
-
-                        <!-- NEW: Book Description / Synopsis -->
-                        <div class="form-group">
-                            <label>Book Description / Synopsis</label>
-                            <textarea name="description" rows="4" placeholder="What is this book about?..." required></textarea>
-                        </div>
-
-                        <div class="form-group" style="background: #fdf2f8; padding: 15px; border-radius: 6px; border: 1px solid #fce7f3; margin-bottom: 25px;">
-                            <label style="color: #9d174d;">Cover Image & PDF Uploads</label>
-                            <small style="color: #be185d; display: block; font-weight: 600; margin-bottom: 15px;">Recommendation: Use Google Drive Links instead of direct uploads.</small>
-                            <input type="file" name="cover_image" accept="image/*">
-                            <input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;" autocomplete="off">
-                            <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;">
-                            <input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;" autocomplete="off">
-                        </div>
-                        
-                        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                            <label>
-                                <input type="checkbox" name="is_paid" id="is_paid_checkbox"> 
-                                Premium/Paid Book
-                            </label>
-                            
-                            <!-- DYNAMIC RAZORPAY SETTINGS FOR THIS BOOK -->
-                            <div id="paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
-                                <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
-                                
-                                <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Author's Razorpay Payment Keys (For this book)</label>
-                                <small style="color: #15803d; display: block; margin-bottom: 8px;">100% of sales will go directly to your linked account.</small>
-                                
-                                <!-- New Dynamic Status Box -->
-                                <div id="publish_rp_status" style="display: none; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;"></div>
-                                
-                                <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Your Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
-                                <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="margin-bottom: 10px; border-color: #bbf7d0;">
-                                
-                                <!-- New Verify Button -->
-                                <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('publish')">Test / Verify Keys</button>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px;">Publish Book</button>
-                    </form>
-                </div>
-
-                <div>
-                    <div class="panel">
-                        <h2>{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
-                        
-                        <!-- INSTANT SEARCH BAR -->
-                        <div style="margin-bottom: 20px;">
-                            <input type="text" id="librarySearch" placeholder="Search books by title..." onkeyup="filterLibrary()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
-                        </div>
-
-                        {% if my_books %}
-                            <div class="table-scroll-container">
-                                <table>
-                                    <tr>
-                                        <th>Cover</th>
-                                        <th>Title</th>
-                                        <th>Type</th>
-                                        <th>Action</th>
-                                    </tr>
-                                    {% for book in my_books %}
-                                    <tr class="library-row">
-                                        <td>
-                                            <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
-                                        </td>
-                                        <td style="font-weight: 500;" class="book-title-cell">
-                                            {{ book.title }} 
-                                            {% if session.role in ['official', 'developer'] %}
-                                                <br><small style="color: #718096;">by {{ book.author_name }}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if book.is_paid %}
-                                                <span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span><br>
-                                                {% if book.rp_verified %}
-                                                    <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#dcfce7; color:#166534;">✓ Payments verified</span>
-                                                {% else %}
-                                                    <span title="{{ book.rp_verify_message or 'Razorpay details have not been verified yet. Edit the book to fix this.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#fef3c7; color:#92400e;">⚠ Payments unverified</span>
-                                                {% endif %}
-                                            {% else %}
-                                                Free
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <div style="display: flex; gap: 5px; align-items: flex-start; flex-wrap: wrap;">
-                                                {% if book.is_paid %}
-                                                <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
-                                                {% endif %}
-                                                
-                                                <!-- NEW: data-desc attribute securely loads the description for editing -->
-                                                <button type="button" class="btn-sm btn-dark edit-btn" 
-                                                        data-id="{{ book.id }}" 
-                                                        data-title="{{ book.title | escape }}" 
-                                                        data-catalog="{{ book.catalog }}" 
-                                                        data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
-                                                        data-price="{{ book.price_paise }}" 
-                                                        data-keyid="{{ book.rp_key_id or '' }}" 
-                                                        data-keysecret="{{ book.rp_key_secret or '' }}"
-                                                        data-verified="{{ 'true' if book.rp_verified else 'false' }}"
-                                                        data-verifymsg="{{ book.rp_verify_message or '' | escape }}"
-                                                        data-desc="{{ book.description | escape }}"
-                                                        onclick="openEditModal(this)">Edit</button>
-                                                
-                                                {% if session.role == 'official' %}
-                                                    <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;">
-                                                        <input type="text" name="reason" placeholder="Reason for Dev..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                                        <button type="submit" class="btn-sm btn-warn">Req. Delete</button>
-                                                    </form>
-                                                {% elif session.role == 'developer' %}
-                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this book permanently?');">
-                                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
-                                                    </form>
-                                                {% else %}
-                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');">
-                                                        <button type="submit" class="btn-sm btn-red">Del</button>
-                                                    </form>
-                                                {% endif %}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </table>
-                            </div>
-                        {% else %}
-                            <p>No books available.</p>
-                        {% endif %}
+    <!-- TAB 2: PUBLICATIONS & UPLOAD (FOR AUTHORS / ADMINS) -->
+    {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
+    <div id="publicationsSec" class="dash-tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 28px; align-items: start;">
+            <!-- Upload Book Form -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Publish New Book</h3>
+                <form action="/dashboard" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="book_title_input">Book Title</label>
+                        <input type="text" id="book_title_input" name="title" required placeholder="e.g. Master Clean Code">
                     </div>
-                </div>
-            </div>
-        {% endif %}
-
-        {% if session.role in ['official', 'developer'] %}
-            <!-- Pending Username Requests -->
-            <div class="panel" style="border-left: 5px solid #3182ce;">
-                <h2>Pending Username Requests</h2>
-                {% if username_requests %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Current Username</th>
-                                <th>Requested Username</th>
-                                <th>Reason</th>
-                                <th>Action</th>
-                            </tr>
-                            {% for req in username_requests %}
-                            <tr>
-                                <td>{{ req.current_username }}</td>
-                                <td>{{ req.new_username }}</td>
-                                <td>{{ req.reason }}</td>
-                                <td style="display: flex; gap: 10px;">
-                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='approve') }}" method="POST">
-                                        <button type="submit" class="btn-sm btn-green">Approve</button>
-                                    </form>
-                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='reject') }}" method="POST">
-                                        <button type="submit" class="btn-sm btn-red">Reject</button>
-                                    </form>
-                                </td>
-                            </tr>
+                    <div class="form-group">
+                        <label for="book_cat_select">Category Catalog</label>
+                        <select id="book_cat_select" name="catalog" required>
+                            {% for cat in site_catalogs %}
+                                <option value="{{ cat.name }}">{{ cat.name }}</option>
                             {% endfor %}
-                        </table>
+                            {% if session.role in ['official', 'developer'] %}
+                                <option value="Archives">Archives (Free Classic)</option>
+                            {% endif %}
+                        </select>
                     </div>
-                {% else %}
-                    <p>No pending username requests.</p>
-                {% endif %}
-            </div>
+                    <div class="form-group">
+                        <label for="book_desc_input">Description / Synopsis</label>
+                        <textarea id="book_desc_input" name="description" rows="3" required placeholder="Summary of this book..."></textarea>
+                    </div>
 
-            <!-- Approvals (Both Admins) -->
-            <div class="panel" style="border-left: 5px solid #38a169;">
-                <h2>Pending Author Approvals</h2>
-                {% if pending_authors %}
-                <div class="table-scroll-container">
-                    <table>
-                        <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Action</th>
-                        </tr>
-                        {% for user in pending_authors %}
-                        <tr>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td style="display: flex; gap: 15px;">
-                                <form action="/dashboard" method="POST">
-                                    <input type="hidden" name="approve_author_id" value="{{ user.id }}">
-                                    <button type="submit" class="btn-sm btn-green">Approve</button>
-                                </form>
-                                <form action="/dashboard" method="POST" style="display: flex; gap: 5px;">
-                                    <input type="hidden" name="reject_author_id" value="{{ user.id }}">
-                                    <input type="text" name="reject_reason" placeholder="Reason for rejection..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
-                                    <button type="submit" class="btn-sm btn-red">Reject</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                </div>
-                {% else %}
-                    <p>No pending authors.</p>
-                {% endif %}
-            </div>
-        {% endif %}
+                    <div class="form-group" style="background: var(--surface-hover); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <label style="color: var(--orange); margin-bottom: 6px;">Cover Image & PDF File</label>
+                        <small style="color: var(--muted); display: block; margin-bottom: 10px;">Upload direct files or paste public Google Drive links:</small>
+                        <input type="file" name="cover_image" accept="image/*" style="margin-bottom: 8px;">
+                        <input type="text" name="cover_link" placeholder="Drive Cover Image URL" style="margin-bottom: 12px;">
+                        <input type="file" name="pdf_file" accept=".pdf" style="margin-bottom: 8px;">
+                        <input type="text" name="pdf_link" placeholder="Drive PDF URL">
+                    </div>
 
-        <!-- OFFICIAL USER MANAGEMENT -->
-        {% if session.role == 'official' %}
-            <div class="panel">
-                <h2>Manage Platform Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search readers or authors..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Readers & Authors</option>
-                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
-                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                    <div class="form-group" style="padding: 12px; background: var(--surface-hover); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" name="is_paid" id="is_paid_checkbox" style="width: auto;">
+                            <strong>Sell as Premium Book (₹ INR)</strong>
+                        </label>
+                        
+                        <div id="paid_settings" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">
+                            <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in INR (e.g. 199)" style="margin-bottom: 10px;">
+                            <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Razorpay Key ID (rzp_live_...)" style="margin-bottom: 10px;">
+                            <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Razorpay Key Secret">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Publish to Universal Library</button>
                 </form>
-
-                {% if all_users %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email Address</th>
-                                <th>Role</th>
-                                <th>Action</th>
-                            </tr>
-                            {% for user in all_users %}
-                            <tr>
-                                <td>{{ user.username }}</td>
-                                <td style="color: #4a5568;">{{ user.email }}</td>
-                                <td style="text-transform: capitalize;">{{ user.role }}</td>
-                                <td>
-                                    <!-- OFFICIALS ONLY SEND REQUESTS TO THE DEVELOPER -->
-                                    <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Report Reason to Dev..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-orange">Submit Report</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No users found matching that filter.</p>
-                {% endif %}
             </div>
-        {% endif %}
 
-        <!-- BOTTOM DEVELOPER SECTION -->
-        {% if session.role == 'developer' %}
-        <div class="grid-2">
-            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
-            <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
-                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
-                
-                <!-- NEW SEARCH BAR FOR ARCHIVES -->
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
+            <!-- Published Books Table -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="margin: 0; font-family: var(--font-serif); color: var(--text-main);">
+                        {{ 'My Published Titles' if session.role == 'author' else 'Platform Publications' }}
+                    </h3>
+                    <input type="search" id="dashBookSearch" placeholder="Filter books..." onkeyup="filterDashTable()" style="padding: 8px 14px; max-width: 200px; border-radius: var(--radius-full); font-size: 0.88rem;">
                 </div>
 
-                {% if archive_books %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Cover</th>
-                                <th>Title</th>
-                                <th>Action</th>
+                {% if my_books %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.92rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border); text-align: left; color: var(--muted);">
+                                <th style="padding: 10px 8px;">Cover</th>
+                                <th style="padding: 10px 8px;">Title & Category</th>
+                                <th style="padding: 10px 8px;">Type</th>
+                                <th style="padding: 10px 8px; text-align: right;">Actions</th>
                             </tr>
-                            {% for book in archive_books %}
-                            <tr class="archive-row">
-                                <td>
-                                    <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
+                        </thead>
+                        <tbody id="dashBooksTable">
+                            {% for b in my_books %}
+                            <tr style="border-bottom: 1px solid var(--border);" class="dash-book-row">
+                                <td style="padding: 10px 8px;">
+                                    {% if b.cover_image and b.cover_image.startswith('http') %}
+                                        <img src="{{ b.cover_image | drive_img }}" style="width: 36px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                    {% elif b.cover_image %}
+                                        <img src="{{ url_for('static', filename='uploads/covers/' + b.cover_image) }}" style="width: 36px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='PustakVerse.png') }}" style="width: 36px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                    {% endif %}
                                 </td>
-                                <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
-                                <td>
-                                    <div style="display: flex; gap: 5px;">
-                                        <!-- NEW: Edit Button handles descriptions -->
-                                        <button type="button" class="btn-sm btn-dark edit-btn" 
-                                                data-id="{{ book.id }}" 
-                                                data-title="{{ book.title | escape }}" 
-                                                data-catalog="{{ book.catalog }}" 
-                                                data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
-                                                data-price="{{ book.price_paise }}" 
-                                                data-keyid="{{ book.rp_key_id or '' }}" 
-                                                data-keysecret="{{ book.rp_key_secret or '' }}"
-                                                data-desc="{{ book.description | escape }}"
-                                                onclick="openEditModal(this)">Edit</button>
-                                        
-                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
-                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                <td style="padding: 10px 8px;" class="book-name-td">
+                                    <strong>{{ b.title }}</strong><br>
+                                    <small style="color: var(--muted);">{{ b.catalog }}</small>
+                                </td>
+                                <td style="padding: 10px 8px;">
+                                    {% if b.is_paid %}
+                                        <span class="card-badge badge-premium" style="position: static;">₹{{ "%.2f"|format(b.price_paise / 100) }}</span>
+                                    {% else %}
+                                        <span class="card-badge badge-free" style="position: static;">Free</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 10px 8px; text-align: right;">
+                                    <div style="display: inline-flex; gap: 6px;">
+                                        <a href="{{ url_for('view_book', book_id=b.id) }}" class="btn btn-outline btn-icon" title="View Book">👁️</a>
+                                        <form action="{{ url_for('delete_book', book_id=b.id) }}" method="POST" onsubmit="return confirm('Delete this publication permanently?');" style="margin: 0;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-icon" style="color: var(--danger);" title="Delete Book">🗑️</button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                    <p>No books in Archives.</p>
-                {% endif %}
-            </div>
-
-            <!-- DEVELOPER USER MANAGEMENT -->
-            <div class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
-                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
-                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
-                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
-                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
-
-                {% if searched_users %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email Address</th>
-                                <th>Role</th>
-                                <th>Last Active</th>
-                                <th>Actions</th>
-                            </tr>
-                            {% for user in searched_users %}
-                            <tr>
-                                <td style="font-weight: 500;">{{ user.username }}</td>
-                                <td style="color: #4a5568;">{{ user.email }}</td>
-                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
-                                
-                                <!-- TIMEZONE FIX: Applying the to_ist filter here -->
-                                <td style="color: #718096; font-size: 0.85rem;">{{ user.last_activity | to_ist }}</td>
-                                
-                                <td style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                        <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                    </form>
-
-                                    {% if user.role in ['reader', 'author'] %}
-                                    <form action="{{ url_for('promote_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Promote this user to Official Administrator? This will notify them directly via email.');">
-                                        <button type="submit" class="btn-sm btn-green" style="height: 100%;">Promote</button>
-                                    </form>
-                                    {% endif %}
-
-                                    {% if user.role == 'official' %}
-                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');">
-                                            <input type="hidden" name="reason" value="Administrative Decision.">
-                                            <button type="submit" class="btn-sm btn-dark" style="height: 100%;">Revoke</button>
-                                        </form>
-                                    {% endif %}
-                                    
-                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No users found matching that filter.</p>
+                    <p style="color: var(--muted); padding: 24px 0; text-align: center;">No books published yet.</p>
                 {% endif %}
             </div>
         </div>
-        {% endif %}
-
     </div>
+    {% endif %}
 
-    <!-- Edit Modal Script -->
-    <div id="editBookModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto;">
-            <button type="button" onclick="document.getElementById('editBookModal').style.display='none'" style="position: absolute; top: 15px; right: 20px; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            <h2 style="margin-top: 0;">Edit Book</h2>
-            <form id="editBookForm" method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <input type="text" name="title" id="edit_title" required>
-                </div>
-                <div class="form-group">
-                    <select name="catalog" id="edit_catalog" required>
-                        {% for cat in site_catalogs %}
-                            <option value="{{ cat.name }}">{{ cat.name }}</option>
+    <!-- TAB 3: PLATFORM MODERATION (OFFICIALS & DEVELOPERS) -->
+    {% if session.role in ['official', 'developer'] %}
+    <div id="moderationSec" class="dash-tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+            <!-- Pending Author Approvals -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Pending Author Approvals</h3>
+                {% if pending_authors %}
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        {% for pa in pending_authors %}
+                        <div style="padding: 14px; background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                <strong>{{ pa.username }}</strong>
+                                <small style="color: var(--muted);">{{ pa.email }}</small>
+                            </div>
+                            <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 10px;">{{ pa.verification_reason or 'No reason provided.' }}</p>
+                            <div style="display: flex; gap: 8px;">
+                                <form action="/dashboard" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="approve_author_id" value="{{ pa.id }}">
+                                    <button type="submit" class="btn btn-primary btn-sm">Approve Author</button>
+                                </form>
+                                <form action="/dashboard" method="POST" style="margin: 0; display: flex; gap: 4px;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="reject_author_id" value="{{ pa.id }}">
+                                    <input type="hidden" name="reject_reason" value="Application not approved at this time.">
+                                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </div>
+                        </div>
                         {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- NEW: Edit Description -->
-                <div class="form-group">
-                    <label>Book Description / Synopsis</label>
-                    <textarea name="description" id="edit_description" rows="4" required></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <input type="checkbox" name="is_paid" id="edit_is_paid" onchange="toggleEditPrice()"> Paid Book
-                    <div id="edit_paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
-                        <input type="text" name="price_inr" id="edit_price_inr" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
-                        
-                        <!-- Dynamic Status Box -->
-                        <div id="edit_rp_status" style="display:none; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;"></div>
-                        
-                        <input type="text" name="rp_key_id" id="edit_rp_key_id" placeholder="Live Key ID (rzp_live_...)" style="margin-bottom: 10px;">
-                        <input type="password" name="rp_key_secret" id="edit_rp_key_secret" placeholder="Secret Key" style="margin-bottom: 10px;">
-                        
-                        <!-- New Verify Button -->
-                        <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('edit')">Test / Verify Keys</button>
-                        
-                        <small style="color:#64748b; display:block; margin-top:10px;">Changing either key re-verifies your Razorpay details when you save. You can update these any time.</small>
                     </div>
-                </div>
-                <button type="submit" class="btn-sm btn-orange">Save Changes</button>
-            </form>
+                {% else %}
+                    <p style="color: var(--muted); margin: 0;">No author applications awaiting review.</p>
+                {% endif %}
+            </div>
+
+            <!-- Username Change Requests -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Username Change Requests</h3>
+                {% if username_requests %}
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        {% for req in username_requests %}
+                        <div style="padding: 14px; background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                            <div><strong>{{ req.current_username }}</strong> &rarr; <span style="color: var(--orange); font-weight: 700;">{{ req.new_username }}</span></div>
+                            <small style="color: var(--muted); display: block; margin: 4px 0 10px;">Reason: {{ req.reason }}</small>
+                            <div style="display: flex; gap: 8px;">
+                                <form action="{{ url_for('handle_username_request', req_id=req.id, action='approve') }}" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-primary btn-sm">Approve</button>
+                                </form>
+                                <form action="{{ url_for('handle_username_request', req_id=req.id, action='reject') }}" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: var(--muted); margin: 0;">No username change requests pending.</p>
+                {% endif %}
+            </div>
         </div>
     </div>
+    {% endif %}
 
-    <script>
-        // Real-time Library Search Filter
-        function filterLibrary() {
-            let input = document.getElementById('librarySearch').value.toLowerCase();
-            let rows = document.querySelectorAll('.library-row');
-            rows.forEach(row => {
-                let titleText = row.querySelector('.book-title-cell').innerText.toLowerCase();
-                if (titleText.includes(input)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
+    <!-- TAB 4: DEVELOPER CONTROL CENTER (DEVELOPER ONLY) -->
+    {% if session.role == 'developer' %}
+    <div id="developerSec" class="dash-tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+            <!-- Appoint Official Form -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Appoint Platform Official</h3>
+                <form action="{{ url_for('create_official') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" name="username" required placeholder="Official username">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required placeholder="Official email">
+                    </div>
+                    <div class="form-group">
+                        <label>Temporary Password</label>
+                        <input type="password" name="password" required placeholder="Minimum 8 characters">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Official Administrator</button>
+                </form>
+            </div>
 
-        // Real-time Archive Search Filter
-        function filterArchives() {
-            let input = document.getElementById('archiveSearch').value.toLowerCase();
-            let rows = document.querySelectorAll('.archive-row');
-            rows.forEach(row => {
-                let titleText = row.querySelector('.archive-title-cell').innerText.toLowerCase();
-                if (titleText.includes(input)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-        
-        // Setup Publish Book Form Toggles
-        const paidCheckbox = document.getElementById('is_paid_checkbox'); 
-        const paidSettings = document.getElementById('paid_settings');
-        const priceInput = document.getElementById('price_inr_input');
-        const rpKeyIdInput = document.getElementById('rp_key_id_input');
-        const rpKeySecretInput = document.getElementById('rp_key_secret_input');
-        
-        if(paidCheckbox) { 
-            paidCheckbox.addEventListener('change', function() { 
-                if(this.checked) { 
-                    paidSettings.style.display = 'block'; 
-                    priceInput.required = true; 
-                    rpKeyIdInput.required = true;
-                    rpKeySecretInput.required = true;
-                } else { 
-                    paidSettings.style.display = 'none'; 
-                    priceInput.required = false; 
-                    rpKeyIdInput.required = false;
-                    rpKeySecretInput.required = false;
-                }
-            }); 
-        }
+            <!-- Front Page Settings -->
+            <div class="card">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Front Page & Intro Settings</h3>
+                <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label>Hero Title</label>
+                        <input type="text" name="hero_title" value="{{ site_settings.hero_title }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Hero Subtitle</label>
+                        <input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Cinematic Intro Tagline</label>
+                        <input type="text" name="intro_tagline" value="{{ site_settings.intro_tagline }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Cinematic Intro Sub-Tagline</label>
+                        <input type="text" name="intro_sub_tagline" value="{{ site_settings.intro_sub_tagline }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Platform Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
 
-        // Updated Modal Logic to securely pull from data- attributes
-        function openEditModal(btn) {
-            document.getElementById('editBookForm').action = "/edit_book/" + btn.dataset.id; 
-            document.getElementById('edit_title').value = btn.dataset.title; 
-            document.getElementById('edit_catalog').value = btn.dataset.catalog;
-            
-            // Populate the new description field
-            document.getElementById('edit_description').value = btn.dataset.desc;
-            
-            const isPaidCheck = document.getElementById('edit_is_paid'); 
-            const editPaidSettings = document.getElementById('edit_paid_settings');
-            const pInput = document.getElementById('edit_price_inr');
-            const keyIdInput = document.getElementById('edit_rp_key_id');
-            const keySecretInput = document.getElementById('edit_rp_key_secret');
-            const rpStatus = document.getElementById('edit_rp_status');
-            
-            let isPaid = btn.dataset.ispaid === 'true';
-            isPaidCheck.checked = isPaid; 
-            
-            if(isPaid) { 
-                editPaidSettings.style.display = 'block'; 
-                pInput.value = (parseInt(btn.dataset.price) / 100).toFixed(2); 
-                pInput.required = true;
-                keyIdInput.value = btn.dataset.keyid; 
-                keyIdInput.required = true;
-                keySecretInput.value = btn.dataset.keysecret; 
-                keySecretInput.required = true;
+<script>
+function switchDashTab(tabId, btn) {
+    document.querySelectorAll('.dash-tab-content').forEach(c => c.style.display = 'none');
+    document.querySelectorAll('.dash-tab-btn').forEach(b => b.classList.remove('active'));
+    const target = document.getElementById(tabId);
+    if (target) target.style.display = 'block';
+    if (btn) btn.classList.add('active');
+}
 
-                const isVerified = btn.dataset.verified === 'true';
-                rpStatus.style.display = 'block';
-                rpStatus.textContent = isVerified
-                    ? '✓ Payment details currently verified.'
-                    : ('⚠ Payment details not verified yet.' + (btn.dataset.verifymsg ? ' ' + btn.dataset.verifymsg : ' Save again after checking your keys.'));
-                rpStatus.style.background = isVerified ? '#dcfce7' : '#fef3c7';
-                rpStatus.style.color = isVerified ? '#166534' : '#92400e';
-            } else { 
-                editPaidSettings.style.display = 'none'; 
-                pInput.value = ''; 
-                pInput.required = false;
-                keyIdInput.value = ''; 
-                keyIdInput.required = false;
-                keySecretInput.value = ''; 
-                keySecretInput.required = false;
-                rpStatus.style.display = 'none';
-            }
-            
-            document.getElementById('editBookModal').style.display = 'flex';
-        }
+function filterDashTable() {
+    const term = document.getElementById('dashBookSearch').value.toLowerCase();
+    document.querySelectorAll('.dash-book-row').forEach(row => {
+        const title = row.querySelector('.book-name-td').textContent.toLowerCase();
+        row.style.display = title.includes(term) ? '' : 'none';
+    });
+}
 
-        function toggleEditPrice() { 
-            const isPaidCheck = document.getElementById('edit_is_paid'); 
-            const editPaidSettings = document.getElementById('edit_paid_settings');
-            const pInput = document.getElementById('edit_price_inr'); 
-            const keyIdInput = document.getElementById('edit_rp_key_id');
-            const keySecretInput = document.getElementById('edit_rp_key_secret');
-            
-            if(isPaidCheck.checked) { 
-                editPaidSettings.style.display = 'block'; 
-                pInput.required = true; 
-                keyIdInput.required = true;
-                keySecretInput.required = true;
-            } else { 
-                editPaidSettings.style.display = 'none'; 
-                pInput.required = false; 
-                keyIdInput.required = false;
-                keySecretInput.required = false;
-            } 
-        }
-        
-    // Instant Live Verification for Razorpay Keys
-        async function verifyRazorpayKeys(context) {
-            let keyIdInput, keySecretInput, statusDiv;
-            const btn = event.target;
-            
-            if (context === 'publish') {
-                keyIdInput = document.getElementById('rp_key_id_input');
-                keySecretInput = document.getElementById('rp_key_secret_input');
-                statusDiv = document.getElementById('publish_rp_status');
-            } else {
-                keyIdInput = document.getElementById('edit_rp_key_id');
-                keySecretInput = document.getElementById('edit_rp_key_secret');
-                statusDiv = document.getElementById('edit_rp_status');
-            }
-
-            const keyId = keyIdInput.value.trim();
-            const keySecret = keySecretInput.value.trim();
-
-            if (!keyId || !keySecret) {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.color = '#991b1b';
-                statusDiv.textContent = 'Please enter both Key ID and Secret Key to verify.';
-                return;
-            }
-
-            // UI Loading state
-            btn.disabled = true;
-            const originalText = btn.textContent;
-            btn.textContent = 'Verifying...';
-            statusDiv.style.display = 'none';
-
-            try {
-                const response = await fetch('/verify_razorpay_ajax', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key_id: keyId, key_secret: keySecret })
-                });
-                const data = await response.json();
-
-                statusDiv.style.display = 'block';
-                if (data.status === 'valid') {
-                    statusDiv.style.background = '#dcfce7';
-                    statusDiv.style.color = '#166534';
-                    statusDiv.innerHTML = '✓ ' + data.message;
-                } else if (data.status === 'unverified') {
-                    statusDiv.style.background = '#fef3c7';
-                    statusDiv.style.color = '#92400e';
-                    statusDiv.innerHTML = '⚠ ' + data.message;
-                } else {
-                    statusDiv.style.background = '#fee2e2';
-                    statusDiv.style.color = '#991b1b';
-                    statusDiv.innerHTML = '✗ ' + data.message;
-                }
-            } catch (err) {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#fee2e2';
-                statusDiv.style.color = '#991b1b';
-                statusDiv.textContent = 'Network error. Could not reach server to verify.';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-
-    </script>
-</body>
-</html>
+const paidCheck = document.getElementById('is_paid_checkbox');
+const paidBox = document.getElementById('paid_settings');
+if (paidCheck && paidBox) {
+    paidCheck.addEventListener('change', (e) => {
+        paidBox.style.display = e.target.checked ? 'block' : 'none';
+    });
+}
+</script>
+<style>
+.dash-tab-btn.active {
+    background: var(--surface) !important;
+    color: var(--orange) !important;
+    border-color: var(--border) !important;
+    border-bottom: 2px solid var(--orange) !important;
+}
+@media (max-width: 768px) {
+    #publicationsSec > div { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}

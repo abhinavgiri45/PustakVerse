@@ -43,7 +43,14 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-app.secret_key = os.environ.get('FLASK_SECRET_KEY')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY') or secrets.token_hex(32)
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    MAX_CONTENT_LENGTH=30 * 1024 * 1024  # 30 MB max upload limit
+)
 
 UPLOAD_FOLDER = 'static/uploads'
 PRIVATE_PDF_FOLDER = 'private_uploads/pdfs'
@@ -58,12 +65,121 @@ os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'logos'), exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots'), exist_ok=True)
 os.makedirs(os.path.join(app.config['PRIVATE_PDF_FOLDER']), exist_ok=True)
 
-# --- SEO & PERFORMANCE CACHING HEADER ---
+# ==========================================
+# IN-MEMORY RATE LIMITING & SECURITY GUARDS
+# ==========================================
+RATE_LIMIT_STORE = {}
+RATE_LIMIT_LOCK = threading.Lock()
+
+def is_rate_limited(key, max_attempts=5, window_seconds=60):
+    now = time.time()
+    with RATE_LIMIT_LOCK:
+        records = RATE_LIMIT_STORE.get(key, [])
+        valid_records = [t for t in records if now - t < window_seconds]
+        if len(valid_records) >= max_attempts:
+            RATE_LIMIT_STORE[key] = valid_records
+            return True
+        valid_records.append(now)
+        RATE_LIMIT_STORE[key] = valid_records
+        return False
+
+def is_safe_path(base_dir, path):
+    try:
+        resolved_base = os.path.realpath(base_dir)
+        resolved_path = os.path.realpath(path)
+        return os.path.commonpath([resolved_base]) == os.path.commonpath([resolved_base, resolved_path])
+    except Exception:
+        return False
+
+# ==========================================
+# CSRF PROTECTION MIDDLEWARE
+# ==========================================
+@app.before_request
+def csrf_protection():
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = secrets.token_hex(32)
+
+    # Enforce CSRF token verification on state-modifying requests
+    if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+        # Exempt external webhook endpoints
+        if request.path.startswith('/payment/webhook'):
+            return None
+
+        submitted_token = request.headers.get('X-CSRF-Token')
+        if not submitted_token and request.form:
+            submitted_token = request.form.get('csrf_token')
+        if not submitted_token and request.is_json and isinstance(request.json, dict):
+            submitted_token = request.json.get('csrf_token')
+
+        expected_token = session.get('_csrf_token')
+        if submitted_token and expected_token:
+            if not secrets.compare_digest(str(submitted_token), str(expected_token)):
+                logging.warning(f"CSRF token mismatch on path {request.path}")
+                if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'message': 'Security token invalid or expired. Please refresh the page.'}), 403
+                flash("Your security token has expired. Please try again.", "error")
+                return redirect(request.referrer or url_for('index'))
+
+@app.context_processor
+def inject_security_and_globals():
+    return {
+        'csrf_token': lambda: session.get('_csrf_token', ''),
+        'current_year': datetime.now().year
+    }
+
+# ==========================================
+# MULTI-LAYER HTTP SECURITY HEADERS & CACHING
+# ==========================================
 @app.after_request
-def add_header(response):
-    if 'Cache-Control' not in response.headers:
-        response.headers['Cache-Control'] = 'public, max-age=3600'
+def apply_security_headers(response):
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    elif 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+
+    # Hardened Security Headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'geolocation=(), camera=(), microphone=(self)'
+    
+    # Content Security Policy (allows KaTeX, Google Fonts, Razorpay checkout, and local assets)
+    if 'Content-Security-Policy' not in response.headers:
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://checkout.razorpay.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
+            "img-src 'self' data: blob: https:; "
+            "connect-src 'self' https://api.razorpay.com https://cdn.jsdelivr.net https://lumberjack-cx.razorpay.com; "
+            "frame-src 'self' https://api.razorpay.com; "
+            "object-src 'none'; "
+            "base-uri 'self';"
+        )
+        response.headers['Content-Security-Policy'] = csp
+
     return response
+
+# ==========================================
+# CUSTOM BRANDED ERROR HANDLERS
+# ==========================================
+@app.errorhandler(404)
+def handle_404(e):
+    return render_template('error.html', error_code=404, error_title="Page Not Found", error_message="The book, collection, or page you were looking for doesn't exist or has moved."), 404
+
+@app.errorhandler(403)
+def handle_403(e):
+    return render_template('error.html', error_code=403, error_title="Access Forbidden", error_message="You don't have permission to view or manage this resource."), 403
+
+@app.errorhandler(413)
+def handle_413(e):
+    return render_template('error.html', error_code=413, error_title="File Too Large", error_message="The uploaded file exceeds the 30 MB size limit."), 413
+
+@app.errorhandler(500)
+def handle_500(e):
+    logging.error(f"Server Error encountered: {e}")
+    return render_template('error.html', error_code=500, error_title="Unexpected Error", error_message="Something went wrong on our end. Please try again in a few moments."), 500
 
 # ==========================================
 # TIMEZONE FORMATTING (UTC TO IST)

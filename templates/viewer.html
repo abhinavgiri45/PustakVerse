@@ -3,170 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading: {{ book.title }} - PustakVerse</title>
-      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <title>Reading: {{ book.title }} · PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-viewer: #0f172a;
+            --topbar-bg: #1e293b;
+            --text-light: #f8fafc;
+            --orange: #f97316;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        * { box-sizing: border-box; }
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            overflow: hidden; /* Prevents scrolling outside the iframe */
-            background-color: #333;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background-color: var(--bg-viewer);
+            font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+            color: var(--text-light);
         }
         .header {
-            background-color: #1a1a1a;
-            color: white;
-            padding: 10px 20px;
+            background-color: var(--topbar-bg);
+            padding: 10px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            z-index: 10;
+            border-bottom: 1px solid var(--border);
+            z-index: 20;
             position: relative;
+            height: 56px;
         }
-        
         .header-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 18px;
         }
-
-        .header a {
-            color: #e67e22;
-            text-decoration: none;
-            font-weight: bold;
-            transition: color 0.2s;
+        .book-title-tag {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .header a:hover {
-            color: #f39c12;
-        }
-
-        /* View Controls */
         .view-controls {
             display: flex;
-            gap: 8px;
-            background: #2c3e50;
-            padding: 4px 8px;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 6px;
             border-radius: 6px;
+            border: 1px solid var(--border);
         }
         .view-btn {
             background: transparent;
-            color: #ecf0f1;
-            border: 1px solid transparent;
+            color: #cbd5e1;
+            border: none;
             padding: 4px 10px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 600;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
         .view-btn:hover {
-            background: #34495e;
-            border-color: #7f8c8d;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
         }
-        .view-btn:active {
-            background: #e67e22;
-            color: white;
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-
-        /* Preview Warning Banner */
+        .btn-header {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 6px 14px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            transition: 0.2s;
+        }
+        .btn-header:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+        .btn-ai-tutor {
+            background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 6px 14px;
+            border-radius: 6px;
+        }
         .preview-warning { 
-            background: #feebc8; 
-            color: #c05621; 
-            padding: 12px; 
+            background: #fffbeb; 
+            color: #b45309; 
+            padding: 8px 16px; 
             text-align: center; 
-            font-weight: bold; 
-            border-bottom: 1px solid #f6ad55; 
-            z-index: 9; 
-            position: relative; 
-            font-size: 0.95rem; 
+            font-weight: 600; 
+            border-bottom: 1px solid #fef3c7; 
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-
-        /* Iframe Sizing */
         iframe {
             width: 100%;
             border: none;
         }
-        .pdf-container { height: calc(100vh - 48px); }
-        .pdf-container.with-warning { height: calc(100vh - 93px); }
+        .pdf-container { height: calc(100vh - 56px); }
+        .pdf-container.with-warning { height: calc(100vh - 96px); }
 
-        /* --- NEW: Google Drive Clipping Wrapper --- */
         .drive-wrapper {
             width: 100%;
-            overflow: hidden; /* Hides anything pushed outside this box */
+            overflow: hidden;
             position: relative;
         }
-        .drive-wrapper.standard { height: calc(100vh - 48px); }
-        .drive-wrapper.with-warning { height: calc(100vh - 93px); }
-
+        .drive-wrapper.standard { height: calc(100vh - 56px); }
+        .drive-wrapper.with-warning { height: calc(100vh - 96px); }
         .drive-iframe {
             position: absolute;
-            top: -56px; /* Pushes the iframe up to hide the Google Drive pop-out toolbar */
+            top: -56px;
             left: 0;
             width: 100%;
-            height: calc(100% + 56px); /* Compensates for the height lost at the top */
+            height: calc(100% + 56px);
             border: none;
         }
-
-        /* Lock Screen for Drive Links */
         .drive-block { 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: calc(100vh - 48px); text-align: center; padding: 20px; background-color: #f4f6f9; 
+            height: calc(100vh - 56px); text-align: center; padding: 20px; background-color: var(--bg-viewer); 
         }
-        .drive-block h2 { color: #2d3748; margin-top: 15px; }
-        .drive-block p { color: #718096; max-width: 500px; line-height: 1.6; }
+        .drive-block h2 { color: #ffffff; margin-top: 15px; font-family: 'Playfair Display', serif; }
+        .drive-block p { color: #94a3b8; max-width: 500px; line-height: 1.6; }
     </style>
 </head>
-<!-- Prevent Right Click entirely on the body -->
 <body oncontextmenu="return false;">
 
     <div class="header">
         <div class="header-left">
-            <span>📖 Reading: <strong>{{ book.title }}</strong></span>
+            <span class="book-title-tag">📖 {{ book.title }}</span>
             
-            <!-- Show view controls ONLY for securely uploaded internal PDFs -->
             {% if not book.pdf_file.startswith('http') %}
             <div class="view-controls">
-                <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
-                <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
-                <button class="view-btn" onclick="changeView('FitV')" title="Fit to screen height">Fit Height</button>
+                <button class="view-btn" onclick="changeView('FitH')" title="Fit Width">Fit Width</button>
+                <button class="view-btn" onclick="changeView('Fit')" title="Fit Entire Page">Fit Page</button>
+                <button class="view-btn" onclick="changeView('FitV')" title="Fit Height">Fit Height</button>
             </div>
             {% endif %}
         </div>
         
-        <a href="javascript:history.back()">← Back</a>
+        <div class="header-actions">
+            <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn-ai-tutor" title="Study with AI Tutor">✨ AI Study Tutor</a>
+            <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-header">← Exit Reader</a>
+        </div>
     </div>
 
-    <!-- Shows a bright warning banner if the user is in Preview mode -->
     {% if not can_read %}
         <div class="preview-warning">
-            ⚠️ You are viewing a limited preview. Purchase the book to unlock the full version.
+            <span>⚠️</span> You are viewing a limited sample preview. <a href="{{ url_for('view_book', book_id=book.id) }}" style="color: inherit; font-weight: 700; margin-left: 4px;">Purchase full book &rarr;</a>
         </div>
     {% endif %}
 
-    <!-- Determine how to serve the file based on link type and purchase status -->
     {% if book.pdf_file.startswith('http') %}
-        
-        <!-- Google Drive Links (Clipped to hide pop-out) -->
         {% if can_read %}
             <div class="drive-wrapper {% if not can_read %}with-warning{% else %}standard{% endif %}">
                 <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="drive-iframe" allow="autoplay"></iframe>
             </div>
         {% else %}
-            <!-- Block Drive Links if Unpaid -->
             <div class="drive-block">
-                <span style="font-size: 4rem;">🔒</span>
-                <h2>Preview Not Available</h2>
-                <p>Because this premium book is securely hosted on an external drive, our system cannot automatically slice it to generate a preview. Please purchase the book to unlock full access.</p>
-                <a href="javascript:history.back()" style="display:inline-block; margin-top:20px; padding:10px 20px; background:#f66d2f; color:white; border-radius:5px; text-decoration:none; font-weight:bold;">Go Back</a>
+                <span style="font-size: 3.5rem;">🔒</span>
+                <h2>Preview Not Available on Drive</h2>
+                <p>This premium book is hosted on an external drive. Please purchase the full title to unlock instant reading access.</p>
+                <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-ai-tutor" style="display:inline-block; margin-top:20px; padding:10px 24px; text-decoration:none;">Go to Book Page</a>
             </div>
         {% endif %}
-
     {% else %}
-        <!-- Secure Internal Python Slicer for Uploaded PDFs -->
         <iframe id="pdf-frame" 
                 src="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
                 class="pdf-container {% if not can_read %}with-warning{% endif %}" 
@@ -174,9 +192,7 @@
         </iframe>
     {% endif %}
 
-    <!-- Advanced Protection & View Scripts -->
     <script>
-        // Dynamically change the PDF view mode for internal files
         function changeView(viewMode) {
             const frame = document.getElementById('pdf-frame');
             if (frame) {
@@ -185,21 +201,18 @@
             }
         }
 
-        // Disable common keyboard shortcuts used for saving/printing/inspecting
         document.addEventListener('keydown', function(e) {
-            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
                 (e.ctrlKey && e.shiftKey && e.key === 'I') ||
                 (e.ctrlKey && e.shiftKey && e.key === 'C')) {
                 e.preventDefault();
-                alert('Downloading and Printing are disabled to protect author copyrights.');
+                alert('Document saving and printing are disabled to protect author copyrights.');
                 return false;
             }
         });
 
-        // Prevent Dragging elements (like images)
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();
         });

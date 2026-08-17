@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="min-height: 60vh; display: flex; align-items: center; justify-content: center;">
+    <div class="form-card" style="text-align: center; max-width: 540px; padding: 48px 32px;">
+        <div style="font-size: 4rem; font-weight: 800; font-family: 'Playfair Display', serif; color: var(--orange); line-height: 1; margin-bottom: 12px;">
+            {{ error_code }}
+        </div>
+        <h1 style="font-family: 'Playfair Display', serif; font-size: 1.8rem; margin: 0 0 12px; color: var(--navy);">
+            {{ error_title }}
+        </h1>
+        <p style="color: var(--muted); font-size: 1rem; line-height: 1.6; margin-bottom: 28px;">
+            {{ error_message }}
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a href="{{ url_for('index') }}" class="btn btn-primary" style="text-decoration: none; padding: 12px 24px;">
+                &larr; Back to Global Library
+            </a>
+            <a href="{{ url_for('contact') }}" class="btn btn-outline" style="text-decoration: none; padding: 12px 24px;">
+                Contact Support
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

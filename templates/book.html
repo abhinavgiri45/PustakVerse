@@ -1,585 +1,272 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.title }} - PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <style>
-        :root { 
-            --nav-bg: #2d3748; 
-            --primary-orange: #f66d2f; 
-            --bg-light: #f7fafc; 
-            --text-dark: #1e293b; 
-            --text-light: #64748b; 
-        }
-        
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', sans-serif; 
-            background-color: var(--bg-light); 
-            color: var(--text-dark); 
-        }
-        
-        .navbar { 
-            background-color: var(--nav-bg); 
-            padding: 12px 40px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        
-        .navbar-brand img { 
-            height: 45px; 
-            background: white; 
-            padding: 5px; 
-            border-radius: 4px; 
-            object-fit: contain; 
-        }
-        
-        .navbar-links a { 
-            color: white; 
-            text-decoration: none; 
-            font-weight: 600; 
-            font-size: 1rem; 
-            transition: 0.2s; 
-        }
-        
-        .navbar-links a:hover { 
-            color: var(--primary-orange); 
-        }
+{% extends 'base.html' %}
 
-        .container { 
-            max-width: 1100px; 
-            margin: 40px auto; 
-            padding: 0 20px; 
-        }
-        
-        .book-header { 
-            display: flex; 
-            gap: 40px; 
-            background: white; 
-            padding: 40px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-        }
-        
-        .book-cover { 
-            width: 300px; 
-            border-radius: 8px; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
-            object-fit: cover; 
-        }
-        
-        .book-details { 
-            flex: 1; 
-        }
-        
-        .tag { 
-            display: inline-block; 
-            background: #e0e7ff; 
-            color: #0369a1; 
-            padding: 4px 12px; 
-            border-radius: 20px; 
-            font-size: 0.85rem; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            margin-bottom: 15px; 
-        }
-        
-        h1 { 
-            margin: 0 0 5px 0; 
-            font-size: 2.5rem; 
-            color: #0f172a; 
-            line-height: 1.2; 
-        }
-        
-        .author { 
-            font-size: 1.2rem; 
-            color: var(--text-light); 
-            margin-bottom: 15px; 
-        }
-        
-        /* AVERAGE RATING HEADER */
-        .header-rating { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            margin-bottom: 25px; 
-            font-size: 1.1rem; 
-        }
-        
-        .header-stars { 
-            color: #eab308; 
-            font-weight: bold; 
-            font-size: 1.3rem; 
-        }
-        
-        .header-count { 
-            color: #64748b; 
-            font-size: 0.95rem; 
-        }
+{% block title %}{{ book.title }} by {{ book.author_name }} · PustakVerse{% endblock %}
 
-        .description { 
-            font-size: 1.1rem; 
-            line-height: 1.7; 
-            color: #475569; 
-            white-space: pre-wrap; 
-            margin-bottom: 30px; 
-        }
-        
-        .action-box { 
-            background: #f8fafc; 
-            padding: 20px; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
-            display: inline-block; 
-            width: 100%; 
-            box-sizing: border-box; 
-        }
-        
-        .price { 
-            font-size: 1.8rem; 
-            font-weight: bold; 
-            color: #166534; 
-            margin-bottom: 15px; 
-        }
-        
-        .btn { 
-            display: inline-block; 
-            padding: 15px 30px; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            font-size: 1.1rem; 
-            cursor: pointer; 
-            text-decoration: none; 
-            text-align: center; 
-            border: none; 
-            width: 100%; 
-            box-sizing: border-box; 
-            transition: 0.2s;
-        }
-        
-        .btn-green { 
-            background: #16a34a; 
-            color: white; 
-        } 
-        
-        .btn-green:hover { 
-            background: #15803d; 
-        }
-        
-        .btn-dark { 
-            background: var(--nav-bg); 
-            color: white; 
-        } 
-        
-        .btn-dark:hover { 
-            background: #1e293b; 
-        }
-        
-        .btn-outline { 
-            background: transparent; 
-            border: 2px solid #cbd5e1; 
-            color: #334155; 
-        } 
-        
-        .btn-outline:hover { 
-            background: #f1f5f9; 
-            border-color: #94a3b8; 
-        }
-
-        .reviews-section { 
-            margin-top: 50px; 
-            background: white; 
-            padding: 40px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-        }
-        
-        .reviews-section h2 { 
-            border-bottom: 2px solid #edf2f7; 
-            padding-bottom: 10px; 
-            color: #0f172a; 
-            margin-bottom: 30px; 
-        }
-        
-        /* REVIEW SUMMARY STYLES */
-        .summary-container { 
-            display: flex; 
-            gap: 40px; 
-            margin-bottom: 40px; 
-            background: #f8fafc; 
-            padding: 30px; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
-            align-items: center; 
-        }
-        
-        .summary-score { 
-            text-align: center; 
-            min-width: 150px; 
-        }
-        
-        .summary-score .big-number { 
-            font-size: 4rem; 
-            font-weight: bold; 
-            color: #0f172a; 
-            line-height: 1; 
-        }
-        
-        .summary-score .stars { 
-            color: #eab308; 
-            font-size: 1.5rem; 
-            margin: 5px 0; 
-        }
-        
-        .summary-score .total-text { 
-            color: #64748b; 
-            font-size: 0.9rem; 
-        }
-        
-        .summary-bars { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-        }
-        
-        .bar-row { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            font-size: 0.9rem; 
-            color: #475569; 
-        }
-        
-        .bar-label { 
-            min-width: 50px; 
-        }
-        
-        .bar-outer { 
-            flex: 1; 
-            height: 12px; 
-            background: #e2e8f0; 
-            border-radius: 6px; 
-            overflow: hidden; 
-        }
-        
-        .bar-inner { 
-            height: 100%; 
-            background: #eab308; 
-            border-radius: 6px; 
-        }
-        
-        .bar-count { 
-            min-width: 40px; 
-            text-align: right; 
-            color: #94a3b8; 
-        }
-
-        .review-form { 
-            background: #ffffff; 
-            padding: 25px; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
-            margin-bottom: 30px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02); 
-        }
-        
-        .review-form label { 
-            display: block; 
-            font-weight: bold; 
-            margin-bottom: 8px; 
-        }
-        
-        .review-form select, 
-        .review-form textarea { 
-            width: 100%; 
-            padding: 12px; 
-            margin-bottom: 15px; 
-            border: 1px solid #cbd5e1; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            font-family: inherit;
-        }
-        
-        .review-card { 
-            padding: 25px 0; 
-            border-bottom: 1px solid #f1f5f9; 
-        }
-        
-        .review-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 10px; 
-        }
-        
-        .reviewer-name { 
-            font-weight: bold; 
-            color: #334155; 
-            font-size: 1.1rem; 
-        }
-        
-        .review-date { 
-            color: #94a3b8; 
-            font-size: 0.85rem; 
-        }
-        
-        .stars { 
-            color: #eab308; 
-            font-size: 1.2rem; 
-            margin-bottom: 8px; 
-        }
-        
-        .review-text { 
-            color: #475569; 
-            line-height: 1.6; 
-            margin: 0; 
-            font-size: 1.05rem; 
-        }
-
-        .flash { 
-            padding: 15px; 
-            border-radius: 6px; 
-            margin-bottom: 20px; 
-            text-align: center; 
-            font-weight: 500; 
-        }
-        
-        .flash.success { 
-            background: #dcfce7; 
-            color: #166534; 
-        } 
-        
-        .flash.error { 
-            background: #fee2e2; 
-            color: #991b1b; 
-        }
-
-        .hidden-review { 
-            display: none; 
-        }
-        
-        .view-more-container { 
-            text-align: center; 
-            margin-top: 30px; 
-        }
-
-        @media (max-width: 768px) { 
-            .book-header { 
-                flex-direction: column; 
-            } 
-            .book-cover { 
-                width: 100%; 
-                height: auto; 
-            } 
-            .summary-container { 
-                flex-direction: column; 
-                gap: 20px; 
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse">
-            </a>
-        </div>
-        <div class="navbar-links">
-            <a href="/">← Back to Library</a>
-        </div>
+{% block content %}
+<div class="container">
+    <!-- BREADCRUMBS -->
+    <nav style="margin-bottom: 24px; font-size: 0.9rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <a href="{{ url_for('index') }}" style="color: inherit; text-decoration: none;">Global Library</a>
+        <span>/</span>
+        <a href="{{ url_for('category_view', name=book.catalog) }}" style="color: inherit; text-decoration: none;">{{ book.catalog }}</a>
+        <span>/</span>
+        <span style="color: var(--text-main); font-weight: 600;">{{ book.title }}</span>
     </nav>
 
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div class="book-header">
+    <!-- BOOK SHOWCASE HERO CARD -->
+    <div class="card" style="padding: 40px; margin-bottom: 36px;">
+        <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px; align-items: start;">
+            <!-- Cover Column -->
             <div>
-                <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' ~ book.cover_image) }}" class="book-cover" alt="Cover">
-            </div>
-            
-            <div class="book-details">
-                <span class="tag">{{ book.catalog }}</span>
-                <h1>{{ book.title }}</h1>
-                <div class="author">By <strong>{{ book.author_name }}</strong></div>
-                
-                <!-- Average Rating Header -->
-                <div class="header-rating">
-                    <span class="header-stars">
-                        {% if avg_rating > 0 %}
-                            ★ {{ avg_rating }}
-                        {% else %}
-                            ☆ No Ratings
-                        {% endif %}
-                    </span>
-                    <span class="header-count">({{ review_count }} reviews)</span>
-                </div>
-                
-                <div class="description">{{ book.description or 'No description provided for this book.' }}</div>
-                
-                <div class="action-box">
-                    {% if book.is_paid %}
-                        {% if can_read %}
-                            <div style="color: #047857; font-weight: bold; margin-bottom: 10px;">✓ You own this premium book</div>
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark">Read Full Book Now</a>
-                        {% else %}
-                            <div class="price">₹{{ "%.2f"|format(book.price_paise/100) }}</div>
-                            <div style="display: flex; gap: 10px;">
-                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569;">Free Preview</a>
-                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2;">
-                                    <button type="submit" class="btn btn-green">Buy Securely</button>
-                                </form>
-                            </div>
-                        {% endif %}
+                <div class="book-cover-container" style="border-radius: var(--radius-md); box-shadow: var(--shadow-lg); border: 1px solid var(--border);">
+                    {% if book.cover_image and book.cover_image.startswith('http') %}
+                        <img src="{{ book.cover_image | drive_img }}" alt="{{ book.title }}" style="width:100%; height:100%; object-fit:cover;">
+                    {% elif book.cover_image %}
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ book.cover_image) }}" alt="{{ book.title }}" style="width:100%; height:100%; object-fit:cover;">
                     {% else %}
-                        <div class="price" style="color: #3b82f6;">Free to Read</div>
-                        <div style="display: flex; gap: 10px;">
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1;">Read Now</a>
-                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1;">
-                                <button type="submit" class="btn btn-dark" style="background: #cbd5e1; color: #0f172a;">Save to Library</button>
-                            </form>
-                        </div>
+                        <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="{{ book.title }}" style="width:100%; height:100%; object-fit:cover;">
                     {% endif %}
-                    <div style="margin-top: 14px;">
-                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="width: 100%; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">Learn with AI Tutor</a>
-                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- REVIEWS SECTION -->
-        <div class="reviews-section">
-            <h2>Community Reviews & Ratings</h2>
-            
-            <!-- RATING SUMMARY VISUALIZATION -->
-            {% if review_count > 0 %}
-            <div class="summary-container">
-                <div class="summary-score">
-                    <div class="big-number">{{ avg_rating }}</div>
-                    <div class="stars">
-                        {% for _ in range(avg_rating|round|int) %}★{% endfor %}{% for _ in range(5 - (avg_rating|round|int)) %}☆{% endfor %}
-                    </div>
-                    <div class="total-text">{{ review_count }} global ratings</div>
+            <!-- Details Column -->
+            <div>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+                    <span class="card-badge badge-category" style="position: static; display: inline-block;">{{ book.catalog }}</span>
+                    {% if book.is_paid %}
+                        <span class="card-badge badge-premium" style="position: static; display: inline-block;">Premium · ₹{{ "%.2f"|format(book.price_paise / 100) }}</span>
+                    {% else %}
+                        <span class="card-badge badge-free" style="position: static; display: inline-block;">Free Open Book</span>
+                    {% endif %}
                 </div>
+
+                <h1 style="font-family: var(--font-serif); font-size: clamp(2rem, 4vw, 2.8rem); line-height: 1.2; margin: 0 0 10px; color: var(--text-main);">
+                    {{ book.title }}
+                </h1>
                 
-                <div class="summary-bars">
-                    {% for star in [5, 4, 3, 2, 1] %}
-                        {% set count = rating_counts[star] %}
-                        {% set percentage = (count / review_count * 100) if review_count > 0 else 0 %}
-                        <div class="bar-row">
-                            <span class="bar-label">{{ star }} star</span>
-                            <div class="bar-outer">
-                                <div class="bar-inner" style="width: {{ percentage }}%;"></div>
-                            </div>
-                            <span class="bar-count">{{ percentage|round|int }}%</span>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-            
-            <!-- REVIEW POSTING FORM -->
-            {% if session.user_id %}
-                {% if can_read %}
-                <div class="review-form">
-                    <form action="{{ url_for('submit_review', book_id=book.id) }}" method="POST">
-                        <label>Rate this book</label>
-                        <select name="rating" required>
-                            <option value="5">★★★★★ - Excellent</option>
-                            <option value="4">★★★★☆ - Very Good</option>
-                            <option value="3">★★★☆☆ - Average</option>
-                            <option value="2">★★☆☆☆ - Below Average</option>
-                            <option value="1">★☆☆☆☆ - Poor</option>
-                        </select>
-                        <label>Your Review</label>
-                        <textarea name="review" rows="3" placeholder="What did you think of the book?" required></textarea>
-                        <button type="submit" class="btn btn-dark" style="width: auto; padding: 10px 25px;">Post Review</button>
-                    </form>
-                </div>
-                {% else %}
-                <div style="background: #e2e8f0; padding: 15px; border-left: 4px solid #94a3b8; margin-bottom: 30px; border-radius: 4px;">
-                    <p style="color: #334155; margin: 0; font-weight: bold;">You must purchase this book or add it to your library to leave a review.</p>
-                </div>
-                {% endif %}
-            {% else %}
-            <div style="background: #fffbeb; padding: 15px; border-left: 4px solid #f59e0b; margin-bottom: 30px; border-radius: 4px;">
-                <a href="{{ url_for('login') }}" style="color: #b45309; font-weight: bold;">Log in to leave a review</a>
-            </div>
-            {% endif %}
+                <p style="font-size: 1.1rem; color: var(--muted); margin: 0 0 18px;">
+                    Written by <strong style="color: var(--text-main);">{{ book.author_name }}</strong>
+                </p>
 
-            <!-- REVIEW LIST WITH LIMIT & "VIEW MORE" -->
-            <div class="review-list">
-                {% for r in reviews %}
-                <!-- Apply hidden-review class to any index strictly greater than 10 -->
-                <div class="review-card {% if loop.index > 10 %}hidden-review{% endif %}">
-                    <div class="review-header">
+                <!-- Rating Summary -->
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 10px 16px; background: var(--surface-hover); border-radius: var(--radius-sm); width: fit-content; border: 1px solid var(--border);">
+                    <span style="color: #eab308; font-size: 1.2rem; font-weight: bold;">
+                        {% if avg_rating > 0 %}★ {{ avg_rating }}{% else %}☆ No Ratings Yet{% endif %}
+                    </span>
+                    <span style="color: var(--muted); font-size: 0.9rem;">
+                        ({{ review_count }} reader reviews)
+                    </span>
+                </div>
+
+                <!-- Book Description -->
+                <div style="font-size: 1.05rem; line-height: 1.7; color: var(--text-main); margin-bottom: 32px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; padding-right: 10px;">
+                    {{ book.description or 'No detailed description provided for this book.' }}
+                </div>
+
+                <!-- Action Button Container -->
+                <div style="background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
                         <div>
-                            <span class="reviewer-name">
-                                {{ r.username }}
-                                {% if session.user_id == r.user_id %}
-                                    <span style="color: #f66d2f; font-size: 0.85rem; margin-left: 5px;">(You)</span>
+                            {% if book.is_paid %}
+                                {% if can_read %}
+                                    <span style="color: #059669; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
+                                        ✓ You own this book
+                                    </span>
+                                {% else %}
+                                    <div style="font-size: 1.75rem; font-weight: 800; color: var(--orange); font-family: var(--font-serif);">
+                                        ₹{{ "%.2f"|format(book.price_paise / 100) }}
+                                    </div>
                                 {% endif %}
-                            </span>
-                            <span class="review-date" style="margin-left: 10px;">{{ r.created_at | to_ist }}</span>
+                            {% else %}
+                                <div style="font-size: 1.5rem; font-weight: 800; color: #059669; font-family: var(--font-serif);">
+                                    Free to Read
+                                </div>
+                            {% endif %}
                         </div>
-                        
-                        <!-- Delete Review logic -->
-                        {% if session.user_id == r.user_id %}
-                        <form action="{{ url_for('delete_review', review_id=r.id, book_id=book.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your review?');">
-                            <button type="submit" style="background: none; border: none; color: #e53e3e; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: underline;">Delete My Review</button>
-                        </form>
+
+                        <!-- Secondary action buttons -->
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" 
+                                    class="btn btn-outline" 
+                                    onclick="saveBookToLibrary({{ book.id }}, '{{ book.title|escape }}')"
+                                    title="Save to My Library">
+                                🔖 Save
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline" 
+                                    onclick="copyShareLink('{{ url_for('view_book', book_id=book.id, _external=True) }}', '{{ book.title|escape }}')"
+                                    title="Share Book">
+                                🔗 Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Primary Action Row -->
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        {% if book.is_paid %}
+                            {% if can_read %}
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-primary" style="flex: 2; padding: 14px 24px; font-size: 1.05rem;">
+                                    📖 Read Full Book
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; padding: 14px 20px;">
+                                    👀 Free Preview
+                                </a>
+                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2; margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px 24px; font-size: 1.05rem;">
+                                        ⚡ Buy Securely (₹{{ "%.2f"|format(book.price_paise / 100) }})
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-primary" style="flex: 2; padding: 14px 24px; font-size: 1.05rem;">
+                                📖 Read Online Free
+                            </a>
                         {% endif %}
-                        
+
+                        <!-- AI Study Tutor Button -->
+                        <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn btn-ai" style="flex: 1.5; padding: 14px 20px;">
+                            ✨ Ask AI Tutor
+                        </a>
                     </div>
-                    <div class="stars">
-                        {% for _ in range(r.rating) %}★{% endfor %}{% for _ in range(5 - r.rating) %}☆{% endfor %}
-                    </div>
-                    <p class="review-text">{{ r.review }}</p>
                 </div>
-                {% else %}
-                <p style="color: #64748b; font-size: 1.1rem;">No reviews yet. Be the first to review this book!</p>
-                {% endfor %}
             </div>
-
-            <!-- VIEW MORE BUTTON -->
-            {% if reviews|length > 10 %}
-            <div class="view-more-container">
-                <button id="viewMoreBtn" class="btn btn-outline" onclick="showMoreReviews()" style="width: auto; padding: 12px 40px;">View More Reviews</button>
-            </div>
-            {% endif %}
-
         </div>
     </div>
 
-    <!-- JAVASCRIPT FOR VIEW MORE BUTTON -->
-    <script>
-        function showMoreReviews() {
-            // Find all reviews that are currently hidden
-            const hiddenReviews = document.querySelectorAll('.hidden-review');
-            
-            // Unhide them by removing the class
-            hiddenReviews.forEach(review => {
-                review.style.display = 'block';
-            });
-            
-            // Hide the 'View More' button after expanding
-            const viewMoreBtn = document.getElementById('viewMoreBtn');
-            if (viewMoreBtn) {
-                viewMoreBtn.style.display = 'none';
-            }
-        }
-    </script>
-</body>
-</html>
+    <!-- REVIEWS & COMMUNITY SECTION -->
+    <div class="card" style="padding: 36px; margin-bottom: 40px;">
+        <div class="section-heading">
+            <div>
+                <h2>💬 Reader Reviews & Ratings</h2>
+                <p class="subtitle">See what fellow readers think or leave your own review.</p>
+            </div>
+        </div>
+
+        <!-- RATING BREAKDOWN -->
+        {% if review_count > 0 %}
+        <div style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 36px; padding: 24px; background: var(--surface-hover); border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 32px; align-items: center;">
+            <div style="text-align: center;">
+                <div style="font-size: 3.8rem; font-weight: 800; color: var(--text-main); line-height: 1; font-family: var(--font-serif);">
+                    {{ avg_rating }}
+                </div>
+                <div style="color: #eab308; font-size: 1.4rem; margin: 6px 0;">
+                    {% for _ in range(avg_rating|round|int) %}★{% endfor %}{% for _ in range(5 - (avg_rating|round|int)) %}☆{% endfor %}
+                </div>
+                <div style="color: var(--muted); font-size: 0.9rem;">
+                    {{ review_count }} global ratings
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for star in [5, 4, 3, 2, 1] %}
+                    {% set count = rating_counts[star] %}
+                    {% set percentage = (count / review_count * 100) if review_count > 0 else 0 %}
+                    <div style="display: flex; align-items: center; gap: 12px; font-size: 0.88rem; color: var(--muted);">
+                        <span style="width: 50px; text-align: right; font-weight: 600;">{{ star }} ★</span>
+                        <div style="flex: 1; height: 10px; background: var(--border); border-radius: var(--radius-full); overflow: hidden;">
+                            <div style="height: 100%; background: #eab308; width: {{ percentage }}%; border-radius: var(--radius-full);"></div>
+                        </div>
+                        <span style="width: 45px;">{{ percentage|round|int }}%</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- WRITE A REVIEW FORM -->
+        {% if session.user_id %}
+            {% if can_read %}
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; margin-bottom: 32px;">
+                <h3 style="margin: 0 0 16px; font-family: var(--font-serif);">Write a Review</h3>
+                <form action="{{ url_for('submit_review', book_id=book.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="reviewRating">Select Star Rating</label>
+                        <select name="rating" id="reviewRating" required style="max-width: 250px;">
+                            <option value="5">★★★★★ - Masterpiece (5 Stars)</option>
+                            <option value="4">★★★★☆ - Great Book (4 Stars)</option>
+                            <option value="3">★★★☆☆ - Good Read (3 Stars)</option>
+                            <option value="2">★★☆☆☆ - Fair (2 Stars)</option>
+                            <option value="1">★☆☆☆☆ - Needs Work (1 Star)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reviewContent">Your Thoughts & Feedback</label>
+                        <textarea name="review" id="reviewContent" rows="3" placeholder="What did you enjoy about this book?" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Publish Review</button>
+                </form>
+            </div>
+            {% endif %}
+        {% else %}
+            <div style="padding: 16px 20px; background: var(--surface-hover); border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <span style="color: var(--muted);">Want to leave a review for this book?</span>
+                <a href="{{ url_for('login') }}" class="btn btn-outline" style="padding: 8px 16px; font-size: 0.88rem;">Sign in to Review</a>
+            </div>
+        {% endif %}
+
+        <!-- REVIEWS LIST -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            {% if reviews and reviews|length > 0 %}
+                {% for r in reviews %}
+                <div class="card review-item {% if loop.index > 8 %}hidden-review{% endif %}" style="padding: 20px; border-radius: var(--radius-md);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div>
+                            <strong style="color: var(--text-main); font-size: 1rem;">{{ r.username }}</strong>
+                            {% if session.user_id == r.user_id %}
+                                <span style="color: var(--orange); font-size: 0.8rem; margin-left: 6px; font-weight: 700;">(You)</span>
+                            {% endif %}
+                            <span style="color: var(--muted); font-size: 0.82rem; margin-left: 10px;">{{ r.created_at | to_ist }}</span>
+                        </div>
+                        
+                        {% if session.user_id == r.user_id %}
+                        <form action="{{ url_for('delete_review', review_id=r.id, book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete your review?');" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" style="background: none; border: none; color: var(--danger); font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: underline;">
+                                Delete
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div style="color: #eab308; font-size: 1.1rem; margin-bottom: 8px;">
+                        {% for _ in range(r.rating) %}★{% endfor %}{% for _ in range(5 - r.rating) %}☆{% endfor %}
+                    </div>
+                    <p style="margin: 0; color: var(--text-main); line-height: 1.6; font-size: 0.95rem;">
+                        {{ r.review }}
+                    </p>
+                </div>
+                {% endfor %}
+
+                {% if reviews|length > 8 %}
+                <div style="text-align: center; margin-top: 16px;">
+                    <button type="button" id="viewMoreReviewsBtn" class="btn btn-outline" onclick="expandReviews()">
+                        View More Reviews ({{ reviews|length - 8 }} more)
+                    </button>
+                </div>
+                {% endif %}
+            {% else %}
+                <div style="text-align: center; padding: 36px; color: var(--muted);">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">✨</div>
+                    <p style="margin: 0;">No reviews written yet. Be the first to share your thoughts!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function expandReviews() {
+    document.querySelectorAll('.hidden-review').forEach(r => r.style.display = 'block');
+    const btn = document.getElementById('viewMoreReviewsBtn');
+    if (btn) btn.style.display = 'none';
+}
+</script>
+<style>
+.hidden-review { display: none; }
+@media (max-width: 768px) {
+    .card > div { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}
