@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <style>
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            background-color: #0f172a; /* Deep cinematic black/blue */
+            color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        .cinematic-container {
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 2s ease-in forwards;
+        }
+
+        .logo {
+            max-width: 250px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 20px rgba(246, 109, 47, 0.5));
+            animation: pulseLogo 4s infinite alternate;
+        }
+
+        .tagline {
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin: 0;
+            opacity: 0;
+            animation: slideUp 2s ease-out 1.5s forwards;
+        }
+
+        .sub-tagline {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-top: 10px;
+            opacity: 0;
+            animation: slideUp 2s ease-out 2.5s forwards;
+        }
+
+        .skip-btn {
+            position: absolute;
+            bottom: 40px;
+            background: transparent;
+            color: #64748b;
+            border: 1px solid #64748b;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            opacity: 0;
+            animation: fadeIn 1s ease-in 3s forwards;
+        }
+
+        .skip-btn:hover {
+            color: white;
+            border-color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseLogo {
+            0% { transform: scale(0.95); }
+            100% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cinematic-container">
+        <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo">
+        <h1 class="tagline">Every Book. Every Mind. Free.</h1>
+        <p class="sub-tagline">Prepare to explore the universe of knowledge...</p>
+    </div>
+
+    <button class="skip-btn" onclick="goToLogin()">Skip Intro</button>
+
+    <script>
+        // Automatically redirect to the login page with a special "onboarding" flag after 6 seconds
+        setTimeout(() => {
+            goToLogin();
+        }, 6000);
+
+        function goToLogin() {
+            // The ?first_time=true tells the login page to show the "Skip" button
+            window.location.href = "/login?first_time=true";
+        }
+    </script>
+</body>
+</html>

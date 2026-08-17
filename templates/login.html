@@ -2,6 +2,27 @@
 {% block content %}
 
 <style>
+    /* INSTANTLY HIDE UNNECESSARY NAVBAR ELEMENTS FROM BASE.HTML */
+    .nav-search { display: none !important; }
+    .nav-links a { display: none !important; } 
+    
+    /* CUSTOM 'BACK' BUTTON STYLING */
+    .nav-links .custom-back-btn { 
+        display: inline-flex !important; 
+        color: #f8fafc !important; 
+        font-weight: 600 !important; 
+        text-decoration: none; 
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 18px;
+        border-radius: 25px;
+        transition: 0.2s;
+    }
+    .nav-links .custom-back-btn:hover {
+        background: #f66d2f !important;
+        color: white !important;
+    }
+
+    /* FORM STYLING */
     :root {
         --primary-orange: #f66d2f;
         --primary-orange-hover: #e05c24;
@@ -65,6 +86,13 @@
 
 <div class="auth-wrapper">
     <div class="auth-box">
+
+        <!-- ONBOARDING SKIP BUTTON (Only shows if coming from intro page) -->
+        <div id="skipOnboardingContainer" style="display: none; text-align: center; margin: 20px 0 10px;">
+            <button onclick="skipToLibrary()" style="background: transparent; border: 1px solid #cbd5e1; color: #475569; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: 0.2s;">
+                Skip Sign In & Explore Library →
+            </button>
+        </div>
         
         <div class="flash-wrapper">
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -226,6 +254,25 @@
 </div>
 
 <script>
+    // INJECT THE CLEAN BACK BUTTON INTO THE MAIN NAVBAR
+    document.addEventListener('DOMContentLoaded', () => {
+        const navLinks = document.querySelector('.nav-links');
+        if (navLinks) {
+            navLinks.insertAdjacentHTML('beforeend', '<a href="/" class="custom-back-btn">← Back to Library</a>');
+        }
+
+        // Check if user came from Cinematic Intro
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('first_time') === 'true') {
+            document.getElementById('skipOnboardingContainer').style.display = 'block';
+        }
+    });
+
+    function skipToLibrary() {
+        localStorage.setItem('pustakverse_onboarded', 'true');
+        window.location.href = '/';
+    }
+
     function switchTab(tabId, element) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.form-area').forEach(form => form.classList.remove('active'));
@@ -368,6 +415,7 @@
             const data = await response.json();
             
             if (data.success) {
+                localStorage.setItem('pustakverse_onboarded', 'true'); // Flag to prevent intro repetition
                 alert(data.message);
                 window.location.href = data.redirect;
             } else {

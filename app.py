@@ -1122,6 +1122,14 @@ def create_master_developer():
 # PUBLIC ROUTES
 # ==========================================
 @app.route('/')
+
+@app.route('/intro')
+def intro():
+    # If a user is already logged in, they shouldn't see the intro again
+    if 'user_id' in session:
+        return redirect(url_for('index'))
+    return render_template('intro.html')
+
 def index():
     show_telegram_popup = session.pop('show_telegram_popup', False)
     db = None
@@ -1896,6 +1904,8 @@ def send_delete_account_otp():
             try: db.close()
             except: pass
     return redirect(url_for('dashboard'))
+
+
 
 @app.route('/delete_my_account', methods=['POST'])
 def delete_my_account():

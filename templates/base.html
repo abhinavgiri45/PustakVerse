@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PustakVerse | Every Book. Every Mind. Free.</title>
+    <script>
+        // Check if this is the user's first time visiting the site
+        if (!localStorage.getItem('pustakverse_onboarded')) {
+            const currentPath = window.location.pathname;
+            // If they are not already on the intro or login pages, redirect them to the intro
+            if (currentPath !== '/intro' && currentPath !== '/login' && currentPath !== '/register') {
+                window.location.href = '/intro';
+            }
+        }
+    </script>
       <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
