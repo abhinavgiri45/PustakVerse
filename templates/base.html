@@ -3,25 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PustakVerse - A free & open digital universe for books, literature, knowledge, and AI-powered study. Read, learn, and explore unlimited books.">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{% block title %}PustakVerse | Every Book. Every Mind. Free.{% endblock %}</title>
-
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <title>PustakVerse | Every Book. Every Mind. Free.</title>
+      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
-
-    <!-- Google Fonts Preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=Playfair+Display:ital,wght@0,500..900;1,500..900&display=swap" rel="stylesheet">
-
-    <!-- Global Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-    <!-- SMART ONBOARDING / INTRO REDIRECT (Per Session) -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <!-- SMART ONBOARDING REDIRECT -->
     <script>
+        // Trigger intro once per browser session for all users
         (function() {
             const introSeen = sessionStorage.getItem('pustakverse_intro_seen');
             if (!introSeen) {
@@ -34,303 +23,168 @@
             }
         })();
     </script>
-    {% block head %}{% endblock %}
 </head>
 <body>
-    <!-- Top Reading Progress Indicator -->
-    <div class="scroll-progress-container" aria-hidden="true">
-        <div class="scroll-progress-bar" id="myBar"></div>
-    </div>
+    <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
 
-    <!-- Category Sidebar Drawer -->
-    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()" aria-hidden="true"></div>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
     <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
         <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
-        <h3>Browse Categories</h3>
-        {% if site_catalogs %}
-            {% for cat in site_catalogs %}
-                <a href="{{ url_for('category_view', name=cat.name) }}">
-                    <span>{{ cat.name }}</span>
-                    <span>&rarr;</span>
-                </a>
-            {% endfor %}
-        {% else %}
-            <a href="{{ url_for('category_view', name='Fiction') }}">Fiction</a>
-            <a href="{{ url_for('category_view', name='Non-Fiction') }}">Non-Fiction</a>
-            <a href="{{ url_for('category_view', name='Educational') }}">Educational</a>
-            <a href="{{ url_for('category_view', name='History') }}">History</a>
-            <a href="{{ url_for('category_view', name='Poetry') }}">Poetry</a>
-        {% endif %}
-        
-        <h3>Special Collections</h3>
-        <a href="{{ url_for('archives_view') }}">
-            <span>🏛️ Free Classic Archives</span>
-            <span>&rarr;</span>
-        </a>
-        <a href="{{ url_for('ask_ai') }}">
-            <span>✨ AI Study Tutor</span>
-            <span>&rarr;</span>
-        </a>
+        <h3>Browse by category</h3>
+        {% for cat in site_catalogs %}
+            <a href="{{ url_for('category_view', name=cat.name) }}">{{ cat.name }}</a>
+        {% endfor %}
+        <h3>Special collections</h3>
+        <a href="{{ url_for('archives_view') }}">Archives (Free Books)</a>
     </aside>
 
-    <!-- Top Navigation Bar -->
     <nav>
         <div class="nav-brand">
-            <button class="hamburger-btn" type="button" onclick="openNav()" aria-label="Open navigation menu">☰</button>
-            <a href="{{ url_for('index') }}" class="brand-logo" aria-label="PustakVerse Home">
-                {% if site_settings and site_settings.logo_image and site_settings.logo_image != 'PustakVerse.png' %}
+            <button class="hamburger-btn" type="button" onclick="openNav()" aria-label="Open navigation">☰</button>
+            <a href="{{ url_for('index') }}" class="brand-logo" aria-label="PustakVerse home">
+                {% if site_settings.logo_image != 'PustakVerse.png' %}
                     <img src="{{ url_for('static', filename='uploads/logos/' + site_settings.logo_image) }}" alt="PustakVerse" class="logo-img">
                 {% else %}
                     <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img">
                 {% endif %}
             </a>
         </div>
-
-        <div class="nav-search" aria-label="Global book search">
+        <div class="nav-search" aria-label="Global search">
             <form class="nav-search-form" role="search" id="globalSearchForm" action="javascript:void(0);">
-                <input type="search" id="globalSearchInput" placeholder="Search books, authors, topics..." aria-label="Search books">
+                <input type="search" id="globalSearchInput" placeholder="Search books, authors, categories..." aria-label="Search books">
                 <button type="button" id="globalMicBtn" class="nav-search-btn" title="Search by Voice" aria-label="Search by Voice">🎤</button>
             </form>
         </div>
-
         <div class="nav-links">
             <a href="{{ url_for('index') }}">Global Library</a>
-            <a href="{{ url_for('ask_ai') }}">AI Tutor</a>
-            {% if session.get('username') %}
+            {% if session.username %}
                 <a href="{{ url_for('my_library') }}">My Library</a>
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('logout') }}" style="color: #fca5a5;">Logout</a>
+                <a href="{{ url_for('payment_history') }}">Payment History</a>
+                <a href="{{ url_for('dashboard') }}">My Profile</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
             {% else %}
                 <a href="{{ url_for('contact') }}">Contact</a>
                 <a href="{{ url_for('login') }}" class="nav-btn-highlight">Sign In / Join</a>
             {% endif %}
-            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle theme">
-                <span id="themeIcon">☾</span>
-            </button>
         </div>
+        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
     </nav>
 
-    <!-- Global Flash Notification Banner -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-container">
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}" role="alert">
-                        <span>{{ message }}</span>
-                        <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer; padding:0 4px;" aria-label="Dismiss">&times;</button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+      {% if messages %}
+        <div class="container flash-container">
+            {% for category, message in messages %}
+              <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+      {% endif %}
     {% endwith %}
 
-    <!-- Main Page Content Block -->
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+    {% block content %}{% endblock %}
 
-    <!-- Community Telegram Modal Popup -->
-    {% if show_telegram_popup %}
-    <div class="popup-overlay" id="tgPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+    <div class="popup-overlay" id="tgPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-hidden="true">
         <div class="popup-content">
             <button class="popup-close" type="button" onclick="dismissPopup()" aria-label="Close popup">&times;</button>
-            <div class="popup-kicker">COMMUNITY & ARCHIVES</div>
+            <div class="popup-kicker">THE PUSTAKVERSE COMMUNITY</div>
             <div class="popup-orbit"><span>✦</span><span>✦</span><span>✦</span><div class="popup-book">PV</div></div>
-            <h2 id="popupTitle">Join PustakVerse Readers 🚀</h2>
-            <p>Get instant access to newly released archives, reading groups, and community discussions.</p>
-            <div class="popup-perks">
-                <span>✦ Free Archives</span>
-                <span>✦ Author Spotlights</span>
-                <span>✦ Daily Summaries</span>
-            </div>
-            <a href="https://t.me/PustakVerse" target="_blank" rel="noopener" class="popup-btn" onclick="dismissPopup()">
-                Join Telegram Community <span>&rarr;</span>
-            </a>
+            <h2 id="popupTitle">Join the PustakVerse Family! <span>🚀</span></h2>
+            <p>Find your next favorite book, meet curious readers, and get first access to community updates.</p>
+            <div class="popup-perks"><span>✦ Reader picks</span><span>✦ Author updates</span><span>✦ Free resources</span></div>
+            <a href="https://t.me/PustakVerse" target="_blank" rel="noopener" class="popup-btn" onclick="dismissPopup()">Join our Telegram community <span>→</span></a>
             <button class="close-popup" type="button" onclick="dismissPopup()">Maybe later</button>
         </div>
     </div>
-    {% endif %}
+    <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
 
-    <!-- Global JavaScript Framework -->
     <script>
-        // Sidebar Navigation
-        function openNav() {
-            document.getElementById('mySidebar').style.width = '300px';
-            document.getElementById('sidebarOverlay').style.display = 'block';
-        }
-        function closeNav() {
-            document.getElementById('mySidebar').style.width = '0';
-            document.getElementById('sidebarOverlay').style.display = 'none';
-        }
-
-        // Theme Toggle
-        function applyTheme(theme) {
-            document.body.classList.toggle('dark-theme', theme === 'dark');
-            const icon = document.getElementById('themeIcon');
-            if (icon) icon.textContent = theme === 'dark' ? '☀' : '☾';
-        }
-        function toggleTheme() {
-            const nextTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark';
-            localStorage.setItem('pustakverse_theme', nextTheme);
-            applyTheme(nextTheme);
-        }
-
-        // Toast Notification System
-        let toastTimeout;
-        function showToast(message, isError = false) {
-            let toast = document.getElementById('globalToast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'globalToast';
-                toast.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:9999; background:#0f172a; color:#ffffff; padding:12px 20px; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.3); font-size:0.92rem; font-weight:600; display:flex; align-items:center; gap:8px; opacity:0; transform:translateY(20px); transition:all 0.25s ease; border:1px solid rgba(255,255,255,0.15);';
-                document.body.appendChild(toast);
-            }
-            clearTimeout(toastTimeout);
-            toast.innerHTML = `<span>${isError ? '⚠️' : '✓'}</span><span>${message}</span>`;
-            requestAnimationFrame(() => {
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateY(0)';
-            });
-            toastTimeout = setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(20px)';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // Copy Share Link Helper
-        async function copyShareLink(url, bookTitle) {
-            try {
-                if (navigator.clipboard) {
-                    await navigator.clipboard.writeText(url);
-                    showToast(`Link for "${bookTitle}" copied!`);
-                } else {
-                    const temp = document.createElement('input');
-                    temp.value = url;
-                    document.body.appendChild(temp);
-                    temp.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(temp);
-                    showToast(`Link for "${bookTitle}" copied!`);
-                }
-            } catch (err) {
-                showToast("Could not copy link", true);
-            }
-        }
-
-        // Bookmark Save Helper
-        async function saveBookToLibrary(bookId, bookTitle) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            try {
-                const response = await fetch(`/save-book/${bookId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken || '',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                const data = await response.json();
-                if (data.success) {
-                    showToast(`"${bookTitle}" added to library!`);
-                } else {
-                    showToast(data.message || "Please sign in to save books", true);
-                }
-            } catch (e) {
-                showToast("Please sign in to save books to library", true);
-            }
-        }
-
-        function dismissPopup() {
-            const popup = document.getElementById('tgPopup');
-            if (popup) {
-                popup.style.display = 'none';
-                localStorage.setItem('pustakverse_tg_seen', 'true');
-            }
-        }
-
+        function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
+        function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
+        function dismissPopup() { const popup = document.getElementById('tgPopup'); popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); localStorage.setItem('pustakverse_tg_seen', 'true'); }
+        function applyTheme(theme) { document.body.classList.toggle('dark-theme', theme === 'dark'); document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '☾'; }
+        function toggleTheme() { const nextTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark'; localStorage.setItem('pustakverse_theme', nextTheme); applyTheme(nextTheme); }
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         document.addEventListener('DOMContentLoaded', function() {
             applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
-            
-            // Auto-trigger telegram modal on login if flag set
-            const tgPopup = document.getElementById('tgPopup');
-            if (tgPopup) {
-                setTimeout(() => {
-                    tgPopup.classList.add('is-visible');
-                }, 1000);
+            if (!localStorage.getItem('pustakverse_tg_seen')) {
+                setTimeout(function() { const popup = document.getElementById('tgPopup'); popup.classList.add('is-visible'); popup.setAttribute('aria-hidden', 'false'); }, 1200);
             }
         });
-
-        // Top Scroll Reading Indicator
+        document.addEventListener('keydown', function(event) { if (event.key === 'Escape') { dismissPopup(); closeNav(); } });
         window.addEventListener('scroll', function() {
             const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const bar = document.getElementById('myBar');
-            if (bar) {
-                bar.style.width = height > 0 ? (winScroll / height) * 100 + '%' : '0%';
-            }
+            document.getElementById('myBar').style.width = height > 0 ? (winScroll / height) * 100 + '%' : '0%';
+            document.getElementById('backToTop').classList.toggle('is-visible', winScroll > 400);
         });
 
-        // Global Book Search & Filtering
-        const searchInput = document.getElementById('globalSearchInput');
-        const searchForm = document.getElementById('globalSearchForm');
-        const micBtn = document.getElementById('globalMicBtn');
+        const globalSearchInput = document.getElementById('globalSearchInput');
+        const globalSearchForm = document.getElementById('globalSearchForm');
+        const globalMicBtn = document.getElementById('globalMicBtn');
 
-        function filterBooks(query) {
+        function filterVisibleCards(query) {
             const cards = document.querySelectorAll('.book-card');
-            const term = (query || '').trim().toLowerCase();
-            let count = 0;
+            let visibleCount = 0;
+            const normalized = (query || '').toLowerCase();
 
             cards.forEach(card => {
-                const title = (card.getAttribute('data-title') || card.querySelector('.book-card-title')?.textContent || '').toLowerCase();
-                const author = (card.getAttribute('data-author') || card.querySelector('.book-card-author')?.textContent || '').toLowerCase();
-                const category = (card.getAttribute('data-category') || card.querySelector('.book-category-tag')?.textContent || '').toLowerCase();
-                
-                const match = !term || title.includes(term) || author.includes(term) || category.includes(term);
-                card.style.display = match ? 'flex' : 'none';
-                if (match) count++;
+                const title = (card.getAttribute('data-title') || '').toLowerCase();
+                const author = (card.getAttribute('data-author') || '').toLowerCase();
+                const catalog = (card.getAttribute('data-catalog') || '').toLowerCase();
+                const matches = title.includes(normalized) || author.includes(normalized) || catalog.includes(normalized);
+                card.style.display = matches ? 'flex' : 'none';
+                if (matches) visibleCount++;
             });
 
             const noResults = document.getElementById('noResultsMsg');
             if (noResults) {
-                noResults.style.display = (count === 0 && cards.length > 0) ? 'block' : 'none';
+                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
             }
         }
 
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => filterBooks(e.target.value));
+        if (globalSearchInput) {
+            globalSearchInput.addEventListener('keyup', function() {
+                filterVisibleCards(this.value);
+            });
         }
 
-        // Voice Search Recognition
-        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        if (globalSearchForm) {
+            globalSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                filterVisibleCards(globalSearchInput?.value || '');
+                globalSearchInput?.blur();
+            });
+        }
+
+        if (globalMicBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
 
-            micBtn.addEventListener('click', () => {
+            globalMicBtn.addEventListener('click', () => {
                 recognition.start();
-                micBtn.textContent = '🎙️';
-                if (searchInput) searchInput.placeholder = 'Listening...';
+                globalMicBtn.textContent = '🎙️';
+                globalSearchInput.placeholder = 'Listening...';
             });
 
             recognition.onresult = (event) => {
-                const text = event.results[0][0].transcript;
-                if (searchInput) {
-                    searchInput.value = text;
-                    filterBooks(text);
-                }
+                globalSearchInput.value = event.results[0][0].transcript;
+                filterVisibleCards(globalSearchInput.value);
+            };
+
+            recognition.onerror = () => {
+                globalMicBtn.textContent = '🎤';
+                globalSearchInput.placeholder = 'Search books, authors, categories...';
             };
 
             recognition.onend = () => {
-                micBtn.textContent = '🎤';
-                if (searchInput) searchInput.placeholder = 'Search books, authors, topics...';
+                globalMicBtn.textContent = '🎤';
+                globalSearchInput.placeholder = 'Search books, authors, categories...';
             };
-        } else if (micBtn) {
-            micBtn.style.display = 'none';
+        } else if (globalMicBtn) {
+            globalMicBtn.style.display = 'none';
         }
     </script>
-    {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,89 +1,54 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales History - PustakVerse</title>
+      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f7fafc; color: #2d3748; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background: #f8fafc; color: #718096; }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #2d3748; color: white; text-decoration: none; border-radius: 6px; margin-bottom: 20px; }
+        .status-paid { color: #38a169; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+        
+        <h1 style="color: #f66d2f;">Sales History</h1>
+        <h3 style="margin-top: 0; color: #718096;">Book: {{ book.title }}</h3>
+        <p><strong>Base Price:</strong> ₹{{ "%.2f"|format(book.price_paise/100) }}</p>
 
-{% block title %}Sales History · {{ book.title }} · PustakVerse{% endblock %}
-
-{% block content %}
-<div class="container" style="max-width: 1000px; padding: 40px 20px;">
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <div>
-            <h1 style="font-family: var(--font-serif); font-size: 2rem; margin: 0 0 4px; color: var(--text-main);">
-                Sales & Revenue Analytics
-            </h1>
-            <p style="color: var(--muted); margin: 0; font-size: 0.95rem;">Publication: <strong>{{ book.title }}</strong></p>
-        </div>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">
-            &larr; Back to Dashboard
-        </a>
-    </div>
-
-    <!-- REVENUE STATS BAR -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-        <div class="card" style="padding: 20px;">
-            <span style="color: var(--muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Book Price</span>
-            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-top: 4px;">
-                ₹{{ "%.2f"|format(book.price_paise / 100) }}
-            </div>
-        </div>
-        <div class="card" style="padding: 20px;">
-            <span style="color: var(--muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Total Sales Count</span>
-            <div style="font-size: 1.5rem; font-weight: 800; color: var(--orange); margin-top: 4px;">
-                {{ sales|length }} Copies
-            </div>
-        </div>
-        <div class="card" style="padding: 20px;">
-            <span style="color: var(--muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Platform Commission</span>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #059669; margin-top: 4px;">
-                0% (Direct)
-            </div>
-        </div>
-    </div>
-
-    <!-- SALES TABLE -->
-    <div class="card" style="padding: 24px;">
-        <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main);">Recent Reader Purchases</h3>
         {% if sales %}
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--border); text-align: left; color: var(--muted);">
-                        <th style="padding: 12px 10px;">Date & Time</th>
-                        <th style="padding: 12px 10px;">Order ID</th>
-                        <th style="padding: 12px 10px;">Reader / Buyer</th>
-                        <th style="padding: 12px 10px;">Amount Paid</th>
-                        <th style="padding: 12px 10px; text-align: right;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sale in sales %}
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 14px 10px; color: var(--muted); font-size: 0.88rem;">
-                            {{ sale.paid_at.strftime('%b %d, %Y %I:%M %p') if sale.paid_at else 'N/A' }}
-                        </td>
-                        <td style="padding: 14px 10px; font-family: monospace; color: var(--muted); font-size: 0.88rem;">
-                            {{ sale.razorpay_order_id }}
-                        </td>
-                        <td style="padding: 14px 10px; font-weight: 600; color: var(--text-main);">
-                            {{ sale.buyer_name }}
-                        </td>
-                        <td style="padding: 14px 10px; font-weight: 700; color: #059669;">
-                            ₹{{ "%.2f"|format(sale.amount_paise / 100) }}
-                        </td>
-                        <td style="padding: 14px 10px; text-align: right;">
-                            <span class="card-badge badge-free" style="position: static; display: inline-block;">✓ Completed</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+            <table>
+                <tr>
+                    <th>Date</th>
+                    <th>Order ID</th>
+                    <th>Buyer Username</th>
+                    <th>Amount Paid</th>
+                    <th>Status</th>
+                </tr>
+                {% for sale in sales %}
+                <tr>
+                    <td>{{ sale.paid_at.strftime('%Y-%m-%d %H:%M') if sale.paid_at else 'N/A' }}</td>
+                    <td style="font-family: monospace;">{{ sale.razorpay_order_id }}</td>
+                    <td>{{ sale.buyer_name }}</td>
+                    <td>₹{{ "%.2f"|format(sale.amount_paise/100) }}</td>
+                    <td class="status-paid">SUCCESS</td>
+                </tr>
+                {% endfor %}
             </table>
-        </div>
         {% else %}
-            <div style="text-align: center; padding: 48px 20px;">
-                <div style="font-size: 2.5rem; margin-bottom: 12px;">📊</div>
-                <h3 style="margin: 0 0 8px; font-family: var(--font-serif); color: var(--text-main);">No sales recorded yet</h3>
-                <p style="color: var(--muted); margin: 0 0 20px;">Share your book link with readers across social channels and communities to get your first sale!</p>
-                <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-primary">View Live Book Page</a>
+            <div style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #a0aec0;">No sales recorded yet.</h3>
+                <p>Keep promoting your book to get your first reader!</p>
             </div>
         {% endif %}
     </div>
-</div>
-{% endblock %}
+</body>
+</html>

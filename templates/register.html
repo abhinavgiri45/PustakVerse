@@ -1,79 +1,34 @@
 {% extends 'base.html' %}
-
-{% block title %}Create Account · PustakVerse{% endblock %}
-
 {% block content %}
-<div class="container" style="min-height: 75vh; display: flex; align-items: center; justify-content: center; padding: 40px 16px;">
-    <div class="card" style="max-width: 480px; width: 100%; padding: 40px; box-shadow: var(--shadow-lg);">
-        <div style="text-align: center; margin-bottom: 28px;">
-            <span class="eyebrow">Join the Community</span>
-            <h1 style="font-family: var(--font-serif); font-size: 2rem; margin: 8px 0 6px; color: var(--text-main);">
-                Create an Account
-            </h1>
-            <p style="color: var(--muted); font-size: 0.95rem; margin: 0;">Access thousands of free & premium books worldwide.</p>
-        </div>
-
-        <form method="POST" action="{{ url_for('register') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div class="form-group">
-                <label for="reg_username">Username</label>
-                <input type="text" id="reg_username" name="username" required placeholder="Choose a username">
-            </div>
-
-            <div class="form-group">
-                <label for="reg_email">Email Address</label>
-                <input type="email" id="reg_email" name="email" required placeholder="name@domain.com">
-            </div>
-
-            <div class="form-group">
-                <label for="reg_password">Password</label>
-                <input type="password" id="reg_password" name="password" required minlength="6" placeholder="Minimum 6 characters">
-            </div>
-
-            <div class="form-group">
-                <label for="reg_question">Security Question (Password Recovery)</label>
-                <select id="reg_question" name="security_question" required>
-                    <option value="What is your pet's name?">What is your pet's name?</option>
-                    <option value="What is your favorite book?">What is your favorite book?</option>
-                    <option value="What city were you born in?">What city were you born in?</option>
-                    <option value="What is your favorite food?">What is your favorite food?</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="reg_answer">Security Answer</label>
-                <input type="text" id="reg_answer" name="security_answer" placeholder="Your answer" required>
-            </div>
-
-            <div class="form-group">
-                <label for="reg_role">Account Type</label>
-                <select id="reg_role" name="role" onchange="toggleAuthorReason(this.value)">
-                    <option value="reader">Reader (Discover & Read Books)</option>
-                    <option value="author">Author (Publish & Sell Original Works)</option>
-                </select>
-            </div>
-
-            <div id="author_reason_group" class="form-group" style="display: none; background: var(--surface-hover); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-                <label for="reg_reason" style="color: var(--orange);">Author Application Statement</label>
-                <textarea id="reg_reason" name="verification_reason" rows="2" placeholder="Tell us about your books, genres, and background..."></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 8px;">
-                Create Account &rarr;
-            </button>
+<div class="container">
+    <div class="form-card" style="text-align: center;">
+        <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" style="height: 90px; margin-bottom: 10px;">
+        <h2 style="color: var(--navy); margin-top: 0;">Create an Account</h2>
+        <form method="POST" action="/register" style="text-align: left;">
+            <label>Username:</label>
+            <input type="text" name="username" required>
+            <label>Email Address:</label>
+            <input type="email" name="email" required>
+            <label>Password:</label>
+            <input type="password" name="password" required>
+            <label>Security Question (In case you forget your password):</label>
+            <select name="security_question" required>
+                <option value="What is your pet's name?">What is your pet's name?</option>
+                <option value="What is your favorite book?">What is your favorite book?</option>
+                <option value="What city were you born in?">What city were you born in?</option>
+                <option value="What is your favorite food?">What is your favorite food?</option>
+            </select>
+            <label>Security Answer:</label>
+            <input type="text" name="security_answer" placeholder="e.g. Harry Potter" required>
+            <label>I am a:</label>
+            <select name="role">
+                <option value="reader">Reader</option>
+                <option value="author">Author</option>
+            </select>
+            <label style="color: var(--orange);">If registering as an Author, why do you want to publish here?</label>
+            <textarea name="verification_reason" rows="3" placeholder="Tell us about your writing..." style="padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit; margin-bottom: 15px; margin-top: 8px;"></textarea>
+            <button type="submit">Register</button>
         </form>
-
-        <div style="text-align: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--muted);">
-            Already have an account? <a href="{{ url_for('login') }}" style="color: var(--orange); font-weight: 600; text-decoration: none;">Sign In</a>
-        </div>
     </div>
 </div>
-
-<script>
-function toggleAuthorReason(role) {
-    const group = document.getElementById('author_reason_group');
-    if (group) group.style.display = (role === 'author') ? 'block' : 'none';
-}
-</script>
 {% endblock %}

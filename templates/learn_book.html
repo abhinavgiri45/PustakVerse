@@ -1,83 +1,201 @@
-{% extends 'base.html' %}
-
-{% block title %}AI Study Tutor · {{ book.title }} · PustakVerse{% endblock %}
-
-{% block content %}
-<div class="container">
-    <nav style="margin-bottom: 20px; font-size: 0.9rem; color: var(--muted); display: flex; align-items: center; gap: 8px;">
-        <a href="{{ url_for('index') }}" style="color: inherit; text-decoration: none;">Global Library</a>
-        <span>/</span>
-        <a href="{{ url_for('view_book', book_id=book.id) }}" style="color: inherit; text-decoration: none;">{{ book.title }}</a>
-        <span>/</span>
-        <span style="color: var(--text-main); font-weight: 600;">AI Study Guide</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Tutor - {{ book.title }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+        .navbar {
+            background: #1e293b;
+            padding: 12px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar img {
+            width: 150px;
+            background: white;
+            border-radius: 6px;
+            padding: 4px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 18px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 32px auto;
+            padding: 0 20px 40px;
+        }
+        .header-box {
+            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+            color: white;
+            padding: 28px 30px;
+            border-radius: 16px;
+            box-shadow: 0 16px 35px rgba(15, 23, 42, 0.15);
+        }
+        .header-box h1 {
+            margin: 0 0 8px;
+            font-size: 2.2rem;
+        }
+        .header-box p {
+            margin: 0;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+        .panel {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e2e8f0;
+            margin-top: 24px;
+            padding: 24px;
+        }
+        .concept-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .concept-form input {
+            flex: 1;
+            min-width: 220px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 14px 22px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+        .btn-primary {
+            background: #f97316;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .study-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+            margin-top: 26px;
+        }
+        .ai-card {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 12px;
+            padding: 22px;
+        }
+        .ai-card h2, .side-panel h3 {
+            margin-top: 0;
+            font-size: 1.4rem;
+        }
+        .ai-card p, .side-panel li, .side-panel p {
+            line-height: 1.7;
+            color: #334155;
+        }
+        .side-panel ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #075985;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 760px) {
+            .study-grid {
+                grid-template-columns: 1fr;
+            }
+            .navbar {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse logo">
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('view_book', book_id=book.id) }}">← Back to Book</a>
+        </div>
     </nav>
 
-    <!-- HEADER BANNER -->
-    <div class="card" style="background: linear-gradient(135deg, var(--navy) 0%, #1e293b 100%); color: #ffffff; padding: 36px; margin-bottom: 28px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-            <div>
-                <span class="eyebrow" style="background: rgba(249, 115, 22, 0.15); color: var(--orange); border-color: rgba(249, 115, 22, 0.3);">
-                    AI Powered Book Study
-                </span>
-                <h1 style="font-family: var(--font-serif); font-size: 2.2rem; margin: 8px 0 6px; color: #ffffff;">
-                    {{ book.title }}
-                </h1>
-                <p style="color: #cbd5e1; margin: 0; font-size: 1rem;">
-                    Understand key concepts, generate study questions, and master topics grounded in this book.
-                </p>
-            </div>
-            <div>
-                <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn btn-ai" style="padding: 12px 22px;">
-                    ✨ Open Live AI Chat &rarr;
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- CONCEPT EXPLORATION FORM -->
-    <div class="card" style="padding: 28px; margin-bottom: 28px;">
-        <h3 style="margin: 0 0 12px; font-family: var(--font-serif); color: var(--text-main);">Study a Specific Concept</h3>
-        <form method="GET" action="{{ url_for('learn_book', book_id=book.id) }}" style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <input type="text" name="concept" value="{{ concept_query }}" placeholder="e.g., Summary, Main Themes, Key Characters, Formulas..." required style="flex: 1; min-width: 250px; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 1rem;">
-            <button type="submit" class="btn btn-primary">Generate Study Notes</button>
-            <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-outline">Back to Book</a>
-        </form>
-    </div>
-
-    <!-- STUDY RESULTS GRID -->
-    {% if ai_data %}
-    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px;">
-        <!-- Explanation Panel -->
-        <div class="card" style="padding: 28px;">
-            <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main); display: flex; align-items: center; gap: 8px;">
-                <span>💡</span> Concept Explanation
-            </h3>
-            <div style="font-size: 1.05rem; line-height: 1.7; color: var(--text-main); white-space: pre-wrap;">
-                {{ ai_data.explanation }}
-            </div>
+    <div class="container">
+        <div class="header-box">
+            <div class="badge">Free AI learning helper</div>
+            <h1>AI Study Tutor for {{ book.title }}</h1>
+            <p>Learn any concept clearly from this book with a simple, beginner-friendly explanation, examples, and practice questions.</p>
         </div>
 
-        <!-- Practice Questions Panel -->
-        <div class="card" style="padding: 28px; background: var(--surface-hover);">
-            <h3 style="margin: 0 0 16px; font-family: var(--font-serif); color: var(--text-main); display: flex; align-items: center; gap: 8px;">
-                <span>📝</span> Practice Questions
-            </h3>
-            {% if ai_data.practice_questions %}
-                <ol style="padding-left: 20px; margin: 0; line-height: 1.7; color: var(--text-main);">
-                    {% for q in ai_data.practice_questions %}
-                        <li style="margin-bottom: 12px; font-weight: 500;">{{ q }}</li>
+        <div class="panel">
+            <form class="concept-form" method="POST" action="{{ url_for('learn_book', book_id=book.id) }}">
+                <input type="text" name="concept" value="{{ concept }}" placeholder="Example: loops, function, theme, strategy, summary..." aria-label="Concept to learn">
+                <button type="submit" class="btn btn-primary">Explain this concept</button>
+                <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-secondary">Suggested concept</a>
+            </form>
+        </div>
+
+        <div class="study-grid">
+            <div class="ai-card">
+                <h2>{{ ai_response['concept'] }}</h2>
+                <p>{{ ai_response['explanation'] }}</p>
+
+                <h3>Key points</h3>
+                <ul>
+                    {% for point in ai_response['key_points'] %}
+                        <li>{{ point }}</li>
                     {% endfor %}
-                </ol>
-            {% else %}
-                <p style="color: var(--muted);">No practice questions generated.</p>
-            {% endif %}
+                </ul>
+
+                <h3>Example</h3>
+                <p>{{ ai_response['example'] }}</p>
+
+                <h3>Practice questions</h3>
+                <ul>
+                    {% for q in ai_response['practice_questions'] %}
+                        <li>{{ q }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="side-panel panel">
+                <h3>Book context</h3>
+                <p>{{ ai_response['book_context'] }}</p>
+                <h3>Study tip</h3>
+                <p>{{ ai_response['study_tip'] }}</p>
+                <h3>Quick idea</h3>
+                <p>Use the concept name to ask the AI tutor for a simpler explanation, then explain it back in your own words.</p>
+            </div>
         </div>
     </div>
-    {% endif %}
-</div>
-<style>
-@media (max-width: 768px) {
-    .container > div:last-child { grid-template-columns: 1fr !important; }
-}
-</style>
-{% endblock %}
+</body>
+</html>

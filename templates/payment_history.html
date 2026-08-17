@@ -1,71 +1,55 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Payments - PustakVerse</title>
+      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f7fafc; color: #2d3748; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background: #f8fafc; color: #718096; }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #2d3748; color: white; text-decoration: none; border-radius: 6px; margin-bottom: 20px; }
+        .status-paid { color: #38a169; font-weight: bold; }
+        .status-pending { color: #d97706; font-weight: bold; }
+        .status-failed { color: #e53e3e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/my-library" class="btn-back">← Back to Library</a>
+        
+        <h1 style="color: #f66d2f;">My Payment History</h1>
 
-{% block title %}My Payment History · PustakVerse{% endblock %}
-
-{% block content %}
-<div class="container" style="max-width: 1000px; padding: 40px 20px;">
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <div>
-            <h1 style="font-family: var(--font-serif); font-size: 2rem; margin: 0 0 4px; color: var(--text-main);">
-                Payment History
-            </h1>
-            <p style="color: var(--muted); margin: 0; font-size: 0.95rem;">All your verified book purchases and transactions.</p>
-        </div>
-        <a href="{{ url_for('my_library') }}" class="btn btn-outline btn-sm">
-            &larr; Back to My Library
-        </a>
-    </div>
-
-    <div class="card" style="padding: 24px;">
         {% if payments %}
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--border); text-align: left; color: var(--muted);">
-                        <th style="padding: 12px 10px;">Date & Time</th>
-                        <th style="padding: 12px 10px;">Book Purchased</th>
-                        <th style="padding: 12px 10px;">Order ID</th>
-                        <th style="padding: 12px 10px;">Amount</th>
-                        <th style="padding: 12px 10px; text-align: right;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in payments %}
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 14px 10px; color: var(--muted); font-size: 0.88rem;">
-                            {{ p.paid_at.strftime('%b %d, %Y %I:%M %p') if p.paid_at else 'N/A' }}
-                        </td>
-                        <td style="padding: 14px 10px; font-weight: 600; color: var(--text-main);">
-                            {{ p.book_title }}
-                        </td>
-                        <td style="padding: 14px 10px; font-family: monospace; color: var(--muted); font-size: 0.88rem;">
-                            {{ p.razorpay_order_id }}
-                        </td>
-                        <td style="padding: 14px 10px; font-weight: 700; color: var(--text-main);">
-                            ₹{{ "%.2f"|format(p.amount_paise / 100) }}
-                        </td>
-                        <td style="padding: 14px 10px; text-align: right;">
-                            {% if p.status == 'paid' %}
-                                <span class="card-badge badge-free" style="position: static; display: inline-block;">✓ Success</span>
-                            {% elif p.status == 'pending' %}
-                                <span class="card-badge badge-category" style="position: static; display: inline-block;">Pending</span>
-                            {% else %}
-                                <span class="card-badge badge-premium" style="position: static; display: inline-block;">Failed</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+            <table>
+                <tr>
+                    <th>Date</th>
+                    <th>Book Title</th>
+                    <th>Order ID</th>
+                    <th>Amount Paid</th>
+                    <th>Status</th>
+                </tr>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.paid_at.strftime('%Y-%m-%d %H:%M') if payment.paid_at else 'N/A' }}</td>
+                    <td style="font-weight: 600;">{{ payment.book_title }}</td>
+                    <td style="font-family: monospace; font-size: 0.9em; color: #718096;">{{ payment.razorpay_order_id }}</td>
+                    <td>₹{{ "%.2f"|format(payment.amount_paise/100) }}</td>
+                    <td class="{% if payment.status == 'paid' %}status-paid{% elif payment.status == 'pending' %}status-pending{% else %}status-failed{% endif %}">
+                        {{ payment.status|capitalize }}
+                    </td>
+                </tr>
+                {% endfor %}
             </table>
-        </div>
         {% else %}
-            <div style="text-align: center; padding: 48px 20px;">
-                <div style="font-size: 2.5rem; margin-bottom: 12px;">🧾</div>
-                <h3 style="margin: 0 0 8px; font-family: var(--font-serif); color: var(--text-main);">No purchase transactions yet</h3>
-                <p style="color: var(--muted); margin: 0 0 20px;">When you purchase premium books, invoices will appear here.</p>
-                <a href="{{ url_for('index') }}" class="btn btn-primary">Browse Global Library</a>
+            <div style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #a0aec0;">You haven't purchased any premium books yet.</h3>
             </div>
         {% endif %}
     </div>
-</div>
-{% endblock %}
+</body>
+</html>
