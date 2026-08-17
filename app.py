@@ -1587,6 +1587,7 @@ def register():
     return jsonify({'success': False, 'message': 'Invalid action.'})
 
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -1602,18 +1603,24 @@ def login():
                 user = cursor.fetchone()
                 
                 if user:
-                    # MAX 5 PASSWORD ATTEMPTS LOCKOUT
-                    if user.get('locked_until') and user['locked_until'] > datetime.now():
-                        diff = user['locked_until'] - datetime.now()
+                    # 1. Safely check 5-Attempt Lockout
+                    locked = user.get('locked_until')
+                    if locked and locked > datetime.now():
+                        diff = locked - datetime.now()
                         mins = int(diff.total_seconds() / 60) + 1
-                        flash(f"Account temporarily locked due to 5 failed attempts. Please try again in {mins} minutes.", "error")
+                        flash(f"Account temporarily locked. Please try again in {mins} minutes.", "error")
                         return render_template('login.html', active_tab=login_portal)
 
+                    # 2. Check Password
                     if check_password_hash(user['password_hash'], request.form['password']):
-                        # Reset failed attempts on success
+                        
+                        # Safely reset failed attempts upon successful login
                         if user.get('failed_attempts', 0) > 0:
-                            cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user['id'],))
-                            db.commit()
+                            try:
+                                cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user['id'],))
+                                db.commit()
+                            except Exception:
+                                pass # Silently ignore if column doesn't exist yet
 
                         if login_portal == 'reader' and user['role'] != 'reader': 
                             flash("Please use the 'Author / Official' tab to log in to your account.", "error")
@@ -1643,22 +1650,26 @@ def login():
                         flash(f"Welcome back, {user['username']}!", "success")
                         return redirect(url_for('index'))
                     else:
-                        # INCORRECT PASSWORD: Add Strike
+                        # 3. Wrong Password - Safely increment failed attempts
                         attempts = user.get('failed_attempts', 0) + 1
-                        if attempts >= 5:
-                            lock_time = datetime.now() + timedelta(minutes=15)
-                            cursor.execute("UPDATE users SET failed_attempts = %s, locked_until = %s WHERE id = %s", (attempts, lock_time, user['id']))
-                            flash("Account locked for 15 minutes due to 5 consecutive failed attempts.", "error")
-                        else:
-                            cursor.execute("UPDATE users SET failed_attempts = %s WHERE id = %s", (attempts, user['id']))
-                            flash(f"Invalid username or password. {5 - attempts} attempts remaining.", "error")
-                        db.commit()
+                        try:
+                            if attempts >= 5:
+                                lock_time = datetime.now() + timedelta(minutes=15)
+                                cursor.execute("UPDATE users SET failed_attempts = %s, locked_until = %s WHERE id = %s", (attempts, lock_time, user['id']))
+                                flash("Account locked for 15 minutes due to 5 consecutive failed attempts.", "error")
+                            else:
+                                cursor.execute("UPDATE users SET failed_attempts = %s WHERE id = %s", (attempts, user['id']))
+                                flash(f"Invalid username or password. {5 - attempts} attempts remaining.", "error")
+                            db.commit()
+                        except Exception:
+                            # Fallback if DB columns are missing, just show standard error
+                            flash("Invalid username or password.", "error")
                         return render_template('login.html', active_tab=login_portal)
                 else:
                     flash("Invalid username or password.", "error")
                     return render_template('login.html', active_tab=login_portal)
-            except Exception:
-                flash("Secure connection to the database timed out.", "error")
+            except Exception as e:
+                flash("A database error occurred. Please try again.", "error")
                 return render_template('login.html', active_tab=login_portal)
             finally:
                 if db:
@@ -1763,51 +1774,87 @@ def logout():
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        action = request.form.get('action')
+        data = request.json if request.is_json else request.form
+        action = data.get('action')
         db = None
         
         if action == 'send_otp':
-            email = request.form.get('email')
+            email = data.get('email', '').strip()
+            sec_question = data.get('security_question', '')
+            sec_answer = data.get('security_answer', '').lower().strip()
+            
             try:
                 db = get_db_connection()
                 cursor = db.cursor(dictionary=True)
                 cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
                 user = cursor.fetchone()
+                
+                if not user:
+                    return jsonify({'success': False, 'message': 'No account found with that email.'})
+                if user['role'] == 'developer':
+                    return jsonify({'success': False, 'message': 'Developer accounts cannot be reset here.'})
+                if user['security_answer'].lower().strip() != sec_answer:
+                    return jsonify({'success': False, 'message': 'Security answer is incorrect.'})
+
+                otp = str(random.randint(100000, 999999))
+                session['reset_otp'] = otp
+                session['reset_email'] = email
+                session['reset_otp_expiry'] = time.time() + 300 # 5 minutes
+                session['last_reset_sent'] = time.time()
+                
+                # Send email asynchronously to prevent timeouts
+                send_email_async(send_otp_email, email, otp)
+                
+                return jsonify({'success': True, 'message': 'OTP sent successfully!'})
+                
             except Exception: 
-                flash("Database connection timeout. Please try again.", "error")
-                return render_template('forgot_password.html', show_otp_form=False)
+                return jsonify({'success': False, 'message': 'Database connection error.'})
             finally:
                 if db:
                     try: db.close()
                     except: pass
-                    
-            if user and user['role'] == 'developer':
-                flash("Developer accounts cannot be reset via this page. ", "error")
-                return render_template('forgot_password.html', show_otp_form=False)
-            elif user:
-                otp = str(random.randint(100000, 999999))
-                session['reset_otp'] = otp
-                session['reset_email'] = email
-                if send_otp_email(email, otp):
-                    flash("An OTP has been sent.", "success")
-                    return render_template('forgot_password.html', show_otp_form=True, email=email)
-            else:
-                flash("If this email exists, an OTP will be sent.", "info")
-        elif action == 'verify_otp':
-            user_otp = request.form.get('otp')
-            new_password = request.form.get('new_password')
+
+        elif action == 'resend_otp':
             email = session.get('reset_email')
+            if not email:
+                return jsonify({'success': False, 'message': 'Session expired.'})
+                
+            last_sent = session.get('last_reset_sent', 0)
+            if time.time() - last_sent < 60:
+                return jsonify({'success': False, 'message': 'Please wait 60 seconds before resending.'})
+                
+            otp = str(random.randint(100000, 999999))
+            session['reset_otp'] = otp
+            session['reset_otp_expiry'] = time.time() + 300
+            session['last_reset_sent'] = time.time()
             
-            if user_otp and user_otp == session.get('reset_otp'):
+            send_email_async(send_otp_email, email, otp)
+            return jsonify({'success': True, 'message': 'A new OTP has been sent.'})
+
+        elif action == 'verify_otp':
+            user_otp = data.get('otp', '').strip()
+            new_password = data.get('new_password', '')
+            email = session.get('reset_email')
+            correct_otp = session.get('reset_otp')
+            expiry = session.get('reset_otp_expiry', 0)
+            
+            if not correct_otp or not email:
+                return jsonify({'success': False, 'message': 'Session expired. Please reload.'})
+            if time.time() > expiry:
+                return jsonify({'success': False, 'message': 'OTP expired. Please click Resend.'})
+                
+            if len(new_password) < 6:
+                return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'})
+            
+            if user_otp == correct_otp:
                 hashed_pw = generate_password_hash(new_password)
                 try:
                     db = get_db_connection()
                     cursor = db.cursor()
-                    cursor.execute("UPDATE users SET password_hash = %s WHERE email = %s", (hashed_pw, email))
+                    cursor.execute("UPDATE users SET password_hash = %s, failed_attempts = 0, locked_until = NULL WHERE email = %s", (hashed_pw, email))
                     db.commit()
                 except Exception: 
-                    flash("Database connection timeout. Please try again.", "error")
-                    return render_template('forgot_password.html', show_otp_form=True, email=email)
+                    return jsonify({'success': False, 'message': 'Database error.'})
                 finally:
                     if db:
                         try: db.close()
@@ -1815,13 +1862,11 @@ def forgot_password():
                         
                 session.pop('reset_otp', None)
                 session.pop('reset_email', None)
-                flash("Password changed successfully. You may now log in.", "success")
-                return redirect(url_for('login'))
+                return jsonify({'success': True, 'message': 'Password reset successfully! Redirecting...', 'redirect': url_for('login')})
             else: 
-                flash("Invalid OTP. Please try again.", "error")
-                return render_template('forgot_password.html', show_otp_form=True, email=email)
+                return jsonify({'success': False, 'message': 'Invalid OTP. Please try again.'})
                 
-    return render_template('forgot_password.html', show_otp_form=False)
+    return render_template('forgot_password.html')
 
 # ==========================================
 # ACCOUNT DELETION (OTP VERIFIED)

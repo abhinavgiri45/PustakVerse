@@ -25,30 +25,25 @@
             min-height: 100vh; display: flex; flex-direction: column;
         }
 
-        /* Navbar */
         .navbar { background-color: var(--nav-bg); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; }
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: 0.2s; }
         .navbar-links a:hover { color: var(--primary-orange); }
 
-        /* Main Container */
         .auth-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
         .auth-box { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; }
 
-        /* Flash Messages */
         .flash-wrapper { padding: 15px 20px 0 20px; }
         .flash { padding: 12px; border-radius: 6px; text-align: center; font-weight: 500; font-size: 0.95rem; margin-bottom: 5px; }
         .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
         .flash.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .flash.info { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
 
-        /* Tabs */
         .tabs { display: flex; border-bottom: 2px solid #edf2f7; background: #f8fafc; }
         .tab-btn { flex: 1; padding: 15px 10px; text-align: center; background: none; border: none; font-weight: 600; color: var(--text-light); cursor: pointer; transition: 0.2s; font-size: 0.95rem; border-bottom: 3px solid transparent; margin-bottom: -2px; }
         .tab-btn:hover { color: var(--text-dark); background: #f1f5f9; }
         .tab-btn.active { color: var(--primary-orange); border-bottom-color: var(--primary-orange); background: white; }
 
-        /* Form Area */
         .form-area { padding: 30px; display: none; }
         .form-area.active { display: block; }
         .form-area h2 { text-align: center; margin-top: 0; color: var(--nav-bg); margin-bottom: 25px; font-size: 1.6rem; display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -61,7 +56,6 @@
         .toggle-password { position: absolute; right: 12px; top: 38px; cursor: pointer; font-size: 1.2rem; user-select: none; opacity: 0.7; }
         .toggle-password:hover { opacity: 1; }
 
-        /* Buttons */
         .btn-submit { width: 100%; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 1.05rem; cursor: pointer; transition: 0.2s; color: white; }
         .btn-submit.orange { background: var(--primary-orange); }
         .btn-submit.orange:hover { background: var(--primary-orange-hover); }
@@ -73,8 +67,6 @@
 
         .divider { display: flex; align-items: center; text-align: center; margin: 25px 0 20px 0; color: #a0aec0; font-size: 0.9rem; font-weight: 600; }
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
-        .divider:not(:empty)::before { margin-right: 15px; }
-        .divider:not(:empty)::after { margin-left: 15px; }
 
         .btn-google {
             display: flex; align-items: center; justify-content: center; width: 100%;
@@ -125,15 +117,12 @@
                 {% endwith %}
             </div>
 
-            <!-- 2-STEP VERIFICATION PANEL FOR OFFICIALS -->
+            <!-- 2-STEP VERIFICATION PANEL -->
             {% if show_2fa_form %}
                 <div class="form-area active" style="padding-top: 20px;">
-                    <h2>
-                        <span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>
-                        2-Step Verification
-                    </h2>
+                    <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>2-Step Verification</h2>
                     <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
-                        To protect your administrative access, we have sent a 6-digit verification code to <strong>{{ email }}</strong>.
+                        We have sent a 6-digit verification code to <strong>{{ email }}</strong>.
                     </p>
                     <form action="/login" method="POST">
                         <input type="hidden" name="action" value="verify_2fa">
@@ -148,20 +137,17 @@
                     </div>
                 </div>
 
-            <!-- STANDARD LOGIN & REGISTRATION PANELS -->
             {% else %}
+                <!-- TABS (Fixed Buttons) -->
                 <div class="tabs">
-                    <button class="tab-btn {% if active_tab == 'reader' or not active_tab %}active{% endif %}" onclick="switchTab('reader')">📖 Reader Login</button>
-                    <button class="tab-btn {% if active_tab == 'official' %}active{% endif %}" onclick="switchTab('official')">🏛️ Author / Official</button>
-                    <button class="tab-btn" onclick="switchTab('register')">✨ Create Account</button>
+                    <button type="button" class="tab-btn {% if active_tab == 'reader' or not active_tab %}active{% endif %}" onclick="switchTab('reader', this)">📖 Reader Login</button>
+                    <button type="button" class="tab-btn {% if active_tab == 'official' %}active{% endif %}" onclick="switchTab('official', this)">🏛️ Author / Official</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('register', this)">✨ Create Account</button>
                 </div>
 
                 <!-- READER LOGIN -->
                 <div id="reader" class="form-area {% if active_tab == 'reader' or not active_tab %}active{% endif %}">
-                    <h2>
-                        <span style="font-size: 2.2rem;">📚</span>
-                        Welcome Back, Reader
-                    </h2>
+                    <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                     <form action="/login" method="POST">
                         <input type="hidden" name="action" value="login">
                         <input type="hidden" name="login_portal" value="reader">
@@ -181,10 +167,7 @@
                     <div class="divider">or continue with</div>
                     <a href="/login/google" class="btn-google">
                         <svg class="google-icon" viewBox="0 0 24 24">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                         </svg>
                         Sign in with Google
                     </a>
@@ -192,10 +175,7 @@
 
                 <!-- AUTHOR / OFFICIAL LOGIN -->
                 <div id="official" class="form-area {% if active_tab == 'official' %}active{% endif %}">
-                    <h2>
-                        <span style="font-size: 2.2rem;">🏛️</span>
-                        Creator / Admin Portal
-                    </h2>
+                    <h2><span style="font-size: 2.2rem;">🏛️</span>Creator / Admin Portal</h2>
                     <form action="/login" method="POST">
                         <input type="hidden" name="action" value="login">
                         <input type="hidden" name="login_portal" value="author_official">
@@ -213,14 +193,9 @@
                     </form>
                 </div>
 
-                <!-- REGISTRATION FORM WITH AJAX -->
+                <!-- REGISTRATION FORM -->
                 <div id="register" class="form-area">
-                    <h2>
-                        <span style="font-size: 2.2rem;">✨</span>
-                        Join PustakVerse
-                    </h2>
-
-                    <!-- Main Reg Form -->
+                    <h2><span style="font-size: 2.2rem;">✨</span>Join PustakVerse</h2>
                     <form id="registrationForm" onsubmit="submitRegistration(event)">
                         <div class="form-group">
                             <label>Choose Username</label>
@@ -246,7 +221,6 @@
                         <div class="form-group" id="authorReasonGroup" style="display: none; background: #fffaf0; padding: 15px; border-radius: 6px; border: 1px solid #fbd38d;">
                             <label style="color: #c05621;">Why do you want an Author Account?</label>
                             <input type="text" id="reg_ver_reason" placeholder="Briefly describe your writing/books" style="border-color: #f6ad55;">
-                            <small style="color: #dd6b20; display: block; margin-top: 5px;">Author accounts require manual review by administrators.</small>
                         </div>
                         <div class="form-group">
                             <label>Security Question (For Account Recovery)</label>
@@ -264,25 +238,18 @@
                         <div class="terms-checkbox-group">
                             <input type="checkbox" id="accept_terms" required>
                             <label for="accept_terms">
-                                I verify that I am over 13 years of age and I accept the <a href="/terms?role=reader" id="termsLink" target="_blank">Reader Terms and Conditions</a>.
+                                I verify I am over 13 and accept the <a href="/terms?role=reader" id="termsLink" target="_blank">Terms and Conditions</a>.
                             </label>
                         </div>
 
                         <button type="submit" id="btnSendOtp" class="btn-submit orange">Verify Email & Create Account</button>
-                        
-                        <div class="divider">or quickly join with</div>
-                        <a href="/login/google" class="btn-google">
-                            <svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                            Sign up with Google
-                        </a>
                     </form>
 
-                    <!-- AJAX OTP Verification Section (Same Page) -->
+                    <!-- AJAX OTP SECTION -->
                     <div id="otpSection" style="display: none; padding-top: 10px;">
                         <h3 style="margin-top: 0; color: var(--navy); text-align: center;">Verify Your Email</h3>
                         <p style="text-align: center; color: #718096; font-size: 0.95rem;">Enter the 6-digit code sent to your email.</p>
                         
-                        <!-- 5 Minute Timer -->
                         <div id="otpTimerDisplay" style="text-align: center; font-weight: bold; color: #e53e3e; margin-bottom: 15px; font-size: 1.1rem;">
                             Time remaining: 05:00
                         </div>
@@ -291,8 +258,6 @@
                             <input type="text" id="reg_otp_input" placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.2rem; text-align: center;">
                         </div>
                         <button type="button" id="btnVerifyOtp" onclick="verifyOtp()" class="btn-submit orange" style="margin-bottom: 10px;">Submit Code & Join</button>
-                        
-                        <!-- Resend Button -->
                         <button type="button" id="btnResendOtp" onclick="resendOtp()" class="btn-submit dark" disabled style="opacity: 0.5;">Resend Code (wait 60s)</button>
                     </div>
 
@@ -302,8 +267,191 @@
     </div>
 
     <script>
-        // Tab Logic
-        function switchTab(tabId) {
+        // FIXED TAB LOGIC
+        function switchTab(tabId, element) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.form-area').forEach(form => form.classList.remove('active'));
-        
+            document.getElementById(tabId).classList.add('active');
+            if(element) element.classList.add('active');
+        }
+
+        function togglePassword(fieldId, iconElement) {
+            const field = document.getElementById(fieldId);
+            if (field.type === "password") {
+                field.type = "text";
+                iconElement.textContent = "🙈"; 
+            } else {
+                field.type = "password";
+                iconElement.textContent = "👁️"; 
+            }
+        }
+
+        function toggleAuthorReason() {
+            var role = document.getElementById('roleSelect').value;
+            var reasonGroup = document.getElementById('authorReasonGroup');
+            var termsLink = document.getElementById('termsLink');
+            if (role === 'author') {
+                reasonGroup.style.display = 'block';
+                termsLink.href = "/terms?role=author";
+            } else {
+                reasonGroup.style.display = 'none';
+                termsLink.href = "/terms?role=reader";
+            }
+        }
+
+        // Live Checker
+        const usernameInput = document.getElementById('reg_username');
+        const statusSpan = document.getElementById('usernameStatus');
+        let timeout = null;
+        if(usernameInput) {
+            usernameInput.addEventListener('input', function() {
+                clearTimeout(timeout);
+                const username = this.value.trim();
+                if (username.length === 0) { statusSpan.innerHTML = ''; return; }
+                statusSpan.innerHTML = '<span style="color: #718096;">Checking...</span>';
+                timeout = setTimeout(() => {
+                    fetch('/check_username', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'username=' + encodeURIComponent(username)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        statusSpan.innerHTML = data.available ? `<span style="color: #166534;">✓ ${data.message}</span>` : `<span style="color: #991b1b;">✗ ${data.message}</span>`;
+                    });
+                }, 500);
+            });
+        }
+
+        // OTP TIMER LOGIC
+        let otpInterval;
+        let timeLeft = 300;
+
+        function startOtpTimer() {
+            clearInterval(otpInterval);
+            timeLeft = 300; 
+            const resendBtn = document.getElementById('btnResendOtp');
+            resendBtn.disabled = true;
+            resendBtn.style.opacity = '0.5';
+            
+            otpInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                document.getElementById('otpTimerDisplay').textContent = `Time remaining: 0${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                
+                if (timeLeft <= 240) {
+                    resendBtn.disabled = false;
+                    resendBtn.style.opacity = '1';
+                    resendBtn.textContent = "Resend Code";
+                } else {
+                    resendBtn.textContent = `Resend Code (wait ${timeLeft - 240}s)`;
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(otpInterval);
+                    document.getElementById('otpTimerDisplay').textContent = "Code Expired. Please resend.";
+                }
+            }, 1000);
+        }
+
+        async function submitRegistration(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSendOtp');
+            btn.disabled = true;
+            btn.textContent = "Sending Code...";
+
+            const payload = {
+                action: 'send_otp',
+                username: document.getElementById('reg_username').value,
+                email: document.getElementById('reg_email').value,
+                password: document.getElementById('reg_password').value,
+                role: document.getElementById('roleSelect').value,
+                security_question: document.getElementById('reg_sec_q').value,
+                security_answer: document.getElementById('reg_sec_a').value,
+                verification_reason: document.getElementById('reg_ver_reason') ? document.getElementById('reg_ver_reason').value : ''
+            };
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('registrationForm').style.display = 'none';
+                    document.getElementById('otpSection').style.display = 'block';
+                    startOtpTimer();
+                } else {
+                    alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = "Verify Email & Create Account";
+                }
+            } catch (err) {
+                alert("Network error.");
+                btn.disabled = false;
+                btn.textContent = "Verify Email & Create Account";
+            }
+        }
+
+        async function verifyOtp() {
+            const btn = document.getElementById('btnVerifyOtp');
+            const otpVal = document.getElementById('reg_otp_input').value;
+            if (!otpVal) return alert("Please enter the code.");
+            btn.disabled = true;
+            btn.textContent = "Verifying...";
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = "Submit Code & Join";
+                }
+            } catch (err) {
+                alert("Network error.");
+                btn.disabled = false;
+                btn.textContent = "Submit Code & Join";
+            }
+        }
+
+        async function resendOtp() {
+            const btn = document.getElementById('btnResendOtp');
+            btn.disabled = true;
+            btn.textContent = "Resending...";
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'resend_otp' })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    startOtpTimer();
+                } else {
+                    alert(data.message);
+                    btn.disabled = false;
+                    btn.textContent = "Resend Code";
+                }
+            } catch (err) {
+                alert("Network error.");
+                btn.disabled = false;
+                btn.textContent = "Resend Code";
+            }
+        }
+    </script>
+</body>
+</html>
