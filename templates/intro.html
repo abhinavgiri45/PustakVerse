@@ -91,25 +91,28 @@
         <p class="sub-tagline">{{ site_settings.intro_sub_tagline }}</p>
     </div>
 
-    <!-- Smart button text based on session status -->
-    <button class="skip-btn" onclick="goToNext()">
-        {% if session.get('user_id') %} Skip to Library {% else %} Skip Intro {% endif %}
+    <button class="skip-btn" id="skipIntroBtn" onclick="goToNext()" aria-label="Skip Introduction">
+        Skip to Library &rarr;
     </button>
 
     <script>
+        let isNavigating = false;
+
         const timeoutId = setTimeout(() => {
             goToNext();
         }, 5500);
 
         function goToNext() {
+            if (isNavigating) return;
+            isNavigating = true;
             clearTimeout(timeoutId);
-            // If they are logged in, go straight to the library! 
-            // If they are logged out, push to login page.
-            {% if session.get('user_id') %}
-                window.location.replace("/"); 
-            {% else %}
-                window.location.replace("/login?first_time=true"); 
-            {% endif %}
+            
+            // Mark intro as completed for this session and in local storage
+            sessionStorage.setItem('pustakverse_intro_seen', 'true');
+            localStorage.setItem('pustakverse_onboarded', 'true');
+
+            // Navigate directly to the Global Library
+            window.location.replace("/");
         }
     </script>
 </body>

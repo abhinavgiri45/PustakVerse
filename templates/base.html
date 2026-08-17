@@ -9,17 +9,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <!-- SMART ONBOARDING REDIRECT -->
-    <!-- SMART ONBOARDING REDIRECT -->
     <script>
-        // Trigger for ALL users (logged in or not) on their first visit
-        if (!localStorage.getItem('pustakverse_onboarded')) {
-            const currentPath = window.location.pathname;
-            const allowedPaths = ['/intro', '/login', '/register', '/forgot-password'];
-            
-            if (!allowedPaths.includes(currentPath)) {
-                window.location.replace('/intro');
+        // Trigger intro once per browser session for all users
+        (function() {
+            const introSeen = sessionStorage.getItem('pustakverse_intro_seen');
+            if (!introSeen) {
+                const currentPath = window.location.pathname;
+                const allowedPaths = ['/intro', '/login', '/register', '/forgot-password'];
+                if (!allowedPaths.includes(currentPath)) {
+                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                    window.location.replace('/intro');
+                }
             }
-        }
+        })();
     </script>
 </head>
 <body>

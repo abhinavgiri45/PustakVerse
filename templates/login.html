@@ -5,7 +5,7 @@
     /* INSTANTLY HIDE UNNECESSARY BASE.HTML ELEMENTS (Search, Menu, Telegram Popup) */
     .nav-search, .search-container, .search-bar { display: none !important; }
     .nav-links a:not(.custom-back-btn) { display: none !important; } 
-    .menu-btn, .menu-toggle, .hamburger, .sidebar-toggle, .menu-icon { display: none !important; pointer-events: none; }
+    .menu-btn, .menu-toggle, .hamburger, .sidebar-toggle, .menu-icon, .hamburger-btn { display: none !important; pointer-events: none; }
     .sidebar, .side-menu, #sidebar, .mobile-menu { display: none !important; }
     .overlay, .sidebar-overlay, #sidebar-overlay, .blur-overlay { display: none !important; }
     #telegramPopup, .telegram-popup, #telegram-modal { display: none !important; }
@@ -90,13 +90,6 @@
 
 <div class="auth-wrapper">
     <div class="auth-box">
-
-        <!-- ONBOARDING SKIP BUTTON (Only shows if coming from intro page) -->
-        <div id="skipOnboardingContainer" style="display: none; text-align: center; margin: 20px 0 10px;">
-            <button onclick="skipToLibrary()" style="background: transparent; border: 1px solid #cbd5e1; color: #475569; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: 0.2s;">
-                Skip Sign In & Explore Library →
-            </button>
-        </div>
         
         <div class="flash-wrapper">
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -272,18 +265,7 @@
         if (telegramPopup) telegramPopup.style.display = 'none';
         if (overlay) overlay.style.display = 'none';
         if (sidebar) sidebar.style.display = 'none';
-
-        // Check if user came from Cinematic Intro
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('first_time') === 'true') {
-            document.getElementById('skipOnboardingContainer').style.display = 'block';
-        }
     });
-
-    function skipToLibrary() {
-        localStorage.setItem('pustakverse_onboarded', 'true');
-        window.location.href = '/';
-    }
 
     function switchTab(tabId, element) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -427,6 +409,7 @@
             const data = await response.json();
             
             if (data.success) {
+                sessionStorage.setItem('pustakverse_intro_seen', 'true');
                 localStorage.setItem('pustakverse_onboarded', 'true'); // Flag to prevent intro repetition
                 alert(data.message);
                 window.location.href = data.redirect;
