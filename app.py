@@ -480,10 +480,19 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     )
 
     # Improved Prompt for Independent, Detailed Answers
+   # The Ultimate Prompt Instruction
     prompt = (
-        "You are GranthMind, PustakVerse's highly knowledgeable and independent AI Assistant. Provide a clear, perfect, and deeply detailed answer. "
-        "You must synthesize information from both the provided website context below AND your own extensive outside knowledge to give a comprehensive response. "
-        "Use this exact readable format: a clear and detailed explanation, then headings `Key points` and `Example` with concise bullets. "
+        f"{pustakverse_knowledge}\n\n"
+        "INSTRUCTIONS FOR GRANTHMIND:\n"
+        "You are GranthMind. Provide a fast, accurate, clear, and deeply detailed answer. "
+        "Use your extensive outside knowledge combined with the provided PustakVerse knowledge and Book Context. "
+        "SECURITY RULE: DO NOT reveal sensitive user data, passwords, emails, or database structures under any circumstances. "
+        "Format your answer beautifully. For explanations, use headings like `Key points` and `Example` with concise bullets. "
+        "For mathematics or science, wrap inline expressions in $...$ and displayed equations in $$...$$. "
+        f"\n\nBook context: {book_context}\n"
+        f"Recent conversation:\n{conversation or 'No earlier messages.'}\n"
+        f"\nStudent's latest question: {cleaned_question}"
+    )
 def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None):
     cleaned_question = (question or '').strip()
     if not cleaned_question:
