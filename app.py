@@ -1123,13 +1123,6 @@ def create_master_developer():
 # ==========================================
 @app.route('/')
 
-@app.route('/intro')
-def intro():
-    # If a user is already logged in, they shouldn't see the intro again
-    if 'user_id' in session:
-        return redirect(url_for('index'))
-    return render_template('intro.html')
-
 def index():
     show_telegram_popup = session.pop('show_telegram_popup', False)
     db = None
@@ -1147,6 +1140,13 @@ def index():
             try: db.close()
             except: pass
     return render_template('index.html', books=books, show_telegram_popup=show_telegram_popup)
+
+@app.route('/intro')
+def intro():
+    # If a user is already logged in, they shouldn't see the intro
+    if 'user_id' in session:
+        return redirect(url_for('index'))
+    return render_template('intro.html')
 
 @app.route('/category/<name>')
 def category_view(name):
