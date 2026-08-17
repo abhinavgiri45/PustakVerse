@@ -129,12 +129,6 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Global Floating Toast Notification -->
-    <div id="globalToast" class="toast-notification" role="status" aria-live="polite">
-        <span id="toastIcon">✓</span>
-        <span id="toastMessage">Action completed!</span>
-    </div>
-
     <!-- Community Telegram Modal Popup -->
     {% if show_telegram_popup %}
     <div class="popup-overlay" id="tgPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
@@ -156,53 +150,6 @@
         </div>
     </div>
     {% endif %}
-
-    <!-- Back to Top Button -->
-    <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
-
-    <!-- Professional Footer -->
-    <footer>
-        <div class="footer-container">
-            <div class="footer-brand">
-                <h3>PustakVerse</h3>
-                <p>An open global digital library committed to making knowledge, literature, and educational resources accessible to every mind on Earth.</p>
-            </div>
-            <div class="footer-col">
-                <h4>Categories</h4>
-                <ul>
-                    <li><a href="{{ url_for('category_view', name='Fiction') }}">Fiction</a></li>
-                    <li><a href="{{ url_for('category_view', name='Non-Fiction') }}">Non-Fiction</a></li>
-                    <li><a href="{{ url_for('category_view', name='Educational') }}">Educational</a></li>
-                    <li><a href="{{ url_for('category_view', name='History') }}">History</a></li>
-                    <li><a href="{{ url_for('category_view', name='Poetry') }}">Poetry</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Explore</h4>
-                <ul>
-                    <li><a href="{{ url_for('archives_view') }}">Free Classic Archives</a></li>
-                    <li><a href="{{ url_for('ask_ai') }}">AI Study Tutor</a></li>
-                    <li><a href="{{ url_for('my_library') }}">Personal Library</a></li>
-                    <li><a href="{{ url_for('login') }}">Creator & Author Portal</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Platform</h4>
-                <ul>
-                    <li><a href="{{ url_for('contact') }}">Contact Us</a></li>
-                    <li><a href="{{ url_for('terms') }}">Terms & Privacy</a></li>
-                    <li><a href="https://t.me/PustakVerse" target="_blank" rel="noopener">Telegram Community</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <div>&copy; {{ current_year }} PustakVerse. Every Book. Every Mind. Free.</div>
-            <div style="display: flex; gap: 16px;">
-                <a href="{{ url_for('terms') }}" style="color: inherit; text-decoration: none;">Privacy Policy</a>
-                <a href="{{ url_for('terms') }}" style="color: inherit; text-decoration: none;">Terms of Service</a>
-            </div>
-        </div>
-    </footer>
 
     <!-- Global JavaScript Framework -->
     <script>
@@ -231,19 +178,24 @@
         // Toast Notification System
         let toastTimeout;
         function showToast(message, isError = false) {
-            const toast = document.getElementById('globalToast');
-            const toastMsg = document.getElementById('toastMessage');
-            const toastIcon = document.getElementById('toastIcon');
-            if (!toast || !toastMsg) return;
-
+            let toast = document.getElementById('globalToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'globalToast';
+                toast.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:9999; background:#0f172a; color:#ffffff; padding:12px 20px; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.3); font-size:0.92rem; font-weight:600; display:flex; align-items:center; gap:8px; opacity:0; transform:translateY(20px); transition:all 0.25s ease; border:1px solid rgba(255,255,255,0.15);';
+                document.body.appendChild(toast);
+            }
             clearTimeout(toastTimeout);
-            toastMsg.textContent = message;
-            toastIcon.textContent = isError ? '⚠️' : '✓';
-            toast.classList.add('is-visible');
-
+            toast.innerHTML = `<span>${isError ? '⚠️' : '✓'}</span><span>${message}</span>`;
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
             toastTimeout = setTimeout(() => {
-                toast.classList.remove('is-visible');
-            }, 3200);
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         // Copy Share Link Helper
@@ -251,7 +203,7 @@
             try {
                 if (navigator.clipboard) {
                     await navigator.clipboard.writeText(url);
-                    showToast(`Link for "${bookTitle}" copied to clipboard!`);
+                    showToast(`Link for "${bookTitle}" copied!`);
                 } else {
                     const temp = document.createElement('input');
                     temp.value = url;
@@ -259,10 +211,10 @@
                     temp.select();
                     document.execCommand('copy');
                     document.body.removeChild(temp);
-                    showToast(`Link for "${bookTitle}" copied to clipboard!`);
+                    showToast(`Link for "${bookTitle}" copied!`);
                 }
             } catch (err) {
-                showToast("Could not copy link to clipboard", true);
+                showToast("Could not copy link", true);
             }
         }
 
@@ -280,18 +232,13 @@
                 });
                 const data = await response.json();
                 if (data.success) {
-                    showToast(`"${bookTitle}" added to your library!`);
+                    showToast(`"${bookTitle}" added to library!`);
                 } else {
                     showToast(data.message || "Please sign in to save books", true);
                 }
             } catch (e) {
                 showToast("Please sign in to save books to library", true);
             }
-        }
-
-        // Scroll Handlers
-        function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function dismissPopup() {
@@ -314,17 +261,13 @@
             }
         });
 
-        // Scroll Progress & Back to Top
+        // Top Scroll Reading Indicator
         window.addEventListener('scroll', function() {
             const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
             const bar = document.getElementById('myBar');
             if (bar) {
                 bar.style.width = height > 0 ? (winScroll / height) * 100 + '%' : '0%';
-            }
-            const btt = document.getElementById('backToTop');
-            if (btt) {
-                btt.classList.toggle('is-visible', winScroll > 350);
             }
         });
 
