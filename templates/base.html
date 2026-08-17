@@ -8,13 +8,22 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <!-- SMART ONBOARDING REDIRECT -->
     <script>
-        // Check if this is the user's first time visiting the site
-        if (!localStorage.getItem('pustakverse_onboarded')) {
+        // Use Jinja to check if the user has an active session on the backend
+        const isLoggedIn = {{ 'true' if session.get('user_id') else 'false' }};
+        
+        // If they are logged in, silently mark them as onboarded so the intro never bothers them
+        if (isLoggedIn) {
+            localStorage.setItem('pustakverse_onboarded', 'true');
+        } 
+        // If they are NOT logged in AND it is their first time, route them to the cinematic intro
+        else if (!localStorage.getItem('pustakverse_onboarded')) {
             const currentPath = window.location.pathname;
-            // If they are not already on the intro or login pages, redirect them to the intro
-            if (currentPath !== '/intro' && currentPath !== '/login' && currentPath !== '/register') {
-                window.location.href = '/intro';
+            const allowedPaths = ['/intro', '/login', '/register', '/forgot-password'];
+            
+            if (!allowedPaths.includes(currentPath)) {
+                window.location.replace('/intro');
             }
         }
     </script>

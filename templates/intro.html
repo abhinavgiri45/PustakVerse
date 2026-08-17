@@ -6,9 +6,10 @@
     <title>Welcome to PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
+        /* Prevent all scrolling, bouncing, and white flashes */
         body, html {
-            margin: 0; padding: 0; height: 100%;
-            background-color: #0f172a; /* Deep cinematic black/blue */
+            margin: 0; padding: 0; height: 100vh; width: 100vw;
+            background-color: #0f172a; /* Deep cinematic background */
             color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             overflow: hidden;
@@ -17,66 +18,68 @@
         .cinematic-container {
             text-align: center;
             opacity: 0;
-            animation: fadeIn 2s ease-in forwards;
+            animation: fadeIn 1.5s ease-in forwards;
+            padding: 20px;
         }
 
         .logo {
-            max-width: 250px;
+            height: 100px;
+            max-width: 90vw;
+            object-fit: contain;
             margin-bottom: 20px;
-            filter: drop-shadow(0 0 20px rgba(246, 109, 47, 0.5));
+            filter: drop-shadow(0 0 15px rgba(246, 109, 47, 0.4));
             animation: pulseLogo 4s infinite alternate;
         }
 
         .tagline {
-            font-size: 1.8rem;
-            font-weight: 300;
-            letter-spacing: 2px;
+            font-size: 2rem;
+            font-weight: 400;
+            letter-spacing: 1px;
             margin: 0;
             opacity: 0;
-            animation: slideUp 2s ease-out 1.5s forwards;
+            animation: slideUp 1.5s ease-out 1s forwards;
+            color: #f8fafc;
         }
 
         .sub-tagline {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #94a3b8;
-            margin-top: 10px;
+            margin-top: 15px;
             opacity: 0;
-            animation: slideUp 2s ease-out 2.5s forwards;
+            animation: slideUp 1.5s ease-out 2s forwards;
         }
 
         .skip-btn {
             position: absolute;
-            bottom: 40px;
+            bottom: 50px;
             background: transparent;
-            color: #64748b;
+            color: #94a3b8;
             border: 1px solid #64748b;
-            padding: 8px 20px;
-            border-radius: 20px;
+            padding: 10px 25px;
+            border-radius: 25px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             transition: 0.3s;
             opacity: 0;
-            animation: fadeIn 1s ease-in 3s forwards;
+            animation: fadeIn 1s ease-in 2.5s forwards;
         }
 
         .skip-btn:hover {
             color: white;
-            border-color: white;
-            background: rgba(255, 255, 255, 0.1);
+            border-color: #f66d2f;
+            background: rgba(246, 109, 47, 0.1);
         }
 
-        /* Animations */
-        @keyframes fadeIn {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-        @keyframes slideUp {
-            0% { opacity: 0; transform: translateY(20px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulseLogo {
-            0% { transform: scale(0.95); }
-            100% { transform: scale(1.05); }
+        /* Fluid Animations */
+        @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+        @keyframes slideUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes pulseLogo { 0% { transform: scale(0.98); } 100% { transform: scale(1.02); } }
+        
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            .tagline { font-size: 1.5rem; }
+            .sub-tagline { font-size: 0.95rem; }
+            .logo { height: 80px; }
         }
     </style>
 </head>
@@ -91,14 +94,15 @@
     <button class="skip-btn" onclick="goToLogin()">Skip Intro</button>
 
     <script>
-        // Automatically redirect to the login page with a special "onboarding" flag after 6 seconds
-        setTimeout(() => {
+        // Fallback timeout: Go to login after 5.5 seconds automatically
+        const timeoutId = setTimeout(() => {
             goToLogin();
-        }, 6000);
+        }, 5500);
 
         function goToLogin() {
-            // The ?first_time=true tells the login page to show the "Skip" button
-            window.location.href = "/login?first_time=true";
+            clearTimeout(timeoutId);
+            // Using .replace() means they can't hit the back button and get stuck in the intro
+            window.location.replace("/login?first_time=true"); 
         }
     </script>
 </body>
