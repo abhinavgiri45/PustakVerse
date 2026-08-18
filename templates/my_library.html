@@ -1,102 +1,447 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Library - PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <style>
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f4f6f9; 
+            color: #1e293b; 
+            font-size: 16px; 
+        }
+        
+        .navbar { 
+            background-color: #2d3748; 
+            padding: 10px 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 16px; 
+        }
+        
+        .navbar-brand img { 
+            height: 45px; 
+            background: white; 
+            padding: 5px; 
+            border-radius: 4px; 
+            object-fit: contain; 
+        }
+        
+        .navbar-links { 
+            display: flex; 
+            gap: 16px; 
+            align-items: center; 
+            margin-left: auto; 
+        }
+        
+        .navbar-links a { 
+            color: white; 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 1rem; 
+            transition: 0.2s; 
+            padding: 12px 16px; 
+            min-height: 48px; 
+            display: inline-flex; 
+            align-items: center; 
+            box-sizing: border-box; 
+        }
+        
+        .navbar-links a:hover { 
+            color: #f66d2f; 
+        }
+        
+        .hero-section { 
+            background: #1a202c; 
+            color: white; 
+            padding: 50px 20px 80px; 
+            text-align: center; 
+            border-bottom: 4px solid #f66d2f; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+        }
+        
+        .hero-section h1 { 
+            margin: 0; 
+            font-size: 2.5rem; 
+            letter-spacing: -0.5px; 
+        }
+        
+        .hero-section p { 
+            font-size: 1.1rem; 
+            color: #cbd5e1; 
+            margin: 0; 
+            max-width: 740px;
+            line-height: 1.6;
+        }
 
-{% block title %}My Library · PustakVerse{% endblock %}
+        .search-container { 
+            width: 100%; 
+            max-width: 760px; 
+            margin: 30px auto 0 auto; 
+            display: flex; 
+            align-items: center; 
+            background: white; 
+            border-radius: 32px; 
+            padding: 10px 18px; 
+            box-shadow: 0 18px 35px rgba(0,0,0,0.14); 
+            border: 1px solid rgba(15,23,42,0.08);
+        }
 
-{% block content %}
-<!-- MY LIBRARY HERO -->
-<header class="hero" style="padding: 56px 20px 48px;">
-    <div class="hero-content">
-        <span class="eyebrow">✦ 個人書斎 • PERSONAL READING SANCTUARY ✦</span>
+        .search-container input { 
+            flex: 1; 
+            border: none; 
+            outline: none; 
+            padding: 16px 14px; 
+            font-size: 1.05rem; 
+            color: #1e293b; 
+            background: transparent; 
+        }
+
+        .search-container input::placeholder { 
+            color: #64748b; 
+            opacity: 1; 
+        }
+
+        .icon-btn { 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: #334155; 
+            min-width: 50px; 
+            min-height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.2s; 
+            padding: 0; 
+        }
+
+        .icon-btn:hover { 
+            color: #f66d2f; 
+            transform: scale(1.1); 
+        }
+
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 40px; 
+        }
+        
+        .book-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+            gap: 25px; 
+        }
+        
+        .book-card { 
+            background: white; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+            border: 1px solid #e2e8f0; 
+            transition: transform 0.2s; 
+        }
+        
+        .book-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+        }
+        
+        .book-cover { 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 250 / 320; 
+            object-fit: cover; 
+            background: #e2e8f0; 
+            display: block; 
+            transition: opacity 0.2s; 
+        }
+        
+        .book-cover-link:hover .book-cover { 
+            opacity: 0.85; 
+        }
+        
+        .book-info { 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            flex: 1; 
+        }
+        
+        .book-tag { 
+            color: #f66d2f; 
+            font-size: 0.85rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+        }
+        
+        .book-title { 
+            font-size: 1.15rem; 
+            color: #1e293b; 
+            margin: 0 0 5px 0; 
+            font-weight: bold; 
+            line-height: 1.3; 
+        }
+        
+        .book-title a { 
+            color: inherit; 
+            text-decoration: none; 
+        }
+        
+        .book-title a:hover { 
+            color: #f66d2f; 
+        }
+        
+        .book-author { 
+            font-size: 1rem; 
+            color: #334155; 
+            margin: 0 0 10px 0; 
+        }
+        
+        .book-actions { 
+            display: flex; 
+            gap: 12px; 
+            margin-top: auto; 
+        }
+        
+        .btn { 
+            flex: 1; 
+            padding: 12px 0; 
+            min-height: 48px; 
+            text-align: center; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            border: none; 
+            transition: 0.2s; 
+            text-decoration: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-sizing: border-box; 
+        }
+        
+        .btn:hover { 
+            opacity: 0.85; 
+        }
+        
+        .btn-read { 
+            background-color: #2d3748; 
+            color: white; 
+        }
+
+        .flash { 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            text-align: center; 
+            font-weight: 500; 
+        }
+        
+        .flash.success { background: #dcfce7; color: #166534; } 
+        .flash.error { background: #fee2e2; color: #991b1b; } 
+
+        .no-results { 
+            display: none; 
+            text-align: center; 
+            grid-column: 1 / -1; 
+            padding: 40px 0; 
+        }
+
+        .no-results h2 { 
+            color: #1e293b; 
+            margin-bottom: 10px; 
+            font-size: 1.8rem; 
+        }
+
+        .no-results p { 
+            color: #334155; 
+        }
+
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; padding: 15px; }
+            .navbar-links { width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+            .container { padding: 20px; }
+            .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+            .book-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" width="150" height="45">
+            </a>
+        </div>
+        <div class="navbar-links">
+            <a href="/">← Back to Library</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('payment_history') }}">Payment History</a>
+            <a href="{{ url_for('logout') }}" style="background: #e53e3e; border-radius: 25px;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="hero-section">
         <h1>My Personal Library</h1>
-        <p class="hero-subtitle">Your saved books, acquired volumes, and active study resources in one place.</p>
-
-        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 18px;">
-            <a href="{{ url_for('index') }}" class="filter-pill active">
-                <span>Explore Global Library &rarr;</span>
-            </a>
-            <a href="{{ url_for('payment_history') }}" class="filter-pill">
-                <span>Receipts & Transactions</span>
-            </a>
-        </div>
-    </div>
-</header>
-
-<div class="container">
-    <div class="section-heading">
-        <div>
-            <h2><span>📚</span> Saved Books ({{ books|length }})</h2>
-            <p class="subtitle">Quick access to your reading shelf.</p>
-        </div>
-        <div style="font-size: 0.88rem; color: var(--text-muted); font-weight: 700; font-family: var(--font-display);">
-            Sync status: <span style="color: #00b894;">● Active</span>
-        </div>
+        <p>Books you have saved, purchased, or published.</p>
     </div>
 
-    <!-- RESPONSIVE MANGA GRID -->
-    <div class="book-grid">
-        {% if books and books|length > 0 %}
-            {% for book in books %}
-            <article class="book-card"
-                     data-title="{{ book.title|lower }}" 
-                     data-author="{{ book.author_name|lower }}" 
-                     data-category="{{ book.catalog|lower }}">
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
+            <input type="search" id="searchInput" name="search" placeholder="Search your library..." aria-label="Search your library">
+            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
+        </form>
+
+        <div class="book-grid">
+            {% for book in saved_books %}
+            <div class="book-card" data-title="{{ book.title | escape | lower }}" data-author="{% if book.author_role == 'developer' %}developer{% else %}{{ book.author_name | escape | lower }}{% endif %}" data-catalog="{{ book.catalog | escape | lower }}">
                 
-                <div class="book-cover-container">
-                    {% if book.is_paid %}
-                        <span class="card-badge badge-premium">PURCHASED</span>
+                {% set cover = book.cover_image %}
+                
+                <a href="{{ url_for('view_book', book_id=book.id) }}" class="book-cover-link" style="display: block;">
+                    {% if cover.startswith('http') %}
+                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
                     {% else %}
-                        <span class="card-badge badge-free">SAVED</span>
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
                     {% endif %}
+                </a>
 
-                    <a href="{{ url_for('view_book', book_id=book.id) }}">
-                        {% if book.cover_image and book.cover_image.startswith('http') %}
-                            <img src="{{ book.cover_image | drive_img }}" alt="{{ book.title }}" loading="lazy">
-                        {% elif book.cover_image %}
-                            <img src="{{ url_for('static', filename='uploads/covers/' + book.cover_image) }}" alt="{{ book.title }}" loading="lazy">
-                        {% else %}
-                            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="{{ book.title }}" loading="lazy">
-                        {% endif %}
-                    </a>
-                </div>
-
-                <div class="book-card-body">
-                    <span class="book-category-tag">「 {{ book.catalog }} 」</span>
-                    <h3 class="book-card-title">
-                        <a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a>
-                    </h3>
-                    <p class="book-card-author">By {{ book.author_name }}</p>
-
-                    <div class="book-card-actions">
-                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-primary" style="flex: 1;">
-                            Read
-                        </a>
-
-                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn-icon" title="Study with AI Tutor">
-                            ✨
-                        </a>
-
-                        <form action="{{ url_for('remove_from_library', book_id=book.id) }}" method="POST" style="margin: 0;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" 
-                                    class="btn-icon" 
-                                    style="color: var(--anime-pink);" 
-                                    title="Remove from Library" 
-                                    onclick="return confirm('Remove this title from your personal library?');">
-                                ✕
-                            </button>
-                        </form>
+                <div class="book-info">
+                    <div class="book-tag">{{ book.catalog }}</div>
+                    
+                    <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
+                    <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
+                    
+                    <!-- Added Date Feature: Uses safe to_ist filter instead of strftime to prevent crashes -->
+                    <p style="color: #64748b; font-size: 0.9em; margin-bottom: 20px;">
+                        Added: <strong>{{ (book.added_at or book.created_at) | to_ist }}</strong>
+                    </p>
+                    
+                    <div class="book-actions">
+                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Read Full Book</a>
                     </div>
                 </div>
-            </article>
-            {% endfor %}
-        {% else %}
-            <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
-                <div style="font-size: 3rem; margin-bottom: 12px;">📖</div>
-                <h3 style="margin: 0 0 8px; font-family: var(--font-display);">Your personal shelf is empty</h3>
-                <p style="color: var(--text-muted); margin: 0 0 20px;">Browse the global catalog and tap the 🔖 bookmark icon to save books here.</p>
-                <a href="{{ url_for('index') }}" class="btn btn-primary">Discover Books to Read</a>
             </div>
-        {% endif %}
+            {% else %}
+                <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
+                    <h2 style="color: #334155;">Your library is currently empty.</h2>
+                    <p style="color: #64748b; margin-bottom: 20px;">Head over to the Global Library to find your next great read!</p>
+                    <a href="/" style="display: inline-block; background: #f66d2f; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 6px;">Browse Books</a>
+                </div>
+            {% endfor %}
+
+            <div class="no-results" id="noResultsMsg">
+                <h2>No matches found in your library.</h2>
+                <p>Try searching for a different title, author, or category.</p>
+            </div>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <script>
+        function filterBooks() {
+            let input = document.getElementById('searchInput').value.toLowerCase().trim();
+            let cards = document.querySelectorAll('.book-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                let title = card.getAttribute('data-title') || '';
+                let author = card.getAttribute('data-author') || '';
+                let catalog = card.getAttribute('data-catalog') || '';
+
+                if (title.includes(input) || author.includes(input) || catalog.includes(input)) {
+                    card.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            let noResults = document.getElementById('noResultsMsg');
+            if (noResults) {
+                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+            }
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        const searchForm = document.getElementById('searchForm');
+        const micBtn = document.getElementById('micBtn');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', filterBooks);
+        }
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                filterBooks();
+                searchInput.blur();
+            });
+        }
+
+        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            micBtn.addEventListener('click', () => {
+                recognition.start();
+                micBtn.style.color = '#f66d2f';
+                micBtn.style.transform = 'scale(1.2)';
+                searchInput.placeholder = 'Listening...';
+            });
+
+            recognition.onresult = (event) => {
+                searchInput.value = event.results[0][0].transcript;
+                filterBooks();
+            };
+
+            recognition.onerror = () => {
+                resetMic();
+            };
+
+            recognition.onend = () => {
+                resetMic();
+            };
+
+            function resetMic() {
+                micBtn.style.color = '#334155';
+                micBtn.style.transform = 'scale(1)';
+                searchInput.placeholder = 'Search your library...';
+            }
+        } else if (micBtn) {
+            micBtn.style.display = 'none';
+        }
+    </script>
+
+</body>
+</html>
