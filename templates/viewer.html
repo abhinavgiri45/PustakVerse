@@ -142,12 +142,31 @@
                 <button class="view-btn" onclick="setViewerTheme('sepia')" title="Warm Sepia Mode">📜 Sepia</button>
                 <button class="view-btn" onclick="setViewerTheme('light')" title="Light Mode">☀️ Day</button>
                 <button class="view-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>
+                <button class="view-btn" onclick="toggleNotesDrawer()" style="background: #ea580c; color: white;" title="Open Personal Reading Notes">📝 Notes</button>
             </div>
         </div>
         
         <div style="display: flex; align-items: center; gap: 15px;">
             <span id="readingProgressText" style="font-size: 0.85rem; color: #a0aec0;"></span>
             <a href="javascript:history.back()">← Back</a>
+        </div>
+    </div>
+
+    <!-- NOTES SIDEBAR DRAWER -->
+    <div id="notesDrawer" style="display: none; position: fixed; top: 48px; right: 0; bottom: 0; width: 340px; max-width: 90vw; background: #ffffff; box-shadow: -5px 0 25px rgba(0,0,0,0.15); z-index: 1000; flex-direction: column; padding: 18px; box-sizing: border-box; border-left: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">📝 Reading Notes & Takeaways</h3>
+            <button onclick="toggleNotesDrawer()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 10px 0;">Notes auto-save continuously to your browser for this book.</p>
+        <textarea id="bookNotesArea" placeholder="Write key points, thoughts, chapter summaries, or quotes..." style="flex: 1; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; resize: none; outline: none; margin-bottom: 10px;" oninput="saveBookNotes()"></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">
+            <span id="notesCountText">0 characters</span>
+            <span id="notesSaveStatus" style="color: #16a34a; font-weight: 600;">Saved</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" onclick="copyBookNotes()" class="view-btn" style="flex: 1; background: #0f172a; color: white; padding: 8px; border-radius: 6px; font-size: 0.8rem;">Copy</button>
+            <button type="button" onclick="downloadBookNotes()" class="view-btn" style="flex: 1; background: #2563eb; color: white; padding: 8px; border-radius: 6px; font-size: 0.8rem;">Download .txt</button>
         </div>
     </div>
 
@@ -191,6 +210,8 @@
     <script>
         // Reading Progress & Bookmark Memory
         const BOOK_KEY = 'pv_book_read_{{ book.id }}';
+        const NOTES_KEY = 'pv_notes_{{ book.id }}';
+
         function recordReadingSession() {
             const now = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             localStorage.setItem(BOOK_KEY, JSON.stringify({
@@ -204,6 +225,77 @@
             }
         }
         recordReadingSession();
+
+        // Notes Drawer Controller
+        function toggleNotesDrawer() {
+            const drawer = document.getElementById('notesDrawer');
+            if (!drawer) return;
+            if (drawer.style.display === 'none' || !drawer.style.display) {
+                drawer.style.display = 'flex';
+                loadBookNotes();
+            } else {
+                drawer.style.display = 'none';
+            }
+        }
+
+        function loadBookNotes() {
+            const area = document.getElementById('bookNotesArea');
+            if (area) {
+                area.value = localStorage.getItem(NOTES_KEY) || '';
+                updateNotesCount();
+            }
+        }
+
+        function saveBookNotes() {
+            const area = document.getElementById('bookNotesArea');
+            const status = document.getElementById('notesSaveStatus');
+            if (area) {
+                localStorage.setItem(NOTES_KEY, area.value);
+                updateNotesCount();
+                if (status) {
+                    status.textContent = 'Saved';
+                    status.style.color = '#16a34a';
+                }
+            }
+        }
+
+        function updateNotesCount() {
+            const area = document.getElementById('bookNotesArea');
+            const countEl = document.getElementById('notesCountText');
+            if (area && countEl) {
+                const len = area.value.length;
+                const words = area.value.trim() ? area.value.trim().split(/\s+/).length : 0;
+                countEl.textContent = words + ' words (' + len + ' chars)';
+            }
+        }
+
+        function copyBookNotes() {
+            const area = document.getElementById('bookNotesArea');
+            if (area && area.value) {
+                navigator.clipboard.writeText(area.value).then(() => {
+                    alert("Notes copied to clipboard!");
+                }).catch(() => {
+                    alert("Notes copied!");
+                });
+            }
+        }
+
+        function downloadBookNotes() {
+            const area = document.getElementById('bookNotesArea');
+            if (!area || !area.value.trim()) {
+                alert("Please write some notes first before downloading.");
+                return;
+            }
+            const blob = new Blob([area.value], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Notes_' + {{ book.title|tojson }}.replace(/[^a-zA-Z0-9]/g, '_') + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
         // Reading Theme Switcher
         function setViewerTheme(theme) {

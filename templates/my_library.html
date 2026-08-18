@@ -312,7 +312,7 @@
         {% endwith %}
 
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
-            <input type="search" id="searchInput" name="search" placeholder="Search your library..." aria-label="Search your library">
+            <input type="search" id="searchInput" name="search" placeholder="Search your library... (Ctrl + K)" aria-label="Search your library">
             <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -320,9 +320,22 @@
             </button>
         </form>
 
+        <!-- Shelf Filter Tabs -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin: 25px 0 30px; flex-wrap: wrap;">
+            <button type="button" class="shelf-tab active" onclick="filterByShelf('all', this)" style="background: #2d3748; color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                📚 All Books ({{ saved_books|length }})
+            </button>
+            <button type="button" class="shelf-tab" onclick="filterByShelf('reading', this)" style="background: #e2e8f0; color: #1e293b; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                📖 Currently Reading (<span id="readingShelfCount">0</span>)
+            </button>
+            <button type="button" class="shelf-tab" onclick="filterByShelf('completed', this)" style="background: #e2e8f0; color: #1e293b; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                ✅ Completed (<span id="completedShelfCount">0</span>)
+            </button>
+        </div>
+
         <div class="book-grid">
             {% for book in saved_books %}
-            <div class="book-card" data-title="{{ book.title | escape | lower }}" data-author="{% if book.author_role == 'developer' %}developer{% else %}{{ book.author_name | escape | lower }}{% endif %}" data-catalog="{{ book.catalog | escape | lower }}">
+            <div class="book-card" id="bookCard_{{ book.id }}" data-book-id="{{ book.id }}" data-title="{{ book.title | escape | lower }}" data-author="{% if book.author_role == 'developer' %}developer{% else %}{{ book.author_name | escape | lower }}{% endif %}" data-catalog="{{ book.catalog | escape | lower }}">
                 
                 {% set cover = book.cover_image %}
                 
@@ -335,13 +348,19 @@
                 </a>
 
                 <div class="book-info">
-                    <div class="book-tag">{{ book.catalog }}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div class="book-tag">{{ book.catalog }}</div>
+                        <select onchange="updateShelfStatus({{ book.id }}, this.value)" id="shelfSelect_{{ book.id }}" style="font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer;">
+                            <option value="saved">📑 Saved</option>
+                            <option value="reading">📖 Reading</option>
+                            <option value="completed">✅ Done</option>
+                        </select>
+                    </div>
                     
                     <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
-                    <!-- Added Date Feature: Uses safe to_ist filter instead of strftime to prevent crashes -->
-                    <p style="color: #64748b; font-size: 0.9em; margin-bottom: 20px;">
+                    <p style="color: #64748b; font-size: 0.85em; margin-bottom: 16px;">
                         Added: <strong>{{ (book.added_at or book.created_at) | to_ist }}</strong>
                     </p>
                     
@@ -359,13 +378,63 @@
             {% endfor %}
 
             <div class="no-results" id="noResultsMsg">
-                <h2>No matches found in your library.</h2>
+                <h2>No matches found in this shelf.</h2>
                 <p>Try searching for a different title, author, or category.</p>
             </div>
         </div>
     </div>
 
     <script>
+        let currentShelf = 'all';
+
+        function initShelfStatuses() {
+            let readingCount = 0;
+            let completedCount = 0;
+            const cards = document.querySelectorAll('.book-card');
+            
+            cards.forEach(card => {
+                const bookId = card.getAttribute('data-book-id');
+                if (!bookId) return;
+                const savedStatus = localStorage.getItem('pv_shelf_' + bookId) || 'saved';
+                const select = document.getElementById('shelfSelect_' + bookId);
+                if (select) select.value = savedStatus;
+                card.setAttribute('data-shelf', savedStatus);
+                
+                if (savedStatus === 'reading') readingCount++;
+                if (savedStatus === 'completed') completedCount++;
+            });
+
+            const rEl = document.getElementById('readingShelfCount');
+            const cEl = document.getElementById('completedShelfCount');
+            if (rEl) rEl.textContent = readingCount;
+            if (cEl) cEl.textContent = completedCount;
+        }
+
+        function updateShelfStatus(bookId, newStatus) {
+            localStorage.setItem('pv_shelf_' + bookId, newStatus);
+            const card = document.getElementById('bookCard_' + bookId);
+            if (card) {
+                card.setAttribute('data-shelf', newStatus);
+            }
+            initShelfStatuses();
+            filterBooks();
+        }
+
+        function filterByShelf(shelf, btn) {
+            currentShelf = shelf;
+            document.querySelectorAll('.shelf-tab').forEach(t => {
+                t.style.background = '#e2e8f0';
+                t.style.color = '#1e293b';
+                t.classList.remove('active');
+            });
+            if (btn) {
+                btn.style.background = '#2d3748';
+                btn.style.color = 'white';
+                btn.classList.add('active');
+            }
+            filterBooks();
+        }
+
         function filterBooks() {
             let input = document.getElementById('searchInput').value.toLowerCase().trim();
             let cards = document.querySelectorAll('.book-card');
@@ -375,8 +444,12 @@
                 let title = card.getAttribute('data-title') || '';
                 let author = card.getAttribute('data-author') || '';
                 let catalog = card.getAttribute('data-catalog') || '';
+                let shelf = card.getAttribute('data-shelf') || 'saved';
 
-                if (title.includes(input) || author.includes(input) || catalog.includes(input)) {
+                let matchesSearch = title.includes(input) || author.includes(input) || catalog.includes(input);
+                let matchesShelf = (currentShelf === 'all') || (shelf === currentShelf);
+
+                if (matchesSearch && matchesShelf) {
                     card.style.display = 'flex';
                     visibleCount++;
                 } else {
@@ -389,6 +462,8 @@
                 noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
             }
         }
+
+        document.addEventListener('DOMContentLoaded', initShelfStatuses);
 
         const searchInput = document.getElementById('searchInput');
         const searchForm = document.getElementById('searchForm');

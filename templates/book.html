@@ -427,7 +427,21 @@
                     <span class="header-count">({{ review_count }} reviews)</span>
                 </div>
                 
-                <div class="description">{{ book.description or 'No description provided for this book.' }}</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                    <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">
+                        ⏱️ Estimated Reading: <strong>~{{ [((book.description|length / 200)|round|int), 3]|max }} mins</strong>
+                    </span>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="ttsPlayBtn" onclick="toggleBookTTS()" class="btn-sm" style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+                            🎧 Listen to Synopsis
+                        </button>
+                        <button type="button" onclick="openShareModal()" class="btn-sm" style="background: #f8fafc; color: #3b82f6; border: 1px solid #bfdbfe; border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+                            🔗 Share Book
+                        </button>
+                    </div>
+                </div>
+
+                <div class="description" id="bookSynopsisText">{{ book.description or 'No description provided for this book.' }}</div>
                 
                 <div class="action-box">
                     {% if book.is_paid %}
@@ -439,6 +453,7 @@
                             <div style="display: flex; gap: 10px;">
                                 <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569;">Free Preview</a>
                                 <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-green">Buy Securely</button>
                                 </form>
                             </div>
@@ -448,6 +463,7 @@
                         <div style="display: flex; gap: 10px;">
                             <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1;">Read Now</a>
                             <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-dark" style="background: #cbd5e1; color: #0f172a;">Save to Library</button>
                             </form>
                         </div>
@@ -563,21 +579,116 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT FOR VIEW MORE BUTTON -->
+    <!-- SHARE MODAL & QR CODE -->
+    <div id="shareModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: #ffffff; width: 90%; max-width: 440px; border-radius: 16px; padding: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); text-align: center; position: relative;">
+            <button type="button" onclick="closeShareModal()" style="position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer;">&times;</button>
+            <h3 style="margin: 0 0 6px 0; color: #0f172a; font-size: 1.4rem;">Share This Book</h3>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Share with friends or scan QR code to read on mobile.</p>
+            
+            <div id="qrcodeBox" style="margin: 0 auto 20px; display: flex; justify-content: center;">
+                <img id="qrImage" src="" alt="Book QR Code" style="width: 160px; height: 160px; border-radius: 8px; border: 1px solid #e2e8f0; padding: 6px;">
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                <input type="text" id="shareUrlInput" readonly style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; background: #f8fafc;">
+                <button type="button" onclick="copyShareLink()" class="btn btn-dark" style="padding: 10px 16px; font-size: 0.85rem; border-radius: 8px;">Copy</button>
+            </div>
+
+            <div style="display: flex; gap: 8px; justify-content: center;">
+                <a id="shareWhatsapp" href="#" target="_blank" rel="noopener" class="btn btn-sm" style="background: #25D366; color: white; border-radius: 6px; padding: 8px 14px; font-size: 0.85rem; font-weight: 700; text-decoration: none;">WhatsApp</a>
+                <a id="shareTelegram" href="#" target="_blank" rel="noopener" class="btn btn-sm" style="background: #229ED9; color: white; border-radius: 6px; padding: 8px 14px; font-size: 0.85rem; font-weight: 700; text-decoration: none;">Telegram</a>
+                <a id="shareTwitter" href="#" target="_blank" rel="noopener" class="btn btn-sm" style="background: #000000; color: white; border-radius: 6px; padding: 8px 14px; font-size: 0.85rem; font-weight: 700; text-decoration: none;">X (Twitter)</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT FOR VIEW MORE, TTS, AND SHARING -->
     <script>
         function showMoreReviews() {
-            // Find all reviews that are currently hidden
             const hiddenReviews = document.querySelectorAll('.hidden-review');
-            
-            // Unhide them by removing the class
             hiddenReviews.forEach(review => {
                 review.style.display = 'block';
             });
-            
-            // Hide the 'View More' button after expanding
             const viewMoreBtn = document.getElementById('viewMoreBtn');
             if (viewMoreBtn) {
                 viewMoreBtn.style.display = 'none';
+            }
+        }
+
+        // Web Speech API Narrator (TTS)
+        let isSpeaking = false;
+        function toggleBookTTS() {
+            const btn = document.getElementById('ttsPlayBtn');
+            const desc = document.getElementById('bookSynopsisText');
+            if (!('speechSynthesis' in window)) {
+                alert("Text-to-speech is not supported by your browser.");
+                return;
+            }
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                if (btn) btn.textContent = '🎧 Listen to Synopsis';
+            } else {
+                window.speechSynthesis.cancel();
+                const text = (desc ? desc.innerText : '').trim();
+                if (!text) return;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    if (btn) btn.textContent = '🎧 Listen to Synopsis';
+                };
+                utterance.onerror = () => {
+                    isSpeaking = false;
+                    if (btn) btn.textContent = '🎧 Listen to Synopsis';
+                };
+                window.speechSynthesis.speak(utterance);
+                isSpeaking = true;
+                if (btn) btn.textContent = '⏹ Stop Audio';
+            }
+        }
+
+        // Share Modal & QR Code Generator
+        function openShareModal() {
+            const modal = document.getElementById('shareModal');
+            const urlInput = document.getElementById('shareUrlInput');
+            const qrImg = document.getElementById('qrImage');
+            const currentUrl = window.location.href;
+            
+            if (urlInput) urlInput.value = currentUrl;
+            if (qrImg) {
+                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(currentUrl);
+            }
+
+            const title = {{ book.title | tojson }};
+            const shareText = encodeURIComponent('Read "' + title + '" on PustakVerse: ' + currentUrl);
+            
+            document.getElementById('shareWhatsapp').href = 'https://api.whatsapp.com/send?text=' + shareText;
+            document.getElementById('shareTelegram').href = 'https://t.me/share/url?url=' + encodeURIComponent(currentUrl) + '&text=' + encodeURIComponent('Read "' + title + '" on PustakVerse');
+            document.getElementById('shareTwitter').href = 'https://twitter.com/intent/tweet?text=' + shareText;
+
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('shareModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function copyShareLink() {
+            const urlInput = document.getElementById('shareUrlInput');
+            if (urlInput) {
+                urlInput.select();
+                navigator.clipboard.writeText(urlInput.value).then(() => {
+                    alert("Book link copied to clipboard!");
+                }).catch(() => {
+                    document.execCommand('copy');
+                    alert("Book link copied!");
+                });
             }
         }
     </script>
