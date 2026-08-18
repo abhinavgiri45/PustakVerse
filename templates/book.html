@@ -413,7 +413,10 @@
             <div class="book-details">
                 <span class="tag">{{ book.catalog }}</span>
                 <h1>{{ book.title }}</h1>
-                <div class="author">By <strong>{{ book.author_name }}</strong></div>
+                <div class="author" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <span>By <strong>{{ book.author_name }}</strong></span>
+                    <span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✓ Verified Creator</span>
+                </div>
                 
                 <!-- Average Rating Header -->
                 <div class="header-rating">
@@ -468,8 +471,9 @@
                             </form>
                         </div>
                     {% endif %}
-                    <div style="margin-top: 14px;">
-                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="width: 100%; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">Learn with AI Tutor</a>
+                    <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">🤖 Learn with AI Tutor</a>
+                        <a href="/category/{{ book.catalog }}" class="btn btn-outline" style="flex: 1; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1;">📚 More in {{ book.catalog }}</a>
                     </div>
                 </div>
             </div>

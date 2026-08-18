@@ -143,10 +143,19 @@
                 <button class="view-btn" onclick="setViewerTheme('light')" title="Light Mode">☀️ Day</button>
                 <button class="view-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>
                 <button class="view-btn" onclick="toggleNotesDrawer()" style="background: #ea580c; color: white;" title="Open Personal Reading Notes">📝 Notes</button>
+                
+                <!-- Focus Timer Button -->
+                <button class="view-btn" id="focusTimerBtn" onclick="toggleFocusTimer()" style="background: #047857; color: white;" title="Click to Start/Pause Reading Timer">
+                    ⏱️ <span id="timerDisplay">00:00</span>
+                </button>
             </div>
         </div>
         
         <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #cbd5e1;">
+                <span>🔅</span>
+                <input type="range" id="brightnessRange" min="40" max="100" value="100" oninput="adjustBrightness(this.value)" style="width: 70px; cursor: pointer; accent-color: #f66d2f;" title="Brightness Dimmer">
+            </div>
             <span id="readingProgressText" style="font-size: 0.85rem; color: #a0aec0;"></span>
             <a href="javascript:history.back()">← Back</a>
         </div>
@@ -356,6 +365,40 @@
                 return false;
             }
         });
+
+        // Focus Reading Timer Controller
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let timerRunning = false;
+
+        function toggleFocusTimer() {
+            const btn = document.getElementById('focusTimerBtn');
+            const display = document.getElementById('timerDisplay');
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                if (btn) btn.style.background = '#d97706';
+            } else {
+                timerRunning = true;
+                if (btn) btn.style.background = '#047857';
+                timerInterval = setInterval(() => {
+                    timerSeconds++;
+                    const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                    const secs = String(timerSeconds % 60).padStart(2, '0');
+                    if (display) display.textContent = `${mins}:${secs}`;
+                }, 1000);
+            }
+        }
+
+        // Reader Brightness Dimmer Controller
+        function adjustBrightness(val) {
+            const container = document.getElementById('viewerContainer');
+            if (container) {
+                const currentFilter = container.style.filter || '';
+                const baseFilter = currentFilter.replace(/brightness\([^)]+\)/g, '').trim();
+                container.style.filter = `${baseFilter} brightness(${val / 100})`.trim();
+            }
+        }
 
         // Prevent Dragging elements (like images)
         document.addEventListener('dragstart', function(e) {
