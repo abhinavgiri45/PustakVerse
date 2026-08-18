@@ -12,6 +12,11 @@
     <script>
         // Trigger intro once per browser session for all users
         (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('skip_intro') === '1') {
+                sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                return;
+            }
             const introSeen = sessionStorage.getItem('pustakverse_intro_seen');
             if (!introSeen) {
                 const currentPath = window.location.pathname;

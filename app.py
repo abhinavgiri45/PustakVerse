@@ -1248,8 +1248,14 @@ def create_master_developer():
 # PUBLIC ROUTES
 # ==========================================
 @app.route('/')
-
 def index():
+    if request.args.get('skip_intro') == '1':
+        session['pustakverse_intro_seen'] = True
+
+    if not session.get('pustakverse_intro_seen'):
+        session['pustakverse_intro_seen'] = True
+        return redirect(url_for('intro'))
+
     show_telegram_popup = session.pop('show_telegram_popup', False)
     db = None
     books = []
@@ -1269,6 +1275,7 @@ def index():
 
 @app.route('/intro')
 def intro():
+    session['pustakverse_intro_seen'] = True
     return render_template('intro.html')
 
 @app.route('/category/<name>')
