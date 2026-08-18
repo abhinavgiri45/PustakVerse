@@ -19,11 +19,14 @@
             justify-content: space-between;
             align-items: center;
         }
-        .navbar img {
-            width: 150px;
-            background: white;
-            border-radius: 6px;
-            padding: 4px;
+        .navbar img, .logo-img {
+            height: 52px;
+            width: auto;
+            max-width: 220px;
+            background: transparent;
+            padding: 0;
+            object-fit: contain;
+            display: block;
         }
         .nav-links a {
             color: white;
@@ -141,7 +144,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse logo">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
             </a>
         </div>
         <div class="nav-links">

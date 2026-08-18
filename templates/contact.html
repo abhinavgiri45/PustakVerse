@@ -9,7 +9,7 @@
     <style>
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; height: 100vh; display: flex; flex-direction: column; }
         .navbar { background-color: #34495e; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; }
-        .navbar-brand img { height: 45px; background: white; padding: 5px; border-radius: 4px; }
+        .navbar-brand img, .logo-img { height: 52px; width: auto; max-width: 220px; background: transparent; padding: 0; object-fit: contain; display: block; }
         .navbar-links { display: flex; gap: 20px; align-items: center; }
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.95rem; }
         .navbar-links a:hover { color: #f66d2f; }
@@ -36,7 +36,7 @@
 
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="Logo"></a>
+            <a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 52px; width: auto; object-fit: contain;"></a>
         </div>
         <div class="navbar-links">
             <a href="/">← Back to Library</a>

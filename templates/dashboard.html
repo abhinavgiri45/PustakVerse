@@ -33,9 +33,12 @@
             align-items: center; 
         }
         
-        .navbar-brand img { 
-            height: 45px; 
+        .navbar-brand img, .logo-img { 
+            height: 52px; 
+            width: auto;
+            max-width: 220px;
             object-fit: contain; 
+            display: block;
         }
         
         .navbar-links { 
@@ -233,7 +236,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
             </a>
         </div>
         <div class="navbar-links">

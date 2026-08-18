@@ -25,12 +25,15 @@
             gap: 16px; 
         }
         
-        .navbar-brand img { 
-            height: 45px; 
-            background: white; 
-            padding: 5px; 
-            border-radius: 4px; 
+        .navbar-brand img, .logo-img { 
+            height: 52px; 
+            width: auto;
+            max-width: 220px;
+            background: transparent; 
+            padding: 0; 
+            border-radius: 8px; 
             object-fit: contain; 
+            display: block;
         }
         
         .navbar-links { 
@@ -281,7 +284,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" width="150" height="45">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
             </a>
         </div>
         <div class="navbar-links">
