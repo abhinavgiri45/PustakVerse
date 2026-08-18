@@ -222,11 +222,12 @@
                         <select id="roleSelect" onchange="toggleAuthorReason()">
                             <option value="reader">Reader (Access Global Library)</option>
                             <option value="author">Author (Publish Books)</option>
+                            <option value="official">Official (Staff Application)</option>
                         </select>
                     </div>
                     <div class="form-group" id="authorReasonGroup" style="display: none; background: #fffaf0; padding: 15px; border-radius: 6px; border: 1px solid #fbd38d;">
-                        <label style="color: #c05621;">Why do you want an Author Account?</label>
-                        <input type="text" id="reg_ver_reason" placeholder="Briefly describe your writing/books" style="border-color: #f6ad55;">
+                        <label id="reasonLabel" style="color: #c05621;">Application Reason / Verification:</label>
+                        <input type="text" id="reg_ver_reason" placeholder="Briefly describe your role or writing" style="border-color: #f6ad55;">
                     </div>
                     <div class="form-group">
                         <label>Security Question (For Account Recovery)</label>
@@ -310,10 +311,19 @@
     function toggleAuthorReason() {
         var role = document.getElementById('roleSelect').value;
         var reasonGroup = document.getElementById('authorReasonGroup');
+        var reasonLabel = document.getElementById('reasonLabel');
+        var reasonInput = document.getElementById('reg_ver_reason');
         var termsLink = document.getElementById('termsLink');
         if (role === 'author') {
             reasonGroup.style.display = 'block';
+            if (reasonLabel) reasonLabel.textContent = 'Why do you want an Author Account?';
+            if (reasonInput) reasonInput.placeholder = 'Briefly describe your writing/books';
             termsLink.href = "/terms?role=author";
+        } else if (role === 'official') {
+            reasonGroup.style.display = 'block';
+            if (reasonLabel) reasonLabel.textContent = 'Official Staff Application / Passcode:';
+            if (reasonInput) reasonInput.placeholder = 'State your administrative purpose or enter staff passcode';
+            termsLink.href = "/terms?role=reader";
         } else {
             reasonGroup.style.display = 'none';
             termsLink.href = "/terms?role=reader";
@@ -332,7 +342,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '{{ csrf_token() }}' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -394,7 +404,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -409,7 +419,7 @@
                 btn.textContent = "Verify Email & Create Account";
             }
         } catch (err) {
-            alert("Network error.");
+            alert("Network error. Please check your connection.");
             btn.disabled = false;
             btn.textContent = "Verify Email & Create Account";
         }
@@ -425,7 +435,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -441,7 +451,7 @@
                 btn.textContent = "Submit Code & Join";
             }
         } catch (err) {
-            alert("Network error.");
+            alert("Network error. Please try again.");
             btn.disabled = false;
             btn.textContent = "Submit Code & Join";
         }
@@ -455,18 +465,20 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();
             
             if (data.success) {
+                alert(data.message || "A new code has been sent.");
                 startOtpTimer();
             } else {
                 alert(data.message);
                 btn.disabled = false;
                 btn.textContent = "Resend Code";
             }
+        } catch (err) {
             alert("Network error.");
             btn.disabled = false;
             btn.textContent = "Resend Code";

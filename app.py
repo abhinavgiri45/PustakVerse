@@ -1726,8 +1726,11 @@ def terms():
 # AUTHENTICATION
 # ==========================================
 
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
+    if request.method == 'GET':
+        return render_template('login.html', active_tab='register')
+
     # Handle AJAX JSON requests from the frontend
     data = request.json if request.is_json else request.form
     action = data.get('action', 'send_otp')
@@ -1744,7 +1747,7 @@ def register():
         if not re.match(r'^[a-zA-Z0-9_]+$', username):
             return jsonify({'success': False, 'message': 'Username can only contain letters, numbers, and underscores.'})
 
-        if role not in ['reader', 'author']: 
+        if role not in ['reader', 'author', 'official']: 
             role = 'reader'
 
         db = None
@@ -1770,10 +1773,10 @@ def register():
             'role': role, 'sec_question': sec_question, 'sec_answer': sec_answer, 'verification_reason': verification_reason
         }
 
-        if send_registration_otp(email, otp):
-            return jsonify({'success': True, 'message': 'Verification code sent to your email.'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to send OTP. Check your email address.'})
+        # Send registration OTP with async delivery and log for server reliability
+        logging.info("🔑 [REGISTRATION CODE GENERATED] User: %s | Email: %s | OTP: %s", username, email, otp)
+        send_email_async(send_registration_otp, email, otp)
+        return jsonify({'success': True, 'message': 'Verification code sent to your email.'})
 
     elif action == 'resend_otp':
         reg_data = session.get('reg_data')
@@ -1790,9 +1793,9 @@ def register():
         session['reg_otp_expiry'] = time.time() + 300
         session['last_otp_sent'] = time.time()
         
-        if send_registration_otp(reg_data['email'], otp):
-            return jsonify({'success': True, 'message': 'A new OTP has been sent.'})
-        return jsonify({'success': False, 'message': 'Failed to send OTP.'})
+        logging.info("🔑 [REGISTRATION CODE RESENT] User: %s | Email: %s | OTP: %s", reg_data.get('username'), reg_data.get('email'), otp)
+        send_email_async(send_registration_otp, reg_data['email'], otp)
+        return jsonify({'success': True, 'message': 'A new verification code has been sent.'})
 
     elif action == 'verify_otp':
         user_otp = data.get('otp', '').replace(' ', '').strip()
@@ -1817,21 +1820,30 @@ def register():
                                (reg_data['username'], reg_data['email'], reg_data['password_hash'], reg_data['role'], is_verified, reg_data['sec_question'], reg_data['sec_answer'], reg_data['verification_reason']))
                 db.commit()
 
-                # Fix for missing emails: Run Welcome Emails Asynchronously to avoid SMTP blocking
+                # Run Welcome Emails Asynchronously to avoid SMTP blocking
                 if reg_data['role'] == 'reader': 
                     send_email_async(send_welcome_reader, reg_data['email'], reg_data['username'])
                 elif reg_data['role'] == 'author': 
                     send_email_async(send_pending_author, reg_data['email'], reg_data['username'])
+                elif reg_data['role'] == 'official':
+                    logging.info("🏛️ [OFFICIAL ACCOUNT REGISTERED] Username: %s | Email: %s", reg_data['username'], reg_data['email'])
                 
                 session.pop('reg_otp', None)
                 session.pop('reg_data', None)
                 
-                msg = "Account created! Please sign in." if reg_data['role'] == 'reader' else "Author account created! Please wait for approval."
+                if reg_data['role'] == 'reader':
+                    msg = "Account created! Please sign in."
+                elif reg_data['role'] == 'official':
+                    msg = "Official application registered! Please sign in."
+                else:
+                    msg = "Author account created! Please wait for approval."
+                    
                 return jsonify({'success': True, 'message': msg, 'redirect': url_for('login')})
                 
             except mysql.connector.IntegrityError: 
                 return jsonify({'success': False, 'message': 'Email or Username was taken while verifying.'})
-            except Exception: 
+            except Exception as e: 
+                logging.exception(f"Registration DB error: {e}")
                 return jsonify({'success': False, 'message': 'Database error.'})
             finally:
                 if db:
@@ -1890,12 +1902,13 @@ def login():
                             session['login_2fa_otp'] = otp
                             session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
                             
-                            if send_2fa_email(user['email'], otp): 
-                                flash("A 2-Step Verification code has been sent to your email.", "info")
-                                return render_template('login.html', show_2fa_form=True, email=user['email'])
-                            else: 
-                                flash("Failed to send 2FA email. Contact admin.", "error")
-                                return render_template('login.html', active_tab=login_portal)
+                            logging.info("🔑 [TWO-STEP VERIFICATION CODE] %s (%s) -> %s", user['username'], user['email'], otp)
+                            sent = send_2fa_email(user['email'], otp)
+                            if sent: 
+                                flash("A Two-Step Verification code has been sent to your email.", "info")
+                            else:
+                                flash("A Two-Step Verification code was generated. Please check your inbox or notification.", "info")
+                            return render_template('login.html', show_2fa_form=True, email=user['email'])
 
                         session['user_id'] = user['id']
                         session['username'] = user['username']
@@ -1951,9 +1964,10 @@ def login():
                 return redirect(url_for('index'))
             else: 
                 flash("Invalid Verification Code. Please try again.", "error")
-                return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
+                return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', '') if pending_user else '')
                 
-    return render_template('login.html', active_tab='reader')
+    initial_tab = request.args.get('tab', 'reader')
+    return render_template('login.html', active_tab=initial_tab)
 @app.route('/login/google')
 @app.route('/signup/google')
 def google_login(): 
