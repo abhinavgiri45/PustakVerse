@@ -72,7 +72,12 @@
                 <a href="{{ url_for('login') }}" class="nav-btn-highlight">Sign In / Join</a>
             {% endif %}
         </div>
-        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.15); color: #f66d2f; border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
+                🔥 <span id="baseStreakCount">1</span>d
+            </span>
+            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
+        </div>
     </nav>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -110,6 +115,13 @@
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         document.addEventListener('DOMContentLoaded', function() {
             applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
+            
+            const streakCountEl = document.getElementById('baseStreakCount');
+            if (streakCountEl) {
+                const s = localStorage.getItem('pv_reading_streak') || '1';
+                streakCountEl.textContent = s;
+            }
+
             if (!localStorage.getItem('pustakverse_tg_seen')) {
                 setTimeout(function() { 
                     const popup = document.getElementById('tgPopup'); 
