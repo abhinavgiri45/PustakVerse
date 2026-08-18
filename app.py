@@ -1109,12 +1109,46 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         return msg
 
     # ==========================================
-    # 1. PRIMARY METHOD: HTTP REST APIS (PORT 443 - ZERO FIREWALL BLOCKING ON CLOUD)
+    # 1. PRIMARY METHOD: GMAIL REST API / GOOGLE OAUTH2 (HTTPS PORT 443)
+    # ==========================================
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('GMAIL_CLIENT_ID') or os.environ.get('CLIENT_ID') or os.environ.get('GOOGLE_AUTH_CLIENT_ID') or '').strip()
+    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('GMAIL_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
+    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('GMAIL_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or os.environ.get('GMAIL_TOKEN') or '').strip()
+    
+    if client_id and refresh_token and client_secret:
+        try:
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token"
+            }
+            r = requests.post(token_url, data=token_data, timeout=6)
+            token_json = r.json()
+            access_token = token_json.get("access_token")
+
+            if access_token:
+                msg = create_mime_msg()
+                encoded_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+                send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+                headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=6)
+                if send_res.status_code in [200, 201]:
+                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Gmail REST API (Port 443)", to_email)
+                    return True
+                delivery_errors.append(f"Gmail API HTTP {send_res.status_code}: {send_res.text[:200]}")
+            else:
+                delivery_errors.append(f"Gmail OAuth Token Error: {token_json.get('error_description') or token_json.get('error') or 'Could not obtain access token'}")
+        except Exception as error:
+            delivery_errors.append(f"Gmail API exception: {error}")
+
+    # ==========================================
+    # 2. HTTP REST APIS: RESEND, BREVO, SENDGRID (HTTPS PORT 443)
     # ==========================================
     resend_key = (os.environ.get('RESEND_API_KEY') or '').strip()
     if resend_key:
         try:
-            # Resend default onboarding sender or verified domain
             from_addr = f"PustakVerse <onboarding@resend.dev>" if 'resend.dev' in from_email or '@' not in from_email else f"PustakVerse <{sender_header}>"
             r = requests.post(
                 "https://api.resend.com/emails",
@@ -1170,34 +1204,6 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
             delivery_errors.append(f"SendGrid API HTTP {r.status_code}: {r.text[:200]}")
         except Exception as e:
             delivery_errors.append(f"SendGrid API exception: {e}")
-
-    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
-    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
-    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or '').strip()
-    if client_id and refresh_token and client_secret:
-        try:
-            token_url = "https://oauth2.googleapis.com/token"
-            token_data = {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token,
-                "grant_type": "refresh_token"
-            }
-            r = requests.post(token_url, data=token_data, timeout=5)
-            access_token = r.json().get("access_token")
-
-            if access_token:
-                msg = create_mime_msg()
-                encoded_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-                send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
-                headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
-                if send_res.status_code in [200, 201]:
-                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Gmail API", to_email)
-                    return True
-                delivery_errors.append(f"Gmail API HTTP {send_res.status_code}: {send_res.text[:200]}")
-        except Exception as error:
-            delivery_errors.append(f"Gmail API exception: {error}")
 
     # ==========================================
     # 2. SECONDARY METHOD: DIRECT SMTP MULTI-PORT AUTO-ROUTING (IPv4 ENFORCED)
