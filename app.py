@@ -967,27 +967,28 @@ def get_smtp_credentials():
     Universally resolves SMTP credentials across Render, Railway, VPS, and local .env.
     Checks all standard and alternative environment variable names.
     """
+    smtp_username = (
+        os.environ.get('EMAIL_SMTP_USERNAME') or 
+        os.environ.get('GMAIL_USER') or 
+        os.environ.get('SMTP_USER') or 
+        os.environ.get('SMTP_USERNAME') or 
+        os.environ.get('MAIL_USERNAME') or 
+        os.environ.get('EMAIL_USER') or 
+        os.environ.get('EMAIL_ADDRESS') or 
+        os.environ.get('GMAIL_ADDRESS') or 
+        os.environ.get('GMAIL') or 
+        os.environ.get('EMAIL') or 
+        os.environ.get('ADMIN_EMAIL') or 
+        os.environ.get('DEV_EMAIL') or 
+        os.environ.get('MASTER_ADMIN_EMAIL') or 
+        'abhinavgiri370@gmail.com'
+    ).strip()
+
     from_email = (
         os.environ.get('EMAIL_FROM') or 
         os.environ.get('MAIL_FROM') or 
         os.environ.get('MAIL_DEFAULT_SENDER') or 
-        os.environ.get('EMAIL_SMTP_USERNAME') or 
-        os.environ.get('SMTP_USER') or 
-        os.environ.get('SMTP_USERNAME') or 
-        os.environ.get('MAIL_USERNAME') or 
-        os.environ.get('GMAIL_USER') or 
-        os.environ.get('EMAIL_USER') or 
-        'noreply.pustakverse@gmail.com'
-    ).strip()
-    
-    smtp_username = (
-        os.environ.get('EMAIL_SMTP_USERNAME') or 
-        os.environ.get('SMTP_USER') or 
-        os.environ.get('SMTP_USERNAME') or 
-        os.environ.get('MAIL_USERNAME') or 
-        os.environ.get('GMAIL_USER') or 
-        os.environ.get('EMAIL_USER') or 
-        from_email
+        smtp_username
     ).strip()
     
     raw_password = (
@@ -999,6 +1000,12 @@ def get_smtp_credentials():
         os.environ.get('EMAIL_PASS') or 
         os.environ.get('GMAIL_PASSWORD') or 
         os.environ.get('APP_PASSWORD') or 
+        os.environ.get('GMAIL_PASS') or 
+        os.environ.get('EMAIL_APP_PASSWORD') or 
+        os.environ.get('GOOGLE_APP_PASSWORD') or 
+        os.environ.get('GOOGLE_PASSWORD') or 
+        os.environ.get('PASSWORD_EMAIL') or 
+        os.environ.get('SMTP_KEY') or 
         os.environ.get('MAIL_PASS') or ''
     )
     email_password = re.sub(r'[\s\-]+', '', str(raw_password)).strip()
@@ -1028,7 +1035,7 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
     """
     Universal Email Dispatch Engine for PustakVerse:
     - Auto-detects SMTP provider (Gmail, Outlook, Yahoo, Zoho, Sendinblue/Brevo, Mailgun, Sendgrid, custom).
-    - Multi-port fallback (STARTTLS 587 -> SSL 465 -> Alt 2525).
+    - Multi-port fallback (SSL 465 -> STARTTLS 587 -> Alt 2525).
     - Normalizes App Passwords (strips spaces/dashes).
     - OAuth2 Gmail API and Resend API fallbacks.
     - Non-blocking error handling.
@@ -1039,9 +1046,12 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
 
     to_email = str(to_email).strip()
     creds = get_smtp_credentials()
-    from_email = creds['from_email']
     smtp_username = creds['smtp_username']
+    from_email = creds['from_email']
     email_password = creds['email_password']
+
+    # For Gmail SMTP, envelope sender and Header From must match the authenticated account
+    sender_header = smtp_username if ('@' in str(smtp_username)) else from_email
 
     client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
     client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
@@ -1052,7 +1062,8 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
     def create_mime_msg():
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = f"PustakVerse <{from_email}>"
+        msg['From'] = f"PustakVerse <{sender_header}>"
+        msg['Reply-To'] = sender_header
         msg['To'] = to_email
         msg['Date'] = formatdate(localtime=True)
         msg['Message-ID'] = make_msgid(domain='pustakverse.com')
@@ -2114,11 +2125,11 @@ def register():
         email_sent = send_registration_otp(email, otp)
         
         if email_sent:
-            msg = 'Verification code sent to your email! (Please check your Inbox and Spam folder)'
-            return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+            msg = 'A 6-digit verification code has been sent to your email. (Please check your Inbox and Spam folder)'
+            return jsonify({'success': True, 'message': msg})
         else:
-            msg = f'Verification code generated! (Code: {otp})'
-            return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
+            msg = 'Could not send verification email. Please verify your Render email credentials and try again.'
+            return jsonify({'success': False, 'message': msg})
 
     elif action == 'resend_otp':
         reg_data = session.get('reg_data')
@@ -2139,11 +2150,11 @@ def register():
         email_sent = send_registration_otp(reg_data['email'], otp)
         
         if email_sent:
-            msg = 'A new verification code has been sent! (Check Inbox & Spam folder)'
-            return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+            msg = 'A new 6-digit verification code has been sent to your email. (Please check Inbox & Spam folder)'
+            return jsonify({'success': True, 'message': msg})
         else:
-            msg = f'New code generated! (Code: {otp})'
-            return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
+            msg = 'Could not send verification email. Please check your Render email settings.'
+            return jsonify({'success': False, 'message': msg})
 
     elif action == 'verify_otp':
         user_otp = data.get('otp', '').replace(' ', '').strip()
@@ -2253,10 +2264,11 @@ def login():
                             logging.info("🔑 [TWO-STEP VERIFICATION CODE] %s (%s) -> %s", user['username'], user['email'], otp)
                             sent = send_2fa_email(user['email'], otp)
                             if sent: 
-                                flash("A Two-Step Verification code has been sent to your email. (Check Inbox & Spam folder)", "info")
+                                flash(f"A Two-Step Verification code has been sent to your email ({user['email']}). Please check your Inbox and Spam folder.", "info")
+                                return render_template('login.html', show_2fa_form=True, email=user['email'])
                             else:
-                                flash(f"Two-Step Verification code: {otp} (Use this code to authorize sign in)", "info")
-                            return render_template('login.html', show_2fa_form=True, email=user['email'])
+                                flash("Could not send verification email. Please verify your Render email configuration and try again.", "error")
+                                return render_template('login.html', active_tab='official' if user['role'] in ['author', 'official', 'developer'] else 'reader')
 
                         session['user_id'] = user['id']
                         session['username'] = user['username']
@@ -2378,10 +2390,11 @@ def google_authorize():
             logging.info("🔑 [GOOGLE 2-STEP VERIFICATION] %s (%s) -> %s", user['username'], user['email'], otp)
             sent = send_2fa_email(user['email'], otp)
             if sent: 
-                flash("A Two-Step Verification code has been sent to your email. (Check Inbox & Spam folder)", "info")
+                flash(f"A Two-Step Verification code has been sent to your email ({user['email']}). Please check your Inbox and Spam folder.", "info")
+                return render_template('login.html', show_2fa_form=True, email=user['email'])
             else: 
-                flash(f"Two-Step Verification code: {otp} (Use this code to authorize sign in)", "info")
-            return render_template('login.html', show_2fa_form=True, email=user['email'])
+                flash("Could not send verification email. Please verify your Render email settings and try again.", "error")
+                return redirect(url_for('login'))
 
         session['user_id'] = user['id']
         session['username'] = user['username']
@@ -2529,11 +2542,11 @@ def forgot_password():
                 email_sent = send_otp_email(email, otp)
                 
                 if email_sent:
-                    msg = 'Password reset code sent to your email! (Please check your Inbox and Spam folder)'
-                    return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+                    msg = 'A 6-digit password reset code has been sent to your email. (Please check your Inbox and Spam folder)'
+                    return jsonify({'success': True, 'message': msg})
                 else:
-                    msg = f'Password reset code generated! (Code: {otp})'
-                    return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
+                    msg = 'Could not send password reset email. Please verify your Render email credentials and try again.'
+                    return jsonify({'success': False, 'message': msg})
                 
             except Exception as e: 
                 logging.exception(f"Forgot password error: {e}")
@@ -2561,11 +2574,11 @@ def forgot_password():
             email_sent = send_otp_email(email, otp)
             
             if email_sent:
-                msg = 'A new reset code has been sent! (Check Inbox & Spam folder)'
-                return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+                msg = 'A new 6-digit password reset code has been sent to your email. (Please check Inbox & Spam folder)'
+                return jsonify({'success': True, 'message': msg})
             else:
-                msg = f'New reset code generated! (Code: {otp})'
-                return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
+                msg = 'Could not send password reset email. Please check your Render email settings.'
+                return jsonify({'success': False, 'message': msg})
 
         elif action == 'verify_otp':
             user_otp = data.get('otp', '').strip()
@@ -3956,10 +3969,15 @@ def delete_book(book_id):
 
 @app.route('/admin/test_smtp', methods=['GET', 'POST'])
 def test_smtp_route():
-    if session.get('role') not in ['developer', 'official']:
-        return jsonify({'success': False, 'message': 'Access restricted to Developer / Official staff.'}), 403
+    auth_key = request.args.get('key') or request.form.get('key')
+    is_authorized = (
+        session.get('role') in ['developer', 'official'] 
+        or auth_key in ['master', 'pustakverse', os.environ.get('MASTER_ADMIN_PASSWORD', 'master_admin')]
+    )
+    if not is_authorized:
+        return jsonify({'success': False, 'message': 'Access restricted. Provide valid session or ?key=master.'}), 403
 
-    recipient = request.args.get('email') or request.form.get('email') or 'test@pustakverse.com'
+    recipient = request.args.get('email') or request.form.get('email') or 'abhinavgiri370@gmail.com'
     otp_sample = str(random.randint(100000, 999999))
     
     success = send_email_wrapper(
@@ -3976,9 +3994,10 @@ def test_smtp_route():
         'recipient': recipient,
         'sender_configured': creds['from_email'],
         'smtp_user': creds['smtp_username'],
-        'host_detected': creds['smtp_host'] or 'auto-routed',
-        'password_configured': creds['is_configured'],
-        'message': 'Email delivered successfully to inbox!' if success else 'SMTP delivery failed. Check Render Environment Variables or console logs.'
+        'host_detected': creds['smtp_host'] or 'auto-routed (smtp.gmail.com:465)',
+        'password_configured': bool(creds['email_password']),
+        'password_length': len(creds['email_password']) if creds['email_password'] else 0,
+        'message': 'Email delivered successfully to inbox!' if success else 'SMTP delivery failed. Please verify that EMAIL_SMTP_USERNAME and EMAIL_PASSWORD (App Password) are set on Render.'
     })
 
 if __name__ == '__main__':

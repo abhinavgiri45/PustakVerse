@@ -256,10 +256,8 @@
                 <div id="otpSection" style="display: none; padding-top: 10px;">
                     <h3 style="margin-top: 0; color: #2d3748; text-align: center;">Verify Your Email</h3>
                     <div id="otpNoticeBox" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 12px; text-align: center; line-height: 1.4;">
-                        📧 A 6-digit code has been dispatched. Please check your <strong>Inbox</strong> and <strong>Spam / Junk</strong> folder.
+                        📧 A 6-digit code has been sent to your email. Please check your <strong>Inbox</strong> and <strong>Spam / Junk</strong> folder.
                     </div>
-                    
-                    <div id="otpBackupBadge" style="display: none; margin-bottom: 14px; text-align: center;"></div>
                     
                     <div id="otpTimerDisplay" style="text-align: center; font-weight: bold; color: #e53e3e; margin-bottom: 15px; font-size: 1.1rem;">
                         Time remaining: 05:00
@@ -416,20 +414,6 @@
             if (data.success) {
                 document.getElementById('registrationForm').style.display = 'none';
                 document.getElementById('otpSection').style.display = 'block';
-                
-                const backupBadge = document.getElementById('otpBackupBadge');
-                const otpInput = document.getElementById('reg_otp_input');
-                
-                if (data.dev_otp) {
-                    if (otpInput) otpInput.value = data.dev_otp;
-                    if (backupBadge) {
-                        backupBadge.style.display = 'block';
-                        backupBadge.innerHTML = `<div style="background: #dcfce7; border: 1.5px dashed #16a34a; color: #166534; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">🔑 Verification Code: <span style="font-size: 1.25rem; letter-spacing: 4px; font-family: monospace;">${data.dev_otp}</span><div style="font-size: 0.8rem; font-weight: normal; margin-top: 4px; color: #15803d;">(Auto-filled for instant verification)</div></div>`;
-                    }
-                } else if (backupBadge) {
-                    backupBadge.style.display = 'none';
-                }
-                
                 startOtpTimer();
             } else {
                 alert(data.message);
@@ -489,17 +473,7 @@
             const data = await response.json();
             
             if (data.success) {
-                const backupBadge = document.getElementById('otpBackupBadge');
-                const otpInput = document.getElementById('reg_otp_input');
-                
-                if (data.dev_otp) {
-                    if (otpInput) otpInput.value = data.dev_otp;
-                    if (backupBadge) {
-                        backupBadge.style.display = 'block';
-                        backupBadge.innerHTML = `<div style="background: #dcfce7; border: 1.5px dashed #16a34a; color: #166534; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">🔑 New Verification Code: <span style="font-size: 1.25rem; letter-spacing: 4px; font-family: monospace;">${data.dev_otp}</span><div style="font-size: 0.8rem; font-weight: normal; margin-top: 4px; color: #15803d;">(Auto-filled for instant verification)</div></div>`;
-                    }
-                }
-                alert(data.message || "A new code has been sent.");
+                alert(data.message || "A new verification code has been sent to your email.");
                 startOtpTimer();
             } else {
                 alert(data.message);
