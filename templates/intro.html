@@ -2,97 +2,178 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to PustakVerse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Welcome to PustakVerse · Anime Digital Library</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;700&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
+
     <style>
-        /* Prevent all scrolling, bouncing, and white flashes */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body, html {
-            margin: 0; padding: 0; height: 100vh; width: 100vw;
-            background-color: #0f172a; /* Deep cinematic background */
-            color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: #0c0a1a;
+            /* Atmospheric Shinkai anime cosmos background */
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(108, 92, 231, 0.4) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(255, 71, 126, 0.25) 0%, transparent 50%),
+                radial-gradient(circle at 20% 70%, rgba(0, 206, 201, 0.2) 0%, transparent 40%),
+                linear-gradient(135deg, #090814 0%, #15112d 50%, #0d0a1c 100%);
+            color: #ffffff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient glowing anime star particles */
+        .stars-overlay {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px),
+                radial-gradient(rgba(255, 71, 126, 0.7) 1.5px, transparent 1.5px),
+                radial-gradient(rgba(108, 92, 231, 0.8) 1.2px, transparent 1.2px);
+            background-size: 80px 80px, 160px 160px, 120px 120px;
+            background-position: 0 0, 40px 60px, 80px 20px;
+            opacity: 0.6;
+            animation: drift 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes drift {
+            from { transform: translateY(0); }
+            to { transform: translateY(-40px); }
         }
 
         .cinematic-container {
             text-align: center;
             opacity: 0;
-            animation: fadeIn 1.5s ease-in forwards;
-            padding: 20px;
+            animation: fadeIn 1.2s ease-in forwards;
+            padding: 24px;
+            z-index: 10;
+            max-width: 800px;
+        }
+
+        .anime-kicker {
+            display: inline-block;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #ffd32a;
+            background: rgba(253, 203, 110, 0.15);
+            border: 1px solid rgba(253, 203, 110, 0.35);
+            padding: 4px 16px;
+            border-radius: 9999px;
+            margin-bottom: 24px;
+            box-shadow: 0 0 16px rgba(253, 203, 110, 0.25);
+            animation: slideDown 1s ease-out forwards;
         }
 
         .logo {
-            height: 100px;
-            max-width: 90vw;
+            height: 90px;
+            max-width: 85vw;
             object-fit: contain;
-            margin-bottom: 20px;
-            filter: drop-shadow(0 0 15px rgba(246, 109, 47, 0.4));
-            animation: pulseLogo 4s infinite alternate;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 0 25px rgba(108, 92, 231, 0.6));
+            animation: pulseLogo 4s infinite alternate ease-in-out;
         }
 
         .tagline {
-            font-size: 2rem;
-            font-weight: 400;
-            letter-spacing: 1px;
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
             margin: 0;
             opacity: 0;
-            animation: slideUp 1.5s ease-out 1s forwards;
-            color: #f8fafc;
+            animation: slideUp 1.2s ease-out 0.6s forwards;
+            color: #ffffff;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            line-height: 1.2;
         }
 
         .sub-tagline {
-            font-size: 1.1rem;
-            color: #94a3b8;
-            margin-top: 15px;
+            font-size: 1.15rem;
+            color: #c9c4eb;
+            margin-top: 14px;
             opacity: 0;
-            animation: slideUp 1.5s ease-out 2s forwards;
+            animation: slideUp 1.2s ease-out 1.2s forwards;
+            line-height: 1.6;
         }
 
         .skip-btn {
             position: absolute;
-            bottom: 50px;
-            background: transparent;
-            color: #94a3b8;
-            border: 1px solid #64748b;
-            padding: 10px 25px;
-            border-radius: 25px;
+            bottom: 40px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #e2def8;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 28px;
+            border-radius: 9999px;
             cursor: pointer;
+            font-family: 'Outfit', sans-serif;
             font-size: 0.95rem;
-            transition: 0.3s;
+            font-weight: 700;
+            transition: all 0.25s ease;
             opacity: 0;
-            animation: fadeIn 1s ease-in 2.5s forwards;
+            animation: fadeIn 1s ease-in 1.8s forwards;
+            z-index: 20;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .skip-btn:hover {
-            color: white;
-            border-color: #f66d2f;
-            background: rgba(246, 109, 47, 0.1);
+            color: #ffffff;
+            border-color: #ff477e;
+            background: linear-gradient(135deg, rgba(255, 71, 126, 0.3), rgba(108, 92, 231, 0.3));
+            box-shadow: 0 0 20px rgba(255, 71, 126, 0.4);
+            transform: translateY(-2px);
         }
 
-        /* Fluid Animations */
         @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
         @keyframes slideUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
-        @keyframes pulseLogo { 0% { transform: scale(0.98); } 100% { transform: scale(1.02); } }
-        
-        /* Mobile Responsiveness */
+        @keyframes slideDown { 0% { opacity: 0; transform: translateY(-15px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes pulseLogo { 0% { transform: scale(0.98); } 100% { transform: scale(1.03); } }
+
         @media (max-width: 600px) {
-            .tagline { font-size: 1.5rem; }
-            .sub-tagline { font-size: 0.95rem; }
-            .logo { height: 80px; }
+            .tagline { font-size: 1.8rem; }
+            .sub-tagline { font-size: 1rem; }
+            .logo { height: 72px; }
+            .skip-btn { bottom: 30px; padding: 10px 22px; font-size: 0.9rem; }
         }
     </style>
 </head>
 <body>
+    <div class="stars-overlay"></div>
+
     <div class="cinematic-container">
-        <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo">
-        <!-- These now pull directly from your Developer Dashboard! -->
+        <span class="anime-kicker">✦ 普遍的な知識の図書館 • PUSTAKVERSE ✦</span>
+        <div>
+            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo">
+        </div>
         <h1 class="tagline">{{ site_settings.intro_tagline }}</h1>
         <p class="sub-tagline">{{ site_settings.intro_sub_tagline }}</p>
     </div>
 
     <button class="skip-btn" id="skipIntroBtn" onclick="goToNext()" aria-label="Skip Introduction">
-        Skip to Library &rarr;
+        <span>Enter Library</span>
+        <span>&rarr;</span>
     </button>
 
     <script>
@@ -107,11 +188,8 @@
             isNavigating = true;
             clearTimeout(timeoutId);
             
-            // Mark intro as completed for this session and in local storage
             sessionStorage.setItem('pustakverse_intro_seen', 'true');
             localStorage.setItem('pustakverse_onboarded', 'true');
-
-            // Navigate directly to the Global Library
             window.location.replace("/");
         }
     </script>
