@@ -101,14 +101,15 @@
             {% endwith %}
         </div>
 
-        <!-- 2-STEP VERIFICATION PANEL -->
+        <!-- TWO-STEP VERIFICATION PANEL -->
         {% if show_2fa_form %}
             <div class="form-area active" style="padding-top: 20px;">
-                <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>2-Step Verification</h2>
+                <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>Two-Step Verification</h2>
                 <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
-                    We have sent a 6-digit verification code to <strong>{{ email }}</strong>.
+                    We have sent a 6-digit security code to <strong>{{ email }}</strong>. Please enter the code below to securely authenticate your sign-in.
                 </p>
                 <form action="/login" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="verify_2fa">
                     <div class="form-group">
                         <label>Verification Code</label>
@@ -133,6 +134,7 @@
             <div id="reader" class="form-area {% if active_tab == 'reader' or not active_tab %}active{% endif %}">
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <form action="/login" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -141,11 +143,11 @@
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" name="password" id="login_pass_reader" required placeholder="Enter your password">
-                        <span class="toggle-password" onclick="togglePassword('login_pass_reader', this)">👁️</span>
+                        <input type="password" name="password" id="reader_password" required placeholder="Enter your password">
+                        <span class="toggle-password" onclick="togglePassword('reader_password', this)">👁️</span>
                     </div>
                     <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
-                    <button type="submit" class="btn-submit orange">Sign In as Reader</button>
+                    <button type="submit" class="btn-submit orange">Sign In to Library</button>
                 </form>
 
                 <div class="divider">or continue with</div>
@@ -153,24 +155,25 @@
                     <svg class="google-icon" viewBox="0 0 24 24">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    Sign in with Google
+                    Continue with Google
                 </a>
             </div>
 
-            <!-- AUTHOR / OFFICIAL LOGIN -->
+            <!-- OFFICIAL LOGIN -->
             <div id="official" class="form-area {% if active_tab == 'official' %}active{% endif %}">
-                <h2><span style="font-size: 2.2rem;">🏛️</span>Creator / Admin Portal</h2>
+                <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <form action="/login" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
                         <label>Username</label>
-                        <input type="text" name="username" required placeholder="Enter your registered username">
+                        <input type="text" name="username" required placeholder="Author / Official Username">
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" name="password" id="login_pass_admin" required placeholder="Enter your secure password">
-                        <span class="toggle-password" onclick="togglePassword('login_pass_admin', this)">👁️</span>
+                        <input type="password" name="password" id="official_password" required placeholder="Enter your password">
+                        <span class="toggle-password" onclick="togglePassword('official_password', this)">👁️</span>
                     </div>
                     <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
                     <button type="submit" class="btn-submit dark">Secure Sign In</button>
@@ -205,8 +208,14 @@
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" id="reg_password" required minlength="6" placeholder="Minimum 6 characters">
+                        <input type="password" id="reg_password" required minlength="6" placeholder="Minimum 6 characters" oninput="checkRegPassStrength(this.value)">
                         <span class="toggle-password" onclick="togglePassword('reg_password', this)">👁️</span>
+                        <div style="margin-top: 6px;">
+                            <div style="height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+                                <div id="reg_pw_meter" style="height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <small id="reg_pw_text" style="font-size: 0.75rem; color: #718096; margin-top: 2px; display: block;">Strength: Enter password</small>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Account Type</label>
@@ -458,10 +467,46 @@
                 btn.disabled = false;
                 btn.textContent = "Resend Code";
             }
-        } catch (err) {
             alert("Network error.");
             btn.disabled = false;
             btn.textContent = "Resend Code";
+        }
+    }
+
+    function checkRegPassStrength(pw) {
+        const meter = document.getElementById('reg_pw_meter');
+        const text = document.getElementById('reg_pw_text');
+        if (!meter || !text) return;
+        
+        let score = 0;
+        if (!pw) {
+            meter.style.width = '0%';
+            text.textContent = 'Strength: Enter password';
+            text.style.color = '#718096';
+            return;
+        }
+        if (pw.length >= 6) score += 25;
+        if (pw.length >= 10) score += 25;
+        if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score += 25;
+        if (/[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score += 25;
+
+        meter.style.width = score + '%';
+        if (score <= 25) {
+            meter.style.background = '#ef4444';
+            text.textContent = 'Strength: Weak (Add numbers / uppercase)';
+            text.style.color = '#ef4444';
+        } else if (score <= 50) {
+            meter.style.background = '#f59e0b';
+            text.textContent = 'Strength: Moderate';
+            text.style.color = '#f59e0b';
+        } else if (score <= 75) {
+            meter.style.background = '#3b82f6';
+            text.textContent = 'Strength: Strong';
+            text.style.color = '#3b82f6';
+        } else {
+            meter.style.background = '#22c55e';
+            text.textContent = 'Strength: Very Strong (Optimal)';
+            text.style.color = '#22c55e';
         }
     }
 </script>

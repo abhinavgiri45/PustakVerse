@@ -135,9 +135,20 @@
                 <button class="view-btn" onclick="changeView('FitV')" title="Fit to screen height">Fit Height</button>
             </div>
             {% endif %}
+
+            <!-- Reading Theme & Fullscreen Controls -->
+            <div class="view-controls">
+                <button class="view-btn" onclick="setViewerTheme('dark')" title="Dark Reading Mode">🌙 Dark</button>
+                <button class="view-btn" onclick="setViewerTheme('sepia')" title="Warm Sepia Mode">📜 Sepia</button>
+                <button class="view-btn" onclick="setViewerTheme('light')" title="Light Mode">☀️ Day</button>
+                <button class="view-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>
+            </div>
         </div>
         
-        <a href="javascript:history.back()">← Back</a>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span id="readingProgressText" style="font-size: 0.85rem; color: #a0aec0;"></span>
+            <a href="javascript:history.back()">← Back</a>
+        </div>
     </div>
 
     <!-- Shows a bright warning banner if the user is in Preview mode -->
@@ -152,12 +163,12 @@
         
         <!-- Google Drive Links (Clipped to hide pop-out) -->
         {% if can_read %}
-            <div class="drive-wrapper {% if not can_read %}with-warning{% else %}standard{% endif %}">
+            <div class="drive-wrapper {% if not can_read %}with-warning{% else %}standard{% endif %}" id="viewerContainer">
                 <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="drive-iframe" allow="autoplay"></iframe>
             </div>
         {% else %}
             <!-- Block Drive Links if Unpaid -->
-            <div class="drive-block">
+            <div class="drive-block" id="viewerContainer">
                 <span style="font-size: 4rem;">🔒</span>
                 <h2>Preview Not Available</h2>
                 <p>Because this premium book is securely hosted on an external drive, our system cannot automatically slice it to generate a preview. Please purchase the book to unlock full access.</p>
@@ -167,15 +178,66 @@
 
     {% else %}
         <!-- Secure Internal Python Slicer for Uploaded PDFs -->
-        <iframe id="pdf-frame" 
-                src="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
-                class="pdf-container {% if not can_read %}with-warning{% endif %}" 
-                sandbox="allow-scripts allow-same-origin">
-        </iframe>
+        <div id="viewerContainer" style="width: 100%; height: 100%;">
+            <iframe id="pdf-frame" 
+                    src="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
+                    class="pdf-container {% if not can_read %}with-warning{% endif %}" 
+                    sandbox="allow-scripts allow-same-origin">
+            </iframe>
+        </div>
     {% endif %}
 
     <!-- Advanced Protection & View Scripts -->
     <script>
+        // Reading Progress & Bookmark Memory
+        const BOOK_KEY = 'pv_book_read_{{ book.id }}';
+        function recordReadingSession() {
+            const now = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            localStorage.setItem(BOOK_KEY, JSON.stringify({
+                title: {{ book.title | tojson }},
+                lastRead: now,
+                timestamp: Date.now()
+            }));
+            const progressEl = document.getElementById('readingProgressText');
+            if (progressEl) {
+                progressEl.textContent = '📖 Bookmarked';
+            }
+        }
+        recordReadingSession();
+
+        // Reading Theme Switcher
+        function setViewerTheme(theme) {
+            const body = document.body;
+            const container = document.getElementById('viewerContainer');
+            if (theme === 'sepia') {
+                body.style.backgroundColor = '#f4ecd8';
+                if (container) container.style.filter = 'sepia(0.35) contrast(0.95)';
+            } else if (theme === 'light') {
+                body.style.backgroundColor = '#f8fafc';
+                if (container) container.style.filter = 'none';
+            } else {
+                body.style.backgroundColor = '#18181b';
+                if (container) container.style.filter = 'none';
+            }
+            localStorage.setItem('pv_viewer_theme', theme);
+        }
+
+        const savedTheme = localStorage.getItem('pv_viewer_theme');
+        if (savedTheme) {
+            setViewerTheme(savedTheme);
+        }
+
+        // Fullscreen Toggle
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
         // Dynamically change the PDF view mode for internal files
         function changeView(viewMode) {
             const frame = document.getElementById('pdf-frame');
@@ -187,7 +249,11 @@
 
         // Disable common keyboard shortcuts used for saving/printing/inspecting
         document.addEventListener('keydown', function(e) {
-            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C
+            if (e.key === 'f' || e.key === 'F') {
+                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    toggleFullscreen();
+                }
+            }
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 

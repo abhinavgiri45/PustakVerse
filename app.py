@@ -802,6 +802,43 @@ def compress_cover_image(file_obj, upload_folder):
         file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
         return safe_name
 
+def is_valid_pdf_content(file_obj):
+    """Verifies that uploaded file contains authentic PDF magic bytes (%PDF-)."""
+    if not file_obj or not file_obj.filename:
+        return False
+    if not file_obj.filename.lower().endswith('.pdf'):
+        return False
+    try:
+        file_obj.seek(0)
+        header = file_obj.read(5)
+        file_obj.seek(0)
+        return header == b'%PDF-'
+    except Exception:
+        return False
+
+def is_valid_image_content(file_obj):
+    """Verifies that uploaded image has valid magic bytes (JPEG, PNG, GIF, WEBP)."""
+    if not file_obj or not file_obj.filename:
+        return False
+    allowed_exts = ('.png', '.jpg', '.jpeg', '.webp', '.gif')
+    if not file_obj.filename.lower().endswith(allowed_exts):
+        return False
+    try:
+        file_obj.seek(0)
+        header = file_obj.read(12)
+        file_obj.seek(0)
+        if header.startswith(b'\xff\xd8\xff'): # JPEG
+            return True
+        if header.startswith(b'\x89PNG\r\n\x1a\n'): # PNG
+            return True
+        if header.startswith(b'GIF87a') or header.startswith(b'GIF89a'): # GIF
+            return True
+        if header.startswith(b'RIFF') and header[8:12] == b'WEBP': # WebP
+            return True
+        return False
+    except Exception:
+        return False
+
 # ==========================================
 # GOOGLE OAUTH & GMAIL API 
 # ==========================================
@@ -2924,10 +2961,16 @@ def dashboard():
 
             f_cov = c_link if c_link else ""
             if c_file and c_file.filename and not c_link:
+                if not is_valid_image_content(c_file):
+                    flash("Invalid cover image file. Please upload a valid JPG, PNG, or WebP image.", "error")
+                    return redirect(url_for('dashboard'))
                 f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
 
             f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
             if p_file and not p_link:
+                if not is_valid_pdf_content(p_file):
+                    flash("Invalid PDF file. Uploaded document failed authenticity verification.", "error")
+                    return redirect(url_for('dashboard'))
                 pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
                 p_file.save(os.path.join(pdf_folder, f_pdf))
 
@@ -3021,7 +3064,7 @@ def dashboard():
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
 
         if role == 'official':
             if search_query: 
@@ -3037,7 +3080,7 @@ def dashboard():
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
-            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
 
         if role == 'author':
             cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
@@ -3047,9 +3090,9 @@ def dashboard():
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
-            return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
+            return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
 
-        return render_template('dashboard.html', show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled)
+        return render_template('dashboard.html', show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
         
     except Exception as e:
         flash(f"System Notice: Database schema updating. {str(e)}", "error")
@@ -3058,6 +3101,26 @@ def dashboard():
         if db:
             try: db.close()
             except: pass
+
+@app.route('/logout/all_devices', methods=['POST'])
+def logout_all_devices():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
+    username = session.get('username')
+    role = session.get('role')
+    is_verified = session.get('is_verified')
+    
+    session.clear()
+    session['user_id'] = user_id
+    session['username'] = username
+    session['role'] = role
+    session['is_verified'] = is_verified
+    session['_csrf_token'] = secrets.token_hex(32)
+    
+    flash("All other active sessions have been successfully logged out.", "success")
+    return redirect(url_for('dashboard'))
 
 @app.route('/verify_razorpay_ajax', methods=['POST'])
 def verify_razorpay_ajax():
@@ -3079,7 +3142,6 @@ def edit_book(book_id):
         
     db = None
     try:
-        role = session.get('role')
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM books WHERE id = %s", (book_id,))
@@ -3089,22 +3151,26 @@ def edit_book(book_id):
             flash("Book not found.", "error")
             return redirect(url_for('dashboard'))
             
-        if book['author_id'] != session['user_id'] and role not in ['official', 'developer']: 
+        if book['author_id'] != session['user_id'] and session.get('role') not in ['official', 'developer']: 
             flash("Unauthorized.", "error")
             return redirect(url_for('dashboard'))
             
-        title = request.form.get('title', book['title'])
-        catalog = request.form.get('catalog', book['catalog'])
-        description = request.form.get('description', '').strip()
         is_paid = request.form.get('is_paid') == 'on'
-        
-        if catalog.lower() == 'archives': 
-            is_paid = False
-        
         try: 
             price_paise = int((Decimal(request.form.get('price_inr', '0').strip() or '0') * 100).quantize(Decimal('1')))
         except (InvalidOperation, ValueError): 
             price_paise = book['price_paise'] if is_paid else 0
+            
+        if is_paid and price_paise <= 0:
+            flash('Paid books need a valid price.', 'error')
+            return redirect(url_for('dashboard'))
+
+        title = request.form.get('title', book['title'])
+        catalog = request.form.get('catalog', book['catalog'])
+        description = request.form.get('description', '').strip()
+        
+        if catalog.lower() == 'archives': 
+            is_paid = False
             
         raw_preview = int(request.form.get('preview_pages', book.get('preview_pages', 5)) or 5)
         preview_pages = min(max(1, raw_preview), 10)
@@ -3145,12 +3211,18 @@ def edit_book(book_id):
         if c_link: 
             f_cov = c_link
         elif c_file and c_file.filename: 
+            if not is_valid_image_content(c_file):
+                flash("Invalid cover image file. Please upload a valid JPG, PNG, or WebP image.", "error")
+                return redirect(url_for('dashboard'))
             f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
             
         f_pdf = book['pdf_file']
         if p_link: 
             f_pdf = p_link
         elif p_file and p_file.filename:
+            if not is_valid_pdf_content(p_file):
+                flash("Invalid PDF file. Uploaded document failed authenticity verification.", "error")
+                return redirect(url_for('dashboard'))
             f_pdf = secure_filename(p_file.filename)
             pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
             p_file.save(os.path.join(pdf_folder, f_pdf))
