@@ -432,7 +432,7 @@
                 
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
                     <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">
-                        ⏱️ Estimated Reading: <strong>~{{ [((book.description|length / 200)|round|int), 3]|max }} mins</strong>
+                        ⏱️ Estimated Reading: <strong>~{{ [((((book.description or '')|length) / 200)|round|int), 3]|max }} mins</strong>
                     </span>
                     <div style="display: flex; gap: 8px;">
                         <button type="button" id="ttsPlayBtn" onclick="toggleBookTTS()" class="btn-sm" style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">

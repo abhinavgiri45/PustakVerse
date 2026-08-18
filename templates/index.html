@@ -395,14 +395,7 @@
 
         // Random Book Discovery
         function discoverRandomBook() {
-            const cards = document.querySelectorAll('.book-card');
-            if (cards.length === 0) return;
-            const randomIndex = Math.floor(Math.random() * cards.length);
-            const targetCard = cards[randomIndex];
-            const link = targetCard.querySelector('.book-title a');
-            if (link) {
-                window.location.href = link.href;
-            }
+            window.location.href = "{{ url_for('random_book') }}";
         }
 
         // Synchronize Daily Reading Streak

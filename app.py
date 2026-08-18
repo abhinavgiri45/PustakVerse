@@ -1404,24 +1404,49 @@ def archives_view():
             except: pass
     return render_template('category.html', books=books, page_title="Archives (Free Classics)")
 
+@app.route('/surprise')
+@app.route('/random_book')
+def random_book():
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT id FROM books ORDER BY RANDOM() LIMIT 1")
+        except Exception:
+            cursor.execute("SELECT id FROM books ORDER BY RAND() LIMIT 1")
+        book = cursor.fetchone()
+        if book and book.get('id'):
+            return redirect(url_for('view_book', book_id=book['id']))
+    except Exception as e:
+        import logging
+        logging.warning(f"Error fetching random book: {e}")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    flash("No books available right now for Surprise Me.", "info")
+    return redirect(url_for('index'))
+
 @app.route('/book/<int:book_id>')
 def view_book(book_id):
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT b.*, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        cursor.execute("SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
         book = cursor.fetchone()
         if not book: 
-            abort(404)
+            flash("The requested book could not be found.", "error")
+            return redirect(url_for('index'))
 
-        cursor.execute("SELECT i.*, u.username FROM interactions i JOIN users u ON i.user_id = u.id WHERE i.book_id = %s ORDER BY i.created_at DESC", (book_id,))
+        cursor.execute("SELECT i.*, COALESCE(u.username, 'Reader') as username FROM interactions i LEFT JOIN users u ON i.user_id = u.id WHERE i.book_id = %s ORDER BY i.created_at DESC", (book_id,))
         reviews = cursor.fetchall()
         
         # SMART SORTING: If the logged-in user wrote a review, move it to the very top!
         user_id = session.get('user_id')
         if user_id:
-            reviews.sort(key=lambda x: x['user_id'] != user_id)
+            reviews.sort(key=lambda x: x.get('user_id') != user_id)
             
         # AVERAGE RATING MATH
         review_count = len(reviews)
@@ -1429,15 +1454,16 @@ def view_book(book_id):
         rating_counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
         
         if review_count > 0:
-            total_stars = sum(r['rating'] for r in reviews)
+            total_stars = sum(r.get('rating', 0) for r in reviews)
             avg_rating = round(total_stars / review_count, 1)
             for r in reviews:
-                if r['rating'] in rating_counts:
-                    rating_counts[r['rating']] += 1
+                rating_val = r.get('rating')
+                if rating_val in rating_counts:
+                    rating_counts[rating_val] += 1
         
         can_read = False
         if 'user_id' in session:
-            if not book['is_paid'] or session['user_id'] == book['author_id'] or session.get('role') == 'developer':
+            if not book.get('is_paid') or session.get('user_id') == book.get('author_id') or session.get('role') == 'developer':
                 can_read = True
             else:
                 cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
@@ -1445,6 +1471,8 @@ def view_book(book_id):
                 
         return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts)
     except Exception as e:
+        import logging
+        logging.exception(f"Error loading book details for book {book_id}: {e}")
         flash("Error loading book details.", "error")
         return redirect(url_for('index'))
     finally:
