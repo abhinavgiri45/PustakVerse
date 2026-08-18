@@ -1109,7 +1109,98 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         return msg
 
     # ==========================================
-    # 1. PRIMARY METHOD: DIRECT SMTP MULTI-PORT AUTO-ROUTING (IPv4 ENFORCED)
+    # 1. PRIMARY METHOD: HTTP REST APIS (PORT 443 - ZERO FIREWALL BLOCKING ON CLOUD)
+    # ==========================================
+    resend_key = (os.environ.get('RESEND_API_KEY') or '').strip()
+    if resend_key:
+        try:
+            # Resend default onboarding sender or verified domain
+            from_addr = f"PustakVerse <onboarding@resend.dev>" if 'resend.dev' in from_email or '@' not in from_email else f"PustakVerse <{sender_header}>"
+            r = requests.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                json={"from": from_addr, "to": [to_email], "subject": subject, "html": body_html},
+                timeout=5
+            )
+            if r.status_code in [200, 201]:
+                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Resend API", to_email)
+                return True
+            delivery_errors.append(f"Resend API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"Resend API exception: {e}")
+
+    brevo_key = (os.environ.get('BREVO_API_KEY') or os.environ.get('SENDINBLUE_API_KEY') or '').strip()
+    if brevo_key:
+        try:
+            r = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={"api-key": brevo_key, "Content-Type": "application/json"},
+                json={
+                    "sender": {"name": "PustakVerse", "email": sender_header},
+                    "to": [{"email": to_email}],
+                    "subject": subject,
+                    "htmlContent": body_html
+                },
+                timeout=5
+            )
+            if r.status_code in [200, 201]:
+                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Brevo HTTP API", to_email)
+                return True
+            delivery_errors.append(f"Brevo API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"Brevo API exception: {e}")
+
+    sendgrid_key = (os.environ.get('SENDGRID_API_KEY') or '').strip()
+    if sendgrid_key:
+        try:
+            r = requests.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={"Authorization": f"Bearer {sendgrid_key}", "Content-Type": "application/json"},
+                json={
+                    "personalizations": [{"to": [{"email": to_email}]}],
+                    "from": {"email": sender_header, "name": "PustakVerse"},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": body_html}]
+                },
+                timeout=5
+            )
+            if r.status_code in [200, 202]:
+                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SendGrid API", to_email)
+                return True
+            delivery_errors.append(f"SendGrid API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"SendGrid API exception: {e}")
+
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
+    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
+    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or '').strip()
+    if client_id and refresh_token and client_secret:
+        try:
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token"
+            }
+            r = requests.post(token_url, data=token_data, timeout=5)
+            access_token = r.json().get("access_token")
+
+            if access_token:
+                msg = create_mime_msg()
+                encoded_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+                send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+                headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
+                if send_res.status_code in [200, 201]:
+                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Gmail API", to_email)
+                    return True
+                delivery_errors.append(f"Gmail API HTTP {send_res.status_code}: {send_res.text[:200]}")
+        except Exception as error:
+            delivery_errors.append(f"Gmail API exception: {error}")
+
+    # ==========================================
+    # 2. SECONDARY METHOD: DIRECT SMTP MULTI-PORT AUTO-ROUTING (IPv4 ENFORCED)
     # ==========================================
     if email_password and smtp_username:
         custom_host = creds['smtp_host']
@@ -1132,7 +1223,6 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
             else:
                 primary_host = 'smtp.gmail.com'
 
-        # Target combinations: (host, port, security_mode)
         smtp_targets = [
             (primary_host, 465, 'ssl'),
             (primary_host, 587, 'starttls'),
@@ -1148,14 +1238,14 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
             try:
                 msg = create_mime_msg()
                 if mode == 'ssl': # SSL direct mode (Port 465) over IPv4
-                    with IPv4SMTP_SSL(host, port, timeout=10) as server:
+                    with IPv4SMTP_SSL(host, port, timeout=4) as server:
                         server.ehlo()
                         server.login(smtp_username, email_password)
                         server.send_message(msg)
                     logging.info("✓ [EMAIL DELIVERED] Recipient: %s via IPv4 SMTP_SSL (%s:%s)", to_email, host, port)
                     return True
                 else: # STARTTLS mode (Port 587 / 2525) over IPv4
-                    with IPv4SMTP(host, port, timeout=10) as server:
+                    with IPv4SMTP(host, port, timeout=4) as server:
                         server.ehlo()
                         try:
                             server.starttls()
@@ -1169,106 +1259,8 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
             except Exception as e:
                 delivery_errors.append(f"SMTP ({host}:{port}/{mode}) failed: {e}")
 
-    # ==========================================
-    # 2. HTTP REST API METHOD: BREVO / SENDINBLUE
-    # ==========================================
-    brevo_key = os.environ.get('BREVO_API_KEY') or os.environ.get('SENDINBLUE_API_KEY')
-    if brevo_key:
-        try:
-            r = requests.post(
-                "https://api.brevo.com/v3/smtp/email",
-                headers={"api-key": brevo_key.strip(), "Content-Type": "application/json"},
-                json={
-                    "sender": {"name": "PustakVerse", "email": sender_header},
-                    "to": [{"email": to_email}],
-                    "subject": subject,
-                    "htmlContent": body_html
-                },
-                timeout=8
-            )
-            if r.status_code in [200, 201]:
-                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Brevo HTTP API", to_email)
-                return True
-            delivery_errors.append(f"Brevo API HTTP {r.status_code}: {r.text[:200]}")
-        except Exception as e:
-            delivery_errors.append(f"Brevo API exception: {e}")
-
-    # ==========================================
-    # 3. HTTP REST API METHOD: RESEND API
-    # ==========================================
-    resend_key = os.environ.get('RESEND_API_KEY')
-    if resend_key:
-        try:
-            r = requests.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {resend_key.strip()}", "Content-Type": "application/json"},
-                json={"from": f"PustakVerse <{sender_header}>", "to": [to_email], "subject": subject, "html": body_html},
-                timeout=8
-            )
-            if r.status_code in [200, 201]:
-                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Resend API", to_email)
-                return True
-            delivery_errors.append(f"Resend API HTTP {r.status_code}: {r.text[:200]}")
-        except Exception as e:
-            delivery_errors.append(f"Resend API exception: {e}")
-
-    # ==========================================
-    # 4. HTTP REST API METHOD: SENDGRID API
-    # ==========================================
-    sendgrid_key = os.environ.get('SENDGRID_API_KEY')
-    if sendgrid_key:
-        try:
-            r = requests.post(
-                "https://api.sendgrid.com/v3/mail/send",
-                headers={"Authorization": f"Bearer {sendgrid_key.strip()}", "Content-Type": "application/json"},
-                json={
-                    "personalizations": [{"to": [{"email": to_email}]}],
-                    "from": {"email": sender_header, "name": "PustakVerse"},
-                    "subject": subject,
-                    "content": [{"type": "text/html", "value": body_html}]
-                },
-                timeout=8
-            )
-            if r.status_code in [200, 202]:
-                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SendGrid API", to_email)
-                return True
-            delivery_errors.append(f"SendGrid API HTTP {r.status_code}: {r.text[:200]}")
-        except Exception as e:
-            delivery_errors.append(f"SendGrid API exception: {e}")
-
-    # ==========================================
-    # 5. OAUTH METHOD: GMAIL REST API
-    # ==========================================
-    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
-    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
-    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or '').strip()
-    if client_id and refresh_token and client_secret:
-        try:
-            token_url = "https://oauth2.googleapis.com/token"
-            token_data = {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token,
-                "grant_type": "refresh_token"
-            }
-            r = requests.post(token_url, data=token_data, timeout=8)
-            access_token = r.json().get("access_token")
-
-            if access_token:
-                msg = create_mime_msg()
-                encoded_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-                send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
-                headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=8)
-                if send_res.status_code in [200, 201]:
-                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Gmail API", to_email)
-                    return True
-                delivery_errors.append(f"Gmail API HTTP {send_res.status_code}: {send_res.text[:200]}")
-        except Exception as error:
-            delivery_errors.append(f"Gmail API exception: {error}")
-
     if not delivery_errors:
-        delivery_errors.append("No email credentials configured. Please set EMAIL_SMTP_USERNAME and EMAIL_PASSWORD (App Password) in Render.")
+        delivery_errors.append("No email credentials configured. Set RESEND_API_KEY (Recommended) or EMAIL_SMTP_USERNAME & EMAIL_PASSWORD in Render.")
 
     logging.error("Email delivery to %s failed. Diagnostics: %s", to_email, " | ".join(delivery_errors))
     return False
@@ -4104,9 +4096,9 @@ def test_smtp_route():
     
     success = send_email_wrapper(
         recipient,
-        f"{otp_sample} - PustakVerse SMTP Live Diagnostic",
-        generate_html_email("SMTP System Test", f"<p>This is a live test email sent from your PustakVerse server.</p><p>Diagnostic Code: <strong>{otp_sample}</strong></p>"),
-        plain_text=f"PustakVerse SMTP Diagnostic. Code: {otp_sample}"
+        f"{otp_sample} - PustakVerse Live Email Diagnostic",
+        generate_html_email("Email System Diagnostic", f"<p>This is a live test email sent from your PustakVerse server.</p><p>Diagnostic Code: <strong>{otp_sample}</strong></p>"),
+        plain_text=f"PustakVerse Email Diagnostic. Code: {otp_sample}"
     )
     
     creds = get_smtp_credentials()
@@ -4114,12 +4106,19 @@ def test_smtp_route():
     return jsonify({
         'success': success,
         'recipient': recipient,
-        'sender_configured': creds['from_email'],
-        'smtp_user': creds['smtp_username'],
-        'host_detected': creds['smtp_host'] or 'auto-routed (smtp.gmail.com:465)',
-        'password_configured': bool(creds['email_password']),
-        'password_length': len(creds['email_password']) if creds['email_password'] else 0,
-        'message': 'Email delivered successfully to inbox!' if success else 'SMTP delivery failed. Please verify that EMAIL_SMTP_USERNAME and EMAIL_PASSWORD (App Password) are set on Render.'
+        'providers': {
+            'resend_api': bool(os.environ.get('RESEND_API_KEY')),
+            'brevo_api': bool(os.environ.get('BREVO_API_KEY') or os.environ.get('SENDINBLUE_API_KEY')),
+            'sendgrid_api': bool(os.environ.get('SENDGRID_API_KEY')),
+            'gmail_oauth_api': bool(os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_REFRESH_TOKEN')),
+            'smtp_credentials': creds['is_configured']
+        },
+        'smtp_details': {
+            'sender_email': creds['from_email'],
+            'smtp_username': creds['smtp_username'],
+            'smtp_host': creds['smtp_host'] or 'auto-routed (smtp.gmail.com)'
+        },
+        'status_message': 'Email delivered successfully to inbox!' if success else 'Delivery failed. Recommendation: Add RESEND_API_KEY or BREVO_API_KEY to Render Environment Variables for 100% instant HTTPS delivery.'
     })
 
 if __name__ == '__main__':
