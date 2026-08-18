@@ -6,6 +6,7 @@
   <title>GranthMind AI Companion · {{ book.title if book else 'PustakVerse' }}</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <style>
@@ -224,14 +225,80 @@
     .user .message { background: #f1f5f9; border-radius: 14px; padding: 12px 16px; color: #0f172a; }
     .message img { display: block; max-width: 240px; max-height: 200px; border-radius: 10px; margin: 0 0 10px; border: 1px solid var(--line); }
     
-    .message-text { line-height: 1.65; font-size: 0.95rem; }
+    .message-text { line-height: 1.7; font-size: 0.96rem; color: #1e293b; }
     .message-text p { margin: 0 0 12px; }
     .message-text p:last-child { margin-bottom: 0; }
-    .message-text h3 { margin: 16px 0 8px; color: #0f172a; font-size: 1.05rem; }
-    .message-text ul, .message-text ol { margin: 0 0 12px; padding-left: 20px; }
-    .message-text li { margin: 4px 0; }
-    .message-text strong { color: #0f172a; }
-    .message-text .katex-display { overflow-x: auto; overflow-y: hidden; padding: 8px 0; margin: 8px 0; }
+    .message-text h1, .message-text h2, .message-text h3, .message-text h4 { margin: 18px 0 10px; color: #0f172a; font-weight: 700; }
+    .message-text h1 { font-size: 1.3rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px; }
+    .message-text h2 { font-size: 1.15rem; }
+    .message-text h3 { font-size: 1.05rem; }
+    .message-text ul, .message-text ol { margin: 0 0 14px; padding-left: 22px; }
+    .message-text li { margin: 5px 0; }
+    .message-text strong { color: #0f172a; font-weight: 700; }
+    .message-text blockquote {
+      margin: 12px 0;
+      padding: 10px 16px;
+      border-left: 4px solid var(--accent);
+      background: #f8fafc;
+      color: #475569;
+      border-radius: 0 8px 8px 0;
+    }
+    .message-text table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 0.92rem;
+    }
+    .message-text th, .message-text td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .message-text th {
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .message-text code {
+      background: #f1f5f9;
+      color: #c2410c;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.88em;
+    }
+    .message-text pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 14px 0;
+    }
+    .message-text pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    /* KaTeX Mathematical Formatting */
+    .message-text .katex {
+      font-size: 1.08em;
+      text-rendering: auto;
+    }
+    .message-text .katex-display {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 12px 18px;
+      margin: 14px 0;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #f97316;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .message-text .katex-display > .katex {
+      white-space: normal;
+    }
     
     /* Message Action Toolbar */
     .msg-actions {
@@ -535,8 +602,74 @@
       }
     }
 
+    function renderMarkdownAndMath(rawText) {
+      if (!rawText) return '';
+      
+      // Standardize delimiters
+      let text = rawText
+        .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')
+        .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
+
+      // Protect Math blocks before Markdown parsing
+      const mathBlocks = [];
+      
+      // 1. Display Math: $$ ... $$ and LaTeX environments
+      text = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+        const id = `@@MATH_DISPLAY_${mathBlocks.length}@@`;
+        mathBlocks.push({ type: 'display', math: math.trim() });
+        return id;
+      });
+      
+      text = text.replace(/\\begin\{([a-zA-Z*]+)\}([\s\S]*?)\\end\{\1\}/g, (match, env, math) => {
+        const id = `@@MATH_DISPLAY_${mathBlocks.length}@@`;
+        mathBlocks.push({ type: 'display', math: `\\begin{${env}}${math}\\end{${env}}` });
+        return id;
+      });
+
+      // 2. Inline Math: $ ... $
+      text = text.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
+        const id = `@@MATH_INLINE_${mathBlocks.length}@@`;
+        mathBlocks.push({ type: 'inline', math: math.trim() });
+        return prefix + id;
+      });
+
+      // Parse Markdown
+      let html = '';
+      if (window.marked && typeof window.marked.parse === 'function') {
+        html = window.marked.parse(text);
+      } else {
+        html = formatTutorText(text);
+      }
+
+      // 3. Render KaTeX back into the HTML
+      mathBlocks.forEach((item, index) => {
+        let renderedMath = '';
+        if (window.katex && typeof window.katex.renderToString === 'function') {
+          try {
+            renderedMath = window.katex.renderToString(item.math, {
+              displayMode: item.type === 'display',
+              throwOnError: false
+            });
+          } catch (e) {
+            renderedMath = item.type === 'display' 
+              ? `<div class="katex-display">$$${escapeHtml(item.math)}$$</div>` 
+              : `<span class="katex">$${escapeHtml(item.math)}$</span>`;
+          }
+        } else {
+          renderedMath = item.type === 'display' 
+            ? `<div class="katex-display">$$${escapeHtml(item.math)}$$</div>` 
+            : `<span class="katex">$${escapeHtml(item.math)}$</span>`;
+        }
+
+        const token = item.type === 'display' ? `@@MATH_DISPLAY_${index}@@` : `@@MATH_INLINE_${index}@@`;
+        html = html.split(token).join(renderedMath);
+      });
+
+      return html;
+    }
+
     function formatTutorText(rawText) {
-      const lines = rawText.replace(/\\\[/g, () => '$$').replace(/\\\]/g, () => '$$').trim().split('\n');
+      const lines = rawText.trim().split('\n');
       let html = '', inList = false;
       const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
       
@@ -561,17 +694,9 @@
     }
 
     function enhanceMessage(element) {
-      const raw = element.textContent;
-      element.innerHTML = formatTutorText(raw);
-      if (window.renderMathInElement) {
-        window.renderMathInElement(element, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false}
-          ],
-          throwOnError: false
-        });
-      }
+      const raw = element.getAttribute('data-raw') || element.textContent;
+      element.setAttribute('data-raw', raw);
+      element.innerHTML = renderMarkdownAndMath(raw);
     }
 
     const enhanceAllMessages = () => {

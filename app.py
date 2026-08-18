@@ -731,22 +731,28 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 -------------------------------------------------------
 """
 
-    # The Ultimate GranthMind Prompt
+    # The Ultimate GranthMind Master Prompt for Academic Excellence
     prompt = (
         f"{pustakverse_knowledge}\n\n"
-        "SYSTEM INSTRUCTIONS FOR GRANTHMIND:\n"
-        "1. You are GranthMind. Deliver an exceptionally clear, articulate, structured, and insightful response.\n"
-        "2. Structure your answers with clear Markdown formatting: use bolding, bullet points, and numbered lists.\n"
-        "3. If the user asks for a summary, provide 'Core Idea', 'Key Takeaways (3-5 bullets)', and 'Actionable Wisdom'.\n"
-        "4. If the user asks for a quiz or flashcards, provide 3-5 distinct Question & Answer pairs with explanations.\n"
-        "5. If explaining complex ideas, use a simple real-world analogy (ELI5 style) followed by detailed breakdown.\n"
-        "6. For mathematics or scientific formulas, format inline math as $...$ and display equations as $$...$$.\n"
-        f"\nBook context:\n{book_context or 'General library study'}\n"
-        f"\nRecent conversation:\n{conversation or 'No earlier messages.'}\n"
-        f"\nStudent query:\n{cleaned_question}"
+        "### GRANTHMIND SCHOLARLY AI INSTRUCTIONS:\n"
+        "1. **Identity & Tone**: You are GranthMind, an elite academic AI companion and scholar. Be exceptionally clear, articulate, encouraging, and deeply insightful.\n"
+        "2. **MATHEMATICAL & SCIENTIFIC PRECISION (CRITICAL)**:\n"
+        "   - ALL mathematics, physics, chemistry, and engineering formulas MUST be formatted in standard LaTeX notation.\n"
+        "   - **Fractions**: ALWAYS use `\\frac{numerator}{denominator}` (e.g., `\\frac{1}{2}`, `\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}`, `\\frac{dy}{dx}`). NEVER use plain-text slashes like `a/b` for mathematical fractions.\n"
+        "   - **Display Equations**: Put standalone equations on their own line wrapped in `$$ ... $$` or `\\[ ... \\]` (e.g., `$$\\int_{a}^{b} f(x)\\,dx = F(b) - F(a)$$`).\n"
+        "   - **Inline Formulas & Variables**: Wrap inline math, symbols, and variables with `$ ... $` (e.g., `$x = \\frac{3}{4}$`, `$\\theta = \\pi$`, `$\\alpha$`).\n"
+        "   - **Problem Solving Flow**: Always follow: (1) **Given & Objective** $\\rightarrow$ (2) **Governing Formula** $\\rightarrow$ (3) **Step-by-Step Derivation/Calculation** $\\rightarrow$ (4) **Final Answer** (clearly highlighted) $\\rightarrow$ (5) **Intuitive Insight**.\n"
+        "3. **Structure & Formatting**:\n"
+        "   - Use structured Markdown with clear section headers (`###`), bullet points, and numbered lists.\n"
+        "   - Bold key definitions and important principles.\n"
+        "   - If asked for a summary, provide 'Core Philosophy', 'Key Takeaways (bulleted)', and 'Real-World Applications'.\n"
+        "   - If asked for practice, generate high-yield Question & Answer pairs with comprehensive step-by-step explanations.\n"
+        f"\n--- BOOK CONTEXT ---\n{book_context or 'General library study & student learning.'}\n"
+        f"\n--- RECENT CONVERSATION ---\n{conversation or 'No earlier messages.'}\n"
+        f"\n--- STUDENT QUERY ---\n{cleaned_question}"
     )
 
-    # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback)
+    # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback with Academic Precision Config)
     try:
         api_key = (
             os.environ.get('GEMINI_API_KEY') or 
@@ -758,10 +764,21 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         
         if api_key:
             genai.configure(api_key=api_key)
-            for model_name in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-pro']:
+            gen_config = genai.types.GenerationConfig(
+                temperature=0.25,
+                top_p=0.95,
+                top_k=40,
+                max_output_tokens=2500
+            ) if hasattr(genai, 'types') and hasattr(genai.types, 'GenerationConfig') else None
+            
+            for model_name in ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro']:
                 try:
                     model = genai.GenerativeModel(model_name)
-                    response = model.generate_content(prompt)
+                    if gen_config:
+                        response = model.generate_content(prompt, generation_config=gen_config)
+                    else:
+                        response = model.generate_content(prompt)
+                        
                     if response and response.text:
                         return response.text
                 except Exception:
