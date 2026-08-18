@@ -748,11 +748,17 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 
     # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback)
     try:
-        api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+        api_key = (
+            os.environ.get('GEMINI_API_KEY') or 
+            os.environ.get('GOOGLE_API_KEY') or 
+            os.environ.get('GOOGLE_GEMINI_API_KEY') or 
+            os.environ.get('GEMINI_KEY') or 
+            os.environ.get('AI_STUDIO_API_KEY') or ''
+        ).strip()
+        
         if api_key:
             genai.configure(api_key=api_key)
-            # Try latest fast models first
-            for model_name in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']:
+            for model_name in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-pro']:
                 try:
                     model = genai.GenerativeModel(model_name)
                     response = model.generate_content(prompt)
