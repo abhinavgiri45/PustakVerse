@@ -628,6 +628,21 @@
                     text.style.color = '#22c55e';
                 }
             }
+
+            function calcAuthorRoyalty(val) {
+                const box = document.getElementById('royaltyCalcBox');
+                const p = parseFloat(val);
+                if (!box) return;
+                if (isNaN(p) || p <= 0) {
+                    box.style.display = 'none';
+                    return;
+                }
+                box.style.display = 'block';
+                document.getElementById('royaltyPerSale').textContent = '₹' + p.toFixed(2);
+                document.getElementById('royalty25').textContent = '₹' + (p * 25).toLocaleString('en-IN');
+                document.getElementById('royalty100').textContent = '₹' + (p * 100).toLocaleString('en-IN');
+                document.getElementById('royalty500').textContent = '₹' + (p * 500).toLocaleString('en-IN');
+            }
         </script>
 
         {% if session.role == 'reader' %}
@@ -690,8 +705,17 @@
                             
                             <!-- DYNAMIC RAZORPAY SETTINGS FOR THIS BOOK -->
                             <div id="paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
-                                <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR)" style="margin-bottom: 15px;">
+                                <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR) e.g., 199" style="margin-bottom: 12px;" oninput="calcAuthorRoyalty(this.value)">
                                 
+                                <!-- Royalty & Projected Earnings Calculator -->
+                                <div id="royaltyCalcBox" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px;">
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #166534; margin-bottom: 4px;">💰 Author Earnings & Projected Royalties</div>
+                                    <div style="font-size: 0.8rem; color: #15803d; line-height: 1.5;">
+                                        <div>Direct Revenue per sale: <strong id="royaltyPerSale" style="font-size: 0.95rem;">₹0</strong></div>
+                                        <div style="margin-top: 3px;">Estimated on 25 sales: <strong id="royalty25">₹0</strong> | 100 sales: <strong id="royalty100">₹0</strong> | 500 sales: <strong id="royalty500">₹0</strong></div>
+                                    </div>
+                                </div>
+
                                 <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Author's Razorpay Payment Keys (For this book)</label>
                                 <small style="color: #15803d; display: block; margin-bottom: 8px;">100% of sales will go directly to your linked account.</small>
                                 
