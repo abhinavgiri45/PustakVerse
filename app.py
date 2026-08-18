@@ -2,6 +2,8 @@ import os
 import secrets
 import random
 import smtplib
+import socket
+import ssl
 import logging
 import re
 import time
@@ -1032,14 +1034,46 @@ def get_smtp_credentials():
         'is_configured': bool(email_password and smtp_username)
     }
 
+# ==========================================
+# CLOUD-RESILIENT IPv4 SMTP CLIENTS
+# ==========================================
+class IPv4SMTP_SSL(smtplib.SMTP_SSL):
+    """Enforces IPv4 socket connection to prevent [Errno 101] Network is unreachable on cloud providers."""
+    def _get_socket(self, host, port, timeout):
+        try:
+            addr_info = socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)
+            ipv4_ip = addr_info[0][4][0]
+        except Exception:
+            ipv4_ip = host
+            
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((ipv4_ip, port))
+        context = self.context if self.context else ssl._create_unverified_context()
+        return context.wrap_socket(sock, server_hostname=host)
+
+class IPv4SMTP(smtplib.SMTP):
+    """Enforces IPv4 socket connection for STARTTLS mode."""
+    def _get_socket(self, host, port, timeout):
+        try:
+            addr_info = socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)
+            ipv4_ip = addr_info[0][4][0]
+        except Exception:
+            ipv4_ip = host
+            
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((ipv4_ip, port))
+        return sock
+
 def send_email_wrapper(to_email, subject, body_html, plain_text=None):
     """
     Universal Email Dispatch Engine for PustakVerse:
     - Auto-detects SMTP provider (Gmail, Outlook, Yahoo, Zoho, Sendinblue/Brevo, Mailgun, Sendgrid, custom).
+    - IPv4 socket enforcement (bypasses Render/Cloud IPv6 routing blackholes).
     - Multi-port fallback (SSL 465 -> STARTTLS 587 -> Alt 2525).
+    - Brevo, Resend, SendGrid HTTP REST API fallbacks (immune to SMTP port blocks).
     - Normalizes App Passwords (strips spaces/dashes).
-    - OAuth2 Gmail API and Resend API fallbacks.
-    - Non-blocking error handling.
     """
     if not to_email or '@' not in str(to_email):
         logging.error("Invalid recipient email address: %s", to_email)
@@ -1053,10 +1087,6 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
 
     # For Gmail SMTP, envelope sender and Header From must match the authenticated account
     sender_header = smtp_username if ('@' in str(smtp_username)) else from_email
-
-    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
-    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
-    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or '').strip()
 
     delivery_errors = []
 
@@ -1079,10 +1109,9 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         return msg
 
     # ==========================================
-    # 1. PRIMARY METHOD: DIRECT SMTP MULTI-PORT AUTO-ROUTING
+    # 1. PRIMARY METHOD: DIRECT SMTP MULTI-PORT AUTO-ROUTING (IPv4 ENFORCED)
     # ==========================================
     if email_password and smtp_username:
-        # Determine host candidates based on sender domain or explicit env var
         custom_host = creds['smtp_host']
         user_domain = smtp_username.split('@')[-1].lower() if '@' in smtp_username else ''
         
@@ -1104,14 +1133,12 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
                 primary_host = 'smtp.gmail.com'
 
         # Target combinations: (host, port, security_mode)
-        # Port 465 SSL is prioritized first for highest deliverability on Render/Cloud
         smtp_targets = [
             (primary_host, 465, 'ssl'),
             (primary_host, 587, 'starttls'),
             (primary_host, 2525, 'starttls')
         ]
         
-        # If custom port was explicitly provided in environment, test it first
         if custom_host and os.environ.get('SMTP_PORT'):
             c_port = int(os.environ.get('SMTP_PORT'))
             c_mode = 'ssl' if c_port == 465 else 'starttls'
@@ -1120,15 +1147,15 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         for host, port, mode in smtp_targets:
             try:
                 msg = create_mime_msg()
-                if mode == 'ssl': # SSL direct mode (Port 465)
-                    with smtplib.SMTP_SSL(host, port, timeout=8) as server:
+                if mode == 'ssl': # SSL direct mode (Port 465) over IPv4
+                    with IPv4SMTP_SSL(host, port, timeout=10) as server:
                         server.ehlo()
                         server.login(smtp_username, email_password)
                         server.send_message(msg)
-                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SMTP_SSL (%s:%s)", to_email, host, port)
+                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via IPv4 SMTP_SSL (%s:%s)", to_email, host, port)
                     return True
-                else: # STARTTLS mode (Port 587 / 2525)
-                    with smtplib.SMTP(host, port, timeout=8) as server:
+                else: # STARTTLS mode (Port 587 / 2525) over IPv4
+                    with IPv4SMTP(host, port, timeout=10) as server:
                         server.ehlo()
                         try:
                             server.starttls()
@@ -1137,14 +1164,84 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
                             pass
                         server.login(smtp_username, email_password)
                         server.send_message(msg)
-                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SMTP (%s:%s)", to_email, host, port)
+                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via IPv4 SMTP (%s:%s)", to_email, host, port)
                     return True
             except Exception as e:
                 delivery_errors.append(f"SMTP ({host}:{port}/{mode}) failed: {e}")
 
     # ==========================================
-    # 2. SECONDARY METHOD: GMAIL REST API (OAUTH)
+    # 2. HTTP REST API METHOD: BREVO / SENDINBLUE
     # ==========================================
+    brevo_key = os.environ.get('BREVO_API_KEY') or os.environ.get('SENDINBLUE_API_KEY')
+    if brevo_key:
+        try:
+            r = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={"api-key": brevo_key.strip(), "Content-Type": "application/json"},
+                json={
+                    "sender": {"name": "PustakVerse", "email": sender_header},
+                    "to": [{"email": to_email}],
+                    "subject": subject,
+                    "htmlContent": body_html
+                },
+                timeout=8
+            )
+            if r.status_code in [200, 201]:
+                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Brevo HTTP API", to_email)
+                return True
+            delivery_errors.append(f"Brevo API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"Brevo API exception: {e}")
+
+    # ==========================================
+    # 3. HTTP REST API METHOD: RESEND API
+    # ==========================================
+    resend_key = os.environ.get('RESEND_API_KEY')
+    if resend_key:
+        try:
+            r = requests.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {resend_key.strip()}", "Content-Type": "application/json"},
+                json={"from": f"PustakVerse <{sender_header}>", "to": [to_email], "subject": subject, "html": body_html},
+                timeout=8
+            )
+            if r.status_code in [200, 201]:
+                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Resend API", to_email)
+                return True
+            delivery_errors.append(f"Resend API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"Resend API exception: {e}")
+
+    # ==========================================
+    # 4. HTTP REST API METHOD: SENDGRID API
+    # ==========================================
+    sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+    if sendgrid_key:
+        try:
+            r = requests.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={"Authorization": f"Bearer {sendgrid_key.strip()}", "Content-Type": "application/json"},
+                json={
+                    "personalizations": [{"to": [{"email": to_email}]}],
+                    "from": {"email": sender_header, "name": "PustakVerse"},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": body_html}]
+                },
+                timeout=8
+            )
+            if r.status_code in [200, 202]:
+                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SendGrid API", to_email)
+                return True
+            delivery_errors.append(f"SendGrid API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"SendGrid API exception: {e}")
+
+    # ==========================================
+    # 5. OAUTH METHOD: GMAIL REST API
+    # ==========================================
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
+    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
+    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or '').strip()
     if client_id and refresh_token and client_secret:
         try:
             token_url = "https://oauth2.googleapis.com/token"
@@ -1170,27 +1267,8 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         except Exception as error:
             delivery_errors.append(f"Gmail API exception: {error}")
 
-    # ==========================================
-    # 3. TERTIARY METHOD: RESEND API (IF CONFIGURED)
-    # ==========================================
-    resend_key = os.environ.get('RESEND_API_KEY')
-    if resend_key:
-        try:
-            r = requests.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
-                json={"from": f"PustakVerse <{from_email}>", "to": [to_email], "subject": subject, "html": body_html},
-                timeout=8
-            )
-            if r.status_code in [200, 201]:
-                logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Resend API", to_email)
-                return True
-            delivery_errors.append(f"Resend API HTTP {r.status_code}: {r.text[:200]}")
-        except Exception as e:
-            delivery_errors.append(f"Resend API exception: {e}")
-
     if not delivery_errors:
-        delivery_errors.append("No email credentials found. Add EMAIL_PASSWORD=your_app_password in .env.")
+        delivery_errors.append("No email credentials configured. Please set EMAIL_SMTP_USERNAME and EMAIL_PASSWORD (App Password) in Render.")
 
     logging.error("Email delivery to %s failed. Diagnostics: %s", to_email, " | ".join(delivery_errors))
     return False
@@ -3275,9 +3353,20 @@ def dashboard():
         search_query = request.args.get('search', '')
         role_filter = request.args.get('role_filter', 'all')
         
-        cursor.execute("SELECT two_factor_enabled FROM users WHERE id = %s", (session['user_id'],))
-        tf_data = cursor.fetchone()
-        two_factor_enabled = tf_data['two_factor_enabled'] if tf_data else False
+        cursor.execute("SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity FROM users WHERE id = %s", (session['user_id'],))
+        user_profile = cursor.fetchone() or {}
+        
+        two_factor_enabled = bool(user_profile.get('two_factor_enabled'))
+        
+        # Calculate Account Security Score (0 - 100%)
+        security_score = 40
+        if two_factor_enabled:
+            security_score += 35
+        if user_profile.get('security_question'):
+            security_score += 25
+            
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1').split(',')[0].strip()
+        user_agent_str = request.headers.get('User-Agent', 'Web Browser')
         
         if request.method == 'POST' and 'toggle_2fa' in request.form:
             current_status = request.form.get('current_status') == 'True'
