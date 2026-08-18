@@ -512,15 +512,29 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
     }
 
 
-def save_uploaded_screenshot(file_obj):
+def save_and_process_ai_attachment(file_obj):
+    """
+    Saves and extracts text from images (PNG, JPG, WEBP, GIF, SVG), PDFs, and text/code files (TXT, MD, CSV, JSON, PY, JAVA, CPP).
+    """
     if not file_obj or not getattr(file_obj, 'filename', None):
-        return ''
+        return None
 
-    allowed_exts = {'.png', '.jpg', '.jpeg', '.webp'}
-    filename = secure_filename(file_obj.filename)
+    filename = secure_filename(file_obj.filename or 'pasted_file')
     ext = os.path.splitext(filename)[1].lower()
-    if ext not in allowed_exts:
-        return ''
+    if not ext:
+        content_type = getattr(file_obj, 'content_type', '') or ''
+        if 'pdf' in content_type:
+            ext = '.pdf'
+        elif 'image' in content_type:
+            ext = '.png'
+        else:
+            ext = '.txt'
+
+    allowed_image_exts = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg'}
+    allowed_doc_exts = {'.pdf', '.txt', '.md', '.csv', '.json', '.py', '.js', '.html', '.css', '.cpp', '.java', '.c', '.sql', '.log', '.xml'}
+
+    if ext not in allowed_image_exts and ext not in allowed_doc_exts:
+        return None
 
     try:
         folder = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots')
@@ -528,10 +542,50 @@ def save_uploaded_screenshot(file_obj):
         safe_name = f"{secrets.token_hex(8)}{ext}"
         save_path = os.path.join(folder, safe_name)
         file_obj.save(save_path)
-        return safe_name
+
+        extracted_text = ''
+        is_image = ext in allowed_image_exts
+        is_pdf = ext == '.pdf'
+        is_text = ext in allowed_doc_exts and ext != '.pdf'
+
+        if is_image:
+            extracted_text = extract_text_from_uploaded_image(save_path)
+        elif is_pdf:
+            try:
+                reader = PdfReader(save_path)
+                pdf_chunks = []
+                for page in reader.pages[:12]:
+                    page_text = page.extract_text() or ''
+                    if page_text:
+                        pdf_chunks.append(page_text)
+                extracted_text = ' '.join(pdf_chunks)[:15000]
+            except Exception:
+                logging.exception('Failed to parse uploaded PDF in AI tutor.')
+        elif is_text:
+            try:
+                with open(save_path, 'r', encoding='utf-8', errors='ignore') as tf:
+                    extracted_text = tf.read()[:15000]
+            except Exception:
+                logging.exception('Failed to read uploaded text document.')
+
+        return {
+            'filename': safe_name,
+            'original_name': filename,
+            'ext': ext,
+            'is_image': is_image,
+            'is_pdf': is_pdf,
+            'is_text': is_text,
+            'extracted_text': extracted_text.strip(),
+            'file_path': save_path
+        }
     except Exception:
-        logging.exception('Failed to save an uploaded AI tutor screenshot.')
-        return ''
+        logging.exception('Failed to save or process AI attachment.')
+        return None
+
+
+def save_uploaded_screenshot(file_obj):
+    res = save_and_process_ai_attachment(file_obj)
+    return res['filename'] if res else ''
 
 
 def extract_text_from_uploaded_image(image_path):
@@ -679,10 +733,10 @@ def generate_free_ai_response(prompt):
     return ''
 
 
-def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None):
+def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None, attachment_text='', attachment_path=''):
     cleaned_question = (question or '').strip()
-    if not cleaned_question:
-        return 'Please ask a question about this book, request a summary, or specify a concept you want GranthMind to explain.'
+    if not cleaned_question and not screenshot_text and not attachment_text and not attachment_path:
+        return 'Please ask a question, paste an excerpt, or attach an image/PDF for GranthMind to analyze.'
 
     query_lower = cleaned_question.lower()
     
@@ -700,14 +754,16 @@ def build_ai_free_response(question, book_title='', book_description='', screens
             "developed exclusively for PustakVerse to provide instant book summaries, deep concept breakdowns, flashcards, and interactive tutoring."
         )
 
-    # Compile the specific book context
+    # Compile the specific book & attachment context
     book_context = ""
     if book_title:
         book_context += f"Book title: {book_title}. "
     if book_description:
         book_context += f"Book description: {book_description[:600]}. "
     if screenshot_text:
-        book_context += f"Screenshot study text: {screenshot_text[:3000]}. "
+        book_context += f"Extracted image text: {screenshot_text[:3000]}. "
+    if attachment_text:
+        book_context += f"\n--- ATTACHED STUDY MATERIAL / DOCUMENT / CODE ---\n{attachment_text[:15000]}\n"
     if book_text:
         book_context += f"Relevant passages from the book: {book_text[:6000]}. "
 
@@ -747,12 +803,12 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         "   - Bold key definitions and important principles.\n"
         "   - If asked for a summary, provide 'Core Philosophy', 'Key Takeaways (bulleted)', and 'Real-World Applications'.\n"
         "   - If asked for practice, generate high-yield Question & Answer pairs with comprehensive step-by-step explanations.\n"
-        f"\n--- BOOK CONTEXT ---\n{book_context or 'General library study & student learning.'}\n"
+        f"\n--- BOOK & ATTACHMENT CONTEXT ---\n{book_context or 'General library study & student learning.'}\n"
         f"\n--- RECENT CONVERSATION ---\n{conversation or 'No earlier messages.'}\n"
-        f"\n--- STUDENT QUERY ---\n{cleaned_question}"
+        f"\n--- STUDENT QUERY ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
     )
 
-    # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback with Academic Precision Config)
+    # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback with Multimodal Support)
     try:
         api_key = (
             os.environ.get('GEMINI_API_KEY') or 
@@ -771,13 +827,23 @@ def build_ai_free_response(question, book_title='', book_description='', screens
                 max_output_tokens=2500
             ) if hasattr(genai, 'types') and hasattr(genai.types, 'GenerationConfig') else None
             
+            gemini_contents = [prompt]
+            if attachment_path and os.path.exists(attachment_path):
+                ext = os.path.splitext(attachment_path)[1].lower()
+                if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'}:
+                    try:
+                        from PIL import Image
+                        gemini_contents.append(Image.open(attachment_path))
+                    except Exception:
+                        pass
+
             for model_name in ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro']:
                 try:
                     model = genai.GenerativeModel(model_name)
                     if gen_config:
-                        response = model.generate_content(prompt, generation_config=gen_config)
+                        response = model.generate_content(gemini_contents, generation_config=gen_config)
                     else:
-                        response = model.generate_content(prompt)
+                        response = model.generate_content(gemini_contents)
                         
                     if response and response.text:
                         return response.text
@@ -1994,41 +2060,61 @@ def ask_ai():
                 except: pass
 
     chat_history = get_ai_chat_history(session['user_id'], book_id)
-    screenshot_path = ''
-    screenshot_text = ''
+    attachment_name = ''
+    attachment_path = ''
+    attachment_text = ''
+    is_image_attachment = False
 
     if request.method == 'POST':
         try:
-            uploaded_file = request.files.get('screenshot')
+            uploaded_file = (
+                request.files.get('attachment') or 
+                request.files.get('screenshot') or 
+                request.files.get('file') or 
+                request.files.get('document')
+            )
+            
             if uploaded_file and uploaded_file.filename:
-                screenshot_name = save_uploaded_screenshot(uploaded_file)
-                if screenshot_name:
-                    screenshot_path = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_screenshots', screenshot_name)
-                    screenshot_text = extract_text_from_uploaded_image(screenshot_path)
+                attachment_info = save_and_process_ai_attachment(uploaded_file)
+                if attachment_info:
+                    attachment_name = attachment_info['filename']
+                    attachment_path = attachment_info['file_path']
+                    attachment_text = attachment_info['extracted_text']
+                    is_image_attachment = attachment_info['is_image']
 
-            if not question and not screenshot_text:
-                message = 'Ask a question or upload a screenshot to continue the conversation.'
+            if not question and not attachment_text and not attachment_path:
+                message = 'Ask a question, paste an excerpt, or attach an image/PDF to start learning.'
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return jsonify({'success': False, 'message': message}), 400
                 flash(message, 'error')
                 return render_template('ask_ai.html', book=book, question='', answer='', chat_history=chat_history)
 
-            prompt_text = question or 'Explain this screenshot in the simplest possible way.'
+            prompt_text = question
+            if not prompt_text:
+                if is_image_attachment:
+                    prompt_text = 'Analyze and explain this attached diagram / image in structured step-by-step detail.'
+                elif attachment_name.lower().endswith('.pdf'):
+                    prompt_text = 'Analyze and explain the key concepts and lessons in this attached document in structured detail.'
+                else:
+                    prompt_text = 'Explain the key insights and takeaways of this attached study material.'
+
             book_text = extract_pdf_text_for_learning(
                 (book or {}).get('pdf_file') or '',
                 bool((book or {}).get('private_pdf'))
             ) if book else ''
+
             answer = build_ai_free_response(
                 prompt_text,
                 book_title=(book or {}).get('title') or '',
                 book_description=(book or {}).get('description') or '',
-                screenshot_text=screenshot_text,
+                screenshot_text=attachment_text if is_image_attachment else '',
                 book_text=book_text,
-                chat_history=chat_history
+                chat_history=chat_history,
+                attachment_text=attachment_text,
+                attachment_path=attachment_path
             )
 
-            screenshot_name = os.path.basename(screenshot_path) if screenshot_path else ''
-            save_ai_chat_message(session['user_id'], book_id, 'user', prompt_text, screenshot_name)
+            save_ai_chat_message(session['user_id'], book_id, 'user', prompt_text, attachment_name)
             save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
             chat_history = get_ai_chat_history(session['user_id'], book_id)
 

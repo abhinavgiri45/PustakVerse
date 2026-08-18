@@ -356,6 +356,7 @@
       background: #fff; 
       border-top: 1px solid var(--line); 
       flex-shrink: 0;
+      position: relative;
     }
     .composer {
       max-width: 820px;
@@ -365,8 +366,125 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.03);
       padding: 8px 12px;
       background: #fff;
+      position: relative;
     }
     .composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12); }
+    
+    /* Attachment Tray */
+    .attachment-tray {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+    .attachment-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 4px 10px 4px 6px;
+      font-size: 0.82rem;
+      color: #334155;
+      max-width: 100%;
+    }
+    .attachment-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      border: 1px solid #e2e8f0;
+    }
+    .attachment-doc-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      background: #eff6ff;
+      color: #2563eb;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .attachment-meta {
+      display: flex;
+      flex-direction: column;
+      max-width: 240px;
+    }
+    .attachment-name {
+      font-weight: 600;
+      color: #0f172a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .attachment-size {
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+    .attachment-remove {
+      background: transparent;
+      border: 0;
+      color: #94a3b8;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      margin-left: 4px;
+    }
+    .attachment-remove:hover { color: #ef4444; background: #fee2e2; }
+
+    /* Drag & Drop Visual Overlay */
+    .drop-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(234, 88, 12, 0.08);
+      border: 2px dashed var(--accent);
+      border-radius: 12px;
+      display: none;
+      place-items: center;
+      z-index: 50;
+      backdrop-filter: blur(2px);
+      pointer-events: none;
+    }
+    .drop-overlay.is-active { display: grid; }
+    .drop-box-content {
+      background: #ffffff;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      text-align: center;
+      color: #c2410c;
+      font-weight: 700;
+      font-size: 1.05rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .drop-box-content span { font-size: 0.85rem; font-weight: 500; color: #64748b; }
+
+    /* Attached badges in messages */
+    .attached-file-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .attached-file-badge.pdf { background: #fef2f2; border-color: #fee2e2; color: #b91c1c; }
+    .attached-file-badge.doc { background: #eff6ff; border-color: #dbeafe; color: #1d4ed8; }
+
     textarea {
       width: 100%;
       min-height: 40px;
@@ -390,8 +508,9 @@
       cursor: pointer;
       display: grid;
       place-items: center;
+      transition: all 0.2s;
     }
-    .icon-btn:hover { background: #e2e8f0; }
+    .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
     .google-mic {
       width: 34px; height: 34px;
       display: grid;
@@ -409,8 +528,6 @@
     .google-mic svg { width: 16px; height: 16px; fill: currentColor; }
     @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgba(239,68,68,0.2); } }
 
-    #screenshot { display: none; }
-    .file-name { color: var(--muted); font-size: 12px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .send {
       min-width: 72px;
       border: 0;
@@ -512,7 +629,13 @@
               <div class="avatar">{{ 'You' if message.role == 'user' else '🧠' }}</div>
               <div class="message">
                 {% if message.screenshot %}
-                  <img src="{{ url_for('static', filename='uploads/ai_screenshots/' + message.screenshot) }}" alt="Uploaded study image">
+                  {% if message.screenshot.endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.svg')) %}
+                    <img src="{{ url_for('static', filename='uploads/ai_screenshots/' + message.screenshot) }}" alt="Uploaded study image">
+                  {% elif message.screenshot.endswith('.pdf') %}
+                    <div class="attached-file-badge pdf">📄 Attached PDF Document: {{ message.screenshot }}</div>
+                  {% else %}
+                    <div class="attached-file-badge doc">📑 Attached Study Notes: {{ message.screenshot }}</div>
+                  {% endif %}
                 {% endif %}
                 <div class="message-text">{{ message.text }}</div>
                 {% if message.role != 'user' %}
@@ -527,7 +650,7 @@
         {% else %}
           <div class="welcome-card">
             <h2>Welcome to GranthMind 🧠</h2>
-            <p>Your intelligent study tutor and research assistant. Ask any concept, upload study notes, or try a quick study prompt below:</p>
+            <p>Your intelligent study tutor and research assistant. Ask any concept, paste text / screenshots (Ctrl+V), or upload PDFs & notes:</p>
             <div class="quick-prompts">
               <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Summarize the main themes and key takeaways of this material in 5 structured bullet points.')">
                 📝 Summarize in 5 key points
@@ -551,26 +674,47 @@
       </div>
 
       <div class="composer-wrap">
+        <!-- Drag & Drop Overlay -->
+        <div class="drop-overlay" id="dropOverlay">
+          <div class="drop-box-content">
+            📁 <div>Drop your Image, PDF, or Notes here</div>
+            <span>GranthMind will analyze and explain it instantly</span>
+          </div>
+        </div>
+
         <form class="composer" id="chatForm" method="post" action="{{ url_for('ask_ai', book_id=(book.id if book else '')) }}" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <textarea id="questionInput" name="question" placeholder="Ask GranthMind any question or concept…" aria-label="Your question">{{ question or '' }}</textarea>
+          
+          <!-- Attachment Preview Tray -->
+          <div class="attachment-tray" id="attachmentTray" style="display: none;">
+            <div class="attachment-card" id="attachmentCard">
+              <div id="attachmentIconWrap"></div>
+              <div class="attachment-meta">
+                <span class="attachment-name" id="attachmentName">file.pdf</span>
+                <span class="attachment-size" id="attachmentSize">120 KB</span>
+              </div>
+              <button type="button" class="attachment-remove" id="removeAttachmentBtn" title="Remove attachment">✕</button>
+            </div>
+          </div>
+
+          <textarea id="questionInput" name="question" placeholder="Ask GranthMind, paste text/image/PDF (Ctrl+V), or drop notes…" aria-label="Your question">{{ question or '' }}</textarea>
           
           <div class="actions">
             <div class="tools">
-              <label class="icon-btn" for="screenshot" title="Upload study diagram or page screenshot" aria-label="Upload study image">📷</label>
-              <input id="screenshot" type="file" name="screenshot" accept="image/*">
-              <span class="file-name" id="fileName"></span>
+              <label class="icon-btn" for="attachmentInput" title="Attach Image, PDF, or Notes" aria-label="Attach File">📎</label>
+              <input id="attachmentInput" type="file" name="attachment" accept="image/*,application/pdf,.txt,.md,.csv,.json,.py,.java,.cpp,.html,.css,.doc,.docx" style="display: none;">
+              <button type="button" class="icon-btn" id="pasteBtn" title="Paste Image or Text from Clipboard (Ctrl+V)" aria-label="Paste from clipboard">📋</button>
             </div>
             
             <div class="send-tools">
               <button class="google-mic" type="button" id="voiceBtn" title="Speak your question" aria-label="Speak your question">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5.3-3a5.3 5.3 0 0 1-10.6 0H5a7 7 0 0 0 6 6.92V21H8v2h8v-2h-3v-3.08A7 7 0 0 0 19 11Z"/></svg>
               </button>
-              <button class="send" type="submit">Ask AI</button>
+              <button class="send" type="submit" id="sendBtn">Ask AI</button>
             </div>
           </div>
         </form>
-        <p class="hint">GranthMind is powered by Gemini AI with KaTeX math rendering. Verify critical study references.</p>
+        <p class="hint">GranthMind supports pasting images, PDFs & text directly (Ctrl+V) · Powered by Gemini AI</p>
       </div>
     </section>
   </main>
@@ -581,8 +725,15 @@
     const questionInput = document.getElementById('questionInput');
     const typing = document.getElementById('typing');
     const voiceBtn = document.getElementById('voiceBtn');
-    const fileInput = document.getElementById('screenshot');
-    const fileName = document.getElementById('fileName');
+    const attachmentInput = document.getElementById('attachmentInput');
+    const attachmentTray = document.getElementById('attachmentTray');
+    const attachmentName = document.getElementById('attachmentName');
+    const attachmentSize = document.getElementById('attachmentSize');
+    const attachmentIconWrap = document.getElementById('attachmentIconWrap');
+    const removeAttachmentBtn = document.getElementById('removeAttachmentBtn');
+    const pasteBtn = document.getElementById('pasteBtn');
+    const dropOverlay = document.getElementById('dropOverlay');
+    const conversationEl = document.querySelector('.conversation');
 
     const scrollDown = () => chatArea.scrollTop = chatArea.scrollHeight;
     const escapeHtml = value => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
@@ -612,15 +763,146 @@
       }
     }
 
+    // Attachment Management & Clipboard Paste
+    let currentAttachedFile = null;
+    function setAttachedFile(file) {
+      if (!file) {
+        currentAttachedFile = null;
+        attachmentTray.style.display = 'none';
+        attachmentInput.value = '';
+        return;
+      }
+      currentAttachedFile = file;
+      attachmentName.textContent = file.name || 'Pasted attachment';
+      const sizeInKb = (file.size / 1024).toFixed(1);
+      attachmentSize.textContent = `${sizeInKb > 1024 ? (sizeInKb/1024).toFixed(2) + ' MB' : sizeInKb + ' KB'}`;
+      
+      attachmentIconWrap.innerHTML = '';
+      if (file.type && file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.className = 'attachment-thumb';
+        img.src = URL.createObjectURL(file);
+        attachmentIconWrap.appendChild(img);
+      } else if (file.type === 'application/pdf' || (file.name && file.name.endsWith('.pdf'))) {
+        attachmentIconWrap.innerHTML = '<div class="attachment-doc-icon" style="background:#fee2e2; color:#dc2626;">PDF</div>';
+      } else {
+        attachmentIconWrap.innerHTML = '<div class="attachment-doc-icon">DOC</div>';
+      }
+      
+      attachmentTray.style.display = 'flex';
+      
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        attachmentInput.files = dt.files;
+      } catch (err) {
+        console.warn('DataTransfer add failed:', err);
+      }
+    }
+
+    attachmentInput.addEventListener('change', () => {
+      if (attachmentInput.files && attachmentInput.files[0]) {
+        setAttachedFile(attachmentInput.files[0]);
+      }
+    });
+
+    removeAttachmentBtn.addEventListener('click', () => {
+      setAttachedFile(null);
+    });
+
+    // Global Clipboard Paste Handler (Ctrl + V)
+    window.addEventListener('paste', (e) => {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+      
+      const items = clipboardData.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file) {
+              e.preventDefault();
+              setAttachedFile(file);
+              questionInput.focus();
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    // Paste Button Click
+    pasteBtn.addEventListener('click', async () => {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        try {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            for (const type of item.types) {
+              if (type.startsWith('image/')) {
+                const blob = await item.getType(type);
+                const file = new File([blob], "pasted_image.png", { type });
+                setAttachedFile(file);
+                return;
+              }
+            }
+          }
+        } catch (err) {
+          // Fallback to text reading
+        }
+      }
+      
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            questionInput.value = (questionInput.value ? questionInput.value + '\n' : '') + text;
+            questionInput.focus();
+            return;
+          }
+        } catch (err) {}
+      }
+
+      alert("Tip: Press Ctrl + V anytime to paste your screenshot, image, PDF, or text directly into GranthMind!");
+      questionInput.focus();
+    });
+
+    // Drag & Drop Listeners
+    if (conversationEl && dropOverlay) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        conversationEl.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropOverlay.classList.add('is-active');
+        }, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        conversationEl.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropOverlay.classList.remove('is-active');
+        }, false);
+      });
+      
+      conversationEl.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          setAttachedFile(files[0]);
+          questionInput.focus();
+        }
+      }, false);
+    }
+
+    // Markdown & KaTeX Math Rendering Engine
     function renderMarkdownAndMath(rawText) {
       if (!rawText) return '';
       
-      // Standardize delimiters
       let text = rawText
         .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')
         .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
 
-      // Protect Math blocks before Markdown parsing
       const mathBlocks = [];
       
       // 1. Display Math: $$ ... $$ and LaTeX environments
@@ -715,7 +997,7 @@
     };
     window.addEventListener('load', enhanceAllMessages);
 
-    const addMessage = (role, text, screenshot = '') => {
+    const addMessage = (role, text, attachmentName = '') => {
       const row = document.createElement('div');
       row.className = 'message-row ' + role;
       
@@ -726,11 +1008,23 @@
       const message = document.createElement('div');
       message.className = 'message';
       
-      if (screenshot) {
-        const img = document.createElement('img');
-        img.src = '/static/uploads/ai_screenshots/' + screenshot;
-        img.alt = 'Uploaded study image';
-        message.appendChild(img);
+      if (attachmentName) {
+        if (/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(attachmentName)) {
+          const img = document.createElement('img');
+          img.src = '/static/uploads/ai_screenshots/' + attachmentName;
+          img.alt = 'Uploaded study image';
+          message.appendChild(img);
+        } else if (/\.pdf$/i.test(attachmentName)) {
+          const badge = document.createElement('div');
+          badge.className = 'attached-file-badge pdf';
+          badge.textContent = '📄 Attached PDF: ' + attachmentName;
+          message.appendChild(badge);
+        } else {
+          const badge = document.createElement('div');
+          badge.className = 'attached-file-badge doc';
+          badge.textContent = '📑 Attached Notes: ' + attachmentName;
+          message.appendChild(badge);
+        }
       }
       
       const textElement = document.createElement('div');
@@ -765,7 +1059,6 @@
       }
     }
 
-    let activeUtterance = null;
     function speakMessageText(btn) {
       if (!('speechSynthesis' in window)) {
         alert("Text-to-speech is not supported by your browser.");
@@ -810,8 +1103,6 @@
       URL.revokeObjectURL(url);
     }
 
-    fileInput.addEventListener('change', () => fileName.textContent = fileInput.files[0]?.name || '');
-
     document.getElementById('newChatBtn').addEventListener('click', async () => {
       if (!confirm('Start a fresh study session and clear this chat?')) return;
       const response = await fetch('{{ url_for("clear_ai_chat", book_id=(book.id if book else 0)) }}', {
@@ -819,7 +1110,7 @@
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       });
       if (response.ok) {
-        chatArea.innerHTML = '<div class="welcome-card"><h2>New Study Session Started 🧠</h2><p>Ask GranthMind any question or concept whenever you are ready.</p></div>';
+        chatArea.innerHTML = '<div class="welcome-card"><h2>New Study Session Started 🧠</h2><p>Ask GranthMind any question, paste text/image/PDF, or drop study notes whenever you are ready.</p></div>';
       }
     });
 
@@ -853,22 +1144,23 @@
       event.preventDefault();
       const data = new FormData(chatForm);
       let question = String(data.get('question') || '').trim();
-      const file = data.get('screenshot');
+      const file = currentAttachedFile || data.get('attachment');
+      const hasFile = file && (file.size > 0 || file.name);
       
-      if (!question && (!file || !file.name)) return;
+      if (!question && !hasFile) return;
       
-      if (question) {
-        addMessage('user', question);
-        if (activeModePrefix) {
-          data.set('question', activeModePrefix + question);
-        }
+      const attachedFileName = hasFile ? (file.name || 'attachment') : '';
+      addMessage('user', question || (hasFile ? `Attached: ${attachedFileName}` : ''), attachedFileName);
+      
+      if (activeModePrefix && question) {
+        data.set('question', activeModePrefix + question);
       }
       
-      const button = chatForm.querySelector('.send');
+      const button = document.getElementById('sendBtn');
       button.disabled = true;
       button.textContent = 'Thinking…';
       chatForm.reset();
-      fileName.textContent = '';
+      setAttachedFile(null);
       typing.style.display = 'flex';
       scrollDown();
       
