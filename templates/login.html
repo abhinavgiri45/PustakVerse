@@ -105,21 +105,16 @@
         {% if show_2fa_form %}
             <div class="form-area active" style="padding-top: 20px;">
                 <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>Two-Step Verification</h2>
-                <p style="text-align: center; color: #718096; margin-bottom: 20px; line-height: 1.5;">
-                    Enter the 6-digit code sent to <strong>{{ email }}</strong> or your secret Security Answer to complete verification.
+                <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
+                    We have sent a 6-digit security code to <strong>{{ email }}</strong>. Please enter the code below to securely authenticate your sign-in.
                 </p>
                 <form action="/login" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="verify_2fa">
                     <div class="form-group">
-                        <label>Verification Code / Security Answer</label>
-                        <input type="text" name="otp" required placeholder="Enter 6-digit code or Security Answer" autocomplete="off" style="font-size: 1.1rem; text-align: center;">
+                        <label>Verification Code</label>
+                        <input type="text" name="otp" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.2rem; text-align: center;">
                     </div>
-                    {% if security_question %}
-                    <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; text-align: center; margin-top: -6px; margin-bottom: 16px;">
-                        💡 <em>Security Question: "{{ security_question }}"</em>
-                    </div>
-                    {% endif %}
                     <button type="submit" class="btn-submit dark">Verify & Login</button>
                 </form>
                 <div style="text-align: center; margin-top: 20px;">

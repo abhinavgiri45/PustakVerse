@@ -2343,8 +2343,8 @@ def login():
                             if sent: 
                                 flash(f"A Two-Step Verification code has been sent to your email ({user['email']}).", "info")
                             else:
-                                flash("Email delivery is delayed on hosting. You can verify using your security code or Security Question Answer below.", "warning")
-                            return render_template('login.html', show_2fa_form=True, email=user['email'], security_question=user.get('security_question'))
+                                flash(f"A 6-digit verification code has been dispatched to {user['email']}. Please check your inbox and spam folder.", "info")
+                            return render_template('login.html', show_2fa_form=True, email=user['email'])
 
                         session['user_id'] = user['id']
                         session['username'] = user['username']
@@ -2381,7 +2381,7 @@ def login():
                     except: pass
                     
         elif action == 'verify_2fa':
-            user_input = request.form.get('otp', '').strip()
+            user_input = request.form.get('otp', '').replace(' ', '').strip()
             pending_user = session.get('pending_2fa_user')
             correct_otp = session.get('login_2fa_otp')
             
@@ -2389,31 +2389,7 @@ def login():
                 flash("Session expired. Please log in again.", "error")
                 return redirect(url_for('login'))
                 
-            # Fetch user's security answer to allow instant bypass if hosting blocks SMTP
-            is_authorized = False
-            if correct_otp and user_input.replace(' ', '') == correct_otp:
-                is_authorized = True
-            else:
-                db = None
-                try:
-                    db = get_db_connection()
-                    cursor = db.cursor(dictionary=True)
-                    cursor.execute("SELECT security_answer, security_question FROM users WHERE id = %s", (pending_user['id'],))
-                    u_row = cursor.fetchone()
-                    if u_row:
-                        sec_ans = str(u_row.get('security_answer') or '').strip().lower()
-                        if sec_ans and user_input.lower() == sec_ans:
-                            is_authorized = True
-                        elif pending_user['role'] == 'developer' and user_input in ['gita', os.environ.get('MASTER_ADMIN_PASSWORD', 'master_admin')]:
-                            is_authorized = True
-                except Exception:
-                    pass
-                finally:
-                    if db:
-                        try: db.close()
-                        except: pass
-            
-            if is_authorized:
+            if correct_otp and user_input == correct_otp:
                 session['user_id'] = pending_user['id']
                 session['username'] = pending_user['username']
                 session['role'] = pending_user['role']
@@ -2426,7 +2402,7 @@ def login():
                 flash(f"Welcome back, {pending_user['username']}!", "success")
                 return redirect(url_for('index'))
             else: 
-                flash("Invalid Verification Code or Security Answer. Please try again.", "error")
+                flash("Invalid Verification Code. Please enter the 6-digit code sent to your email.", "error")
                 return render_template('login.html', show_2fa_form=True, email=pending_user.get('email', ''))
                 
     initial_tab = request.args.get('tab', 'reader')
