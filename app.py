@@ -188,7 +188,7 @@ def apply_security_and_performance(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), camera=(), microphone=(self)'
     
-    # Content Security Policy (allows KaTeX, Google Fonts, Razorpay checkout, and local assets)
+    # Content Security Policy (allows PDF plugins, embeds, Google Drive previews, KaTeX, Google Fonts, Razorpay checkout, and local assets)
     if 'Content-Security-Policy' not in response.headers:
         csp = (
             "default-src 'self'; "
@@ -197,8 +197,9 @@ def apply_security_and_performance(response):
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
             "img-src 'self' data: blob: https:; "
             "connect-src 'self' https://api.razorpay.com https://cdn.jsdelivr.net https://lumberjack-cx.razorpay.com; "
-            "frame-src 'self' https://api.razorpay.com; "
-            "object-src 'none'; "
+            "frame-src 'self' https://api.razorpay.com https://drive.google.com https://docs.google.com https://*.google.com https://*.googleusercontent.com blob: data:; "
+            "object-src 'self' blob: data: https:; "
+            "embed-src 'self' blob: data: https:; "
             "base-uri 'self';"
         )
         response.headers['Content-Security-Policy'] = csp
@@ -3179,7 +3180,10 @@ def serve_secure_pdf(book_id):
         abort(404)
         
     if can_read: 
-        return send_from_directory(folder, book['pdf_file'])
+        resp = send_from_directory(folder, book['pdf_file'], mimetype='application/pdf')
+        resp.headers['Content-Disposition'] = f'inline; filename="{os.path.basename(book["pdf_file"])}"'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        return resp
         
     try:
         reader = PdfReader(full_path)
@@ -3194,7 +3198,10 @@ def serve_secure_pdf(book_id):
         output = io.BytesIO()
         writer.write(output)
         output.seek(0)
-        return send_file(output, mimetype='application/pdf', download_name=f"preview_{book['pdf_file']}")
+        resp = send_file(output, mimetype='application/pdf', download_name=f"preview_{book['pdf_file']}", as_attachment=False)
+        resp.headers['Content-Disposition'] = f'inline; filename="preview_{os.path.basename(book["pdf_file"])}"'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        return resp
     except Exception as e: 
         logging.error(f"Error slicing PDF preview: {e}")
         abort(500)
