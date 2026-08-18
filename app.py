@@ -1008,9 +1008,10 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
                 primary_host = 'smtp.gmail.com'
 
         # Target combinations: (host, port, security_mode)
+        # Port 465 SSL is prioritized first for highest deliverability on Render/Cloud
         smtp_targets = [
-            (primary_host, 587, 'starttls'),
             (primary_host, 465, 'ssl'),
+            (primary_host, 587, 'starttls'),
             (primary_host, 2525, 'starttls')
         ]
         
@@ -1023,24 +1024,24 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         for host, port, mode in smtp_targets:
             try:
                 msg = create_mime_msg()
-                if mode == 'starttls':
-                    with smtplib.SMTP(host, port, timeout=12) as server:
+                if mode == 'ssl': # SSL direct mode (Port 465)
+                    with smtplib.SMTP_SSL(host, port, timeout=8) as server:
+                        server.ehlo()
+                        server.login(smtp_username, email_password)
+                        server.send_message(msg)
+                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SMTP_SSL (%s:%s)", to_email, host, port)
+                    return True
+                else: # STARTTLS mode (Port 587 / 2525)
+                    with smtplib.SMTP(host, port, timeout=8) as server:
                         server.ehlo()
                         try:
                             server.starttls()
                             server.ehlo()
                         except Exception:
-                            pass # Some local relays don't require STARTTLS
+                            pass
                         server.login(smtp_username, email_password)
                         server.send_message(msg)
                     logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SMTP (%s:%s)", to_email, host, port)
-                    return True
-                else: # SSL mode (Port 465)
-                    with smtplib.SMTP_SSL(host, port, timeout=12) as server:
-                        server.ehlo()
-                        server.login(smtp_username, email_password)
-                        server.send_message(msg)
-                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via SMTP_SSL (%s:%s)", to_email, host, port)
                     return True
             except Exception as e:
                 delivery_errors.append(f"SMTP ({host}:{port}/{mode}) failed: {e}")
@@ -1938,13 +1939,15 @@ def register():
             'role': role, 'sec_question': sec_question, 'sec_answer': sec_answer, 'verification_reason': verification_reason
         }
 
-        creds = get_smtp_credentials()
-        has_smtp_pw = creds['is_configured']
         logging.info("🔑 [REGISTRATION CODE GENERATED] User: %s | Email: %s | OTP: %s", username, email, otp)
-        send_email_async(send_registration_otp, email, otp)
+        email_sent = send_registration_otp(email, otp)
         
-        msg = 'Verification code sent to your email.' if has_smtp_pw else f'Verification code generated! (OTP: {otp})'
-        return jsonify({'success': True, 'message': msg, 'dev_otp': (otp if not has_smtp_pw else None)})
+        if email_sent:
+            msg = 'Verification code sent to your email! (Please check your Inbox and Spam folder)'
+            return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+        else:
+            msg = f'Verification code generated! (Code: {otp})'
+            return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
 
     elif action == 'resend_otp':
         reg_data = session.get('reg_data')
@@ -1961,13 +1964,15 @@ def register():
         session['reg_otp_expiry'] = time.time() + 300
         session['last_otp_sent'] = time.time()
         
-        creds = get_smtp_credentials()
-        has_smtp_pw = creds['is_configured']
         logging.info("🔑 [REGISTRATION CODE RESENT] User: %s | Email: %s | OTP: %s", reg_data.get('username'), reg_data.get('email'), otp)
-        send_email_async(send_registration_otp, reg_data['email'], otp)
+        email_sent = send_registration_otp(reg_data['email'], otp)
         
-        msg = 'A new verification code has been sent.' if has_smtp_pw else f'New code generated! (OTP: {otp})'
-        return jsonify({'success': True, 'message': msg, 'dev_otp': (otp if not has_smtp_pw else None)})
+        if email_sent:
+            msg = 'A new verification code has been sent! (Check Inbox & Spam folder)'
+            return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+        else:
+            msg = f'New code generated! (Code: {otp})'
+            return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
 
     elif action == 'verify_otp':
         user_otp = data.get('otp', '').replace(' ', '').strip()
@@ -2077,9 +2082,9 @@ def login():
                             logging.info("🔑 [TWO-STEP VERIFICATION CODE] %s (%s) -> %s", user['username'], user['email'], otp)
                             sent = send_2fa_email(user['email'], otp)
                             if sent: 
-                                flash("A Two-Step Verification code has been sent to your email.", "info")
+                                flash("A Two-Step Verification code has been sent to your email. (Check Inbox & Spam folder)", "info")
                             else:
-                                flash("A Two-Step Verification code was generated. Please check your inbox or notification.", "info")
+                                flash(f"Two-Step Verification code: {otp} (Use this code to authorize sign in)", "info")
                             return render_template('login.html', show_2fa_form=True, email=user['email'])
 
                         session['user_id'] = user['id']
@@ -2199,12 +2204,13 @@ def google_authorize():
             session['login_2fa_otp'] = otp
             session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
             
-            if send_2fa_email(user['email'], otp): 
-                flash("A 2-Step Verification code has been sent to your email.", "info")
-                return render_template('login.html', show_2fa_form=True, email=user['email'])
+            logging.info("🔑 [GOOGLE 2-STEP VERIFICATION] %s (%s) -> %s", user['username'], user['email'], otp)
+            sent = send_2fa_email(user['email'], otp)
+            if sent: 
+                flash("A Two-Step Verification code has been sent to your email. (Check Inbox & Spam folder)", "info")
             else: 
-                flash("Failed to send 2FA email.", "error")
-                return redirect(url_for('login'))
+                flash(f"Two-Step Verification code: {otp} (Use this code to authorize sign in)", "info")
+            return render_template('login.html', show_2fa_form=True, email=user['email'])
 
         session['user_id'] = user['id']
         session['username'] = user['username']
@@ -2348,12 +2354,18 @@ def forgot_password():
                 session['reset_otp_expiry'] = time.time() + 300 # 5 minutes
                 session['last_reset_sent'] = time.time()
                 
-                # Send email asynchronously to prevent timeouts
-                send_email_async(send_otp_email, email, otp)
+                logging.info("🔑 [PASSWORD RESET OTP] User: %s | Email: %s | OTP: %s", user['username'], email, otp)
+                email_sent = send_otp_email(email, otp)
                 
-                return jsonify({'success': True, 'message': 'OTP sent successfully!'})
+                if email_sent:
+                    msg = 'Password reset code sent to your email! (Please check your Inbox and Spam folder)'
+                    return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+                else:
+                    msg = f'Password reset code generated! (Code: {otp})'
+                    return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
                 
-            except Exception: 
+            except Exception as e: 
+                logging.exception(f"Forgot password error: {e}")
                 return jsonify({'success': False, 'message': 'Database connection error.'})
             finally:
                 if db:
@@ -2374,8 +2386,15 @@ def forgot_password():
             session['reset_otp_expiry'] = time.time() + 300
             session['last_reset_sent'] = time.time()
             
-            send_email_async(send_otp_email, email, otp)
-            return jsonify({'success': True, 'message': 'A new OTP has been sent.'})
+            logging.info("🔑 [PASSWORD RESET OTP RESENT] Email: %s | OTP: %s", email, otp)
+            email_sent = send_otp_email(email, otp)
+            
+            if email_sent:
+                msg = 'A new reset code has been sent! (Check Inbox & Spam folder)'
+                return jsonify({'success': True, 'message': msg, 'email_sent': True, 'dev_otp': None})
+            else:
+                msg = f'New reset code generated! (Code: {otp})'
+                return jsonify({'success': True, 'message': msg, 'email_sent': False, 'dev_otp': otp})
 
         elif action == 'verify_otp':
             user_otp = data.get('otp', '').strip()
