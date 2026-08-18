@@ -7,6 +7,7 @@ import re
 import time
 import threading
 import urllib.parse
+import gzip
 from datetime import timedelta
 
 # Auto-load .env configuration file if present
@@ -174,11 +175,11 @@ def inject_security_and_globals():
 # MULTI-LAYER HTTP SECURITY HEADERS & CACHING
 # ==========================================
 @app.after_request
-def apply_security_headers(response):
+def apply_security_and_performance(response):
     if request.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
     elif 'Cache-Control' not in response.headers:
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
 
     # Hardened Security Headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -201,6 +202,28 @@ def apply_security_headers(response):
             "base-uri 'self';"
         )
         response.headers['Content-Security-Policy'] = csp
+
+    # High-Performance GZIP Compression for Text/HTML/JSON/CSS/JS/SVG
+    accept_encoding = request.headers.get('Accept-Encoding', '')
+    if (
+        response.status_code == 200
+        and 'gzip' in accept_encoding.lower()
+        and not response.direct_passthrough
+        and 'Content-Encoding' not in response.headers
+    ):
+        content_type = response.headers.get('Content-Type', '')
+        if any(t in content_type for t in ['text/', 'application/json', 'application/javascript', 'application/xml', 'image/svg+xml']):
+            response_data = response.get_data()
+            if len(response_data) >= 400:
+                gzip_buffer = io.BytesIO()
+                with gzip.GzipFile(mode='wb', fileobj=gzip_buffer, compresslevel=6) as gzip_file:
+                    gzip_file.write(response_data)
+                compressed_data = gzip_buffer.getvalue()
+                if len(compressed_data) < len(response_data):
+                    response.set_data(compressed_data)
+                    response.headers['Content-Encoding'] = 'gzip'
+                    response.headers['Content-Length'] = len(compressed_data)
+                    response.headers['Vary'] = 'Accept-Encoding'
 
     return response
 
@@ -245,16 +268,69 @@ def to_ist_filter(dt):
     return dt.astimezone(ist).strftime('%Y-%m-%d %I:%M %p')
 
 # ==========================================
-# IN-MEMORY CACHE & DYNAMIC SETTINGS
+# ULTRA-FAST IN-MEMORY CACHE ENGINE
 # ==========================================
+class FastMemoryCache:
+    """Thread-safe, sub-millisecond in-memory cache for TiDB/Render high-performance delivery."""
+    def __init__(self):
+        self._cache = {}
+        self._lock = threading.Lock()
+        self._cache['settings'] = {
+            'data': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None, 'rp_key_id': '', 'rp_key_secret': '', 'intro_tagline': 'Every Book. Every Mind. Free.', 'intro_sub_tagline': 'Prepare to explore the universe of knowledge...'},
+            'expiry': 0
+        }
+        self._cache['catalogs'] = {
+            'data': [{'name': 'Fiction'}, {'name': 'Non-Fiction'}, {'name': 'Educational'}, {'name': 'History'}, {'name': 'Poetry'}],
+            'expiry': 0
+        }
+
+    def get(self, key):
+        with self._lock:
+            entry = self._cache.get(key)
+            if entry and time.time() < entry['expiry']:
+                return entry['data']
+            return None
+
+    def set(self, key, data, ttl=60):
+        with self._lock:
+            self._cache[key] = {
+                'data': data,
+                'expiry': time.time() + ttl
+            }
+
+    def delete(self, key):
+        with self._lock:
+            self._cache.pop(key, None)
+
+    def clear_books(self):
+        with self._lock:
+            keys_to_del = [k for k in self._cache if k.startswith('books_') or k.startswith('cat_') or k == 'archives_books']
+            for k in keys_to_del:
+                self._cache.pop(k, None)
+
+    def clear_all(self):
+        with self._lock:
+            self._cache.clear()
+
+    def size(self):
+        with self._lock:
+            return len(self._cache)
+
+fast_cache = FastMemoryCache()
+
+# Legacy compatibility wrapper
 global_cache = {
-    'settings': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None, 'rp_key_id': '', 'rp_key_secret': ''},
-    'catalogs': [{'name': 'Fiction'}, {'name': 'Non-Fiction'}, {'name': 'Educational'}, {'name': 'History'}, {'name': 'Poetry'}],
+    'settings': fast_cache._cache['settings']['data'],
+    'catalogs': fast_cache._cache['catalogs']['data'],
     'last_update': 0
 }
 
 def invalidate_cache():
     global_cache['last_update'] = 0
+    fast_cache.clear_all()
+
+def invalidate_books_cache():
+    fast_cache.clear_books()
 
 def clean_book_data(books):
     if not books: 
@@ -732,47 +808,55 @@ def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
 
 @app.context_processor
 def inject_global_settings():
-    current_time = time.time()
-    if current_time - global_cache['last_update'] > 60:
-        db = None
-        try:
-            db = get_db_connection()
-            cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
-            fetched_settings = cursor.fetchone()
+    cached_settings = fast_cache.get('site_settings')
+    cached_catalogs = fast_cache.get('site_catalogs')
+    
+    if cached_settings is not None and cached_catalogs is not None:
+        return dict(site_settings=cached_settings, site_catalogs=cached_catalogs)
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
+        fetched_settings = cursor.fetchone()
+        
+        cursor.execute("SELECT * FROM catalogs")
+        fetched_catalogs = cursor.fetchall()
+        
+        if fetched_settings and fetched_catalogs:
+            fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
+            fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
+            fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
+            fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
+            fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
+            fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
+            fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Free.")
+            fetched_settings['intro_sub_tagline'] = str(fetched_settings.get('intro_sub_tagline') or "Prepare to explore the universe of knowledge...")
             
-            cursor.execute("SELECT * FROM catalogs")
-            fetched_catalogs = cursor.fetchall()
+            fast_cache.set('site_settings', fetched_settings, ttl=120)
+            fast_cache.set('site_catalogs', fetched_catalogs, ttl=120)
+            global_cache['settings'] = fetched_settings
+            global_cache['catalogs'] = fetched_catalogs
+            return dict(site_settings=fetched_settings, site_catalogs=fetched_catalogs)
+    except Exception:
+        pass
+    finally:
+        if db:
+            try: db.close()
+            except: pass
             
-            if fetched_settings and fetched_catalogs:
-                fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
-                fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
-                fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
-                fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
-                fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
-                fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
-                fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Free.")
-                fetched_settings['intro_sub_tagline'] = str(fetched_settings.get('intro_sub_tagline') or "Prepare to explore the universe of knowledge...")
-                
-                global_cache['settings'] = fetched_settings
-                global_cache['catalogs'] = fetched_catalogs
-                global_cache['last_update'] = current_time
-        except Exception:
-            pass
-        finally:
-            if db:
-                try: db.close()
-                except: pass
     return dict(site_settings=global_cache['settings'], site_catalogs=global_cache['catalogs'])
 
 @app.template_filter('drive_img')
 def drive_img(url):
-    if url and 'drive.google.com' in url:
+    if url and ('drive.google.com' in url or 'googleusercontent.com' in url):
         match = re.search(r'/d/([a-zA-Z0-9_-]+)', url)
         if not match: 
             match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
         if match: 
-            return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w300"
+            # High-speed Google WebP CDN endpoint
+            return f"https://lh3.googleusercontent.com/d/{match.group(1)}=w400-rw"
     return url
 
 def compress_cover_image(file_obj, upload_folder):
@@ -1189,18 +1273,74 @@ def send_book_deleted_email(to_email, username, book_title, reason):
     return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', generate_html_email("Content Removed", f"<p>Hello {username},</p><p>Your book titled '{book_title}' has been removed from PustakVerse.</p><p><strong>Reason:</strong> {reason}</p>"))
 
 # ==========================================
-# SECURE TiDB (MYSQL) DATABASE CONNECTION
+# HIGH-PERFORMANCE TiDB (MYSQL) CONNECTION POOL
 # ==========================================
-def get_db_connection(retries=2, delay=1.0):
+_db_pool = None
+_pool_lock = threading.Lock()
+
+def get_db_pool():
+    global _db_pool
+    if _db_pool is None:
+        with _pool_lock:
+            if _db_pool is None:
+                db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST')
+                db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
+                db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
+                db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
+                db_name = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or os.environ.get('DATABASE_NAME')
+
+                db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('TIDB_URL') or os.environ.get('CLEARDB_DATABASE_URL') or os.environ.get('JAWSDB_URL')
+                if db_url and '://' in db_url:
+                    try:
+                        parsed = urllib.parse.urlparse(db_url)
+                        db_host = parsed.hostname
+                        db_port = parsed.port or (4000 if 'tidb' in str(db_host) else 3306)
+                        db_user = urllib.parse.unquote(parsed.username or '')
+                        db_pass = urllib.parse.unquote(parsed.password or '')
+                        db_name = parsed.path.lstrip('/')
+                    except Exception:
+                        pass
+                try:
+                    from mysql.connector import pooling
+                    _db_pool = pooling.MySQLConnectionPool(
+                        pool_name="pustakverse_tidb_pool",
+                        pool_size=5,
+                        pool_reset_session=True,
+                        host=db_host,
+                        port=db_port,
+                        user=db_user,
+                        password=db_pass,
+                        database=db_name,
+                        ssl_verify_cert=False,
+                        ssl_verify_identity=False,
+                        connection_timeout=6
+                    )
+                    logging.info("✓ [TiDB POOL] Connection pool established (Size: 5)")
+                except Exception as e:
+                    logging.debug("Direct DB connection mode active: %s", e)
+                    _db_pool = None
+    return _db_pool
+
+def get_db_connection(retries=2, delay=0.5):
     last_exception = None
     
+    # Try fetching connection from high-speed pool
+    pool = get_db_pool()
+    if pool:
+        try:
+            conn = pool.get_connection()
+            if conn and conn.is_connected():
+                return conn
+        except Exception as e:
+            logging.debug("Pool connection busy, falling back to direct connection: %s", e)
+
+    # Fallback to direct connection if pool is busy or uninitialized
     db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST')
     db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
     db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
     db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
     db_name = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or os.environ.get('DATABASE_NAME')
 
-    # Automatic fallback parsing for DATABASE_URL / MYSQL_URL connection strings on Render
     db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('TIDB_URL') or os.environ.get('CLEARDB_DATABASE_URL') or os.environ.get('JAWSDB_URL')
     if db_url and '://' in db_url:
         try:
@@ -1223,7 +1363,7 @@ def get_db_connection(retries=2, delay=1.0):
                 database=db_name, 
                 ssl_verify_cert=False, 
                 ssl_verify_identity=False, 
-                connection_timeout=8
+                connection_timeout=6
             )
             if conn.is_connected(): 
                 return conn
@@ -1501,8 +1641,19 @@ def create_master_developer():
             except: pass
 
 # ==========================================
-# PUBLIC ROUTES
+# PUBLIC ROUTES (OPTIMIZED WITH FAST-CACHE)
 # ==========================================
+@app.route('/healthz')
+@app.route('/ping')
+def healthz():
+    """Sub-millisecond keep-alive endpoint to prevent Render dyno cold-starts."""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'PustakVerse',
+        'timestamp': time.time(),
+        'cached_items': fast_cache.size()
+    }), 200
+
 @app.route('/')
 def index():
     if request.args.get('skip_intro') == '1':
@@ -1513,6 +1664,12 @@ def index():
         return redirect(url_for('intro'))
 
     show_telegram_popup = session.pop('show_telegram_popup', False)
+    
+    # 1. Try fast in-memory cache
+    cached_books = fast_cache.get('books_index')
+    if cached_books is not None:
+        return render_template('index.html', books=cached_books, show_telegram_popup=show_telegram_popup)
+
     db = None
     books = []
     try:
@@ -1521,8 +1678,9 @@ def index():
         cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role 
             FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC""")
         books = clean_book_data(cursor.fetchall())
+        fast_cache.set('books_index', books, ttl=45)
     except Exception: 
-        flash("Database error.", "error")
+        flash("Database connection timeout. Retrying...", "error")
     finally:
         if db:
             try: db.close()
@@ -1536,6 +1694,12 @@ def intro():
 
 @app.route('/category/<name>')
 def category_view(name):
+    # 1. Try fast in-memory cache
+    cache_key = f'cat_books_{name}'
+    cached_books = fast_cache.get(cache_key)
+    if cached_books is not None:
+        return render_template('category.html', books=cached_books, page_title=name)
+
     db = None
     books = []
     try:
@@ -1544,6 +1708,7 @@ def category_view(name):
         cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role 
             FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = %s ORDER BY books.created_at DESC""", (name,))
         books = clean_book_data(cursor.fetchall())
+        fast_cache.set(cache_key, books, ttl=45)
     except Exception: 
         flash("Experiencing high traffic. Please refresh to load books.", "error")
     finally:
@@ -1554,6 +1719,11 @@ def category_view(name):
 
 @app.route('/archives')
 def archives_view():
+    # 1. Try fast in-memory cache
+    cached_books = fast_cache.get('archives_books')
+    if cached_books is not None:
+        return render_template('category.html', books=cached_books, page_title="Archives (Free Classics)")
+
     db = None
     books = []
     try:
@@ -1562,6 +1732,7 @@ def archives_view():
         cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role 
             FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at ASC""")
         books = clean_book_data(cursor.fetchall())
+        fast_cache.set('archives_books', books, ttl=45)
     except Exception: 
         flash("Experiencing high traffic. Please refresh to load books.", "error")
     finally:
@@ -3427,6 +3598,7 @@ def edit_book(book_id):
 
         cursor.execute(update_sql, tuple(params))
         db.commit()
+        invalidate_books_cache()
         if is_paid and keys_changed and rp_verified:
             flash("Book updated! Your Razorpay payment details were verified.", "success")
         else:
@@ -3770,6 +3942,7 @@ def delete_book(book_id):
                 cursor.execute("DELETE FROM personal_library WHERE book_id = %s", (book_id,))
                 cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
                 db.commit()
+                invalidate_books_cache()
                 flash("Book deleted successfully.", "success")
             else: 
                 flash("Unauthorized to delete this book.", "error")

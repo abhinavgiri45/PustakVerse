@@ -328,9 +328,9 @@
                 <!-- NEW: Clicking the cover links to the dedicated book details/review page -->
                 <a href="{{ url_for('view_book', book_id=book.id) }}" class="book-cover-link" style="display: block;">
                     {% if cover.startswith('http') %}
-                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
+                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
                     {% else %}
-                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
+                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
                     {% endif %}
                 </a>
 
