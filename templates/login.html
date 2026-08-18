@@ -412,6 +412,14 @@
             if (data.success) {
                 document.getElementById('registrationForm').style.display = 'none';
                 document.getElementById('otpSection').style.display = 'block';
+                if (data.dev_otp) {
+                    const otpInput = document.getElementById('reg_otp_input');
+                    if (otpInput) otpInput.value = data.dev_otp;
+                    const timerEl = document.getElementById('otpTimerDisplay');
+                    if (timerEl) {
+                        timerEl.innerHTML = `<span style="color: #166534; background: #dcfce7; padding: 4px 12px; border-radius: 12px; font-weight: 800;">🔑 Verification Code: ${data.dev_otp}</span>`;
+                    }
+                }
                 startOtpTimer();
             } else {
                 alert(data.message);

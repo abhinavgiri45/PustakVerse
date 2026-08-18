@@ -7,6 +7,24 @@ import re
 import time
 import threading
 from datetime import timedelta
+
+# Auto-load .env configuration file if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    if os.path.exists('.env'):
+        try:
+            with open('.env', 'r', encoding='utf-8', errors='ignore') as env_f:
+                for env_l in env_f:
+                    env_l = env_l.strip()
+                    if env_l and not env_l.startswith('#') and '=' in env_l:
+                        k, v = env_l.split('=', 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
 try:
     import google.generativeai as genai
 except ImportError:
@@ -1799,10 +1817,12 @@ def register():
             'role': role, 'sec_question': sec_question, 'sec_answer': sec_answer, 'verification_reason': verification_reason
         }
 
-        # Send registration OTP with async delivery and log for server reliability
+        has_smtp_pw = bool((os.environ.get('EMAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASSWORD') or os.environ.get('SMTP_PASSWORD') or '').strip())
         logging.info("🔑 [REGISTRATION CODE GENERATED] User: %s | Email: %s | OTP: %s", username, email, otp)
         send_email_async(send_registration_otp, email, otp)
-        return jsonify({'success': True, 'message': 'Verification code sent to your email.'})
+        
+        msg = 'Verification code sent to your email.' if has_smtp_pw else f'Verification code generated! (OTP: {otp})'
+        return jsonify({'success': True, 'message': msg, 'dev_otp': (otp if not has_smtp_pw else None)})
 
     elif action == 'resend_otp':
         reg_data = session.get('reg_data')
@@ -1819,9 +1839,12 @@ def register():
         session['reg_otp_expiry'] = time.time() + 300
         session['last_otp_sent'] = time.time()
         
+        has_smtp_pw = bool((os.environ.get('EMAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASSWORD') or os.environ.get('SMTP_PASSWORD') or '').strip())
         logging.info("🔑 [REGISTRATION CODE RESENT] User: %s | Email: %s | OTP: %s", reg_data.get('username'), reg_data.get('email'), otp)
         send_email_async(send_registration_otp, reg_data['email'], otp)
-        return jsonify({'success': True, 'message': 'A new verification code has been sent.'})
+        
+        msg = 'A new verification code has been sent.' if has_smtp_pw else f'New code generated! (OTP: {otp})'
+        return jsonify({'success': True, 'message': msg, 'dev_otp': (otp if not has_smtp_pw else None)})
 
     elif action == 'verify_otp':
         user_otp = data.get('otp', '').replace(' ', '').strip()
