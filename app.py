@@ -13,6 +13,8 @@ import base64
 import razorpay
 from email.message import EmailMessage
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate, make_msgid
 from decimal import Decimal, InvalidOperation
 import mysql.connector
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
@@ -812,56 +814,146 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
-def send_email_wrapper(to_email, subject, body_html):
+def generate_html_email(title, content):
+    return (
+        f'<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">'
+        f'<div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f97316; padding-bottom: 14px;">'
+        f'<h2 style="color: #0f172a; margin: 0; font-size: 22px;">PustakVerse</h2>'
+        f'<p style="color: #f97316; margin: 4px 0 0 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">{title}</p>'
+        f'</div>'
+        f'<div style="color: #334155; font-size: 15px; line-height: 1.65;">{content}</div>'
+        f'<p style="color: #94a3b8; font-size: 12px; margin-top: 28px; border-top: 1px solid #f1f5f9; padding-top: 12px; text-align: center;">'
+        f'This is an automated notification from PustakVerse · Every Book. Every Mind. Free.'
+        f'</p>'
+        f'</div>'
+    )
+
+def send_email_wrapper(to_email, subject, body_html, plain_text=None):
+    if not to_email or '@' not in str(to_email):
+        logging.error("Invalid recipient email address: %s", to_email)
+        return False
+
+    to_email = str(to_email).strip()
+    from_email = os.environ.get('EMAIL_FROM') or os.environ.get('EMAIL_SMTP_USERNAME') or os.environ.get('SMTP_USER') or 'noreply.pustakverse@gmail.com'
+    from_email = from_email.strip()
+    smtp_username = os.environ.get('EMAIL_SMTP_USERNAME') or os.environ.get('SMTP_USER') or from_email
+    smtp_username = smtp_username.strip()
+    
+    email_password = (
+        os.environ.get('EMAIL_PASSWORD') or 
+        os.environ.get('GMAIL_APP_PASSWORD') or 
+        os.environ.get('SMTP_PASSWORD') or 
+        os.environ.get('MAIL_PASSWORD') or ''
+    ).replace(' ', '').strip()
+
     client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
     refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
-    email_password = os.environ.get('EMAIL_PASSWORD', '').replace(' ', '').strip()
 
-    from_email = os.environ.get('EMAIL_FROM', 'noreply.pustakverse@gmail.com').strip()
-    smtp_username = os.environ.get('EMAIL_SMTP_USERNAME', from_email).strip()
     delivery_errors = []
 
+    def create_mime_msg():
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"PustakVerse <{from_email}>"
+        msg['To'] = to_email
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid(domain='pustakverse.com')
+        
+        text_content = plain_text or re.sub(r'<[^<]+?>', '', body_html)
+        part1 = MIMEText(text_content, 'plain', 'utf-8')
+        part2 = MIMEText(body_html, 'html', 'utf-8')
+        msg.attach(part1)
+        msg.attach(part2)
+        return msg
+
+    # ==========================================
+    # 1. PRIMARY METHOD: DIRECT SMTP (STARTTLS 587 / SSL 465)
+    # ==========================================
+    if email_password:
+        smtp_targets = [
+            ('smtp.gmail.com', 587, 'starttls'),
+            ('smtp.gmail.com', 465, 'ssl')
+        ]
+        custom_host = os.environ.get('SMTP_HOST')
+        if custom_host:
+            custom_port = int(os.environ.get('SMTP_PORT', 587))
+            custom_mode = 'ssl' if custom_port == 465 else 'starttls'
+            smtp_targets.insert(0, (custom_host, custom_port, custom_mode))
+
+        for host, port, mode in smtp_targets:
+            try:
+                msg = create_mime_msg()
+                if mode == 'starttls':
+                    with smtplib.SMTP(host, port, timeout=10) as server:
+                        server.ehlo()
+                        server.starttls()
+                        server.ehlo()
+                        server.login(smtp_username, email_password)
+                        server.send_message(msg)
+                    logging.info("✓ Email successfully delivered to %s via SMTP (%s:%s)", to_email, host, port)
+                    return True
+                else:
+                    with smtplib.SMTP_SSL(host, port, timeout=10) as server:
+                        server.ehlo()
+                        server.login(smtp_username, email_password)
+                        server.send_message(msg)
+                    logging.info("✓ Email successfully delivered to %s via SMTP_SSL (%s:%s)", to_email, host, port)
+                    return True
+            except Exception as e:
+                delivery_errors.append(f"SMTP ({host}:{port}) failed: {e}")
+
+    # ==========================================
+    # 2. SECONDARY METHOD: GMAIL REST API (OAUTH)
+    # ==========================================
     if client_id and refresh_token and client_secret:
         try:
             token_url = "https://oauth2.googleapis.com/token"
-            token_data = {"client_id": client_id, "client_secret": client_secret, "refresh_token": refresh_token, "grant_type": "refresh_token"}
-            r = requests.post(token_url, data=token_data, timeout=5)
+            token_data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token"
+            }
+            r = requests.post(token_url, data=token_data, timeout=8)
             access_token = r.json().get("access_token")
 
             if access_token:
-                message = EmailMessage()
-                message.set_content("Please enable HTML to view this email.")
-                message.add_alternative(body_html, subtype='html')
-                message['To'] = to_email
-                message['Subject'] = subject
-                message['From'] = from_email
-                encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                msg = create_mime_msg()
+                encoded_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
                 send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
                 headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=5)
+                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=8)
                 if send_res.status_code in [200, 201]:
+                    logging.info("✓ Email successfully delivered to %s via Gmail API", to_email)
                     return True
-                delivery_errors.append(f'Gmail API returned {send_res.status_code}: {send_res.text[:200]}')
+                delivery_errors.append(f"Gmail API HTTP {send_res.status_code}: {send_res.text[:200]}")
         except Exception as error:
-            delivery_errors.append(f'Gmail API error: {error}')
+            delivery_errors.append(f"Gmail API exception: {error}")
 
-    if email_password:
+    # ==========================================
+    # 3. TERTIARY METHOD: RESEND API (IF CONFIGURED)
+    # ==========================================
+    resend_key = os.environ.get('RESEND_API_KEY')
+    if resend_key:
         try:
-            msg = MIMEText(body_html, 'html')
-            msg['Subject'] = subject
-            msg['From'] = from_email
-            msg['To'] = to_email
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5) as server:
-                server.login(smtp_username, email_password)
-                server.send_message(msg)
-            return True
-        except Exception as error:
-            delivery_errors.append(f'SMTP error: {error}')
+            r = requests.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                json={"from": f"PustakVerse <{from_email}>", "to": [to_email], "subject": subject, "html": body_html},
+                timeout=8
+            )
+            if r.status_code in [200, 201]:
+                logging.info("✓ Email successfully delivered to %s via Resend API", to_email)
+                return True
+            delivery_errors.append(f"Resend API HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            delivery_errors.append(f"Resend API exception: {e}")
 
     if not delivery_errors:
-        delivery_errors.append('No email provider is configured.')
-    logging.error('Email delivery to %s failed. %s', to_email, ' | '.join(delivery_errors))
+        delivery_errors.append("No email provider configured. Set EMAIL_PASSWORD or GMAIL_APP_PASSWORD.")
+
+    logging.error("Email delivery to %s failed. %s", to_email, " | ".join(delivery_errors))
     return False
 
 def send_email_async(func, *args):
@@ -869,47 +961,54 @@ def send_email_async(func, *args):
     thread = threading.Thread(target=func, args=args)
     thread.start()
     
-def send_registration_otp(to_email, otp): 
-    return send_email_wrapper(to_email, 'PustakVerse - Verify Your Email', generate_html_email("Account Verification", f"<p>Your registration verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
-def send_pending_author(to_email, username):
-    subject = "PustakVerse - Author Account Under Review"
+def send_registration_otp(to_email, otp):
+    logging.info("🔑 [REGISTRATION OTP] Recipient: %s | OTP: %s", to_email, otp)
+    subject = f"{otp} is your PustakVerse verification code"
     content = (
-        f"<p>Hello <strong>{username}</strong>,</p>"
-        f"<p>Thank you for verifying your email! Your Author account is currently <strong>under review</strong> by our administrative team.</p>"
-        f"<p>We will notify you as soon as you are approved so you can start publishing.</p>"
+        f"<div style='text-align: center; padding: 10px 0;'>"
+        f"<p style='font-size: 16px; color: #334155; margin-bottom: 18px;'>Welcome to PustakVerse! Use the verification code below to verify your email and activate your account:</p>"
+        f"<div style='display: inline-block; background: #f8fafc; border: 2px dashed #f97316; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #ea580c; font-family: monospace;'>{otp}</div>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>. If you did not request this, please ignore this email.</p>"
+        f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Account Under Review", content))
+    return send_email_wrapper(to_email, subject, generate_html_email("Account Verification", content), plain_text=f"Your PustakVerse verification code is: {otp}. Valid for 5 minutes.")
 
-def send_author_approved(to_email, username, approver_name):
-    subject = "PustakVerse - Author Account Approved!"
+def send_otp_email(to_email, otp):
+    logging.info("🔑 [PASSWORD RESET OTP] Recipient: %s | OTP: %s", to_email, otp)
+    subject = f"{otp} is your PustakVerse password reset code"
     content = (
-        f"<p>Congratulations <strong>{username}</strong>!</p>"
-        f"<p>Your Author application has been officially <strong>approved by {approver_name}</strong>.</p>"
-        f"<p>You can now log into your dashboard and publish your first book to the Global Library.</p>"
+        f"<div style='text-align: center; padding: 10px 0;'>"
+        f"<p style='font-size: 16px; color: #334155; margin-bottom: 18px;'>We received a request to reset your PustakVerse account password. Use this code to proceed:</p>"
+        f"<div style='display: inline-block; background: #f8fafc; border: 2px dashed #6c5ce7; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #5843be; font-family: monospace;'>{otp}</div>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>. Never share this code with anyone.</p>"
+        f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Account Approved", content))
+    return send_email_wrapper(to_email, subject, generate_html_email("Password Reset", content), plain_text=f"Your PustakVerse password reset code is: {otp}. Valid for 5 minutes.")
 
-def send_author_rejected(to_email, username, rejector_name, reason):
-    subject = "PustakVerse - Author Application Update"
+def send_account_deletion_otp(to_email, otp):
+    logging.info("🔑 [ACCOUNT DELETION OTP] Recipient: %s | OTP: %s", to_email, otp)
+    subject = f"{otp} is your account deletion confirmation code"
     content = (
-        f"<p>Hello <strong>{username}</strong>,</p>"
-        f"<p>We have reviewed your application to become an author on PustakVerse. Unfortunately, your request has been <strong>declined by {rejector_name}</strong>.</p>"
-        f"<p><strong>Reason provided:</strong> {reason}</p>"
-        f"<p>Your account has been switched to a standard Reader account so you can still enjoy the Global Library. If you have any questions, please contact support.</p>"
+        f"<div style='text-align: center; padding: 10px 0;'>"
+        f"<p style='font-size: 16px; color: #e53e3e; margin-bottom: 14px; font-weight: bold;'>Warning: Permanent Account Deletion</p>"
+        f"<p style='color: #475569;'>Use this code to confirm deletion of your PustakVerse account and saved library:</p>"
+        f"<div style='display: inline-block; background: #fff5f5; border: 2px dashed #e53e3e; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #c53030; font-family: monospace;'>{otp}</div>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>.</p>"
+        f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Application Declined", content))
-    
-def generate_html_email(title, content):
-    return f'<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;"><h2 style="color: #2d3748; border-bottom: 2px solid #f66d2f; padding-bottom: 10px;">{title}</h2><div style="color: #4a5568; font-size: 16px; line-height: 1.6;">{content}</div><p style="color: #718096; font-size: 12px; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 10px;">This is an automated message from PustakVerse.</p></div>'
+    return send_email_wrapper(to_email, subject, generate_html_email("Account Deletion", content), plain_text=f"Your PustakVerse account deletion code is: {otp}. Valid for 5 minutes.")
 
-def send_otp_email(to_email, otp): 
-    return send_email_wrapper(to_email, 'PustakVerse - Password Reset OTP', generate_html_email("Password Reset", f"<p>Your password reset code is: <strong style='font-size: 24px; color: #f66d2f;'>{otp}</strong></p>"))
-
-def send_account_deletion_otp(to_email, otp): 
-    return send_email_wrapper(to_email, 'PustakVerse - Account Deletion OTP', generate_html_email("Account Deletion Request", f"<p>Your deletion verification code is: <strong style='font-size: 24px; color: #e53e3e;'>{otp}</strong></p>"))
-
-def send_2fa_email(to_email, otp): 
-    return send_email_wrapper(to_email, 'PustakVerse - Login Verification', generate_html_email("Security Verification", f"<p>Your 2-Step Login Verification code is: <strong style='font-size: 24px; color: #38a169;'>{otp}</strong></p>"))
+def send_2fa_email(to_email, otp):
+    logging.info("🔑 [LOGIN 2FA OTP] Recipient: %s | OTP: %s", to_email, otp)
+    subject = f"{otp} is your PustakVerse login verification code"
+    content = (
+        f"<div style='text-align: center; padding: 10px 0;'>"
+        f"<p style='font-size: 16px; color: #334155; margin-bottom: 18px;'>A sign-in attempt was initiated for your account. Enter this 2-Step Verification code to authorize login:</p>"
+        f"<div style='display: inline-block; background: #f8fafc; border: 2px dashed #00b894; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #008768; font-family: monospace;'>{otp}</div>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>.</p>"
+        f"</div>"
+    )
+    return send_email_wrapper(to_email, subject, generate_html_email("Security Verification", content), plain_text=f"Your PustakVerse login verification code is: {otp}. Valid for 5 minutes.")
 
 def send_welcome_reader(to_email, username): 
     return send_email_wrapper(to_email, 'Welcome to PustakVerse!', generate_html_email("Welcome to the Library", f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to PustakVerse! Dive into our extensive Global Library today.</p>"))
