@@ -984,14 +984,14 @@ def get_smtp_credentials():
         os.environ.get('ADMIN_EMAIL') or 
         os.environ.get('DEV_EMAIL') or 
         os.environ.get('MASTER_ADMIN_EMAIL') or 
-        'abhinavgiri370@gmail.com'
+        os.environ.get('DEVELOPER_EMAIL') or ''
     ).strip()
 
     from_email = (
         os.environ.get('EMAIL_FROM') or 
         os.environ.get('MAIL_FROM') or 
         os.environ.get('MAIL_DEFAULT_SENDER') or 
-        smtp_username
+        smtp_username or 'noreply@pustakverse.com'
     ).strip()
     
     raw_password = (
@@ -4097,7 +4097,14 @@ def test_smtp_route():
     if not is_authorized:
         return jsonify({'success': False, 'message': 'Access restricted. Provide valid session or ?key=master.'}), 403
 
-    recipient = request.args.get('email') or request.form.get('email') or 'abhinavgiri370@gmail.com'
+    creds = get_smtp_credentials()
+    recipient = (
+        request.args.get('email') 
+        or request.form.get('email') 
+        or session.get('email') 
+        or creds.get('from_email') 
+        or 'test@example.com'
+    )
     otp_sample = str(random.randint(100000, 999999))
     
     success = send_email_wrapper(
