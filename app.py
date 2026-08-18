@@ -1837,7 +1837,12 @@ def login():
                 
     return render_template('login.html', active_tab='reader')
 @app.route('/login/google')
+@app.route('/signup/google')
 def google_login(): 
+    mode = request.args.get('mode', 'login')
+    if request.path.startswith('/signup'):
+        mode = 'signup'
+    session['google_auth_mode'] = mode
     return google.authorize_redirect(url_for('google_authorize', _external=True))
 
 @app.route('/login/google/callback')
@@ -1851,7 +1856,7 @@ def google_authorize():
         
         email = user_info.get('email')
         name = user_info.get('name')
-        base_username = re.sub(r'[^a-zA-Z0-9_]', '', name.lower()) if name else email.split('@')[0]
+        base_username = re.sub(r'[^a-zA-Z0-9_]', '', (name or '').lower()) if name else email.split('@')[0]
         if not base_username: 
             base_username = f"user_{secrets.randbelow(9999)}"
         
@@ -1862,17 +1867,22 @@ def google_authorize():
             cursor = db.cursor(dictionary=True)
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
+            
+            # If user does not exist yet, prompt them to set their password!
             if not user:
                 cursor.execute("SELECT * FROM users WHERE username = %s", (base_username,))
                 if cursor.fetchone(): 
                     base_username = f"{base_username}{secrets.randbelow(9999)}"
-                cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer) VALUES (%s, %s, %s, 'reader', TRUE, 'Google', 'Google')", (base_username, email, generate_password_hash(secrets.token_urlsafe(16))))
-                db.commit()
-                send_welcome_reader(email, base_username)
                 
-                cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-                user = cursor.fetchone()
-        except Exception: 
+                session['google_signup_data'] = {
+                    'email': email,
+                    'name': name or '',
+                    'suggested_username': base_username
+                }
+                return redirect(url_for('google_set_password'))
+
+        except Exception as e: 
+            logging.error(f"Google Sign-In database error: {e}")
             flash("Database connection timeout during Google Sign-In.", "error")
             return redirect(url_for('login'))
         finally:
@@ -1900,9 +1910,103 @@ def google_authorize():
         
         flash(f"Welcome back, {user['username']}!", "success")
         return redirect(url_for('index'))
-    except Exception: 
+    except Exception as e: 
+        logging.error(f"Google OAuth callback error: {e}")
         flash("Google Authentication failed. Please try again.", "error")
         return redirect(url_for('login'))
+
+@app.route('/google/set-password', methods=['GET', 'POST'])
+def google_set_password():
+    signup_data = session.get('google_signup_data')
+    if not signup_data or not signup_data.get('email'):
+        flash("Google sign-up session expired. Please sign up with Google again.", "error")
+        return redirect(url_for('login'))
+
+    email = signup_data.get('email')
+    suggested_username = signup_data.get('suggested_username', '')
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        role = request.form.get('role', 'reader')
+        sec_q = request.form.get('security_question', 'What is your favorite book?')
+        sec_a = request.form.get('security_answer', '').strip()
+        ver_reason = request.form.get('verification_reason', '').strip() if role == 'author' else ''
+        accept_terms = request.form.get('accept_terms')
+
+        if not username or not re.match(r'^[a-zA-Z0-9_]{3,30}$', username):
+            flash("Username must be 3-30 characters long and contain only letters, numbers, and underscores.", "error")
+            return render_template('google_set_password.html', email=email, suggested_username=username)
+
+        if not password or len(password) < 6:
+            flash("Password must be at least 6 characters long.", "error")
+            return render_template('google_set_password.html', email=email, suggested_username=username)
+
+        if password != confirm_password:
+            flash("Passwords do not match. Please re-enter.", "error")
+            return render_template('google_set_password.html', email=email, suggested_username=username)
+
+        if not sec_a:
+            flash("Please provide a security answer for account recovery.", "error")
+            return render_template('google_set_password.html', email=email, suggested_username=username)
+
+        if not accept_terms:
+            flash("You must agree to the Terms and Conditions to complete sign up.", "error")
+            return render_template('google_set_password.html', email=email, suggested_username=username)
+
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+            
+            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+            if cursor.fetchone():
+                flash("This email is already registered. Please sign in.", "info")
+                session.pop('google_signup_data', None)
+                return redirect(url_for('login'))
+
+            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash(f"Username '{username}' is already taken. Please choose a different one.", "error")
+                return render_template('google_set_password.html', email=email, suggested_username=username)
+
+            password_hash = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) 
+                VALUES (%s, %s, %s, %s, TRUE, %s, %s, %s)
+            """, (username, email, password_hash, role, sec_q, sec_a, ver_reason))
+            db.commit()
+
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            new_user = cursor.fetchone()
+
+            session.pop('google_signup_data', None)
+
+            if role == 'author':
+                send_welcome_author(email, username)
+            else:
+                send_welcome_reader(email, username)
+
+            session['user_id'] = new_user['id']
+            session['username'] = new_user['username']
+            session['role'] = new_user['role']
+            session['is_verified'] = new_user['is_verified']
+            session['show_telegram_popup'] = True
+
+            flash(f"Welcome to PustakVerse, {username}! Your password has been set and your account is active.", "success")
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            logging.error(f"Error creating Google user: {e}")
+            flash("Database error during account creation. Please try again.", "error")
+            return render_template('google_set_password.html', email=email, suggested_username=username)
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+    return render_template('google_set_password.html', email=email, suggested_username=suggested_username)
 
 @app.route('/logout')
 def logout(): 
