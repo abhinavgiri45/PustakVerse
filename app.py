@@ -7,21 +7,43 @@ import re
 import time
 import threading
 from datetime import timedelta
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+
+try:
+    import razorpay
+except ImportError:
+    razorpay = None
+
 import io
 import base64
-import razorpay
 from email.message import EmailMessage
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate, make_msgid
 from decimal import Decimal, InvalidOperation
-import mysql.connector
+
+try:
+    import mysql.connector
+except ImportError:
+    mysql = None
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from authlib.integrations.flask_client import OAuth
-from PyPDF2 import PdfReader, PdfWriter
+
+try:
+    from authlib.integrations.flask_client import OAuth
+except ImportError:
+    OAuth = None
+
+try:
+    from PyPDF2 import PdfReader, PdfWriter
+except ImportError:
+    PdfReader, PdfWriter = None, None
+
 import requests
 from datetime import datetime, timezone, timedelta
 
@@ -796,14 +818,18 @@ def is_valid_image_content(file_obj):
 # ==========================================
 # GOOGLE OAUTH & GMAIL API 
 # ==========================================
-oauth = OAuth(app)
-google = oauth.register(
-    name='google', 
-    client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(), 
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', '').strip(),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration', 
-    client_kwargs={'scope': 'openid email profile'}
-)
+if OAuth:
+    oauth = OAuth(app)
+    google = oauth.register(
+        name='google', 
+        client_id=os.environ.get('GOOGLE_CLIENT_ID', '').strip(), 
+        client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', '').strip(),
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration', 
+        client_kwargs={'scope': 'openid email profile'}
+    )
+else:
+    oauth = None
+    google = None
 
 def generate_html_email(title, content):
     return (
