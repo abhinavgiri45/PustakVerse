@@ -6,6 +6,7 @@ import logging
 import re
 import time
 import threading
+import urllib.parse
 from datetime import timedelta
 
 # Auto-load .env configuration file if present
@@ -877,6 +878,68 @@ def generate_html_email(title, content):
         f'</body></html>'
     )
 
+def get_smtp_credentials():
+    """
+    Universally resolves SMTP credentials across Render, Railway, VPS, and local .env.
+    Checks all standard and alternative environment variable names.
+    """
+    from_email = (
+        os.environ.get('EMAIL_FROM') or 
+        os.environ.get('MAIL_FROM') or 
+        os.environ.get('MAIL_DEFAULT_SENDER') or 
+        os.environ.get('EMAIL_SMTP_USERNAME') or 
+        os.environ.get('SMTP_USER') or 
+        os.environ.get('SMTP_USERNAME') or 
+        os.environ.get('MAIL_USERNAME') or 
+        os.environ.get('GMAIL_USER') or 
+        os.environ.get('EMAIL_USER') or 
+        'noreply.pustakverse@gmail.com'
+    ).strip()
+    
+    smtp_username = (
+        os.environ.get('EMAIL_SMTP_USERNAME') or 
+        os.environ.get('SMTP_USER') or 
+        os.environ.get('SMTP_USERNAME') or 
+        os.environ.get('MAIL_USERNAME') or 
+        os.environ.get('GMAIL_USER') or 
+        os.environ.get('EMAIL_USER') or 
+        from_email
+    ).strip()
+    
+    raw_password = (
+        os.environ.get('EMAIL_PASSWORD') or 
+        os.environ.get('GMAIL_APP_PASSWORD') or 
+        os.environ.get('SMTP_PASSWORD') or 
+        os.environ.get('MAIL_PASSWORD') or 
+        os.environ.get('SMTP_PASS') or 
+        os.environ.get('EMAIL_PASS') or 
+        os.environ.get('GMAIL_PASSWORD') or 
+        os.environ.get('APP_PASSWORD') or 
+        os.environ.get('MAIL_PASS') or ''
+    )
+    email_password = re.sub(r'[\s\-]+', '', str(raw_password)).strip()
+    
+    smtp_host = (
+        os.environ.get('SMTP_HOST') or 
+        os.environ.get('MAIL_SERVER') or 
+        os.environ.get('EMAIL_HOST') or 
+        os.environ.get('SMTP_SERVER')
+    )
+    if smtp_host:
+        smtp_host = smtp_host.strip()
+        
+    smtp_port = os.environ.get('SMTP_PORT') or os.environ.get('MAIL_PORT') or os.environ.get('EMAIL_PORT')
+    smtp_port = int(smtp_port) if smtp_port and str(smtp_port).isdigit() else None
+    
+    return {
+        'from_email': from_email,
+        'smtp_username': smtp_username,
+        'email_password': email_password,
+        'smtp_host': smtp_host,
+        'smtp_port': smtp_port,
+        'is_configured': bool(email_password and smtp_username)
+    }
+
 def send_email_wrapper(to_email, subject, body_html, plain_text=None):
     """
     Universal Email Dispatch Engine for PustakVerse:
@@ -891,25 +954,14 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         return False
 
     to_email = str(to_email).strip()
-    
-    # 1. Resolve from and smtp usernames
-    from_email = os.environ.get('EMAIL_FROM') or os.environ.get('EMAIL_SMTP_USERNAME') or os.environ.get('SMTP_USER') or 'noreply.pustakverse@gmail.com'
-    from_email = from_email.strip()
-    smtp_username = os.environ.get('EMAIL_SMTP_USERNAME') or os.environ.get('SMTP_USER') or from_email
-    smtp_username = smtp_username.strip()
-    
-    # 2. Normalize password (strip any accidental spaces or dashes in App Passwords)
-    raw_password = (
-        os.environ.get('EMAIL_PASSWORD') or 
-        os.environ.get('GMAIL_APP_PASSWORD') or 
-        os.environ.get('SMTP_PASSWORD') or 
-        os.environ.get('MAIL_PASSWORD') or ''
-    )
-    email_password = re.sub(r'[\s\-]+', '', str(raw_password)).strip()
+    creds = get_smtp_credentials()
+    from_email = creds['from_email']
+    smtp_username = creds['smtp_username']
+    email_password = creds['email_password']
 
-    client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
-    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
-    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN', '').strip()
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('CLIENT_ID') or '').strip()
+    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
+    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or '').strip()
 
     delivery_errors = []
 
@@ -935,7 +987,7 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
     # ==========================================
     if email_password and smtp_username:
         # Determine host candidates based on sender domain or explicit env var
-        custom_host = os.environ.get('SMTP_HOST')
+        custom_host = creds['smtp_host']
         user_domain = smtp_username.split('@')[-1].lower() if '@' in smtp_username else ''
         
         primary_host = custom_host
@@ -1140,11 +1192,25 @@ def send_book_deleted_email(to_email, username, book_title, reason):
 # ==========================================
 def get_db_connection(retries=2, delay=1.0):
     last_exception = None
-    db_host = os.environ.get('DB_HOST')
-    db_port = int(os.environ.get('DB_PORT', 4000))
-    db_user = os.environ.get('DB_USER')
-    db_pass = os.environ.get('DB_PASSWORD')
-    db_name = os.environ.get('DB_NAME')
+    
+    db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST')
+    db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
+    db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
+    db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
+    db_name = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or os.environ.get('DATABASE_NAME')
+
+    # Automatic fallback parsing for DATABASE_URL / MYSQL_URL connection strings on Render
+    db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('TIDB_URL') or os.environ.get('CLEARDB_DATABASE_URL') or os.environ.get('JAWSDB_URL')
+    if db_url and '://' in db_url:
+        try:
+            parsed = urllib.parse.urlparse(db_url)
+            db_host = parsed.hostname
+            db_port = parsed.port or (4000 if 'tidb' in str(db_host) else 3306)
+            db_user = urllib.parse.unquote(parsed.username or '')
+            db_pass = urllib.parse.unquote(parsed.password or '')
+            db_name = parsed.path.lstrip('/')
+        except Exception:
+            pass
 
     for attempt in range(retries):
         try:
@@ -1160,7 +1226,7 @@ def get_db_connection(retries=2, delay=1.0):
             )
             if conn.is_connected(): 
                 return conn
-        except mysql.connector.Error as err:
+        except Exception as err:
             last_exception = err
             time.sleep(delay)
     raise last_exception
@@ -1872,7 +1938,8 @@ def register():
             'role': role, 'sec_question': sec_question, 'sec_answer': sec_answer, 'verification_reason': verification_reason
         }
 
-        has_smtp_pw = bool((os.environ.get('EMAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASSWORD') or os.environ.get('SMTP_PASSWORD') or '').strip())
+        creds = get_smtp_credentials()
+        has_smtp_pw = creds['is_configured']
         logging.info("🔑 [REGISTRATION CODE GENERATED] User: %s | Email: %s | OTP: %s", username, email, otp)
         send_email_async(send_registration_otp, email, otp)
         
@@ -1894,7 +1961,8 @@ def register():
         session['reg_otp_expiry'] = time.time() + 300
         session['last_otp_sent'] = time.time()
         
-        has_smtp_pw = bool((os.environ.get('EMAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASSWORD') or os.environ.get('SMTP_PASSWORD') or '').strip())
+        creds = get_smtp_credentials()
+        has_smtp_pw = creds['is_configured']
         logging.info("🔑 [REGISTRATION CODE RESENT] User: %s | Email: %s | OTP: %s", reg_data.get('username'), reg_data.get('email'), otp)
         send_email_async(send_registration_otp, reg_data['email'], otp)
         
@@ -3709,15 +3777,16 @@ def test_smtp_route():
         plain_text=f"PustakVerse SMTP Diagnostic. Code: {otp_sample}"
     )
     
-    from_e = os.environ.get('EMAIL_FROM') or os.environ.get('EMAIL_SMTP_USERNAME') or 'Not configured'
-    has_pw = bool((os.environ.get('EMAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASSWORD') or '').strip())
+    creds = get_smtp_credentials()
     
     return jsonify({
         'success': success,
         'recipient': recipient,
-        'sender_configured': from_e,
-        'password_configured': has_pw,
-        'message': 'Email delivered successfully to inbox!' if success else 'SMTP delivery failed. Check .env configuration or console logs.'
+        'sender_configured': creds['from_email'],
+        'smtp_user': creds['smtp_username'],
+        'host_detected': creds['smtp_host'] or 'auto-routed',
+        'password_configured': creds['is_configured'],
+        'message': 'Email delivered successfully to inbox!' if success else 'SMTP delivery failed. Check Render Environment Variables or console logs.'
     })
 
 if __name__ == '__main__':
