@@ -40,9 +40,11 @@
 
 ---
 
-### 🤖 4. Gemini AI Study Companion
-- **AI Book Tutor**: Ask questions, generate comprehensive chapter breakdowns, and extract key takeaways powered by Google Gemini.
-- **Interactive Flashcards & Concept Quizzes**: Reinforce learning directly from uploaded book materials.
+### 🧠 4. GranthMind™ AI Study Companion
+- **Multi-Tier Gemini AI Engine**: Intelligent tutoring, Socratic dialogue, and instant multi-perspective book answers.
+- **5 Specialized Study Modes**: *⚡ Fast Answer*, *📝 Chapter Summary*, *🃏 Flashcards & Quizzes*, *💡 Explain Simply (ELI5)*, and *🔬 Deep Breakdown*.
+- **KaTeX Mathematical Derivations & Code Explanations**: Rich inline and displayed LaTeX math formatting for complex technical subjects.
+- **Text-to-Speech Voice Narration & Study Notes Export**: Listen to GranthMind's explanations aloud or export your full study sessions to structured `.txt` notes.
 
 ---
 

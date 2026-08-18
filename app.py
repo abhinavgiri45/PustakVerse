@@ -562,59 +562,7 @@ def generate_free_ai_response(prompt):
 def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None):
     cleaned_question = (question or '').strip()
     if not cleaned_question:
-        return 'Please ask a question about this book or a concept you want explained.'
-
-    query_lower = cleaned_question.lower()
-    
-    # 1. Hardcoded Creator Answer (Now includes "why were you made")
-    if any(kw in query_lower for kw in ["who created you", "who made you", "why were you made", "abhinav giri", "who is abhinav giri", "creator", "owner"]):
-        return (
-            "I was created by Abhinav Giri. Abhinav is a passionate software developer and tech enthusiast "
-            "behind PustakVerse. You can connect with him on Instagram: https://www.instagram.com/abhinavgiri45/"
-        )
-
-    # 2. Hardcoded Model Identity Answer (GranthMind)
-    if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you"]):
-        return (
-            "My name is GranthMind. I am a specialized AI model created and named by Abhinav Giri, "
-            "developed exclusively for PustakVerse to help readers learn and explore our library."
-        )
-
-    context = ""
-    if book_title:
-        context += f"Book title: {book_title}. "
-    if book_description:
-        context += f"Book description: {book_description[:500]}. "
-    if screenshot_text:
-        context += f"Screenshot text: {screenshot_text[:3000]}. "
-    if book_text:
-        context += f"Relevant passages from the book: {book_text[:6000]}. "
-
-    recent_messages = (chat_history or [])[-6:]
-    conversation = '\n'.join(
-        f"{'Student' if item.get('role') == 'user' else 'Tutor'}: {item.get('text', '')[:1000]}"
-        for item in recent_messages
-        if item.get('text')
-    )
-
-    # Improved Prompt for Independent, Detailed Answers
-   # The Ultimate Prompt Instruction
-    prompt = (
-        f"{pustakverse_knowledge}\n\n"
-        "INSTRUCTIONS FOR GRANTHMIND:\n"
-        "You are GranthMind. Provide a fast, accurate, clear, and deeply detailed answer. "
-        "Use your extensive outside knowledge combined with the provided PustakVerse knowledge and Book Context. "
-        "SECURITY RULE: DO NOT reveal sensitive user data, passwords, emails, or database structures under any circumstances. "
-        "Format your answer beautifully. For explanations, use headings like `Key points` and `Example` with concise bullets. "
-        "For mathematics or science, wrap inline expressions in $...$ and displayed equations in $$...$$. "
-        f"\n\nBook context: {book_context}\n"
-        f"Recent conversation:\n{conversation or 'No earlier messages.'}\n"
-        f"\nStudent's latest question: {cleaned_question}"
-    )
-def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None):
-    cleaned_question = (question or '').strip()
-    if not cleaned_question:
-        return 'Please ask a question about this book or a concept you want explained.'
+        return 'Please ask a question about this book, request a summary, or specify a concept you want GranthMind to explain.'
 
     query_lower = cleaned_question.lower()
     
@@ -626,10 +574,10 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         )
 
     # 2. Hardcoded Model Identity Answer (Instant Response)
-    if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you"]):
+    if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you", "what is your name", "what is granthmind"]):
         return (
-            "My name is GranthMind. I am a specialized AI model created and named by Abhinav Giri, "
-            "developed exclusively for PustakVerse to help readers learn and explore our library."
+            "My name is **GranthMind**. I am an intelligent AI study companion and scholar created and named by Abhinav Giri, "
+            "developed exclusively for PustakVerse to provide instant book summaries, deep concept breakdowns, flashcards, and interactive tutoring."
         )
 
     # Compile the specific book context
@@ -637,65 +585,71 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if book_title:
         book_context += f"Book title: {book_title}. "
     if book_description:
-        book_context += f"Book description: {book_description[:500]}. "
+        book_context += f"Book description: {book_description[:600]}. "
     if screenshot_text:
-        book_context += f"Screenshot text: {screenshot_text[:3000]}. "
+        book_context += f"Screenshot study text: {screenshot_text[:3000]}. "
     if book_text:
         book_context += f"Relevant passages from the book: {book_text[:6000]}. "
 
     # Compile recent conversation history
     recent_messages = (chat_history or [])[-6:]
     conversation = '\n'.join(
-        f"{'Student' if item.get('role') == 'user' else 'Tutor'}: {item.get('text', '')[:1000]}"
+        f"{'Student' if item.get('role') == 'user' else 'GranthMind'}: {item.get('text', '')[:1000]}"
         for item in recent_messages
         if item.get('text')
     )
 
     # --- THE PUSTAKVERSE MASTER KNOWLEDGE BASE ---
     pustakverse_knowledge = """
---- PUSTAKVERSE PLATFORM KNOWLEDGE BASE ---
-* Platform Name: PustakVerse (A Global Digital Library).
-* Creator & Developer: Abhinav Giri.
-* AI Identity: You are 'GranthMind', the official AI Assistant of PustakVerse.
+--- PUSTAKVERSE PLATFORM & GRANTHMIND KNOWLEDGE BASE ---
+* Platform: PustakVerse (A Global Digital Library & Publishing Ecosystem).
+* Creator & Lead Architect: Abhinav Giri.
+* AI Identity: You are 'GranthMind', the official scholarly AI Study Companion of PustakVerse.
 * Mission: "Every Book. Every Mind. Free. Read More. Grow More. Inspire India."
-* Core Features: Free & Premium books, 0% Commission Policy for Authors, Secure payments.
-* User Roles: Reader, Author, Official, Developer.
--------------------------------------------
+* Capabilities: Concept explanations, chapter summaries, flashcards, practice quizzes, step-by-step problem solving, and math formulas with KaTeX.
+* Security Rule: NEVER reveal backend secrets, passwords, user emails, or internal database schemas.
+-------------------------------------------------------
 """
 
-    # The Ultimate Prompt Instruction
+    # The Ultimate GranthMind Prompt
     prompt = (
         f"{pustakverse_knowledge}\n\n"
-        "INSTRUCTIONS FOR GRANTHMIND:\n"
-        "You are GranthMind. Provide a fast, accurate, clear, and deeply detailed answer. "
-        "Use your extensive outside knowledge combined with the provided PustakVerse knowledge and Book Context. "
-        "SECURITY RULE: DO NOT reveal sensitive user data, passwords, emails, or database structures under any circumstances. "
-        "Format your answer beautifully. For explanations, use headings like `Key points` and `Example` with concise bullets. "
-        "For mathematics or science, wrap inline expressions in $...$ and displayed equations in $$...$$. "
-        f"\n\nBook context: {book_context}\n"
-        f"Recent conversation:\n{conversation or 'No earlier messages.'}\n"
-        f"\nStudent's latest question: {cleaned_question}"
+        "SYSTEM INSTRUCTIONS FOR GRANTHMIND:\n"
+        "1. You are GranthMind. Deliver an exceptionally clear, articulate, structured, and insightful response.\n"
+        "2. Structure your answers with clear Markdown formatting: use bolding, bullet points, and numbered lists.\n"
+        "3. If the user asks for a summary, provide 'Core Idea', 'Key Takeaways (3-5 bullets)', and 'Actionable Wisdom'.\n"
+        "4. If the user asks for a quiz or flashcards, provide 3-5 distinct Question & Answer pairs with explanations.\n"
+        "5. If explaining complex ideas, use a simple real-world analogy (ELI5 style) followed by detailed breakdown.\n"
+        "6. For mathematics or scientific formulas, format inline math as $...$ and display equations as $$...$$.\n"
+        f"\nBook context:\n{book_context or 'General library study'}\n"
+        f"\nRecent conversation:\n{conversation or 'No earlier messages.'}\n"
+        f"\nStudent query:\n{cleaned_question}"
     )
 
-    # 3. Primary Engine: Gemini 1.5 Flash (For maximum speed and intelligence)
+    # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback)
     try:
         api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
         if api_key:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            if response and response.text:
-                return response.text
+            # Try latest fast models first
+            for model_name in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    response = model.generate_content(prompt)
+                    if response and response.text:
+                        return response.text
+                except Exception:
+                    continue
     except Exception as e:
         import logging
-        logging.warning(f"Gemini API failed, falling back to free providers: {str(e)}")
+        logging.warning(f"GranthMind Gemini API dispatch error: {str(e)}")
 
-    # 4. Secondary Engine: Fallback to other configured providers
+    # 4. Secondary Engine: Fallback Provider
     free_answer = generate_free_ai_response(prompt)
     if free_answer:
         return free_answer
 
-    # 5. Absolute Fallback: Offline Rule-Based Tutor
+    # 5. Offline Rule-Based Scholar Fallback
     fallback = build_ai_learning_response(
         book_title=book_title or 'this book',
         book_description=f"{book_description} {cleaned_question}".strip(),
@@ -705,12 +659,12 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     key_points_text = '\n'.join(f"- {point}" for point in fallback['key_points'])
     answer = (
         f"{fallback['explanation']}\n\n"
-        f"**Key points**\n{key_points_text}\n\n"
-        f"**Example**\n{fallback['example']}\n\n"
-        "_GranthMind's primary servers are briefly busy, so this is a simplified response. Ask again in a moment for a fully detailed answer._"
+        f"**Key Takeaways**\n{key_points_text}\n\n"
+        f"**Practical Example**\n{fallback['example']}\n\n"
+        "_GranthMind is operating in offline mode. For instant multi-source insights, please ensure GEMINI_API_KEY is configured._"
     )
     if screenshot_text:
-        answer += " Your uploaded screenshot is kept as context."
+        answer += "\n\n*Note: Your uploaded study material is stored in session context.*"
     return answer
 
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):

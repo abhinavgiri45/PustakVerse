@@ -151,16 +151,17 @@
 
     <div class="container">
         <div class="header-box">
-            <div class="badge">Free AI learning helper</div>
-            <h1>AI Study Tutor for {{ book.title }}</h1>
-            <p>Learn any concept clearly from this book with a simple, beginner-friendly explanation, examples, and practice questions.</p>
+            <div class="badge">🧠 Powered by GranthMind AI</div>
+            <h1>GranthMind AI Study Tutor · {{ book.title }}</h1>
+            <p>Master any concept from this book with instant multi-tier explanations, practical real-world analogies, and self-assessment questions.</p>
         </div>
 
         <div class="panel">
             <form class="concept-form" method="POST" action="{{ url_for('learn_book', book_id=book.id) }}">
-                <input type="text" name="concept" value="{{ concept }}" placeholder="Example: loops, function, theme, strategy, summary..." aria-label="Concept to learn">
-                <button type="submit" class="btn btn-primary">Explain this concept</button>
-                <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-secondary">Suggested concept</a>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="concept" value="{{ concept }}" placeholder="Example: key themes, main formulas, chapter summary, core strategy..." aria-label="Concept to learn">
+                <button type="submit" class="btn btn-primary">Explain with GranthMind</button>
+                <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn btn-secondary" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">💬 Live Chat with GranthMind</a>
             </form>
         </div>
 
@@ -169,17 +170,17 @@
                 <h2>{{ ai_response['concept'] }}</h2>
                 <p>{{ ai_response['explanation'] }}</p>
 
-                <h3>Key points</h3>
+                <h3>Key Takeaways</h3>
                 <ul>
                     {% for point in ai_response['key_points'] %}
                         <li>{{ point }}</li>
                     {% endfor %}
                 </ul>
 
-                <h3>Example</h3>
+                <h3>Real-World Analogy & Example</h3>
                 <p>{{ ai_response['example'] }}</p>
 
-                <h3>Practice questions</h3>
+                <h3>Practice Assessment Questions</h3>
                 <ul>
                     {% for q in ai_response['practice_questions'] %}
                         <li>{{ q }}</li>
