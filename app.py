@@ -389,6 +389,38 @@ def suggest_concept(book_title, description='', book_text=''):
     return 'core concept'
 
 
+def fetch_live_knowledge(query):
+    """
+    High-speed zero-dependency encyclopedic knowledge retrieval engine.
+    Fetches real-time academic summaries and definitions for any topic across science, history, law, math, and literature.
+    """
+    if not query or len(query.strip()) < 2:
+        return None
+    clean_q = re.sub(r'^(what is|what are|explain|who is|who was|define|tell me about|how does|what do you mean by|describe|write about|summarize)\s+', '', query.strip(), flags=re.I)
+    clean_q = re.sub(r'[^\w\s]', '', clean_q).strip()
+    if not clean_q:
+        clean_q = query.strip()
+        
+    headers = {'User-Agent': 'PustakVerse-GranthMind/2.0 (education-research; abhinavgiri45@gmail.com)'}
+    try:
+        url = 'https://en.wikipedia.org/w/api.php'
+        params = {'action': 'query', 'format': 'json', 'list': 'search', 'srsearch': clean_q, 'utf8': 1, 'srlimit': 3}
+        r = requests.get(url, params=params, headers=headers, timeout=3)
+        if r.status_code == 200:
+            results = r.json().get('query', {}).get('search', [])
+            if results:
+                found_title = results[0]['title']
+                p_url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(found_title)}'
+                p_resp = requests.get(p_url, headers=headers, timeout=3)
+                if p_resp.status_code == 200:
+                    extract = p_resp.json().get('extract', '')
+                    if extract:
+                        return {'title': found_title, 'extract': extract}
+    except Exception:
+        pass
+    return None
+
+
 def build_ai_learning_response(book_title, book_description='', concept_query='', book_text=''):
     concept = (concept_query or suggest_concept(book_title, book_description, book_text) or 'core concept').strip()
     concept_label = concept.strip()
@@ -482,21 +514,47 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
             'How do higher-order functions improve functional programming?'
         ]
     else:
-        explanation = (
-            f"### 💡 Conceptual Breakdown: {concept_label}\n\n"
-            f"{concept_label} represents a fundamental concept in {title_text}. "
-            "To achieve deep mastery, break the concept into first principles: (1) Core definition and purpose, (2) Structural mechanics, and (3) Practical real-world implications."
-        )
-        key_points = [
-            'Master the foundational axioms before moving to complex edge cases.',
-            'Synthesize relationships between this concept and adjacent topics.',
-            'Test your intuition by solving active retrieval questions.'
-        ]
-        example = f'When studying {concept_label}, summarize the 3 most critical rules in your own words and apply them to a real-life case study.'
-        questions = [
-            f'What is the single most important principle underlying {concept_label}?',
-            'How does this concept apply in modern practical scenarios?'
-        ]
+        # Dynamic Real-Time Global Knowledge Retrieval for ANY topic
+        live_res = fetch_live_knowledge(concept_label)
+        if live_res and live_res.get('extract'):
+            topic_name = live_res.get('title', concept_label)
+            live_extract = live_res['extract']
+            explanation = (
+                f"### 💡 Comprehensive Overview: {topic_name}\n\n"
+                f"{live_extract}"
+            )
+            raw_sentences = [s.strip() for s in re.split(r'\. |\.\n', live_extract) if len(s.strip()) > 15]
+            key_points = []
+            for s in raw_sentences[:4]:
+                if not s.endswith('.'): s += '.'
+                key_points.append(s)
+            if not key_points:
+                key_points = [
+                    f"Master the core definition and historical/theoretical context of {topic_name}.",
+                    f"Connect the governing principles of {topic_name} with practical real-world applications."
+                ]
+            example = f"When studying **{topic_name}**, focus on how its governing principles apply to practical case studies and textbook curriculum."
+            questions = [
+                f"What is the foundational definition and significance of **{topic_name}**?",
+                f"What are the primary mechanics or historical factors associated with **{topic_name}**?",
+                f"Can you explain **{topic_name}** in your own words to a fellow student?"
+            ]
+        else:
+            explanation = (
+                f"### 💡 Conceptual Breakdown: {concept_label}\n\n"
+                f"{concept_label} represents a fundamental concept in {title_text}. "
+                "To achieve deep mastery, break the concept into first principles: (1) Core definition and purpose, (2) Structural mechanics, and (3) Practical real-world implications."
+            )
+            key_points = [
+                'Master the foundational axioms before moving to complex edge cases.',
+                'Synthesize relationships between this concept and adjacent topics.',
+                'Test your intuition by solving active retrieval questions.'
+            ]
+            example = f'When studying {concept_label}, summarize the 3 most critical rules in your own words and apply them to a real-life case study.'
+            questions = [
+                f'What is the single most important principle underlying {concept_label}?',
+                'How does this concept apply in modern practical scenarios?'
+            ]
 
     if context_snippet:
         supported_hint = (
