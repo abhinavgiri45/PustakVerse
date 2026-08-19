@@ -934,14 +934,18 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     prompt = (
         f"{pustakverse_knowledge}\n\n"
         "### GRANTHMIND SCHOLARLY AI INSTRUCTIONS:\n"
-        "1. **Identity & Tone**: You are GranthMind, an elite academic AI companion and scholar. Be exceptionally clear, articulate, encouraging, and deeply insightful.\n"
-        "2. **MATHEMATICAL & SCIENTIFIC PRECISION (CRITICAL)**:\n"
+        "1. **Identity & Tone**: You are GranthMind, an elite academic AI tutor and scholar. Be exceptionally clear, articulate, encouraging, and deeply insightful.\n"
+        "2. **DIRECT CONCEPTUAL TEACHING ONLY (CRITICAL)**:\n"
+        "   - ALWAYS answer the student's query directly and comprehensively with facts, explanations, derivations, and historical/scientific context.\n"
+        "   - NEVER output fake URLs (such as pustakverse.org), navigation guides, or instructions telling the user to search a website or catalog.\n"
+        "   - Dive straight into explaining the concept, its core laws/principles, examples, and formulas.\n"
+        "3. **MATHEMATICAL & SCIENTIFIC PRECISION (CRITICAL)**:\n"
         "   - ALL mathematics, physics, chemistry, and engineering formulas MUST be formatted in standard LaTeX notation.\n"
         "   - **Fractions**: ALWAYS use `\\frac{numerator}{denominator}` (e.g., `\\frac{1}{2}`, `\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}`, `\\frac{dy}{dx}`). NEVER use plain-text slashes like `a/b` for mathematical fractions.\n"
         "   - **Display Equations**: Put standalone equations on their own line wrapped in `$$ ... $$` or `\\[ ... \\]` (e.g., `$$\\int_{a}^{b} f(x)\\,dx = F(b) - F(a)$$`).\n"
         "   - **Inline Formulas & Variables**: Wrap inline math, symbols, and variables with `$ ... $` (e.g., `$x = \\frac{3}{4}$`, `$\\theta = \\pi$`, `$\\alpha$`).\n"
         "   - **Problem Solving Flow**: Always follow: (1) **Given & Objective** $\\rightarrow$ (2) **Governing Formula** $\\rightarrow$ (3) **Step-by-Step Derivation/Calculation** $\\rightarrow$ (4) **Final Answer** (clearly highlighted) $\\rightarrow$ (5) **Intuitive Insight**.\n"
-        "3. **Structure & Formatting**:\n"
+        "4. **Structure & Formatting**:\n"
         "   - Use structured Markdown with clear section headers (`###`), bullet points, and numbered lists.\n"
         "   - Bold key definitions and important principles.\n"
         "   - If asked for a summary, provide 'Core Philosophy', 'Key Takeaways (bulleted)', and 'Real-World Applications'.\n"
@@ -951,17 +955,27 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         f"\n--- STUDENT QUERY ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
     )
 
+    def _is_clean_ai_answer(t):
+        if not t or len(t.strip()) < 25:
+            return False
+        lower_t = t.lower()
+        if 'pustakverse.org' in lower_t or 'visit: http' in lower_t:
+            return False
+        if 'type "' in lower_t and 'hit enter' in lower_t:
+            return False
+        return True
+
     # 3. Primary Engine: High-Speed Gemini API (Direct REST + Google SDK with Multimodal Support)
     gemini_resp = call_gemini_api(prompt, attachment_path=attachment_path)
-    if gemini_resp:
+    if _is_clean_ai_answer(gemini_resp):
         return gemini_resp
 
     # 4. Secondary Engine: Free Tier AI Fallback Providers
     free_answer = generate_free_ai_response(prompt)
-    if free_answer:
+    if _is_clean_ai_answer(free_answer):
         return free_answer
 
-    # 5. High-Yield Academic GranthMind Synthesizer (Reliable offline scholar)
+    # 5. High-Yield Academic GranthMind Synthesizer (Reliable verified scholar)
     fallback = build_ai_learning_response(
         book_title=book_title or 'Library Knowledge Core',
         book_description=f"{book_description} {cleaned_question}".strip(),
