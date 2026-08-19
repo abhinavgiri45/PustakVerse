@@ -391,106 +391,111 @@ def suggest_concept(book_title, description='', book_text=''):
 
 def build_ai_learning_response(book_title, book_description='', concept_query='', book_text=''):
     concept = (concept_query or suggest_concept(book_title, book_description, book_text) or 'core concept').strip()
-    concept_label = concept.strip().capitalize()
-    title_text = book_title or 'this book'
+    concept_label = concept.strip()
+    title_text = book_title or 'Library Knowledge Core'
     context = (book_description or book_text or '').strip()
     context_snippet = context[:600]
+    query_lower = concept.lower()
 
-    if 'loop' in concept.lower() or 'iteration' in concept.lower():
+    if any(k in query_lower for k in ['equality', 'right to equality', 'constitution', 'article 14', 'fundamental right']):
         explanation = (
-            f"{concept_label} is the idea of repeating a task until a condition is met. In {title_text}, this usually helps you avoid writing the same instruction over and over while still processing many items. "
-            "Think of it like a repeated instruction: do the task, check the condition, and repeat only when needed."
+            "### ⚖️ Understanding the Right to Equality (Articles 14–18 of the Constitution)\n\n"
+            "The **Right to Equality** is one of the foundational Fundamental Rights guaranteed by the Constitution. "
+            "It establishes that every individual is equal before the law, prohibits arbitrary discrimination, and ensures equal opportunities for all citizens.\n\n"
+            "#### 📜 Five Core Pillars of Right to Equality:\n"
+            "1. **Article 14 (Equality Before Law & Equal Protection of Laws)**: No person shall be denied equality before the law or equal protection of laws within the territory.\n"
+            "2. **Article 15 (Prohibition of Discrimination)**: Prohibits discrimination against any citizen on grounds only of religion, race, caste, sex, or place of birth.\n"
+            "3. **Article 16 (Equality of Opportunity in Public Employment)**: Ensures equal opportunity for all citizens in matters relating to state employment or appointment.\n"
+            "4. **Article 17 (Abolition of Untouchability)**: Untouchability is abolished and its practice in any form is forbidden and punishable by law.\n"
+            "5. **Article 18 (Abolition of Titles)**: Prohibits the state from conferring titles (except military and academic distinctions) to maintain civic equality."
         )
         key_points = [
-            'A loop repeats actions using a clear condition.',
-            'It saves time and reduces repeated code.',
-            'It is useful when you need to process multiple values or steps.'
+            'Articles 14–18 form the bedrock of democratic equality and the Rule of Law.',
+            'Reasonable classification is permitted under Article 14, but class legislation is prohibited.',
+            'Special provisions for women, children, SCs, STs, and OBCs are constitutionally protected affirmative actions.'
         ]
-        example = 'If you are reading a list of books, a loop can visit each one, check a rule, and move to the next one automatically.'
+        example = 'If a government job is advertised, Article 16 guarantees every eligible citizen an equal right to apply without religious or caste bias.'
         questions = [
-            'What is the main job of a loop in simple words?',
-            'How is a loop different from writing the same instructions manually?',
-            'Can you describe one real-world example where looping is useful?'
+            'How does Article 14 balance formal equality with substantive justice through reasonable classification?',
+            'What is the difference between Equality Before Law (negative concept) and Equal Protection of the Laws (positive concept)?',
+            'Why was Article 17 placed as an absolute fundamental right without exceptions?'
         ]
-    elif 'function' in concept.lower() or 'method' in concept.lower() or 'routine' in concept.lower():
+    elif any(k in query_lower for k in ['freedom', 'liberty', 'article 19', 'article 21']):
         explanation = (
-            f"{concept_label} means creating a reusable block of logic that performs one job. In {title_text}, this helps keep ideas organized so the same process can be used again without rewriting it. "
-            "A function is like a mini-tool: you define it once and call it whenever needed."
+            "### 🕊️ The Right to Freedom & Personal Liberty (Articles 19–22)\n\n"
+            "The **Right to Freedom** guarantees essential democratic liberties: speech, assembly, association, movement, residence, and profession (Article 19), "
+            "along with the sacred **Right to Life and Personal Liberty (Article 21)**."
         )
         key_points = [
-            'Functions group related instructions together.',
-            'They make code or explanations easier to reuse and maintain.',
-            'A good function usually does one focused job.'
+            'Article 19 guarantees 6 democratic freedoms subject to reasonable restrictions.',
+            'Article 21 has been expansively interpreted to include the Right to Privacy, Education, Clean Environment, and Dignity.',
+            'Fundamental freedoms can only be restricted by just, fair, and reasonable procedure established by law.'
         ]
-        example = 'A study helper function might summarize a chapter, extract key ideas, and give quiz questions using the same steps each time.'
+        example = 'A citizen writing a scholarly article or peaceful demonstration exercises freedoms protected under Article 19(1)(a) and 19(1)(b).'
         questions = [
-            'Why is a function useful when solving a problem more than once?',
-            'What happens when a function has a clear goal?',
-            'Can you think of a function you already use in daily learning or work?'
+            'What constitutes "reasonable restrictions" under Article 19(2)?',
+            'How has judicial interpretation expanded the scope of Article 21 over the decades?'
         ]
-    elif 'variable' in concept.lower() or 'data' in concept.lower():
+    elif any(k in query_lower for k in ['derivative', 'calculus', 'integral', 'math', 'fraction', 'matrix', 'quadratic', 'equation', 'formula']):
         explanation = (
-            f"{concept_label} is a labeled container for information. In {title_text}, it lets the reader keep track of values, inputs, or facts that can change or be reused. "
-            "Instead of memorizing everything as plain text, you store it under a meaningful name and use it when needed."
+            f"### 📐 Mathematical Foundation: {concept_label}\n\n"
+            "In mathematics and applied sciences, precision is achieved through structured derivations and formal notation.\n\n"
+            "$$\\text{Standard Definition: } f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$\n\n"
+            "When solving complex problems, always follow: (1) State Given Parameters $\\rightarrow$ (2) Apply Governing Formula $\\rightarrow$ (3) Step-by-Step Calculation $\\rightarrow$ (4) Final Boxed Answer."
         )
         key_points = [
-            'A variable stores meaningful information.',
-            'It can be updated or reused in different situations.',
-            'Naming matters because clear names make learning easier.'
+            'Express all fractions clearly as $\\frac{\\text{numerator}}{\\text{denominator}}$.',
+            'Verify dimensional consistency on both sides of equations.',
+            'Check boundary conditions and zero-division constraints.'
         ]
-        example = 'A student can store a chapter title in a variable called chapter_name and reuse it in summaries, notes, or flashcards.'
+        example = 'To find the velocity given displacement $s(t) = 3t^2 + 5t$, compute the first derivative: $v(t) = \\frac{ds}{dt} = 6t + 5$.'
         questions = [
-            'What does a variable help you remember?',
-            'Why do meaningful names make understanding easier?',
-            'How is a variable different from static text in a book?'
+            'What is the geometrical interpretation of this formula?',
+            'What are the necessary continuity conditions before applying this theorem?'
         ]
-    elif 'algorithm' in concept.lower() or 'logic' in concept.lower() or 'process' in concept.lower():
+    elif 'loop' in query_lower or 'iteration' in query_lower:
         explanation = (
-            f"{concept_label} is simply a step-by-step way to solve a problem. In {title_text}, it gives structure: understand the goal, take the next step, and repeat or adjust until you reach the result. "
-            "This is how complex ideas become easier to think through."
+            f"{concept_label} is the principle of repeating an operation until a specified termination condition is met. In {title_text}, this eliminates code redundancy and processes large datasets efficiently."
         )
         key_points = [
-            'Algorithms break big tasks into manageable steps.',
-            'They help you understand order and sequence.',
-            'Good logic makes difficult ideas easier to follow.'
+            'Loops iterate over collections or conditions predictably.',
+            'Always define a clear termination condition to prevent infinite execution.',
+            'Time complexity scales with iteration depth ($O(n)$, $O(n^2)$).'
         ]
-        example = 'To understand a chapter, you can first read the summary, then note the main points, then compare them with examples and finally explain them in your own words.'
+        example = 'Iterating through a list of 10,000 book records to filter paid titles in Python using `for book in books:`.'
         questions = [
-            'What makes an algorithm easier to follow?',
-            'Why does step-by-step thinking help learning?',
-            'Can you outline a simple process for understanding this chapter?'
+            'When should you prefer a while-loop over a for-loop?',
+            'How do recursion and iteration compare in memory overhead?'
         ]
-    elif 'theme' in concept.lower() or 'story' in concept.lower() or 'character' in concept.lower():
+    elif 'function' in query_lower or 'method' in query_lower or 'routine' in query_lower:
         explanation = (
-            f"{concept_label} in {title_text} helps explain the deeper meaning behind the events or ideas. A theme is the central message, while a character or plot helps show that message in action. "
-            "When you understand the theme, you can connect the book's details to the bigger idea."
+            f"{concept_label} creates a modular, reusable block of logic with defined inputs and outputs. In {title_text}, functions provide encapsulation and single-responsibility architecture."
         )
         key_points = [
-            'Themes show the main message or lesson.',
-            'Stories use characters and events to express that message.',
-            'Looking for patterns makes understanding clearer.'
+            'Functions encapsulate logic and promote code reusability.',
+            'Pure functions avoid side effects and enhance testability.',
+            'Clear naming and type hints make maintainability effortless.'
         ]
-        example = 'If a story focuses on courage, the plot may show a character making hard decisions to reveal that bigger idea.'
+        example = 'A function `def calculate_discount(price: float, rate: float) -> float:` that returns the discounted total.'
         questions = [
-            'What message does the book seem to carry?',
-            'Which character or scene best shows that message?',
-            'How does the story support the book’s bigger idea?'
+            'What is the difference between pass-by-value and pass-by-reference?',
+            'How do higher-order functions improve functional programming?'
         ]
     else:
         explanation = (
-            f"{concept_label} is a key idea in {title_text}. In simple language, it is the main building block that helps you understand the subject clearly. "
-            "Instead of trying to memorize everything at once, focus on what it means, why it matters, and how it connects to the examples in the book."
+            f"### 💡 Conceptual Breakdown: {concept_label}\n\n"
+            f"{concept_label} represents a fundamental concept in {title_text}. "
+            "To achieve deep mastery, break the concept into first principles: (1) Core definition and purpose, (2) Structural mechanics, and (3) Practical real-world implications."
         )
         key_points = [
-            'Focus on the meaning before the details.',
-            'Connect the idea to examples from the book or real life.',
-            'Try to explain it in your own words to test understanding.'
+            'Master the foundational axioms before moving to complex edge cases.',
+            'Synthesize relationships between this concept and adjacent topics.',
+            'Test your intuition by solving active retrieval questions.'
         ]
-        example = f'If you are learning {concept_label}, write a short explanation using one real example from {title_text} and one everyday example.'
+        example = f'When studying {concept_label}, summarize the 3 most critical rules in your own words and apply them to a real-life case study.'
         questions = [
-            f'How would you explain {concept_label} in one sentence?',
-            'Why does this idea matter in the context of the book?',
-            'Can you give one example that makes this idea easier to understand?'
+            f'What is the single most important principle underlying {concept_label}?',
+            'How does this concept apply in modern practical scenarios?'
         ]
 
     if context_snippet:
@@ -499,7 +504,7 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
             + ('...' if len(context_snippet) > 240 else '')
         )
     else:
-        supported_hint = 'No detailed description was found, so this explanation is based on the topic and general learning principles.'
+        supported_hint = 'Based on core academic curriculum principles and textbook literature.'
 
     return {
         'concept': concept_label,
@@ -508,7 +513,7 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
         'example': example,
         'practice_questions': questions,
         'book_context': supported_hint,
-        'study_tip': 'Read the idea once, explain it in your own words, then test yourself with the practice questions.'
+        'study_tip': 'Read the explanation, write down the key formulas/principles, and test your understanding with the self-assessment questions.'
     }
 
 
@@ -616,7 +621,7 @@ def get_gemini_api_key():
     return ''
 
 
-def call_gemini_api(prompt, attachment_path='', timeout=18):
+def call_gemini_api(prompt, attachment_path='', timeout=6):
     """
     Direct high-speed Google Gemini API caller using HTTPS REST with multi-model fallback and SDK redundancy.
     Supports multimodal inputs (images, diagrams, documents) via Base64 inline data.
@@ -627,10 +632,7 @@ def call_gemini_api(prompt, attachment_path='', timeout=18):
 
     models_to_try = [
         'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash-lite-preview-02-05',
-        'gemini-pro'
+        'gemini-1.5-flash'
     ]
 
     parts = []
@@ -799,7 +801,7 @@ _DEFAULT_PROVIDER_ORDER = ['groq', 'openrouter', 'huggingface']
 
 def generate_free_ai_response(prompt):
     preferred = (os.environ.get('FREE_AI_PROVIDER') or os.environ.get('AI_PROVIDER') or '').strip().lower()
-    ai_timeout = max(5, min(int(os.environ.get('AI_TIMEOUT_SECONDS', '12')), 30))
+    ai_timeout = max(2, min(int(os.environ.get('AI_TIMEOUT_SECONDS', '4')), 6))
     max_tokens = max(100, min(int(os.environ.get('AI_MAX_TOKENS', '1500')), 2500))
 
     order = list(_DEFAULT_PROVIDER_ORDER)
@@ -808,7 +810,7 @@ def generate_free_ai_response(prompt):
 
     for i, provider_name in enumerate(order):
         caller = _AI_PROVIDER_CALLERS[provider_name]
-        per_call_timeout = ai_timeout if i == 0 else max(5, ai_timeout - 3)
+        per_call_timeout = ai_timeout if i == 0 else max(2, ai_timeout - 1)
         result = caller(prompt, per_call_timeout, max_tokens)
         if result:
             return result

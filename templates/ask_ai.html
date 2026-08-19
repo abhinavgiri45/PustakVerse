@@ -1165,7 +1165,7 @@
       scrollDown();
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       
       try {
         const response = await fetch(chatForm.action, {
@@ -1197,7 +1197,7 @@
         addMessage('assistant', result.answer);
       } catch (error) {
         clearTimeout(timeoutId);
-        const message = error.name === 'AbortError' ? 'That is taking longer than expected. Please try again in a moment.' : (error.message || 'GranthMind is temporarily unreachable. Please retry.');
+        const message = error.name === 'AbortError' ? 'Response took too long to complete. Please try asking with a more specific question or try again.' : (error.message || 'GranthMind is temporarily unreachable. Please retry.');
         addMessage('assistant', message);
       } finally {
         typing.style.display = 'none';
