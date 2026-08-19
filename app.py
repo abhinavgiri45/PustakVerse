@@ -605,11 +605,111 @@ def extract_text_from_uploaded_image(image_path):
         return ''
 
 
+def get_gemini_api_key():
+    for k in ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GEMINI_API_KEY', 'GEMINI_KEY', 'AI_STUDIO_API_KEY', 'GEMINI_API', 'GOOGLE_AI_KEY', 'GEMINI_TOKEN']:
+        val = (os.environ.get(k) or '').strip().strip("'\"")
+        if val:
+            return val
+    cached = fast_cache.get('site_settings') or global_cache.get('settings')
+    if cached and cached.get('gemini_api_key'):
+        return str(cached.get('gemini_api_key')).strip().strip("'\"")
+    return ''
+
+
+def call_gemini_api(prompt, attachment_path='', timeout=18):
+    """
+    Direct high-speed Google Gemini API caller using HTTPS REST with multi-model fallback and SDK redundancy.
+    Supports multimodal inputs (images, diagrams, documents) via Base64 inline data.
+    """
+    api_key = get_gemini_api_key()
+    if not api_key:
+        return ''
+
+    models_to_try = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-2.0-flash-lite-preview-02-05',
+        'gemini-pro'
+    ]
+
+    parts = []
+    if attachment_path and os.path.exists(attachment_path):
+        ext = os.path.splitext(attachment_path)[1].lower()
+        mime_map = {
+            '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp',
+            '.pdf': 'application/pdf'
+        }
+        mime = mime_map.get(ext, 'application/octet-stream')
+        try:
+            with open(attachment_path, 'rb') as f:
+                b64_data = base64.b64encode(f.read()).decode('utf-8')
+            parts.append({"inline_data": {"mime_type": mime, "data": b64_data}})
+        except Exception as ex:
+            logging.warning(f"Failed to encode attachment for Gemini: {ex}")
+
+    parts.append({"text": prompt})
+    payload = {
+        "contents": [{"parts": parts}],
+        "generationConfig": {
+            "temperature": 0.25,
+            "topP": 0.95,
+            "maxOutputTokens": 2500
+        }
+    }
+
+    # 1. Primary: Direct HTTPS REST (Zero SDK conflicts, ultra-fast)
+    for model in models_to_try:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            headers = {"Content-Type": "application/json"}
+            resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+            if resp.status_code == 200:
+                res_data = resp.json()
+                candidates = res_data.get('candidates', [])
+                if candidates:
+                    parts_out = candidates[0].get('content', {}).get('parts', [])
+                    if parts_out and 'text' in parts_out[0]:
+                        return parts_out[0]['text'].strip()
+            else:
+                logging.warning(f"Gemini REST {model} returned HTTP {resp.status_code}: {resp.text[:180]}")
+        except Exception as err:
+            logging.warning(f"Gemini REST {model} error: {err}")
+            continue
+
+    # 2. Secondary: SDK Fallback
+    if genai is not None:
+        try:
+            genai.configure(api_key=api_key)
+            gemini_contents = [prompt]
+            if attachment_path and os.path.exists(attachment_path):
+                ext = os.path.splitext(attachment_path)[1].lower()
+                if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'}:
+                    try:
+                        from PIL import Image
+                        gemini_contents.append(Image.open(attachment_path))
+                    except Exception: pass
+
+            for model_name in models_to_try:
+                try:
+                    m = genai.GenerativeModel(model_name)
+                    res = m.generate_content(gemini_contents)
+                    if res and res.text:
+                        return res.text.strip()
+                except Exception:
+                    continue
+        except Exception as e:
+            logging.warning(f"Gemini SDK fallback error: {e}")
+
+    return ''
+
+
 def _call_openrouter(prompt, timeout, max_tokens):
     key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('FREE_AI_API_KEY') or '').strip()
     if not key:
         return ''
-    model = (os.environ.get('FREE_AI_MODEL') or os.environ.get('AI_MODEL') or 'meta-llama/llama-3.1-8b-instruct:free').strip()
+    model = (os.environ.get('FREE_AI_MODEL') or os.environ.get('AI_MODEL') or 'meta-llama/llama-3.3-70b-instruct:free').strip()
     try:
         response = requests.post(
             'https://openrouter.ai/api/v1/chat/completions',
@@ -617,7 +717,7 @@ def _call_openrouter(prompt, timeout, max_tokens):
                 'Authorization': f'Bearer {key}',
                 'Content-Type': 'application/json',
                 'HTTP-Referer': 'https://pustakverse.onrender.com',
-                'X-Title': 'PustakVerse AI Tutor'
+                'X-Title': 'PustakVerse GranthMind AI'
             },
             json={
                 'model': model,
@@ -631,9 +731,9 @@ def _call_openrouter(prompt, timeout, max_tokens):
             data = response.json()
             content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
             return str(content).strip() if content else ''
-        logging.warning('OpenRouter free AI request failed: %s - %s', response.status_code, response.text[:300])
+        logging.warning('OpenRouter request status: %s - %s', response.status_code, response.text[:200])
     except Exception:
-        logging.exception('OpenRouter free AI request error.')
+        logging.exception('OpenRouter AI error.')
     return ''
 
 
@@ -653,9 +753,9 @@ def _call_groq(prompt, timeout, max_tokens):
             data = response.json()
             content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
             return str(content).strip() if content else ''
-        logging.warning('Groq request failed: %s - %s', response.status_code, response.text[:300])
+        logging.warning('Groq request status: %s - %s', response.status_code, response.text[:200])
     except Exception:
-        logging.exception('Groq free AI request error.')
+        logging.exception('Groq AI error.')
     return ''
 
 
@@ -668,7 +768,7 @@ def _call_huggingface(prompt, timeout, max_tokens):
         response = requests.post(
             f'https://api-inference.huggingface.co/models/{model}',
             headers={'Authorization': f'Bearer {key}'},
-            json={'inputs': prompt, 'parameters': {'max_new_tokens': min(max_tokens, 350), 'temperature': 0.3}},
+            json={'inputs': prompt, 'parameters': {'max_new_tokens': min(max_tokens, 500), 'temperature': 0.3}},
             timeout=timeout
         )
         if response.status_code == 200:
@@ -682,40 +782,25 @@ def _call_huggingface(prompt, timeout, max_tokens):
                 if text:
                     return str(text).strip()
         else:
-            logging.warning('Hugging Face request failed: %s - %s', response.status_code, response.text[:300])
+            logging.warning('Hugging Face request status: %s - %s', response.status_code, response.text[:200])
     except Exception:
-        logging.exception('Hugging Face free AI request error.')
+        logging.exception('Hugging Face AI error.')
     return ''
 
 
 _AI_PROVIDER_CALLERS = {
-    'openrouter': _call_openrouter,
     'groq': _call_groq,
+    'openrouter': _call_openrouter,
     'huggingface': _call_huggingface,
 }
 
-# Groq's LPU inference is consistently the fastest of the three, so it leads the
-# fallback order unless the operator explicitly configured a different preferred provider.
 _DEFAULT_PROVIDER_ORDER = ['groq', 'openrouter', 'huggingface']
 
 
 def generate_free_ai_response(prompt):
-    """
-    Try each configured free-tier AI provider in order until one returns a real answer.
-
-    Speed: each provider gets its own short timeout, and providers with no API key
-    configured are skipped instantly (no network round trip wasted on them), so a
-    typical request either answers fast from the first working provider or fails over
-    to the next one within a few seconds rather than hanging.
-
-    Accuracy: we no longer give up the moment the operator's chosen provider is
-    rate-limited or briefly down — the question still gets answered by a real model
-    whenever any configured provider is reachable, instead of silently degrading to
-    the generic canned fallback.
-    """
     preferred = (os.environ.get('FREE_AI_PROVIDER') or os.environ.get('AI_PROVIDER') or '').strip().lower()
     ai_timeout = max(5, min(int(os.environ.get('AI_TIMEOUT_SECONDS', '12')), 30))
-    max_tokens = max(100, min(int(os.environ.get('AI_MAX_TOKENS', '450')), 800))
+    max_tokens = max(100, min(int(os.environ.get('AI_MAX_TOKENS', '1500')), 2500))
 
     order = list(_DEFAULT_PROVIDER_ORDER)
     if preferred in _AI_PROVIDER_CALLERS:
@@ -723,8 +808,6 @@ def generate_free_ai_response(prompt):
 
     for i, provider_name in enumerate(order):
         caller = _AI_PROVIDER_CALLERS[provider_name]
-        # Give the first (preferred/fastest) provider the full timeout budget; trim the
-        # budget slightly for later fallbacks so a chain of failures still stays snappy.
         per_call_timeout = ai_timeout if i == 0 else max(5, ai_timeout - 3)
         result = caller(prompt, per_call_timeout, max_tokens)
         if result:
@@ -808,72 +891,37 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         f"\n--- STUDENT QUERY ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
     )
 
-    # 3. Primary Engine: Multi-tier Gemini API (Fast & Pro Fallback with Multimodal Support)
-    try:
-        api_key = (
-            os.environ.get('GEMINI_API_KEY') or 
-            os.environ.get('GOOGLE_API_KEY') or 
-            os.environ.get('GOOGLE_GEMINI_API_KEY') or 
-            os.environ.get('GEMINI_KEY') or 
-            os.environ.get('AI_STUDIO_API_KEY') or ''
-        ).strip()
-        
-        if api_key:
-            genai.configure(api_key=api_key)
-            gen_config = genai.types.GenerationConfig(
-                temperature=0.25,
-                top_p=0.95,
-                top_k=40,
-                max_output_tokens=2500
-            ) if hasattr(genai, 'types') and hasattr(genai.types, 'GenerationConfig') else None
-            
-            gemini_contents = [prompt]
-            if attachment_path and os.path.exists(attachment_path):
-                ext = os.path.splitext(attachment_path)[1].lower()
-                if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'}:
-                    try:
-                        from PIL import Image
-                        gemini_contents.append(Image.open(attachment_path))
-                    except Exception:
-                        pass
+    # 3. Primary Engine: High-Speed Gemini API (Direct REST + Google SDK with Multimodal Support)
+    gemini_resp = call_gemini_api(prompt, attachment_path=attachment_path)
+    if gemini_resp:
+        return gemini_resp
 
-            for model_name in ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro']:
-                try:
-                    model = genai.GenerativeModel(model_name)
-                    if gen_config:
-                        response = model.generate_content(gemini_contents, generation_config=gen_config)
-                    else:
-                        response = model.generate_content(gemini_contents)
-                        
-                    if response and response.text:
-                        return response.text
-                except Exception:
-                    continue
-    except Exception as e:
-        import logging
-        logging.warning(f"GranthMind Gemini API dispatch error: {str(e)}")
-
-    # 4. Secondary Engine: Fallback Provider
+    # 4. Secondary Engine: Free Tier AI Fallback Providers
     free_answer = generate_free_ai_response(prompt)
     if free_answer:
         return free_answer
 
-    # 5. Offline Rule-Based Scholar Fallback
+    # 5. High-Yield Academic GranthMind Synthesizer (Reliable offline scholar)
     fallback = build_ai_learning_response(
-        book_title=book_title or 'this book',
+        book_title=book_title or 'Library Knowledge Core',
         book_description=f"{book_description} {cleaned_question}".strip(),
-        concept_query='',
-        book_text=book_text
+        concept_query=cleaned_question,
+        book_text=book_text or attachment_text
     )
     key_points_text = '\n'.join(f"- {point}" for point in fallback['key_points'])
-    answer = (
-        f"{fallback['explanation']}\n\n"
-        f"**Key Takeaways**\n{key_points_text}\n\n"
-        f"**Practical Example**\n{fallback['example']}\n\n"
-        "_GranthMind is operating in offline mode. For instant multi-source insights, please ensure GEMINI_API_KEY is configured._"
-    )
+    answer_parts = [
+        f"### 📖 GranthMind Academic Synthesis: {fallback['concept']}",
+        fallback['explanation'],
+        f"#### 💡 Core Principles & Key Takeaways\n{key_points_text}",
+        f"#### 🧪 Practical Example & Application\n{fallback['example']}"
+    ]
+    if fallback.get('practice_questions'):
+        quiz_text = '\n'.join(f"{i+1}. {q}" for i, q in enumerate(fallback['practice_questions']))
+        answer_parts.append(f"#### 🎯 Self-Assessment & Review Questions\n{quiz_text}")
+
+    answer = '\n\n'.join(answer_parts)
     if screenshot_text:
-        answer += "\n\n*Note: Your uploaded study material is stored in session context.*"
+        answer += "\n\n*Note: Attached material is maintained in session context.*"
     return answer
 
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
@@ -925,6 +973,7 @@ def inject_global_settings():
             fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
             fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Free.")
             fetched_settings['intro_sub_tagline'] = str(fetched_settings.get('intro_sub_tagline') or "Prepare to explore the universe of knowledge...")
+            fetched_settings['gemini_api_key'] = str(fetched_settings.get('gemini_api_key') or "")
             
             fast_cache.set('site_settings', fetched_settings, ttl=120)
             fast_cache.set('site_catalogs', fetched_catalogs, ttl=120)
@@ -1656,12 +1705,18 @@ def ensure_payment_schema():
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN rp_key_secret VARCHAR(255) DEFAULT NULL")
         except Exception: pass
 
-        # ---> NEW INTRO TEXT COLUMNS ADDED HERE <---
+        # ---> NEW INTRO TEXT & GEMINI API KEY COLUMNS ADDED HERE <---
         try:
             cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'intro_tagline'")
             if not cursor.fetchone():
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN intro_tagline VARCHAR(255) DEFAULT 'Every Book. Every Mind. Free.'")
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN intro_sub_tagline VARCHAR(255) DEFAULT 'Prepare to explore the universe of knowledge...'")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'gemini_api_key'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN gemini_api_key VARCHAR(255) DEFAULT NULL")
         except Exception: pass
 
         cursor.execute("INSERT IGNORE INTO front_page_settings (id) VALUES (1)")
@@ -3904,15 +3959,16 @@ def update_front_page():
     rp_key_id = request.form.get('rp_key_id', '').strip()
     rp_key_secret = request.form.get('rp_key_secret', '').strip()
     
-    # Capture the new intro texts
+    # Capture intro texts and Gemini API key
     intro_tagline = request.form.get('intro_tagline', '').strip()
     intro_sub_tagline = request.form.get('intro_sub_tagline', '').strip()
+    gemini_api_key = request.form.get('gemini_api_key', '').strip()
     
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT logo_image, donation_qr, rp_key_id, rp_key_secret FROM front_page_settings WHERE id=1")
+        cursor.execute("SELECT logo_image, donation_qr, rp_key_id, rp_key_secret, gemini_api_key FROM front_page_settings WHERE id=1")
         settings_data = cursor.fetchone()
         
         final_logo = settings_data['logo_image']
@@ -3928,11 +3984,12 @@ def update_front_page():
         
         final_rp_id = rp_key_id if rp_key_id else settings_data.get('rp_key_id', '')
         final_rp_secret = rp_key_secret if rp_key_secret else settings_data.get('rp_key_secret', '')
+        final_gemini_key = gemini_api_key if gemini_api_key else settings_data.get('gemini_api_key', '')
         
         # Save everything to the database
         cursor.execute(
-            "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
-            (title, subtitle, font_color, final_logo, donation_active, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
+            "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s, gemini_api_key=%s WHERE id=1", 
+            (title, subtitle, font_color, final_logo, donation_active, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline, final_gemini_key)
         )
         db.commit()
         invalidate_cache()

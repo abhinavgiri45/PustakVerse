@@ -317,7 +317,21 @@
                             <label>Cinematic Intro Sub-Tagline</label>
                             <input type="text" name="intro_sub_tagline" value="{{ site_settings.intro_sub_tagline }}" required placeholder="Prepare to explore the universe of knowledge...">
                         </div>
-                        <!-- END OF NEW SETTINGS -->
+                        <!-- END OF INTRO SETTINGS -->
+                        
+                        <!-- GRANTHMIND AI ENGINE SETTINGS -->
+                        <div style="background: #fdf2f8; padding: 15px; border-radius: 8px; border: 1.5px solid #fbcfe8; margin-bottom: 20px;">
+                            <label style="color: #9d174d; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                                <span>🧠</span> GranthMind AI Engine (Gemini API Key)
+                            </label>
+                            <small style="color: #be185d; display: block; font-size: 0.8rem; margin-bottom: 8px;">
+                                Enables high-speed multi-model AI tutoring, PDF document scanning, and LaTeX math derivations.
+                            </small>
+                            <input type="password" name="gemini_api_key" value="{{ site_settings.gemini_api_key or '' }}" placeholder="Paste your Google AI Studio key (AIzaSy...)" style="background: #ffffff; border: 1.5px solid #f472b6; border-radius: 6px; padding: 8px 12px; font-size: 0.88rem; width: 100%; box-sizing: border-box;" autocomplete="off">
+                            <small style="color: #64748b; display: block; margin-top: 6px; font-size: 0.76rem;">
+                                💡 Tip: You can also set <code>GEMINI_API_KEY</code> in Render Environment Variables.
+                            </small>
+                        </div>
                         
                         <button type="submit" class="btn-sm btn-dark">Update Settings</button>
                     </form>
