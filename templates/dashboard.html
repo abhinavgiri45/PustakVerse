@@ -691,13 +691,63 @@
                             <textarea name="description" rows="4" placeholder="What is this book about?..." required></textarea>
                         </div>
 
-                        <div class="form-group" style="background: #fdf2f8; padding: 15px; border-radius: 6px; border: 1px solid #fce7f3; margin-bottom: 25px;">
-                            <label style="color: #9d174d;">Cover Image & PDF Uploads</label>
-                            <small style="color: #be185d; display: block; font-weight: 600; margin-bottom: 15px;">Recommendation: Use Google Drive Links instead of direct uploads.</small>
-                            <input type="file" name="cover_image" accept="image/*">
-                            <input type="text" name="cover_link" placeholder="Drive Image URL" style="margin-top: 10px;" autocomplete="off">
-                            <input type="file" name="pdf_file" accept=".pdf" style="margin-top: 15px;">
-                            <input type="text" name="pdf_link" placeholder="Drive PDF Link" style="margin-top: 10px;" autocomplete="off">
+                        <!-- DRIVE-FIRST FILE & COVER INPUTS -->
+                        <div class="form-group" style="background: #f0fdf4; padding: 18px; border-radius: 10px; border: 1.5px solid #86efac; margin-bottom: 25px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                                <label style="color: #166534; font-size: 1rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 6px;">
+                                    <span>📁</span> Google Drive Links <span style="background: #22c55e; color: white; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ RECOMMENDED</span>
+                                </label>
+                                <button type="button" onclick="toggleDriveHelp('publish_drive_help')" style="background: #ffffff; border: 1px solid #86efac; color: #15803d; border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    <span>❓</span> How to make Drive Link Public?
+                                </button>
+                            </div>
+                            <small style="color: #15803d; display: block; font-size: 0.82rem; margin-bottom: 14px; line-height: 1.4;">
+                                Google Drive links provide high-speed reading, support large files (up to 100MB+), and never lag.
+                            </small>
+
+                            <!-- Interactive Drive Public Permission Guide -->
+                            <div id="publish_drive_help" style="display: none; background: #ffffff; border: 1.5px dashed #22c55e; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; font-size: 0.84rem; color: #1e293b; line-height: 1.6; box-shadow: 0 2px 8px rgba(34,197,94,0.08);">
+                                <strong style="color: #166534; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                                    <span>🔓</span> 4-Step Guide to Make Your Drive Link Public:
+                                </strong>
+                                <ol style="margin: 0; padding-left: 20px; color: #334155;">
+                                    <li style="margin-bottom: 4px;">Open your PDF / Cover in <a href="https://drive.google.com" target="_blank" style="color: #ea580c; font-weight: 700; text-decoration: underline;">Google Drive</a>.</li>
+                                    <li style="margin-bottom: 4px;">Right-click the file and click <strong>"Share" ➔ "Share"</strong>.</li>
+                                    <li style="margin-bottom: 4px;">Under <em>General Access</em>, change the dropdown from <strong>"Restricted"</strong> to <strong>"Anyone with the link"</strong> (Role: <em>Viewer</em>).</li>
+                                    <li>Click <strong>"Copy link"</strong>, and paste it directly into the box below!</li>
+                                </ol>
+                            </div>
+
+                            <!-- PDF Link Input -->
+                            <div style="margin-bottom: 14px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+                                    📄 Google Drive PDF Book Link <span style="color: #dc2626;">*</span>
+                                </label>
+                                <input type="url" name="pdf_link" id="publish_pdf_link" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'pdf_drive_status')" autocomplete="off">
+                                <div id="pdf_drive_status" style="font-size: 0.78rem; margin-top: 4px; display: none;"></div>
+                            </div>
+
+                            <!-- Cover Image Link Input -->
+                            <div style="margin-bottom: 10px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+                                    🖼️ Google Drive Book Cover Link (or Image URL) <span style="color: #dc2626;">*</span>
+                                </label>
+                                <input type="url" name="cover_link" id="publish_cover_link" placeholder="https://drive.google.com/file/d/.../view or direct image URL" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'cover_drive_status')" autocomplete="off">
+                                <div id="cover_drive_status" style="font-size: 0.78rem; margin-top: 4px; display: none;"></div>
+                            </div>
+
+                            <!-- Collapsible Direct File Upload Option -->
+                            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+                                <button type="button" onclick="toggleLocalUpload('publish_local_upload')" style="background: transparent; border: none; color: #64748b; font-size: 0.82rem; font-weight: 600; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 5px;">
+                                    <span>💾</span> <span>Or upload files directly from computer (Alternative) ▼</span>
+                                </button>
+                                <div id="publish_local_upload" style="display: none; margin-top: 10px; padding: 12px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Upload Local Cover Image:</label>
+                                    <input type="file" name="cover_image" accept="image/*" style="margin-bottom: 12px; font-size: 0.85rem; width: 100%;">
+                                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Upload Local PDF Document:</label>
+                                    <input type="file" name="pdf_file" accept=".pdf" style="font-size: 0.85rem; width: 100%;">
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
@@ -784,7 +834,7 @@
                                                 <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
                                                 {% endif %}
                                                 
-                                                <!-- NEW: data-desc attribute securely loads the description for editing -->
+                                                <!-- data-pdflink & data-coverlink attributes allow editing Drive links -->
                                                 <button type="button" class="btn-sm btn-dark edit-btn" 
                                                         data-id="{{ book.id }}" 
                                                         data-title="{{ book.title | escape }}" 
@@ -796,6 +846,8 @@
                                                         data-verified="{{ 'true' if book.rp_verified else 'false' }}"
                                                         data-verifymsg="{{ book.rp_verify_message or '' | escape }}"
                                                         data-desc="{{ book.description | escape }}"
+                                                        data-pdflink="{{ book.pdf_file if book.pdf_file.startswith('http') else '' }}"
+                                                        data-coverlink="{{ book.cover_image if book.cover_image.startswith('http') else '' }}"
                                                         onclick="openEditModal(this)">Edit</button>
                                                 
                                                 {% if session.role == 'official' %}
@@ -1086,10 +1138,61 @@
                     </select>
                 </div>
                 
-                <!-- NEW: Edit Description -->
+                <!-- Edit Description -->
                 <div class="form-group">
                     <label>Book Description / Synopsis</label>
                     <textarea name="description" id="edit_description" rows="4" required></textarea>
+                </div>
+
+                <!-- DRIVE-FIRST FILE & COVER EDIT INPUTS -->
+                <div class="form-group" style="background: #f0fdf4; padding: 16px; border-radius: 10px; border: 1.5px solid #86efac; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                        <label style="color: #166534; font-size: 0.95rem; font-weight: 700; margin: 0;">
+                            📁 Google Drive Links <span style="background: #22c55e; color: white; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 10px;">⭐ RECOMMENDED</span>
+                        </label>
+                        <button type="button" onclick="toggleDriveHelp('edit_drive_help')" style="background: #ffffff; border: 1px solid #86efac; color: #15803d; border-radius: 6px; padding: 3px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                            ❓ How to make Public?
+                        </button>
+                    </div>
+
+                    <!-- Interactive Guide -->
+                    <div id="edit_drive_help" style="display: none; background: #ffffff; border: 1.5px dashed #22c55e; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.82rem; color: #1e293b; line-height: 1.5;">
+                        <strong style="color: #166534; display: block; margin-bottom: 6px;">📋 Make Drive Link Public:</strong>
+                        <ol style="margin: 0; padding-left: 18px; color: #334155;">
+                            <li>In <a href="https://drive.google.com" target="_blank" style="color: #ea580c; font-weight: 700;">Google Drive</a>, right-click file ➔ <strong>Share</strong>.</li>
+                            <li>Change <em>General Access</em> from <strong>"Restricted"</strong> to <strong>"Anyone with the link"</strong>.</li>
+                            <li>Click <strong>"Copy link"</strong> and paste it below.</li>
+                        </ol>
+                    </div>
+
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 3px;">
+                            📄 Google Drive PDF Link:
+                        </label>
+                        <input type="url" name="pdf_link" id="edit_pdf_link" placeholder="Leave empty to keep existing or paste Drive link" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 0.88rem;" oninput="validateDriveInput(this, 'edit_pdf_drive_status')" autocomplete="off">
+                        <div id="edit_pdf_drive_status" style="font-size: 0.75rem; margin-top: 3px; display: none;"></div>
+                    </div>
+
+                    <div style="margin-bottom: 8px;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 3px;">
+                            🖼️ Google Drive Cover Link:
+                        </label>
+                        <input type="url" name="cover_link" id="edit_cover_link" placeholder="Leave empty to keep existing or paste Drive link" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 0.88rem;" oninput="validateDriveInput(this, 'edit_cover_drive_status')" autocomplete="off">
+                        <div id="edit_cover_drive_status" style="font-size: 0.75rem; margin-top: 3px; display: none;"></div>
+                    </div>
+
+                    <!-- Collapsible Local Upload in Edit Modal -->
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1;">
+                        <button type="button" onclick="toggleLocalUpload('edit_local_upload')" style="background: transparent; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer; padding: 0;">
+                            💾 Or upload new files from computer ▼
+                        </button>
+                        <div id="edit_local_upload" style="display: none; margin-top: 8px; padding: 10px; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <label style="font-size: 0.78rem; color: #475569; display: block; margin-bottom: 2px;">Replace Cover Image:</label>
+                            <input type="file" name="cover_image" accept="image/*" style="margin-bottom: 8px; font-size: 0.8rem; width: 100%;">
+                            <label style="font-size: 0.78rem; color: #475569; display: block; margin-bottom: 2px;">Replace PDF File:</label>
+                            <input type="file" name="pdf_file" accept=".pdf" style="font-size: 0.8rem; width: 100%;">
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1166,14 +1269,67 @@
             }); 
         }
 
+        // Toggle Drive Public Access Guide
+        function toggleDriveHelp(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+            }
+        }
+
+        // Toggle Local File Upload Section
+        function toggleLocalUpload(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+            }
+        }
+
+        // Live Drive Link Recognition & Status Checker
+        function validateDriveInput(input, statusDivId) {
+            const val = input.value.trim();
+            const statusDiv = document.getElementById(statusDivId);
+            if (!statusDiv) return;
+
+            if (!val) {
+                statusDiv.style.display = 'none';
+                statusDiv.innerHTML = '';
+                return;
+            }
+
+            statusDiv.style.display = 'block';
+            if (val.includes('drive.google.com') || val.includes('googleusercontent.com')) {
+                statusDiv.style.color = '#15803d';
+                statusDiv.innerHTML = '✓ Google Drive link recognized! Ensure sharing is set to <strong>"Anyone with the link"</strong>.';
+            } else if (val.startsWith('http://') || val.startsWith('https://')) {
+                statusDiv.style.color = '#0369a1';
+                statusDiv.innerHTML = '✓ External web URL recognized.';
+            } else {
+                statusDiv.style.color = '#b45309';
+                statusDiv.innerHTML = '⚠ Please enter a complete URL starting with https://';
+            }
+        }
+
         // Updated Modal Logic to securely pull from data- attributes
         function openEditModal(btn) {
             document.getElementById('editBookForm').action = "/edit_book/" + btn.dataset.id; 
             document.getElementById('edit_title').value = btn.dataset.title; 
             document.getElementById('edit_catalog').value = btn.dataset.catalog;
             
-            // Populate the new description field
-            document.getElementById('edit_description').value = btn.dataset.desc;
+            // Populate description
+            document.getElementById('edit_description').value = btn.dataset.desc || '';
+
+            // Populate Drive Links
+            const editPdfLink = document.getElementById('edit_pdf_link');
+            const editCoverLink = document.getElementById('edit_cover_link');
+            if (editPdfLink) {
+                editPdfLink.value = btn.dataset.pdflink || '';
+                validateDriveInput(editPdfLink, 'edit_pdf_drive_status');
+            }
+            if (editCoverLink) {
+                editCoverLink.value = btn.dataset.coverlink || '';
+                validateDriveInput(editCoverLink, 'edit_cover_drive_status');
+            }
             
             const isPaidCheck = document.getElementById('edit_is_paid'); 
             const editPaidSettings = document.getElementById('edit_paid_settings');
@@ -1204,7 +1360,7 @@
             } else { 
                 editPaidSettings.style.display = 'none'; 
                 pInput.value = ''; 
-                pInput.required = false;
+                pInput.required = false; 
                 keyIdInput.value = ''; 
                 keyIdInput.required = false;
                 keySecretInput.value = ''; 
@@ -1235,7 +1391,7 @@
             } 
         }
         
-    // Instant Live Verification for Razorpay Keys
+        // Instant Live Verification for Razorpay Keys
         async function verifyRazorpayKeys(context) {
             let keyIdInput, keySecretInput, statusDiv;
             const btn = event.target;

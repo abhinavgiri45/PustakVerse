@@ -951,6 +951,28 @@ def drive_img(url):
             return f"https://lh3.googleusercontent.com/d/{match.group(1)}=w400-rw"
     return url
 
+def normalize_drive_link(url):
+    """Normalizes any Google Drive link format into a clean, embeddable and streamable preview URL."""
+    if not url or not isinstance(url, str):
+        return url
+    url = url.strip()
+    match = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)', url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    return url
+
+def normalize_drive_image_link(url):
+    """Normalizes Google Drive image links to high-speed CDN URLs."""
+    if not url or not isinstance(url, str):
+        return url
+    url = url.strip()
+    match = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)', url)
+    if match:
+        file_id = match.group(1)
+        return f"https://lh3.googleusercontent.com/d/{file_id}"
+    return url
+
 def compress_cover_image(file_obj, upload_folder):
     if not HAS_PILLOW:
         safe_name = secure_filename(file_obj.filename)
@@ -3537,8 +3559,8 @@ def dashboard():
                     return redirect(url_for('dashboard'))
 
             description = request.form.get('description', '').strip()
-            c_link = request.form.get('cover_link', '').strip()
-            p_link = request.form.get('pdf_link', '').strip()
+            c_link = normalize_drive_image_link(request.form.get('cover_link', '').strip())
+            p_link = normalize_drive_link(request.form.get('pdf_link', '').strip())
             c_file = request.files.get('cover_image')
             p_file = request.files.get('pdf_file')
             is_paid = request.form.get('is_paid') == 'on'
@@ -3790,8 +3812,8 @@ def edit_book(book_id):
         raw_preview = int(request.form.get('preview_pages', book.get('preview_pages', 5)) or 5)
         preview_pages = min(max(1, raw_preview), 10)
         
-        c_link = request.form.get('cover_link', '').strip()
-        p_link = request.form.get('pdf_link', '').strip()
+        c_link = normalize_drive_image_link(request.form.get('cover_link', '').strip())
+        p_link = normalize_drive_link(request.form.get('pdf_link', '').strip())
         c_file = request.files.get('cover_image')
         p_file = request.files.get('pdf_file')
         
