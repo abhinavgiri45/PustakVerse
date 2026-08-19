@@ -1917,10 +1917,10 @@ def healthz():
 
 @app.route('/')
 def index():
-    if request.args.get('skip_intro') == '1':
+    if request.args.get('skip_intro') == '1' or session.get('user_id'):
         session['pustakverse_intro_seen'] = True
 
-    if not session.get('pustakverse_intro_seen'):
+    if not session.get('pustakverse_intro_seen') and not session.get('user_id'):
         session['pustakverse_intro_seen'] = True
         return redirect(url_for('intro'))
 
@@ -2459,6 +2459,7 @@ def register():
                 cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
                                (reg_data['username'], reg_data['email'], reg_data['password_hash'], reg_data['role'], is_verified, reg_data['sec_question'], reg_data['sec_answer'], reg_data['verification_reason']))
                 db.commit()
+                new_user_id = cursor.lastrowid
 
                 # Run Welcome Emails Asynchronously
                 if reg_data['role'] == 'reader': 
@@ -2469,12 +2470,20 @@ def register():
                 session.pop('reg_otp', None)
                 session.pop('reg_data', None)
                 
-                if reg_data['role'] == 'reader':
-                    msg = "Account created! Please sign in."
-                else:
-                    msg = "Author account created! Please wait for approval."
-                    
-                return jsonify({'success': True, 'message': msg, 'redirect': url_for('login')})
+                # Automatically log the user in and redirect directly to the Global Library
+                session['user_id'] = new_user_id
+                session['username'] = reg_data['username']
+                session['role'] = reg_data['role']
+                session['is_verified'] = is_verified
+                session['pustakverse_intro_seen'] = True
+                session['show_telegram_popup'] = True
+                
+                flash(f"Welcome to PustakVerse, {reg_data['username']}! Explore the Global Library below.", "success")
+                return jsonify({
+                    'success': True,
+                    'message': f"Account created! Welcome to PustakVerse, {reg_data['username']}.",
+                    'redirect': url_for('index')
+                })
                 
             except mysql.connector.IntegrityError: 
                 return jsonify({'success': False, 'message': 'Email or Username was taken while verifying.'})
@@ -2620,11 +2629,10 @@ def login():
                 
                 session.pop('login_2fa_otp', None)
                 session.pop('pending_2fa_user', None)
+                session['pustakverse_intro_seen'] = True
                 session['show_telegram_popup'] = True
                 
                 flash(f"Welcome back, {pending_user['username']}!", "success")
-                if pending_user['role'] in ['official', 'author', 'developer']:
-                    return redirect(url_for('dashboard'))
                 return redirect(url_for('index'))
             else: 
                 flash("Invalid Verification Code. Enter the 6-digit email code, your account password, or master key.", "error")
