@@ -222,12 +222,11 @@
                         <select id="roleSelect" onchange="toggleAuthorReason()">
                             <option value="reader">Reader (Access Global Library)</option>
                             <option value="author">Author (Publish Books)</option>
-                            <option value="official">Official (Staff Application)</option>
                         </select>
                     </div>
                     <div class="form-group" id="authorReasonGroup" style="display: none; background: #fffaf0; padding: 15px; border-radius: 6px; border: 1px solid #fbd38d;">
-                        <label id="reasonLabel" style="color: #c05621;">Application Reason / Verification:</label>
-                        <input type="text" id="reg_ver_reason" placeholder="Briefly describe your role or writing" style="border-color: #f6ad55;">
+                        <label id="reasonLabel" style="color: #c05621;">Why do you want an Author Account?</label>
+                        <input type="text" id="reg_ver_reason" placeholder="Briefly describe your writing or books" style="border-color: #f6ad55;">
                     </div>
                     <div class="form-group">
                         <label>Security Question (For Account Recovery)</label>
@@ -319,13 +318,8 @@
         if (role === 'author') {
             reasonGroup.style.display = 'block';
             if (reasonLabel) reasonLabel.textContent = 'Why do you want an Author Account?';
-            if (reasonInput) reasonInput.placeholder = 'Briefly describe your writing/books';
+            if (reasonInput) reasonInput.placeholder = 'Briefly describe your writing or books';
             termsLink.href = "/terms?role=author";
-        } else if (role === 'official') {
-            reasonGroup.style.display = 'block';
-            if (reasonLabel) reasonLabel.textContent = 'Official Staff Application / Passcode:';
-            if (reasonInput) reasonInput.placeholder = 'State your administrative purpose or enter staff passcode';
-            termsLink.href = "/terms?role=reader";
         } else {
             reasonGroup.style.display = 'none';
             termsLink.href = "/terms?role=reader";
