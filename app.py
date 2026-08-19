@@ -982,20 +982,20 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         concept_query=cleaned_question,
         book_text=book_text or attachment_text
     )
-    key_points_text = '\n'.join(f"- {point}" for point in fallback['key_points'])
+    key_points_text = '\n'.join(f"- **Key Insight**: {point}" if not point.startswith('-') else point for point in fallback['key_points'])
     answer_parts = [
-        f"### 📖 GranthMind Academic Synthesis: {fallback['concept']}",
+        f"## 🧠 GranthMind Scholar Insights: {fallback['concept']}",
         fallback['explanation'],
-        f"#### 💡 Core Principles & Key Takeaways\n{key_points_text}",
-        f"#### 🧪 Practical Example & Application\n{fallback['example']}"
+        f"### 💡 Core Principles & Theoretical Framework\n{key_points_text}",
+        f"### 🧪 Practical Application & Real-World Case Study\n{fallback['example']}"
     ]
     if fallback.get('practice_questions'):
         quiz_text = '\n'.join(f"{i+1}. {q}" for i, q in enumerate(fallback['practice_questions']))
-        answer_parts.append(f"#### 🎯 Self-Assessment & Review Questions\n{quiz_text}")
+        answer_parts.append(f"### 🎯 Active Recall & Self-Assessment\n{quiz_text}")
 
     answer = '\n\n'.join(answer_parts)
     if screenshot_text:
-        answer += "\n\n*Note: Attached material is maintained in session context.*"
+        answer += "\n\n*Note: Attached material is maintained in active study session.*"
     return answer
 
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
