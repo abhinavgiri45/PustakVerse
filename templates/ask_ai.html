@@ -1185,7 +1185,10 @@
           if (response.status === 401 || response.status === 403) {
             throw new Error('Your session has expired. Please sign in again to continue.');
           }
-          throw new Error('GranthMind hit a momentary snag. Please try asking again.');
+          if (response.status === 502 || response.status === 503 || response.status === 504) {
+            throw new Error('The server was deploying an update and is back online now! Please press Enter or ask again.');
+          }
+          throw new Error('GranthMind encountered a momentary delay. Please ask again.');
         }
         
         const result = await response.json();
