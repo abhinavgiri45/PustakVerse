@@ -1930,7 +1930,7 @@ def get_db_pool():
     if _db_pool is None:
         with _pool_lock:
             if _db_pool is None:
-                db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST')
+                db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST') or '127.0.0.1'
                 db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
                 db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
                 db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
@@ -1982,7 +1982,7 @@ def get_db_connection(retries=2, delay=0.5):
             logging.debug("Pool connection busy, falling back to direct connection: %s", e)
 
     # Fallback to direct connection if pool is busy or uninitialized
-    db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST')
+    db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST') or '127.0.0.1'
     db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
     db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
     db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
@@ -2000,7 +2000,10 @@ def get_db_connection(retries=2, delay=0.5):
         except Exception:
             pass
 
-    for attempt in range(retries):
+    effective_timeout = 1 if (app and app.config.get('TESTING')) else 6
+    effective_retries = 1 if (app and app.config.get('TESTING')) else retries
+
+    for attempt in range(effective_retries):
         try:
             conn = mysql.connector.connect(
                 host=db_host, 
@@ -2010,7 +2013,7 @@ def get_db_connection(retries=2, delay=0.5):
                 database=db_name, 
                 ssl_verify_cert=False, 
                 ssl_verify_identity=False, 
-                connection_timeout=6
+                connection_timeout=effective_timeout
             )
             if conn.is_connected(): 
                 return conn
@@ -5268,11 +5271,11 @@ def api_user_notes():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Authentication required.'}), 401
     
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
     user_id = session['user_id']
-    
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             book_id = request.args.get('book_id')
             if book_id:
@@ -5310,11 +5313,11 @@ def api_user_bookmarks():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Authentication required.'}), 401
     
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
     user_id = session['user_id']
-    
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             book_id = request.args.get('book_id')
             if book_id:
@@ -5349,11 +5352,11 @@ def api_user_shelves():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Authentication required.'}), 401
     
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
     user_id = session['user_id']
-    
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             cursor.execute("SELECT id, name, book_ids_json, created_at FROM user_shelves WHERE user_id = %s ORDER BY name ASC", (user_id,))
             shelves = cursor.fetchall()
@@ -5402,9 +5405,10 @@ def generate_reading_certificate(book_id):
         flash("Please log in to generate your completion certificate.", "info")
         return redirect(url_for('login'))
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT b.id, b.title, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
         book = cursor.fetchone()
         if not book:
@@ -5438,9 +5442,10 @@ def generate_reading_certificate(book_id):
 
 @app.route('/api/flashcards/<int:book_id>', methods=['GET'])
 def api_generate_flashcards(book_id):
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT title, description, catalog FROM books WHERE id = %s", (book_id,))
         book = cursor.fetchone()
         if not book:
@@ -5467,9 +5472,10 @@ def api_book_requests():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Authentication required.'}), 401
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             cursor.execute("SELECT br.id, br.title, br.author, br.catalog, br.notes, br.status, br.created_at, u.username as requester FROM book_requests br JOIN users u ON br.user_id = u.id ORDER BY br.created_at DESC LIMIT 50")
             requests_list = cursor.fetchall()
@@ -5500,11 +5506,11 @@ def author_coupons():
     if session.get('role') not in ['author', 'developer']:
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
     user_id = session['user_id']
-    
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             cursor.execute("SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.used_count, c.expires_at, b.title as book_title FROM book_coupons c JOIN books b ON c.book_id = b.id WHERE b.author_id = %s OR %s = 'developer'", (user_id, session.get('role')))
             coupons = cursor.fetchall()
@@ -5543,9 +5549,10 @@ def api_apply_coupon():
     if not book_id or not code:
         return jsonify({'valid': False, 'message': 'Please provide a valid coupon code.'}), 400
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM book_coupons WHERE book_id = %s AND code = %s", (book_id, code))
         coupon = cursor.fetchone()
         if not coupon:
@@ -5578,9 +5585,10 @@ def author_changelog():
     if session.get('role') not in ['author', 'developer']:
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             book_id = request.args.get('book_id')
             cursor.execute("SELECT cl.id, cl.book_id, cl.version, cl.notes, cl.created_at, b.title as book_title FROM book_changelogs cl JOIN books b ON cl.book_id = b.id WHERE cl.book_id = %s ORDER BY cl.created_at DESC", (book_id,))
@@ -5614,9 +5622,10 @@ def author_profile_update():
     
     socials = json.dumps({'github': github, 'linkedin': linkedin, 'twitter': twitter, 'website': website})
     
-    db = get_db_connection()
-    cursor = db.cursor()
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor()
         cursor.execute("UPDATE users SET author_bio = %s, social_links_json = %s WHERE id = %s", (bio, socials, session['user_id']))
         db.commit()
         flash("Author profile & portfolio badges updated successfully!", "success")
@@ -5634,9 +5643,10 @@ def official_announcements():
     if session.get('role') not in ['official', 'developer']:
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             cursor.execute("SELECT id, catalog_name, title, message, active, created_at FROM category_announcements ORDER BY created_at DESC")
             announcements = cursor.fetchall()
@@ -5670,9 +5680,10 @@ def official_user_strike(target_user_id):
     reason = request.form.get('reason', 'Community guidelines violation.').strip()
     strike_level = int(request.form.get('strike_level', 1) or 1)
     
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("INSERT INTO user_strikes (user_id, reason, strike_level) VALUES (%s, %s, %s)", (target_user_id, reason, strike_level))
         cursor.execute("SELECT username, email FROM users WHERE id = %s", (target_user_id,))
         usr = cursor.fetchone()
@@ -5701,9 +5712,10 @@ def official_staff_review(book_id):
     review_text = request.form.get('official_review', '').strip()
     reviewer_name = session.get('username', 'Editorial Staff')
     
-    db = get_db_connection()
-    cursor = db.cursor()
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor()
         cursor.execute("UPDATE books SET official_staff_review = %s, official_reviewer_name = %s WHERE id = %s", (review_text, reviewer_name, book_id))
         db.commit()
         invalidate_books_cache()
@@ -5723,9 +5735,10 @@ def developer_api_keys():
     if session.get('role') != 'developer':
         return jsonify({'success': False, 'message': 'Developer authorization required.'}), 403
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             cursor.execute("SELECT id, user_id, label, rate_limit, active, created_at FROM api_keys ORDER BY created_at DESC")
             keys = cursor.fetchall()
@@ -5759,9 +5772,10 @@ def developer_global_ticker():
     message = request.form.get('ticker_message', '').strip()
     active = request.form.get('ticker_active') == 'on'
     
-    db = get_db_connection()
-    cursor = db.cursor()
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor()
         cursor.execute("UPDATE front_page_settings SET alert_ticker_message = %s, alert_ticker_active = %s WHERE id = 1", (message, active))
         db.commit()
         invalidate_cache()
@@ -5778,9 +5792,10 @@ def developer_db_snapshot():
         flash("Unauthorized.", "error")
         return redirect(url_for('dashboard'))
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         snapshot = {'generated_at': datetime.now().isoformat(), 'platform': 'PustakVerse', 'tables': {}}
         for tbl in ['users', 'books', 'catalogs', 'purchases', 'front_page_settings', 'book_coupons', 'user_notes', 'category_announcements']:
             try:
@@ -5812,9 +5827,10 @@ def developer_scan_drive_links():
     if session.get('role') != 'developer':
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
         
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT id, title, cover_image, pdf_file FROM books ORDER BY id DESC LIMIT 50")
         books = cursor.fetchall()
         report = {'scanned_count': len(books), 'healthy': 0, 'broken': []}
@@ -5860,9 +5876,10 @@ def developer_manage_ai_models():
     if session.get('role') != 'developer':
         return jsonify({'success': False, 'message': 'Developer authorization required.'}), 403
 
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
             cursor.execute("SELECT id, display_name, provider_type, model_id, base_url, temperature, max_tokens, is_default, is_active, created_at, CASE WHEN api_key IS NOT NULL AND api_key != '' THEN 1 ELSE 0 END AS has_key FROM ai_models ORDER BY is_default DESC, id ASC")
             models = cursor.fetchall()
@@ -5931,9 +5948,10 @@ def developer_set_default_ai_model(model_id):
     if session.get('role') != 'developer':
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
-    db = get_db_connection()
-    cursor = db.cursor()
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor()
         cursor.execute("UPDATE ai_models SET is_default = 0")
         cursor.execute("UPDATE ai_models SET is_default = 1 WHERE id = %s", (model_id,))
         db.commit()
@@ -5949,9 +5967,10 @@ def generate_ai_mock_exam(book_id):
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Login required.'}), 401
 
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    db = None
     try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM books WHERE id = %s", (book_id,))
         book = cursor.fetchone()
         if not book:
