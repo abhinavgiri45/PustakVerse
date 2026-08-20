@@ -83,7 +83,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 320px;
+            max-width: 280px;
         }
         .book-meta-sub {
             font-size: 0.72rem;
@@ -175,21 +175,22 @@
             border-color: #475569;
         }
 
-        .action-pill.active {
-            background: #ea580c;
-            color: #ffffff;
-            border-color: #f97316;
-        }
-
         .action-pill-cert {
             background: linear-gradient(135deg, #059669 0%, #10b981 100%);
             color: white;
             border: none;
             box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+            animation: pulseUncloked 2s infinite;
         }
-        .action-pill-cert:hover {
-            background: linear-gradient(135deg, #047857 0%, #059669 100%);
-            transform: translateY(-1px);
+        @keyframes pulseUncloked {
+            0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); }
+        }
+
+        .action-pill-locked {
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px dashed #475569;
         }
 
         .action-pill-ambience {
@@ -306,7 +307,7 @@
             box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
         }
 
-        /* --- CERTIFICATE CELEBRATION MODAL --- */
+        /* --- CERTIFICATE CELEBRATION & PROGRESS MODAL --- */
         .cert-dialog-overlay {
             display: none;
             position: fixed;
@@ -368,7 +369,7 @@
         /* Responsive Breakpoints */
         @media (max-width: 900px) {
             .nav-section-center { display: none; }
-            .book-main-title { max-width: 180px; }
+            .book-main-title { max-width: 160px; }
         }
     </style>
 </head>
@@ -407,7 +408,7 @@
 
             <!-- STUDY DRAWER (NOTES & BOOKMARKS) -->
             <button class="action-pill" onclick="toggleStudyDrawer()" title="Open Notes & Bookmarks">
-                📝 <span style="display: none; @media(min-width: 600px){display: inline;}">Notes</span>
+                📝
             </button>
 
             <!-- THEME SWITCHER -->
@@ -415,9 +416,9 @@
                 <span id="themeIcon">🌙</span>
             </button>
 
-            <!-- COMPLETION CERTIFICATE -->
-            <button class="action-pill action-pill-cert" onclick="openCertDialog()" title="Claim Verified Completion Certificate">
-                🎓 Certificate
+            <!-- COMPLETION CERTIFICATE (SMART LOCKED / UNLOCKED) -->
+            <button class="action-pill action-pill-locked" id="certBtn" onclick="handleCertButtonClick()" title="Verified Certificate of Completion">
+                <span id="certBtnIcon">🔒</span> <span id="certBtnText">Cert (0%)</span>
             </button>
 
             <!-- FULLSCREEN -->
@@ -457,20 +458,17 @@
         </div>
     </div>
 
-    <!-- CERTIFICATE CONGRATULATIONS DIALOG -->
+    <!-- CERTIFICATE STATUS / CELEBRATION MODAL -->
     <div class="cert-dialog-overlay" id="certDialog">
-        <div class="cert-dialog-box">
-            <div style="font-size: 3.2rem; margin-bottom: 8px;">🎓</div>
-            <h2 style="color: #ffffff; margin: 0 0 10px; font-size: 1.5rem;">Reading Achievement</h2>
-            <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px;">
-                Congratulations on exploring <strong>"{{ book.title }}"</strong>! You can now claim, customize, and export your official verified certificate.
-            </p>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="action-pill action-pill-cert" style="padding: 12px 24px; font-size: 0.95rem; text-decoration: none;">
-                    📜 View & Download Certificate
-                </a>
-                <button onclick="closeCertDialog()" class="action-pill" style="padding: 12px 18px;">
-                    Continue Reading
+        <div class="cert-dialog-box" id="certDialogBox">
+            <div id="certModalIcon" style="font-size: 3.2rem; margin-bottom: 8px;">🎓</div>
+            <h2 id="certModalTitle" style="color: #ffffff; margin: 0 0 10px; font-size: 1.4rem;">Reading Completion Milestone</h2>
+            <div id="certModalBody" style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 20px;">
+                Loading completion status...
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;" id="certModalActions">
+                <button onclick="closeCertDialog()" class="action-pill" style="padding: 10px 18px;">
+                    Close
                 </button>
             </div>
         </div>
@@ -532,7 +530,9 @@
         let currentPageNum = 1;
         let totalPages = 1;
         let currentScale = 1.25;
-        let isRendering = false;
+        let isBookCompleted = false;
+        let percentCompleted = 0.0;
+        let activeReadingSeconds = 0;
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
         // Initialize and Load Document
@@ -559,6 +559,7 @@
 
                 renderAllVisiblePages();
                 recordProgress(currentPageNum);
+                fetchCompletionStatus();
             } catch (err) {
                 if (loadingEl) {
                     loadingEl.innerHTML = `
@@ -578,7 +579,6 @@
             if (!container || !pdfDoc) return;
             container.innerHTML = '';
 
-            // Render current page or scroll batch
             for (let i = 1; i <= Math.min(totalPages, 50); i++) {
                 const pageWrapper = document.createElement('div');
                 pageWrapper.id = `pageWrapper_${i}`;
@@ -625,6 +625,7 @@
                     targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 recordProgress(currentPageNum);
+                syncReadingProgress(0);
             }
         }
 
@@ -639,6 +640,136 @@
             currentScale = Math.max(0.8, Math.min(2.2, viewportWidth / 900));
             document.getElementById('zoomLevelText').textContent = `Fit`;
             renderAllVisiblePages();
+        }
+
+        // --- GENUINE READING PROGRESS & COMPLETION TRACKING ---
+        function fetchCompletionStatus() {
+            fetch(`/api/reading_progress?book_id={{ book.id }}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        isBookCompleted = data.is_completed;
+                        percentCompleted = data.percent_completed || 0;
+                        updateCertUiState();
+                    }
+                }).catch(() => {});
+        }
+
+        function syncReadingProgress(seconds) {
+            fetch('/api/reading_progress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({
+                    book_id: {{ book.id }},
+                    current_page: currentPageNum,
+                    total_pages: totalPages || 1,
+                    time_spent_seconds: seconds
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    const wasCompleted = isBookCompleted;
+                    isBookCompleted = data.is_completed;
+                    percentCompleted = data.percent_completed || 0;
+                    updateCertUiState();
+
+                    // Trigger celebration if just completed now!
+                    if (!wasCompleted && isBookCompleted) {
+                        triggerCompletionCelebration();
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        // Heartbeat active reader tracking (every 15s)
+        setInterval(() => {
+            if (!document.hidden) {
+                activeReadingSeconds += 15;
+                syncReadingProgress(15);
+            }
+        }, 15000);
+
+        function updateCertUiState() {
+            const btn = document.getElementById('certBtn');
+            const icon = document.getElementById('certBtnIcon');
+            const text = document.getElementById('certBtnText');
+            if (!btn) return;
+
+            if (isBookCompleted) {
+                btn.className = 'action-pill action-pill-cert';
+                if (icon) icon.textContent = '🎓';
+                if (text) text.textContent = 'Certificate';
+                btn.title = 'Claim Official Verified Certificate';
+            } else {
+                btn.className = 'action-pill action-pill-locked';
+                if (icon) icon.textContent = '🔒';
+                if (text) text.textContent = `Cert (${Math.round(percentCompleted)}%)`;
+                btn.title = `Certificate Locked: Read 100% of this book to unlock (${Math.round(percentCompleted)}% read)`;
+            }
+        }
+
+        function handleCertButtonClick() {
+            const dialog = document.getElementById('certDialog');
+            const icon = document.getElementById('certModalIcon');
+            const title = document.getElementById('certModalTitle');
+            const body = document.getElementById('certModalBody');
+            const actions = document.getElementById('certModalActions');
+            if (!dialog) return;
+
+            if (isBookCompleted) {
+                icon.textContent = '🎓';
+                title.textContent = 'Reading Completed!';
+                body.innerHTML = `
+                    <div style="margin-bottom: 12px;">
+                        Congratulations! You have verified and fully completed <strong>"{{ book.title }}"</strong>.
+                    </div>
+                    <div style="font-size: 0.85rem; color: #10b981; font-weight: 700;">
+                        ★ Verified Completion Milestone Unlocked ★
+                    </div>
+                `;
+                actions.innerHTML = `
+                    <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="action-pill action-pill-cert" style="padding: 10px 20px; text-decoration: none;">
+                        📜 View & Download Certificate
+                    </a>
+                    <button onclick="closeCertDialog()" class="action-pill" style="padding: 10px 16px;">
+                        Close
+                    </button>
+                `;
+            } else {
+                icon.textContent = '🔒';
+                title.textContent = 'Certificate Locked';
+                body.innerHTML = `
+                    <div style="margin-bottom: 12px;">
+                        Certificates are only issued to readers who have <strong>fully read and completed</strong> this book.
+                    </div>
+                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; text-align: left; margin: 12px 0;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">
+                            <span>Current Progress:</span>
+                            <span style="color: #f97316;">${Math.round(percentCompleted)}%</span>
+                        </div>
+                        <div style="background: #334155; height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: #f97316; width: ${Math.round(percentCompleted)}%; height: 100%;"></div>
+                        </div>
+                        <div style="font-size: 0.74rem; color: #94a3b8; margin-top: 6px;">
+                            Page ${currentPageNum} of ${totalPages} &bull; Active time: ${Math.round(activeReadingSeconds / 60)} mins
+                        </div>
+                    </div>
+                `;
+                actions.innerHTML = `
+                    <button onclick="closeCertDialog()" class="action-pill action-pill-ambience" style="padding: 10px 20px;">
+                        📖 Keep Reading to Unlock
+                    </button>
+                `;
+            }
+            dialog.style.display = 'flex';
+        }
+
+        function triggerCompletionCelebration() {
+            handleCertButtonClick();
+        }
+
+        function closeCertDialog() {
+            const dialog = document.getElementById('certDialog');
+            if (dialog) dialog.style.display = 'none';
         }
 
         // Record progress in LocalStorage for "Pickup Where You Left"
@@ -706,7 +837,6 @@
                     data[i] *= 3.5;
                 }
             } else if (type === 'binaural') {
-                // 432Hz Pure Harmonic Drone
                 for (let i = 0; i < bufferSize; i++) {
                     const t = i / audioCtx.sampleRate;
                     data[i] = 0.15 * Math.sin(2 * Math.PI * 432 * t) + 0.08 * Math.sin(2 * Math.PI * 216 * t);
@@ -720,7 +850,6 @@
                     data[i] *= 2.2;
                 }
             } else {
-                // Brown Noise
                 let lastOut = 0.0;
                 for (let i = 0; i < bufferSize; i++) {
                     const white = Math.random() * 2 - 1;
@@ -789,7 +918,6 @@
             try { localStorage.setItem('pv_reader_theme', nextTheme); } catch(e) {}
         }
 
-        // Restore saved theme
         try {
             const saved = localStorage.getItem('pv_reader_theme');
             if (saved && themes.includes(saved)) {
@@ -799,16 +927,6 @@
                 if (icon) icon.textContent = saved === 'theme-sepia' ? '📜' : (saved === 'theme-light' ? '☀️' : '🌙');
             }
         } catch(e) {}
-
-        // --- CERTIFICATE DIALOG ---
-        function openCertDialog() {
-            const dialog = document.getElementById('certDialog');
-            if (dialog) dialog.style.display = 'flex';
-        }
-        function closeCertDialog() {
-            const dialog = document.getElementById('certDialog');
-            if (dialog) dialog.style.display = 'none';
-        }
 
         // --- STUDY DRAWER CONTROLLER ---
         function toggleStudyDrawer() {
@@ -917,7 +1035,6 @@
                 }).catch(() => {});
         }
 
-        // Fullscreen Toggle (F key)
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(() => {});

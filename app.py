@@ -2186,6 +2186,26 @@ def ensure_payment_schema():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # 12. Reader: Genuine Reading Progress & Verified Completion Tracker
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS reading_progress (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                book_id INT NOT NULL,
+                current_page INT DEFAULT 1,
+                max_page_reached INT DEFAULT 1,
+                total_pages INT DEFAULT 1,
+                percent_completed FLOAT DEFAULT 0.0,
+                reading_seconds INT DEFAULT 0,
+                is_completed BOOLEAN DEFAULT FALSE,
+                completed_at TIMESTAMP NULL,
+                last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_book (user_id, book_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+            )
+        """)
         
         # Seed default models if empty
         try:
@@ -5425,31 +5445,147 @@ def api_user_shelves():
     finally:
         if db: db.close()
 
+@app.route('/api/reading_progress', methods=['GET', 'POST'])
+def api_reading_progress():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+        
+    user_id = session['user_id']
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        
+        if request.method == 'GET':
+            book_id = request.args.get('book_id', type=int)
+            if not book_id:
+                return jsonify({'success': False, 'message': 'Missing book_id'}), 400
+            cursor.execute("SELECT * FROM reading_progress WHERE user_id = %s AND book_id = %s", (user_id, book_id))
+            row = cursor.fetchone()
+            if row:
+                return jsonify({
+                    'success': True,
+                    'current_page': row['current_page'],
+                    'max_page_reached': row['max_page_reached'],
+                    'total_pages': row['total_pages'],
+                    'percent_completed': row['percent_completed'],
+                    'reading_seconds': row['reading_seconds'],
+                    'is_completed': bool(row['is_completed'])
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'current_page': 1,
+                    'max_page_reached': 1,
+                    'total_pages': 1,
+                    'percent_completed': 0.0,
+                    'reading_seconds': 0,
+                    'is_completed': False
+                })
+                
+        # POST - Track reading heartbeat & page progress
+        data = request.get_json(silent=True) or {}
+        book_id = data.get('book_id')
+        current_page = max(1, int(data.get('current_page', 1)))
+        total_pages = max(1, int(data.get('total_pages', 1)))
+        added_seconds = max(0, min(120, int(data.get('time_spent_seconds', 0))))
+        
+        if not book_id:
+            return jsonify({'success': False, 'message': 'Missing book_id'}), 400
+            
+        cursor.execute("SELECT * FROM reading_progress WHERE user_id = %s AND book_id = %s", (user_id, book_id))
+        existing = cursor.fetchone()
+        
+        if existing:
+            new_max_page = max(existing['max_page_reached'], current_page)
+            new_seconds = existing['reading_seconds'] + added_seconds
+            new_total = max(existing['total_pages'], total_pages)
+            new_pct = min(100.0, round((new_max_page / new_total) * 100.0, 1))
+            
+            # Genuine completion: reached >= 90% or last page AND spent at least 30s actively reading
+            should_complete = (new_max_page >= new_total or new_pct >= 90.0) and new_seconds >= 30
+            is_comp = bool(existing['is_completed'] or should_complete)
+            comp_at = existing['completed_at'] if existing['is_completed'] else (datetime.now() if should_complete else None)
+            
+            cursor.execute("""
+                UPDATE reading_progress 
+                SET current_page = %s, max_page_reached = %s, total_pages = %s, 
+                    percent_completed = %s, reading_seconds = %s, is_completed = %s, completed_at = %s
+                WHERE user_id = %s AND book_id = %s
+            """, (current_page, new_max_page, new_total, new_pct, new_seconds, is_comp, comp_at, user_id, book_id))
+        else:
+            new_pct = min(100.0, round((current_page / total_pages) * 100.0, 1))
+            should_complete = (current_page >= total_pages or new_pct >= 90.0) and added_seconds >= 30
+            comp_at = datetime.now() if should_complete else None
+            
+            cursor.execute("""
+                INSERT INTO reading_progress 
+                (user_id, book_id, current_page, max_page_reached, total_pages, percent_completed, reading_seconds, is_completed, completed_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, book_id, current_page, current_page, total_pages, new_pct, added_seconds, should_complete, comp_at))
+            is_comp = should_complete
+            
+        db.commit()
+        return jsonify({
+            'success': True,
+            'is_completed': is_comp,
+            'percent_completed': new_pct,
+            'cert_unlocked': is_comp
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
 @app.route('/certificate/<int:book_id>', methods=['GET'])
 def generate_reading_certificate(book_id):
     if 'user_id' not in session:
-        flash("Please log in to generate your completion certificate.", "info")
+        flash("Please log in to access your completion certificate.", "info")
         return redirect(url_for('login'))
         
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT b.id, b.title, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        cursor.execute("SELECT b.id, b.title, b.cover_image, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
         book = cursor.fetchone()
         if not book:
             flash("Book not found.", "error")
             return redirect(url_for('index'))
             
-        cursor.execute("SELECT username, email FROM users WHERE id = %s", (session['user_id'],))
+        user_id = session['user_id']
+        role = session.get('role')
+        
+        # Check genuine reading completion
+        cursor.execute("SELECT * FROM reading_progress WHERE user_id = %s AND book_id = %s", (user_id, book_id))
+        progress = cursor.fetchone()
+        
+        is_dev = role == 'developer'
+        is_completed = bool(progress and (progress.get('is_completed') or (progress.get('percent_completed', 0) >= 90.0 and progress.get('reading_seconds', 0) >= 30)))
+        
+        if not is_completed and not is_dev:
+            curr_pct = round(progress.get('percent_completed', 0), 1) if progress else 0.0
+            curr_page = progress.get('current_page', 1) if progress else 1
+            tot_pages = progress.get('total_pages', 1) if progress else 1
+            read_mins = round((progress.get('reading_seconds', 0) if progress else 0) / 60.0, 1)
+            
+            return render_template('certificate_locked.html', 
+                                   book=book, 
+                                   progress=progress, 
+                                   curr_pct=curr_pct, 
+                                   curr_page=curr_page, 
+                                   tot_pages=tot_pages, 
+                                   read_mins=read_mins)
+            
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         
         cert_data = {
-            'cert_id': f"PV-CERT-{book_id}-{session['user_id']}-{secrets.token_hex(3).upper()}",
-            'reader_name': user.get('username', 'Avid Reader'),
+            'cert_id': f"PV-CERT-{book_id}-{user_id}-{secrets.token_hex(3).upper()}",
+            'reader_name': user.get('username', 'Avid Reader') if user else 'Avid Reader',
             'book_title': book.get('title', 'Unknown Title'),
             'author_name': book.get('author_name', 'PustakVerse Creator'),
-            'completed_date': datetime.now().strftime('%B %d, %Y'),
+            'completed_date': (progress['completed_at'].strftime('%B %d, %Y') if progress and progress.get('completed_at') else datetime.now().strftime('%B %d, %Y')),
             'issuer': 'PustakVerse Global Digital Library'
         }
         

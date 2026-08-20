@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Locked - {{ book.title }} - PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 60%, #090d16 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lock-container {
+            background: #1e293b;
+            border: 1.5px solid #334155;
+            border-radius: 24px;
+            padding: 45px 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lock-badge-icon {
+            width: 84px;
+            height: 84px;
+            background: rgba(234, 88, 12, 0.15);
+            border: 2px solid #ea580c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 25px rgba(234, 88, 12, 0.3);
+            animation: pulseGlow 2.5s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(234, 88, 12, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(234, 88, 12, 0.5); }
+        }
+
+        .lock-kicker {
+            font-family: 'Cinzel', serif;
+            font-size: 0.82rem;
+            letter-spacing: 0.25em;
+            color: #f97316;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .lock-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 0 0 14px;
+        }
+
+        .lock-desc {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .progress-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 28px;
+            text-align: left;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.88rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar-bg {
+            background: #334155;
+            border-radius: 10px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .progress-bar-fill {
+            background: linear-gradient(90deg, #ea580c 0%, #f97316 100%);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease-out;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .stat-item {
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stat-item strong {
+            color: #ffffff;
+        }
+
+        .btn-continue {
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            padding: 14px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+        .btn-continue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(234, 88, 12, 0.6);
+        }
+
+        .btn-back {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: block;
+            margin-top: 8px;
+            transition: color 0.2s;
+        }
+        .btn-back:hover { color: #ffffff; }
+    </style>
+</head>
+<body>
+
+    <div class="lock-container">
+        <div class="lock-badge-icon">🔒</div>
+        <div class="lock-kicker">Verified Reading Milestone</div>
+        <h1 class="lock-title">Certificate of Completion Locked</h1>
+        
+        <p class="lock-desc">
+            To preserve the authenticity and academic value of PustakVerse certificates, certificates are only issued to readers who have <strong>fully and genuinely completed</strong> the entire book.
+        </p>
+
+        <div class="progress-box">
+            <div class="progress-header">
+                <span style="color: #ffffff;">📖 "{{ book.title }}"</span>
+                <span style="color: #f97316;">{{ curr_pct }}% Complete</span>
+            </div>
+            
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: {{ curr_pct }}%;"></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span>📑 Page:</span>
+                    <strong>{{ curr_page }} / {{ tot_pages }}</strong>
+                </div>
+                <div class="stat-item">
+                    <span>⏱️ Time Read:</span>
+                    <strong>{{ read_mins }} mins</strong>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <a href="{{ url_for('read_book', book_id=book.id) }}?page={{ curr_page }}" class="btn-continue">
+                📖 Continue Reading to Finish & Unlock
+            </a>
+            <a href="/" class="btn-back">← Return to Library</a>
+        </div>
+    </div>
+
+</body>
+</html>
