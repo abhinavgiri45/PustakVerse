@@ -1153,10 +1153,10 @@ def inject_global_settings():
         cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
         fetched_settings = cursor.fetchone()
         
-        cursor.execute("SELECT * FROM catalogs")
+        cursor.execute("SELECT id, name FROM catalogs ORDER BY name ASC")
         fetched_catalogs = cursor.fetchall()
         
-        if fetched_settings and fetched_catalogs:
+        if fetched_settings:
             fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
             fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
             fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
@@ -1168,10 +1168,17 @@ def inject_global_settings():
             fetched_settings['gemini_api_key'] = str(fetched_settings.get('gemini_api_key') or "")
             
             fast_cache.set('site_settings', fetched_settings, ttl=120)
-            fast_cache.set('site_catalogs', fetched_catalogs, ttl=120)
             global_cache['settings'] = fetched_settings
+        else:
+            fetched_settings = global_cache.get('settings', {})
+
+        if fetched_catalogs is not None:
+            fast_cache.set('site_catalogs', fetched_catalogs, ttl=120)
             global_cache['catalogs'] = fetched_catalogs
-            return dict(site_settings=fetched_settings, site_catalogs=fetched_catalogs)
+        else:
+            fetched_catalogs = global_cache.get('catalogs', [])
+
+        return dict(site_settings=fetched_settings, site_catalogs=fetched_catalogs)
     except Exception:
         pass
     finally:
@@ -4334,7 +4341,10 @@ def dashboard():
                 'upload_freeze': bool(fps_row.get('upload_freeze'))
             }
             
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics)
+            cursor.execute("SELECT c.id, c.name, COUNT(b.id) AS book_count FROM catalogs c LEFT JOIN books b ON c.name = b.catalog GROUP BY c.id, c.name ORDER BY c.name ASC")
+            all_categories = cursor.fetchall()
+            
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories)
 
         if role == 'official':
             if search_query: 
@@ -4582,20 +4592,40 @@ def update_front_page():
 
 @app.route('/add_catalog', methods=['POST'])
 def add_catalog():
-    if session.get('role') not in ['developer', 'official']: 
+    if session.get('role') != 'developer': 
+        flash("Unauthorized. Only the Developer has authority to add or delete categories.", "error")
         return redirect(url_for('dashboard'))
         
-    new_catalog = request.form['catalog_name'].strip()
+    new_catalog = request.form.get('catalog_name', '').strip()
+    if not new_catalog:
+        flash("Category name cannot be empty.", "error")
+        return redirect(url_for('dashboard'))
+
+    if len(new_catalog) > 50:
+        flash("Category name is too long (maximum 50 characters).", "error")
+        return redirect(url_for('dashboard'))
+        
     db = None
     try:
         db = get_db_connection()
-        cursor = db.cursor()
-        cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES (%s)", (new_catalog,))
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM catalogs WHERE LOWER(name) = LOWER(%s)", (new_catalog,))
+        if cursor.fetchone():
+            flash(f"Category '{new_catalog}' already exists.", "info")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("INSERT INTO catalogs (name) VALUES (%s)", (new_catalog,))
         db.commit()
         invalidate_cache()
-        flash(f"Catalog '{new_catalog}' added!", "success")
-    except Exception: 
-        flash("Database error.", "error")
+        invalidate_books_cache()
+        fast_cache.delete('site_catalogs')
+        fast_cache.delete('books_index')
+        fast_cache.clear_all()
+        log_official_activity(session['user_id'], f"Developer created new live category: '{new_catalog}'")
+        flash(f"Category '{new_catalog}' created and synced live across the website!", "success")
+    except Exception as e: 
+        logging.exception("Error adding category")
+        flash("Database error adding category.", "error")
     finally:
         if db:
             try: db.close()
@@ -4604,19 +4634,34 @@ def add_catalog():
 
 @app.route('/delete_catalog/<int:cat_id>', methods=['POST'])
 def delete_catalog(cat_id):
-    if session.get('role') not in ['developer', 'official']: 
+    if session.get('role') != 'developer': 
+        flash("Unauthorized. Only the Developer has authority to add or delete categories.", "error")
         return redirect(url_for('dashboard'))
         
     db = None
     try:
         db = get_db_connection()
-        cursor = db.cursor()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT name FROM catalogs WHERE id = %s", (cat_id,))
+        cat = cursor.fetchone()
+        if not cat:
+            flash("Category not found.", "error")
+            return redirect(url_for('dashboard'))
+            
+        cat_name = cat['name']
+        
         cursor.execute("DELETE FROM catalogs WHERE id = %s", (cat_id,))
         db.commit()
         invalidate_cache()
-        flash("Catalog removed.", "success") 
-    except Exception: 
-        flash("Database error.", "error")
+        invalidate_books_cache()
+        fast_cache.delete('site_catalogs')
+        fast_cache.delete('books_index')
+        fast_cache.clear_all()
+        log_official_activity(session['user_id'], f"Developer deleted dynamic category: '{cat_name}'")
+        flash(f"Category '{cat_name}' deleted and synced live across the website!", "success")
+    except Exception as e: 
+        logging.exception("Error deleting category")
+        flash("Database error deleting category.", "error")
     finally:
         if db:
             try: db.close()

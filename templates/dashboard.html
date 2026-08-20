@@ -285,6 +285,85 @@
                 </form>
             </div>
 
+            <!-- DEVELOPER EXCLUSIVE: Dynamic Category & Taxonomy Manager -->
+            <div class="panel" style="border-left: 5px solid #6366f1; background: #fafafa; margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <h2 style="color: #4338ca; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <span>📚</span> Developer Live Category & Taxonomy Manager
+                        </h2>
+                        <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0 0;">
+                            Create custom categories or delete existing ones. Changes sync live across the entire website instantly without server restarts.
+                        </p>
+                    </div>
+                    <span style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                        <span>⚡</span> Real-Time Auto-Sync Active
+                    </span>
+                </div>
+
+                <!-- Quick Add Category Form -->
+                <div style="background: #ffffff; border: 1.5px dashed #818cf8; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;">
+                    <form action="{{ url_for('add_catalog') }}" method="POST" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #3730a3; margin-bottom: 4px;">New Category Name</label>
+                            <input type="text" name="catalog_name" placeholder="e.g., Computer Science, Self-Help, UPSC Prep, Mythology..." required maxlength="50" style="padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 0.92rem; background: #f8fafc;">
+                        </div>
+                        <button type="submit" class="btn-sm btn-dark" style="background: #4f46e5; padding: 11px 22px; font-weight: 700; align-self: flex-end; margin-bottom: 2px;">
+                            ➕ Add & Sync Category
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Current Active Categories Table -->
+                <div class="table-scroll-container">
+                    <table>
+                        <thead>
+                            <tr style="background: #f1f5f9;">
+                                <th>Category Name</th>
+                                <th>Published Books</th>
+                                <th>Live Status</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in all_categories or site_catalogs %}
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 1.1rem;">📖</span>
+                                        <strong style="color: #1e293b; font-size: 0.95rem;">{{ cat.name }}</strong>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="background: #f1f5f9; color: #475569; font-size: 0.8rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                                        {{ cat.book_count | default(0) }} books
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="background: #dcfce7; color: #166534; font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                        ● Live on Website
+                                    </span>
+                                </td>
+                                <td style="text-align: right;">
+                                    {% if cat.id %}
+                                    <form action="{{ url_for('delete_catalog', cat_id=cat.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete category \'{{ cat.name }}\'? It will be removed from all navigation and filters immediately.');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-sm btn-red" style="padding: 6px 12px; font-size: 0.78rem;">
+                                            🗑️ Remove
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span style="color: #94a3b8; font-size: 0.78rem;">Protected</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="grid-2">
                 <div class="panel">
                     <h2>Website Settings & Payments</h2>
