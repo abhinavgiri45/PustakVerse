@@ -201,7 +201,7 @@
 
     <div class="container">
         <!-- Dynamic Continue Reading Hero Widget -->
-        <div id="continueReadingWidget" style="display: none; margin-bottom: 24px; padding: 18px 24px; background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.08); align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+        <div id="continueReadingWidget" style="display: none; margin-bottom: 24px; padding: 18px 24px; background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.08); align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; position: relative;">
             <div style="display: flex; align-items: center; gap: 16px;">
                 <img id="crCover" src="" alt="Book Cover" style="width: 46px; height: 64px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" onerror="this.src='/static/PustakVerse.png'">
                 <div>
@@ -210,7 +210,10 @@
                     <div style="font-size: 0.84rem; color: #64748b;" id="crMeta"></div>
                 </div>
             </div>
-            <a id="crLink" href="#" class="btn btn-read" style="background: #ea580c; min-width: 170px; border-radius: 10px; font-weight: 700; text-decoration: none;">Resume Reading →</a>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a id="crLink" href="#" class="btn btn-read" style="background: #ea580c; min-width: 160px; border-radius: 10px; font-weight: 700; text-decoration: none;">Resume Reading →</a>
+                <button type="button" onclick="dismissContinueReading()" style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; color: #94a3b8; font-size: 1.1rem; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Dismiss">&times;</button>
+            </div>
         </div>
 
         <div style="margin-bottom: 24px; padding: 22px 24px; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fdba74; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
@@ -459,10 +462,17 @@
                         cover.src = data.cover.startsWith('http') ? data.cover : `/static/uploads/covers/${data.cover}`;
                     }
                     const link = document.getElementById('crLink');
-                    if (link) link.href = `/viewer/${data.id}?page=${data.page || 1}`;
+                    if (link) link.href = `/read_book/${data.id}?page=${data.page || 1}`;
                     widget.style.display = 'flex';
                 }
             } catch (e) {}
+        }
+        function dismissContinueReading() {
+            try {
+                localStorage.removeItem('pv_last_read_book');
+            } catch (e) {}
+            const widget = document.getElementById('continueReadingWidget');
+            if (widget) widget.style.display = 'none';
         }
         renderContinueReading();
 

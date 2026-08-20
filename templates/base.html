@@ -71,10 +71,9 @@
             <div class="search-autocomplete-dropdown" id="searchAutocompleteDropdown"></div>
         </div>
         <div class="nav-links">
-            <a href="{{ url_for('index') }}">Global Library</a>
+            <a href="{{ url_for('index') }}">Library</a>
             {% if session.username %}
                 <a href="{{ url_for('my_library') }}">My Library</a>
-                <a href="{{ url_for('payment_history') }}">Payment History</a>
                 <a href="{{ url_for('dashboard') }}">My Profile</a>
                 <a href="{{ url_for('logout') }}">Logout</a>
             {% else %}

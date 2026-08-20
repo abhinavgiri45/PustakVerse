@@ -4261,6 +4261,8 @@ def book_sales(book_id):
     return render_template('sales_history.html', sales=sales, book=book)
 
 @app.route('/read_book/<int:book_id>')
+@app.route('/viewer/<int:book_id>')
+@app.route('/read/<int:book_id>')
 def read_book(book_id):
     if 'user_id' not in session: 
         flash("Please sign in or register to read or preview books.", "error")
@@ -4271,10 +4273,11 @@ def read_book(book_id):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT id, title, author_id, pdf_file, is_paid, private_pdf, preview_pages FROM books WHERE id = %s', (book_id,))
+        cursor.execute('SELECT id, title, author_id, pdf_file, is_paid, private_pdf, preview_pages, cover_image FROM books WHERE id = %s', (book_id,))
         book = cursor.fetchone()
         if not book: 
-            abort(404)
+            flash("The requested book is currently unavailable or has moved.", "info")
+            return redirect(url_for('index'))
             
         can_read = not book['is_paid'] or session.get('user_id') == book['author_id'] or session.get('role') == 'developer'
         
@@ -4321,8 +4324,31 @@ def serve_secure_pdf(book_id):
             try: db.close()
             except: pass
 
-    if book['pdf_file'].startswith('http'): 
-        abort(400)
+    if not book:
+        abort(404)
+
+    if book['pdf_file'].startswith('http'):
+        pdf_url = book['pdf_file']
+        if 'drive.google.com' in pdf_url or 'docs.google.com' in pdf_url:
+            m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_url)
+            if m:
+                file_id = m.group(1)
+                pdf_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
+        try:
+            req = requests.get(pdf_url, stream=True, timeout=12, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            if req.status_code == 200:
+                def generate():
+                    for chunk in req.iter_content(chunk_size=65536):
+                        if chunk:
+                            yield chunk
+                resp = Response(stream_with_context(generate()), mimetype='application/pdf')
+                resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
+                resp.headers['X-Content-Type-Options'] = 'nosniff'
+                return resp
+            else:
+                return redirect(book['pdf_file'].replace('/view', '/preview'))
+        except Exception:
+            return redirect(book['pdf_file'].replace('/view', '/preview'))
         
     folder = app.config['PRIVATE_PDF_FOLDER'] if book['is_paid'] or book['private_pdf'] else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
     full_path = os.path.join(folder, book['pdf_file'])

@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate of Completion - {{ cert.book_title }}</title>
+    <title>Certificate of Completion - {{ cert.book_title }} - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,800;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
-            padding: 40px 20px;
-            background: #0b1120;
+            padding: 30px 15px;
+            background: #090d16;
             font-family: 'Plus Jakarta Sans', sans-serif;
             display: flex;
             flex-direction: column;
@@ -22,50 +23,135 @@
             color: #1e293b;
         }
 
-        .cert-card {
-            background: linear-gradient(135deg, #fffdfa 0%, #fdfbf7 100%);
-            width: 900px;
-            max-width: 95vw;
-            padding: 50px 60px;
-            border-radius: 20px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-            border: 12px solid #1e293b;
-            position: relative;
-            box-sizing: border-box;
-            text-align: center;
+        .controls-toolbar {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 14px 24px;
+            border-radius: 16px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            max-width: 960px;
+            width: 100%;
         }
 
-        .cert-border-inner {
-            border: 2px dashed #d97706;
-            padding: 35px 30px;
+        .name-editor {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .name-editor input {
+            background: #0f172a;
+            border: 1.5px solid #f97316;
+            color: #ffffff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            outline: none;
+            width: 220px;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
             border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn-png {
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
+        }
+        .btn-png:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(234, 88, 12, 0.6); }
+
+        .btn-pdf {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+        .btn-pdf:hover { transform: translateY(-2px); background: #1d4ed8; }
+
+        .btn-back {
+            background: #334155;
+            color: #cbd5e1;
+        }
+        .btn-back:hover { background: #475569; color: white; }
+
+        /* CERTIFICATE CARD CONTAINER */
+        .cert-wrapper {
+            width: 940px;
+            max-width: 100%;
+            perspective: 1000px;
+        }
+
+        .cert-card {
+            background: linear-gradient(145deg, #ffffff 0%, #faf8f5 50%, #f7f4ee 100%);
+            border: 14px solid #0f172a;
+            border-radius: 24px;
+            padding: 45px 55px;
             position: relative;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6), inset 0 0 40px rgba(217, 119, 6, 0.04);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .cert-inner-frame {
+            border: 2px dashed #ea580c;
+            border-radius: 14px;
+            padding: 35px 35px;
+            position: relative;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(254,243,199,0.15) 100%);
+        }
+
+        .cert-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            opacity: 0.05;
+            pointer-events: none;
         }
 
         .cert-logo {
-            height: 60px;
+            height: 58px;
             width: auto;
             object-fit: contain;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
-        .cert-badge {
+        .cert-kicker {
             font-family: 'Cinzel', serif;
-            font-size: 0.85rem;
-            letter-spacing: 0.25em;
+            font-size: 0.82rem;
+            letter-spacing: 0.28em;
             text-transform: uppercase;
-            color: #d97706;
+            color: #ea580c;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .cert-title {
             font-family: 'Cinzel', serif;
-            font-size: 2.4rem;
+            font-size: 2.35rem;
             font-weight: 900;
             color: #0f172a;
-            letter-spacing: 2px;
-            margin: 0 0 16px;
+            letter-spacing: 1.5px;
+            margin: 0 0 14px;
             text-transform: uppercase;
         }
 
@@ -73,137 +159,313 @@
             font-size: 1.05rem;
             color: #64748b;
             font-style: italic;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .recipient-name {
             font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
+            font-size: 2.6rem;
             font-weight: 800;
             color: #ea580c;
-            border-bottom: 2px solid #fdba74;
+            border-bottom: 2px solid #fed7aa;
             display: inline-block;
-            padding: 0 30px 8px;
-            margin: 10px 0 20px;
+            padding: 0 35px 6px;
+            margin: 8px 0 18px;
+            letter-spacing: 0.5px;
         }
 
         .cert-desc {
-            font-size: 1.1rem;
+            font-size: 1.08rem;
             line-height: 1.7;
             color: #334155;
             max-width: 680px;
-            margin: 0 auto 30px;
+            margin: 0 auto 28px;
         }
 
         .cert-meta-grid {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin-top: 40px;
+            margin-top: 35px;
             padding-top: 20px;
             border-top: 1px solid #e2e8f0;
         }
 
         .meta-col {
             text-align: center;
+            flex: 1;
         }
 
         .meta-signature {
             font-family: 'Playfair Display', cursive;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             color: #0f172a;
             font-style: italic;
-            border-bottom: 1px solid #94a3b8;
+            border-bottom: 1.5px solid #cbd5e1;
             padding-bottom: 4px;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            display: inline-block;
+            min-width: 160px;
         }
 
         .meta-label {
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.76rem;
+            font-weight: 800;
             color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .cert-footer-tag {
+            font-size: 0.74rem;
+            color: #94a3b8;
+            letter-spacing: 0.08em;
+            margin-top: 22px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .gold-seal {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 6px;
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
+            border: 2px solid #fde68a;
+            font-size: 0.65rem;
+            font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        .cert-id-tag {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            letter-spacing: 0.08em;
-            margin-top: 20px;
-        }
-
-        .actions-bar {
-            margin-top: 25px;
-            display: flex;
-            gap: 15px;
-        }
-
-        .btn-print {
-            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
-            color: white;
-            padding: 12px 28px;
-            border-radius: 25px;
-            font-weight: 700;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
-            transition: transform 0.2s;
-        }
-        .btn-print:hover { transform: translateY(-2px); }
-
-        .btn-back {
-            background: #1e293b;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
+        /* PRINT STYLES */
         @media print {
-            body { background: white; padding: 0; }
-            .actions-bar { display: none; }
-            .cert-card { box-shadow: none; border-width: 8px; width: 100%; max-width: 100%; }
+            body { background: white; padding: 0; min-height: auto; }
+            .controls-toolbar { display: none !important; }
+            .cert-wrapper { width: 100%; max-width: 100%; }
+            .cert-card { box-shadow: none; border-width: 8px; width: 100%; page-break-inside: avoid; }
         }
     </style>
 </head>
 <body>
-    <div class="cert-card">
-        <div class="cert-border-inner">
-            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="cert-logo">
-            <div class="cert-badge">Academic Honor & Literacy Achievement</div>
-            <h1 class="cert-title">Certificate of Completion</h1>
-            <div class="cert-present">This certifies that</div>
-            <div class="recipient-name">{{ cert.reader_name }}</div>
-            <div class="cert-desc">
-                has successfully read and completed the comprehensive edition of <strong>"{{ cert.book_title }}"</strong> by <em>{{ cert.author_name }}</em>, demonstrating scholarly discipline, active reflection, and lifelong curiosity.
-            </div>
 
-            <div class="cert-meta-grid">
-                <div class="meta-col">
-                    <div class="meta-signature">{{ cert.completed_date }}</div>
-                    <div class="meta-label">Date Completed</div>
+    <!-- TOP ACTION CONTROLS -->
+    <div class="controls-toolbar">
+        <div class="name-editor">
+            <span>Name on Certificate:</span>
+            <input type="text" id="customNameInput" value="{{ cert.reader_name }}" oninput="updateCertName(this.value)" placeholder="Enter your full name">
+        </div>
+        <button type="button" class="btn-action btn-png" onclick="downloadCertificateImage()">
+            📥 Download Image (PNG)
+        </button>
+        <button type="button" class="btn-action btn-pdf" onclick="window.print()">
+            🖨️ Print / Save PDF
+        </button>
+        <a href="/" class="btn-action btn-back">← Back to Library</a>
+    </div>
+
+    <!-- CERTIFICATE CARD -->
+    <div class="cert-wrapper" id="certWrapper">
+        <div class="cert-card" id="certCard">
+            <div class="cert-inner-frame">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="Watermark" class="cert-watermark">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="cert-logo">
+                <div class="cert-kicker">Academic Honor & Literacy Achievement</div>
+                <h1 class="cert-title">Certificate of Completion</h1>
+                <div class="cert-present">This certifies that</div>
+                <div class="recipient-name" id="certDisplayName">{{ cert.reader_name }}</div>
+                <div class="cert-desc">
+                    has successfully read and completed the comprehensive edition of <strong>"{{ cert.book_title }}"</strong> by <em>{{ cert.author_name }}</em>, demonstrating scholarly discipline, active reflection, and lifelong curiosity.
                 </div>
-                <div class="meta-col">
-                    <div style="font-size: 2.2rem;">🏅</div>
-                    <div class="meta-label">Verified Reader</div>
+
+                <div class="cert-meta-grid">
+                    <div class="meta-col">
+                        <div class="meta-signature" id="certDate">{{ cert.completed_date }}</div>
+                        <div class="meta-label">Date Completed</div>
+                    </div>
+                    <div class="meta-col">
+                        <div class="gold-seal">
+                            <span>★ ★ ★</span>
+                            <span>VERIFIED</span>
+                        </div>
+                        <div class="meta-label">PustakVerse Seal</div>
+                    </div>
+                    <div class="meta-col">
+                        <div class="meta-signature">Abhinav Giri</div>
+                        <div class="meta-label">Platform Dean, PustakVerse</div>
+                    </div>
                 </div>
-                <div class="meta-col">
-                    <div class="meta-signature">Abhinav Giri</div>
-                    <div class="meta-label">Platform Dean, PustakVerse</div>
+
+                <div class="cert-footer-tag">
+                    <span>Verification ID: <strong>{{ cert.cert_id }}</strong></span>
+                    <span>&bull;</span>
+                    <span>Issued by {{ cert.issuer }}</span>
                 </div>
             </div>
-
-            <div class="cert-id-tag">Verification ID: {{ cert.cert_id }} &bull; Issued by {{ cert.issuer }}</div>
         </div>
     </div>
 
-    <div class="actions-bar">
-        <button type="button" class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
-        <a href="/" class="btn-back">← Back to Library</a>
-    </div>
+    <canvas id="exportCanvas" style="display: none;"></canvas>
+
+    <script>
+        function updateCertName(name) {
+            const cleanName = name.trim() || 'Avid Reader';
+            document.getElementById('certDisplayName').textContent = cleanName;
+        }
+
+        // Instant High-Resolution HTML5 Canvas PNG Generator
+        function downloadCertificateImage() {
+            const canvas = document.getElementById('exportCanvas');
+            const ctx = canvas.getContext('2d');
+            const readerName = document.getElementById('certDisplayName').textContent || 'Avid Reader';
+            const bookTitle = {{ cert.book_title | tojson }};
+            const authorName = {{ cert.author_name | tojson }};
+            const completedDate = {{ cert.completed_date | tojson }};
+            const certId = {{ cert.cert_id | tojson }};
+
+            // High Resolution Canvas (1600x1100 for crisp 300DPI printing)
+            canvas.width = 1600;
+            canvas.height = 1100;
+
+            // Background fill
+            const bgGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            bgGrad.addColorStop(0, '#ffffff');
+            bgGrad.addColorStop(0.5, '#faf8f5');
+            bgGrad.addColorStop(1, '#f7f4ee');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Outer dark border
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 24;
+            ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+
+            // Inner dashed orange border
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([12, 8]);
+            ctx.strokeRect(48, 48, canvas.width - 96, canvas.height - 96);
+            ctx.setLineDash([]); // Reset line dash
+
+            // Header text
+            ctx.fillStyle = '#ea580c';
+            ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('ACADEMIC HONOR & LITERACY ACHIEVEMENT', canvas.width / 2, 140);
+
+            // Title
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 54px Georgia, serif';
+            ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 220);
+
+            // Subtitle
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'italic 28px Georgia, serif';
+            ctx.fillText('This certifies that', canvas.width / 2, 290);
+
+            // Recipient Name
+            ctx.fillStyle = '#ea580c';
+            ctx.font = 'bold 62px Georgia, serif';
+            ctx.fillText(readerName, canvas.width / 2, 380);
+
+            // Underline under name
+            const nameMetrics = ctx.measureText(readerName);
+            ctx.strokeStyle = '#fed7aa';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo((canvas.width - nameMetrics.width) / 2 - 30, 405);
+            ctx.lineTo((canvas.width + nameMetrics.width) / 2 + 30, 405);
+            ctx.stroke();
+
+            // Description text
+            ctx.fillStyle = '#334155';
+            ctx.font = '26px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(`has successfully read and completed the comprehensive edition of`, canvas.width / 2, 470);
+            
+            ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText(`"${bookTitle}"`, canvas.width / 2, 520);
+
+            ctx.font = 'italic 24px Georgia, serif';
+            ctx.fillStyle = '#475569';
+            ctx.fillText(`by ${authorName}`, canvas.width / 2, 565);
+
+            ctx.font = '22px "Plus Jakarta Sans", sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('demonstrating scholarly discipline, active reflection, and lifelong curiosity.', canvas.width / 2, 615);
+
+            // Divider
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(150, 700);
+            ctx.lineTo(canvas.width - 150, 700);
+            ctx.stroke();
+
+            // Date Signature
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'italic 30px Georgia, serif';
+            ctx.fillText(completedDate, 350, 780);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(220, 800);
+            ctx.lineTo(480, 800);
+            ctx.stroke();
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('DATE COMPLETED', 350, 830);
+
+            // Gold Verified Seal (Center)
+            const sealX = canvas.width / 2;
+            const sealY = 780;
+            ctx.beginPath();
+            ctx.arc(sealX, sealY, 55, 0, 2 * Math.PI);
+            ctx.fillStyle = '#d97706';
+            ctx.fill();
+            ctx.strokeStyle = '#fde68a';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('★ ★ ★', sealX, sealY - 10);
+            ctx.fillText('VERIFIED', sealX, sealY + 15);
+            ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('PUSTAKVERSE SEAL', sealX, 865);
+
+            // Dean Signature
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'italic 34px Georgia, serif';
+            ctx.fillText('Abhinav Giri', canvas.width - 350, 780);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 480, 800);
+            ctx.lineTo(canvas.width - 220, 800);
+            ctx.stroke();
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('PLATFORM DEAN, PUSTAKVERSE', canvas.width - 350, 830);
+
+            // Footer verification tag
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '18px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(`Verification ID: ${certId}  •  Issued by PustakVerse Global Digital Library`, canvas.width / 2, 990);
+
+            // Trigger direct PNG download
+            const link = document.createElement('a');
+            const cleanFileName = `PustakVerse_Certificate_${bookTitle.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+            link.download = cleanFileName;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
 </body>
 </html>

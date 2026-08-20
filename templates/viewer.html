@@ -4,719 +4,941 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading: {{ book.title }} - PustakVerse</title>
-      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&display=swap" rel="stylesheet">
+    
+    <!-- PDF.js Library for Universal High-Performance In-Browser PDF Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
     <style>
+        * { box-sizing: border-box; }
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            overflow: hidden; /* Prevents scrolling outside the iframe */
-            background-color: #333;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #f8fafc;
         }
-        .header {
-            background-color: #1a1a1a;
-            color: white;
-            padding: 10px 20px;
+
+        /* --- MODERN ORGANIZED READER HEADER --- */
+        .reader-navbar {
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            padding: 8px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            z-index: 10;
+            height: 52px;
+            z-index: 100;
             position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
-        
-        .header-left {
+
+        .nav-section-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
         }
 
-        .header a {
-            color: #e67e22;
+        .btn-nav-back {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 6px 12px;
+            border-radius: 8px;
             text-decoration: none;
-            font-weight: bold;
-            transition: color 0.2s;
+            font-size: 0.84rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        
-        .header a:hover {
-            color: #f39c12;
+        .btn-nav-back:hover {
+            background: #334155;
+            color: #ffffff;
+            border-color: #475569;
         }
 
-        /* View Controls */
-        .view-controls {
+        .book-title-badge {
             display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .book-main-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 320px;
+        }
+        .book-meta-sub {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+
+        /* CENTER CONTROLS (PAGE & ZOOM) */
+        .nav-section-center {
+            display: flex;
+            align-items: center;
             gap: 8px;
-            background: #2c3e50;
+            background: #1e293b;
+            padding: 4px 10px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+        }
+
+        .ctrl-btn {
+            background: transparent;
+            color: #cbd5e1;
+            border: none;
             padding: 4px 8px;
             border-radius: 6px;
-        }
-        .view-btn {
-            background: transparent;
-            color: #ecf0f1;
-            border: 1px solid transparent;
-            padding: 4px 10px;
-            border-radius: 4px;
             cursor: pointer;
             font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .ctrl-btn:hover:not(:disabled) {
+            background: #334155;
+            color: #ffffff;
+        }
+        .ctrl-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .page-num-input {
+            width: 42px;
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: #ffffff;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 2px 4px;
+            border-radius: 6px;
+            outline: none;
+        }
+        .page-num-input:focus {
+            border-color: #ea580c;
+        }
+        .page-total-text {
+            font-size: 0.82rem;
+            color: #94a3b8;
             font-weight: 600;
+        }
+
+        /* RIGHT ACTION GROUP */
+        .nav-section-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .action-pill {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .action-pill:hover {
+            background: #334155;
+            color: #ffffff;
+            border-color: #475569;
+        }
+
+        .action-pill.active {
+            background: #ea580c;
+            color: #ffffff;
+            border-color: #f97316;
+        }
+
+        .action-pill-cert {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+        .action-pill-cert:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            transform: translateY(-1px);
+        }
+
+        .action-pill-ambience {
+            background: #0f766e;
+            color: white;
+            border: none;
+        }
+        .action-pill-ambience.playing {
+            background: #059669;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+            animation: pulseGlow 2s infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 14px rgba(16, 185, 129, 0.8); }
+        }
+
+        /* --- PDF VIEWER MAIN CONTAINER --- */
+        .viewer-viewport {
+            height: calc(100vh - 52px);
+            width: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+            background: #18181b;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .pdf-canvas-card {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 24px;
+            border-radius: 4px;
+            background: #ffffff;
+            transition: filter 0.2s, transform 0.2s;
+            max-width: 100%;
+        }
+
+        /* THEMES */
+        body.theme-sepia .viewer-viewport { background-color: #f4ecd8; }
+        body.theme-sepia .pdf-canvas-card { filter: sepia(0.35) contrast(0.95); }
+        
+        body.theme-light .viewer-viewport { background-color: #e2e8f0; }
+        body.theme-light .pdf-canvas-card { filter: none; }
+
+        body.theme-dark .viewer-viewport { background-color: #090d16; }
+        body.theme-dark .pdf-canvas-card { filter: contrast(1.02); }
+
+        /* LOADING SPINNER */
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            color: #94a3b8;
+            gap: 16px;
+        }
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(234, 88, 12, 0.2);
+            border-top-color: #ea580c;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- AMBIENCE SOUNDS MODAL --- */
+        .ambience-modal {
+            display: none;
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 330px;
+            background: #1e293b;
+            border: 1.5px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.5);
+            z-index: 1050;
+            padding: 20px;
+            flex-direction: column;
+            gap: 16px;
+            backdrop-filter: blur(8px);
+        }
+        .soundscape-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .sound-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #cbd5e1;
             transition: all 0.2s;
         }
-        .view-btn:hover {
-            background: #34495e;
-            border-color: #7f8c8d;
-        }
-        .view-btn:active {
-            background: #e67e22;
+        .sound-card:hover {
+            border-color: #64748b;
             color: white;
         }
-
-        /* Preview Warning Banner */
-        .preview-warning { 
-            background: #feebc8; 
-            color: #c05621; 
-            padding: 12px; 
-            text-align: center; 
-            font-weight: bold; 
-            border-bottom: 1px solid #f6ad55; 
-            z-index: 9; 
-            position: relative; 
-            font-size: 0.95rem; 
+        .sound-card.active {
+            background: #0d9488;
+            border-color: #14b8a6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
         }
 
-        /* Iframe Sizing */
-        iframe {
-            width: 100%;
-            border: none;
+        /* --- CERTIFICATE CELEBRATION MODAL --- */
+        .cert-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,23,42,0.8);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
         }
-        .pdf-container { height: calc(100vh - 48px); }
-        .pdf-container.with-warning { height: calc(100vh - 93px); }
-
-        /* --- NEW: Google Drive Clipping Wrapper --- */
-        .drive-wrapper {
-            width: 100%;
-            overflow: hidden; /* Hides anything pushed outside this box */
-            position: relative;
-        }
-        .drive-wrapper.standard { height: calc(100vh - 48px); }
-        .drive-wrapper.with-warning { height: calc(100vh - 93px); }
-
-        .drive-iframe {
-            position: absolute;
-            top: -56px; /* Pushes the iframe up to hide the Google Drive pop-out toolbar */
-            left: 0;
-            width: 100%;
-            height: calc(100% + 56px); /* Compensates for the height lost at the top */
-            border: none;
+        .cert-dialog-box {
+            background: #1e293b;
+            border: 2px solid #059669;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
         }
 
-        /* Lock Screen for Drive Links */
-        .drive-block { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: calc(100vh - 48px); text-align: center; padding: 20px; background-color: #f4f6f9; 
+        /* --- STUDY DRAWER (NOTES & BOOKMARKS) --- */
+        .study-drawer {
+            display: none;
+            position: fixed;
+            top: 52px;
+            right: 0;
+            bottom: 0;
+            width: 360px;
+            max-width: 90vw;
+            background: #1e293b;
+            border-left: 1px solid #334155;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.4);
+            z-index: 1020;
+            flex-direction: column;
+            padding: 20px;
         }
-        .drive-block h2 { color: #2d3748; margin-top: 15px; }
-        .drive-block p { color: #718096; max-width: 500px; line-height: 1.6; }
+
+        .drawer-tabs {
+            display: flex;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 16px;
+        }
+        .drawer-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: #94a3b8;
+            border-bottom: 2px solid transparent;
+        }
+        .drawer-tab.active {
+            color: #ea580c;
+            border-bottom-color: #ea580c;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 900px) {
+            .nav-section-center { display: none; }
+            .book-main-title { max-width: 180px; }
+        }
     </style>
 </head>
-<!-- Prevent Right Click entirely on the body -->
-<body oncontextmenu="return false;">
+<body class="theme-dark" oncontextmenu="return false;">
 
-    <div class="header">
-        <div class="header-left">
-            <span>📖 Reading: <strong>{{ book.title }}</strong></span>
-            
-            <!-- Show view controls ONLY for securely uploaded internal PDFs -->
-            {% if not book.pdf_file.startswith('http') %}
-            <div class="view-controls">
-                <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
-                <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
-                <button class="view-btn" onclick="changeView('FitV')" title="Fit to screen height">Fit Height</button>
+    <!-- TOP SLICK HEADER -->
+    <nav class="reader-navbar">
+        <!-- LEFT: BACK & BOOK INFO -->
+        <div class="nav-section-left">
+            <a href="javascript:history.back()" class="btn-nav-back">← Library</a>
+            <div class="book-title-badge">
+                <span class="book-main-title" title="{{ book.title }}">{{ book.title }}</span>
+                <span class="book-meta-sub">{{ book.catalog or 'Global Collection' }}</span>
             </div>
-            {% endif %}
+        </div>
 
-            <!-- Reading Theme & Fullscreen Controls -->
-            <div class="view-controls">
-                <button class="view-btn" onclick="setViewerTheme('dark')" title="Dark Reading Mode">🌙 Dark</button>
-                <button class="view-btn" onclick="setViewerTheme('sepia')" title="Warm Sepia Mode">📜 Sepia</button>
-                <button class="view-btn" onclick="setViewerTheme('light')" title="Light Mode">☀️ Day</button>
-                <button class="view-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>
-                <button class="view-btn" onclick="toggleNotesDrawer()" style="background: #ea580c; color: white;" title="Open Personal Reading Notes">📝 Notes</button>
-                <button class="view-btn" onclick="toggleBookmarksModal()" style="background: #2563eb; color: white;" title="Manage Bookmarks">🔖 Bookmarks</button>
-                <button class="view-btn" onclick="toggleFlashcardsDrawer()" style="background: #7c3aed; color: white;" title="5-Min AI Flashcards">⚡ Flashcards</button>
-                <button class="view-btn" onclick="openQuoteModal()" style="background: #0284c7; color: white;" title="Create Branded Quote Card">💬 Quote Card</button>
-                <button class="view-btn" id="ambientAudioBtn" onclick="toggleAmbientAudio()" style="background: #0d9488; color: white;" title="Focus Ambient Noise Player">🎧 Ambience</button>
-                <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="view-btn" style="background: #10b981; color: white; text-decoration: none;" title="Claim Completion Certificate">🎓 Certificate</a>
-                
-                <!-- Focus Timer Button -->
-                <button class="view-btn" id="focusTimerBtn" onclick="toggleFocusTimer()" style="background: #047857; color: white;" title="Click to Start/Pause Reading Timer">
-                    ⏱️ <span id="timerDisplay">00:00</span>
+        <!-- CENTER: PAGE NAVIGATION & ZOOM -->
+        <div class="nav-section-center" id="pdfControlsCenter">
+            <button class="ctrl-btn" id="prevPageBtn" onclick="changePage(-1)" title="Previous Page (Left Arrow)">◀</button>
+            <input type="number" id="pageNumInput" class="page-num-input" value="1" min="1" onchange="jumpToPage(this.value)">
+            <span class="page-total-text" id="pageCountDisplay">/ 1</span>
+            <button class="ctrl-btn" id="nextPageBtn" onclick="changePage(1)" title="Next Page (Right Arrow)">▶</button>
+            <div style="width: 1px; height: 16px; background: #334155; margin: 0 4px;"></div>
+            <button class="ctrl-btn" onclick="adjustZoom(-0.15)" title="Zoom Out (-)">−</button>
+            <span id="zoomLevelText" style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; min-width: 36px; text-align: center;">100%</span>
+            <button class="ctrl-btn" onclick="adjustZoom(0.15)" title="Zoom In (+)">+</button>
+            <button class="ctrl-btn" onclick="fitWidth()" title="Fit Width">Fit</button>
+        </div>
+
+        <!-- RIGHT: STREAMLINED ACTION CONTROLS -->
+        <div class="nav-section-right">
+            <!-- AMBIENCE FOCUS PLAYER -->
+            <button class="action-pill action-pill-ambience" id="ambienceBtn" onclick="toggleAmbienceModal()" title="Focus Ambient Soundscapes">
+                🎧 <span id="ambienceBtnLabel">Ambience</span>
+            </button>
+
+            <!-- STUDY DRAWER (NOTES & BOOKMARKS) -->
+            <button class="action-pill" onclick="toggleStudyDrawer()" title="Open Notes & Bookmarks">
+                📝 <span style="display: none; @media(min-width: 600px){display: inline;}">Notes</span>
+            </button>
+
+            <!-- THEME SWITCHER -->
+            <button class="action-pill" id="themeBtn" onclick="cycleTheme()" title="Switch Reading Theme">
+                <span id="themeIcon">🌙</span>
+            </button>
+
+            <!-- COMPLETION CERTIFICATE -->
+            <button class="action-pill action-pill-cert" onclick="openCertDialog()" title="Claim Verified Completion Certificate">
+                🎓 Certificate
+            </button>
+
+            <!-- FULLSCREEN -->
+            <button class="action-pill" onclick="toggleFullscreen()" title="Fullscreen Mode (F)">
+                ⛶
+            </button>
+        </div>
+    </nav>
+
+    <!-- AMBIENCE FLOATING CONTROLLER -->
+    <div class="ambience-modal" id="ambienceModal">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #ffffff; font-size: 0.95rem;">🎧 Focus Ambience Suite</strong>
+            <button onclick="toggleAmbienceModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">&times;</button>
+        </div>
+        
+        <div class="soundscape-grid">
+            <div class="sound-card active" data-sound="rain" onclick="selectSoundscape('rain')">🌧️ Rain & Storm</div>
+            <div class="sound-card" data-sound="cafe" onclick="selectSoundscape('cafe')">☕ Cozy Cafe</div>
+            <div class="sound-card" data-sound="forest" onclick="selectSoundscape('forest')">🌲 Forest Breeze</div>
+            <div class="sound-card" data-sound="binaural" onclick="selectSoundscape('binaural')">🧘 432Hz Focus</div>
+            <div class="sound-card" data-sound="brown" onclick="selectSoundscape('brown')" style="grid-column: span 2;">📻 Deep Brown Noise</div>
+        </div>
+
+        <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 6px;">
+                <span>Volume</span>
+                <span id="volumeValText">40%</span>
+            </div>
+            <input type="range" min="0" max="100" value="40" oninput="setAmbienceVolume(this.value)" style="width: 100%; accent-color: #14b8a6; cursor: pointer;">
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            <button type="button" id="ambienceMasterBtn" onclick="toggleMasterAmbience()" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 700; background: #059669; color: white; cursor: pointer;">
+                ▶ Play Ambience
+            </button>
+        </div>
+    </div>
+
+    <!-- CERTIFICATE CONGRATULATIONS DIALOG -->
+    <div class="cert-dialog-overlay" id="certDialog">
+        <div class="cert-dialog-box">
+            <div style="font-size: 3.2rem; margin-bottom: 8px;">🎓</div>
+            <h2 style="color: #ffffff; margin: 0 0 10px; font-size: 1.5rem;">Reading Achievement</h2>
+            <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px;">
+                Congratulations on exploring <strong>"{{ book.title }}"</strong>! You can now claim, customize, and export your official verified certificate.
+            </p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="action-pill action-pill-cert" style="padding: 12px 24px; font-size: 0.95rem; text-decoration: none;">
+                    📜 View & Download Certificate
+                </a>
+                <button onclick="closeCertDialog()" class="action-pill" style="padding: 12px 18px;">
+                    Continue Reading
                 </button>
             </div>
         </div>
-        
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #cbd5e1;">
-                <span>🔅</span>
-                <input type="range" id="brightnessRange" min="40" max="100" value="100" oninput="adjustBrightness(this.value)" style="width: 70px; cursor: pointer; accent-color: #f66d2f;" title="Brightness Dimmer">
+    </div>
+
+    <!-- STUDY DRAWER (NOTES & BOOKMARKS) -->
+    <div class="study-drawer" id="studyDrawer">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <strong style="color: #ffffff; font-size: 1rem;">Study & Retention Tools</strong>
+            <button onclick="toggleStudyDrawer()" style="background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">&times;</button>
+        </div>
+
+        <div class="drawer-tabs">
+            <div class="drawer-tab active" id="tabNotesBtn" onclick="switchDrawerTab('notes')">📝 Notes</div>
+            <div class="drawer-tab" id="tabBookmarksBtn" onclick="switchDrawerTab('bookmarks')">🔖 Bookmarks</div>
+            <div class="drawer-tab" id="tabFlashcardsBtn" onclick="switchDrawerTab('flashcards')">⚡ Flashcards</div>
+        </div>
+
+        <!-- NOTES TAB -->
+        <div id="tabNotesContent" style="display: flex; flex-direction: column; flex: 1;">
+            <textarea id="studyNotesArea" placeholder="Capture key insights, formulas, quotes, or chapter summaries..." style="flex: 1; width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 10px; color: #ffffff; padding: 12px; font-family: inherit; font-size: 0.88rem; line-height: 1.6; resize: none; outline: none; margin-bottom: 12px;" oninput="saveStudyNotes()"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; color: #94a3b8;">
+                <span id="notesStatusText">Auto-saved</span>
+                <button onclick="copyStudyNotes()" style="background: #334155; color: #ffffff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.76rem; font-weight: 700;">Copy Notes</button>
             </div>
-            <span id="readingProgressText" style="font-size: 0.85rem; color: #a0aec0;"></span>
-            <a href="javascript:history.back()">← Back</a>
+        </div>
+
+        <!-- BOOKMARKS TAB -->
+        <div id="tabBookmarksContent" style="display: none; flex-direction: column; flex: 1;">
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                <input type="text" id="newBmInput" placeholder="Marker title / chapter..." style="flex: 1; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; outline: none;">
+                <button onclick="addBookmarkHere()" style="background: #2563eb; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 0.85rem;">+ Save</button>
+            </div>
+            <div id="bookmarksContainer" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 20px;">Loading bookmarks...</div>
+            </div>
+        </div>
+
+        <!-- FLASHCARDS TAB -->
+        <div id="tabFlashcardsContent" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; gap: 12px;">
+            <div id="flashcardsContainer">
+                <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 20px;">Loading high-yield concept cards...</div>
+            </div>
         </div>
     </div>
 
-    <!-- FLASHCARDS DRAWER -->
-    <div id="flashcardsDrawer" style="display: none; position: fixed; top: 48px; right: 0; bottom: 0; width: 360px; max-width: 90vw; background: #ffffff; box-shadow: -5px 0 25px rgba(0,0,0,0.2); z-index: 1001; flex-direction: column; padding: 20px; box-sizing: border-box; border-left: 1px solid #e2e8f0; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-            <h3 style="margin: 0; font-size: 1.1rem; color: #5b21b6;">⚡ GranthMind AI Study Flashcards</h3>
-            <button onclick="toggleFlashcardsDrawer()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
+    <!-- MAIN VIEWPORT / CANVAS CONTAINER -->
+    <div class="viewer-viewport" id="viewerScrollContainer">
+        <div id="loadingIndicator" class="loading-state">
+            <div class="spinner"></div>
+            <div>Rendering high-definition document...</div>
         </div>
-        <div id="flashcardsList" style="display: flex; flex-direction: column; gap: 14px;">
-            <div style="text-align: center; padding: 20px; color: #64748b;">Loading high-yield concept cards...</div>
-        </div>
+        <div id="pagesContainer" style="display: flex; flex-direction: column; align-items: center; width: 100%;"></div>
     </div>
 
-    <!-- BOOKMARKS MODAL -->
-    <div id="bookmarksModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); z-index: 1002; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 440px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: #0f172a;">🔖 Multi-Bookmark Tray</h3>
-                <button onclick="toggleBookmarksModal()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
-            </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                <input type="text" id="bmTitleInput" placeholder="Bookmark name or chapter..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
-                <button type="button" onclick="addNewBookmark()" style="background: #2563eb; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 700; cursor: pointer;">+ Add</button>
-            </div>
-            <div id="bookmarksList" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                <div style="color: #94a3b8; font-size: 0.88rem; text-align: center;">No bookmarks saved yet.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SOCIAL QUOTE CARD GENERATOR MODAL -->
-    <div id="quoteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); z-index: 1002; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: #0f172a;">💬 Social Quote Card Generator</h3>
-                <button onclick="document.getElementById('quoteModal').style.display='none'" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
-            </div>
-            <textarea id="quoteTextInput" rows="3" placeholder="Enter memorable quote or insight from this book..." style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.95rem; margin-bottom: 12px;" oninput="renderQuoteCanvas()"></textarea>
-            <canvas id="quoteCanvas" width="600" height="340" style="width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 14px; background: #0f172a;"></canvas>
-            <button type="button" onclick="downloadQuoteCard()" style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; border: none; padding: 10px 24px; border-radius: 20px; font-weight: 700; cursor: pointer;">📥 Download Quote Card</button>
-        </div>
-    </div>
-
-    <!-- NOTES SIDEBAR DRAWER -->
-    <div id="notesDrawer" style="display: none; position: fixed; top: 48px; right: 0; bottom: 0; width: 340px; max-width: 90vw; background: #ffffff; box-shadow: -5px 0 25px rgba(0,0,0,0.15); z-index: 1000; flex-direction: column; padding: 18px; box-sizing: border-box; border-left: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-            <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">📝 Reading Notes & Takeaways</h3>
-            <button onclick="toggleNotesDrawer()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
-        </div>
-        <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 10px 0;">Notes auto-save continuously to your account and browser.</p>
-        <textarea id="bookNotesArea" placeholder="Write key points, thoughts, chapter summaries, or quotes..." style="flex: 1; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; resize: none; outline: none; margin-bottom: 10px;" oninput="saveBookNotes()"></textarea>
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">
-            <span id="notesCountText">0 characters</span>
-            <span id="notesSaveStatus" style="color: #16a34a; font-weight: 600;">Saved</span>
-        </div>
-        <div style="display: flex; gap: 8px;">
-            <button type="button" onclick="copyBookNotes()" class="view-btn" style="flex: 1; background: #0f172a; color: white; padding: 8px; border-radius: 6px; font-size: 0.8rem;">Copy</button>
-            <button type="button" onclick="downloadBookNotes()" class="view-btn" style="flex: 1; background: #2563eb; color: white; padding: 8px; border-radius: 6px; font-size: 0.8rem;">Download .txt</button>
-        </div>
-    </div>
-
-    <!-- Shows a bright warning banner if the user is in Preview mode -->
-    {% if not can_read %}
-        <div class="preview-warning">
-            ⚠️ You are viewing a limited preview. Purchase the book to unlock the full version.
-        </div>
-    {% endif %}
-
-    <!-- Determine how to serve the file based on link type and purchase status -->
-    {% if book.pdf_file.startswith('http') %}
-        
-        <!-- Google Drive Links (Clipped to hide pop-out) -->
-        {% if can_read %}
-            <div class="drive-wrapper {% if not can_read %}with-warning{% else %}standard{% endif %}" id="viewerContainer">
-                <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="drive-iframe" allow="autoplay"></iframe>
-            </div>
-        {% else %}
-            <!-- Block Drive Links if Unpaid -->
-            <div class="drive-block" id="viewerContainer">
-                <span style="font-size: 4rem;">🔒</span>
-                <h2>Preview Not Available</h2>
-                <p>Because this premium book is securely hosted on an external drive, our system cannot automatically slice it to generate a preview. Please purchase the book to unlock full access.</p>
-                <a href="javascript:history.back()" style="display:inline-block; margin-top:20px; padding:10px 20px; background:#f66d2f; color:white; border-radius:5px; text-decoration:none; font-weight:bold;">Go Back</a>
-            </div>
-        {% endif %}
-
-    {% else %}
-        <!-- Secure Internal Python Slicer for Uploaded PDFs -->
-        <div id="viewerContainer" style="width: 100%; height: 100%;">
-            <object id="pdf-object" 
-                    data="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
-                    type="application/pdf" 
-                    class="pdf-container {% if not can_read %}with-warning{% endif %}"
-                    style="width: 100%; border: none;">
-                <iframe id="pdf-frame" 
-                        src="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
-                        class="pdf-container {% if not can_read %}with-warning{% endif %}" 
-                        style="width: 100%; border: none;">
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; text-align: center; color: #64748b;">
-                        <p style="font-size: 1.1rem; color: #1e293b;">Your browser cannot display the PDF viewer directly.</p>
-                    </div>
-                </iframe>
-            </object>
-        </div>
-    {% endif %}
-
-    <!-- Advanced Protection & View Scripts -->
     <script>
-        // Reading Progress & Bookmark Memory
-        const BOOK_KEY = 'pv_book_read_{{ book.id }}';
-        const NOTES_KEY = 'pv_notes_{{ book.id }}';
+        // PDF.js State Management
+        let pdfDoc = null;
+        let currentPageNum = 1;
+        let totalPages = 1;
+        let currentScale = 1.25;
+        let isRendering = false;
+        const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        function recordReadingSession() {
-            const now = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            localStorage.setItem(BOOK_KEY, JSON.stringify({
-                title: {{ book.title | tojson }},
-                lastRead: now,
-                timestamp: Date.now()
-            }));
-            const progressEl = document.getElementById('readingProgressText');
-            if (progressEl) {
-                progressEl.textContent = '📖 Bookmarked';
+        // Initialize and Load Document
+        async function loadPdfDocument() {
+            const loadingEl = document.getElementById('loadingIndicator');
+            try {
+                const loadingTask = pdfjsLib.getDocument({
+                    url: pdfUrl,
+                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                    cMapPacked: true
+                });
+
+                pdfDoc = await loadingTask.promise;
+                totalPages = pdfDoc.numPages;
+                document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
+                document.getElementById('pageNumInput').max = totalPages;
+                if (loadingEl) loadingEl.style.display = 'none';
+
+                // Check for URL saved page
+                const urlParams = new URLSearchParams(window.location.search);
+                const startPage = parseInt(urlParams.get('page') || '1', 10);
+                currentPageNum = Math.min(Math.max(1, startPage), totalPages);
+                document.getElementById('pageNumInput').value = currentPageNum;
+
+                renderAllVisiblePages();
+                recordProgress(currentPageNum);
+            } catch (err) {
+                if (loadingEl) {
+                    loadingEl.innerHTML = `
+                        <div style="text-align: center; max-width: 480px; padding: 20px;">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">📖</div>
+                            <h3 style="color: #ffffff; margin-bottom: 8px;">Document Ready</h3>
+                            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Opening secure stream...</p>
+                            <iframe src="{{ book.pdf_file.replace('/view', '/preview') if book.pdf_file.startswith('http') else url_for('serve_secure_pdf', book_id=book.id) }}" style="width: 90vw; height: 75vh; border: none; border-radius: 12px;"></iframe>
+                        </div>
+                    `;
+                }
             }
         }
-        recordReadingSession();
 
-        // Notes Drawer Controller
-        function toggleNotesDrawer() {
-            const drawer = document.getElementById('notesDrawer');
-            if (!drawer) return;
-            if (drawer.style.display === 'none' || !drawer.style.display) {
-                drawer.style.display = 'flex';
-                loadBookNotes();
+        async function renderAllVisiblePages() {
+            const container = document.getElementById('pagesContainer');
+            if (!container || !pdfDoc) return;
+            container.innerHTML = '';
+
+            // Render current page or scroll batch
+            for (let i = 1; i <= Math.min(totalPages, 50); i++) {
+                const pageWrapper = document.createElement('div');
+                pageWrapper.id = `pageWrapper_${i}`;
+                pageWrapper.style.marginBottom = '20px';
+                pageWrapper.style.display = 'flex';
+                pageWrapper.style.justifyContent = 'center';
+
+                const canvas = document.createElement('canvas');
+                canvas.id = `pdfCanvas_${i}`;
+                canvas.className = 'pdf-canvas-card';
+                pageWrapper.appendChild(canvas);
+                container.appendChild(pageWrapper);
+
+                renderPageCanvas(i, canvas);
+            }
+        }
+
+        async function renderPageCanvas(pageNum, canvas) {
+            try {
+                const page = await pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: currentScale });
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            } catch(e) {}
+        }
+
+        function changePage(delta) {
+            const newPage = currentPageNum + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                jumpToPage(newPage);
+            }
+        }
+
+        function jumpToPage(pageNum) {
+            const num = parseInt(pageNum, 10);
+            if (num >= 1 && num <= totalPages) {
+                currentPageNum = num;
+                document.getElementById('pageNumInput').value = currentPageNum;
+                const targetWrapper = document.getElementById(`pageWrapper_${currentPageNum}`);
+                if (targetWrapper) {
+                    targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                recordProgress(currentPageNum);
+            }
+        }
+
+        function adjustZoom(delta) {
+            currentScale = Math.max(0.7, Math.min(2.5, currentScale + delta));
+            document.getElementById('zoomLevelText').textContent = `${Math.round(currentScale * 80)}%`;
+            renderAllVisiblePages();
+        }
+
+        function fitWidth() {
+            const viewportWidth = window.innerWidth - 60;
+            currentScale = Math.max(0.8, Math.min(2.2, viewportWidth / 900));
+            document.getElementById('zoomLevelText').textContent = `Fit`;
+            renderAllVisiblePages();
+        }
+
+        // Record progress in LocalStorage for "Pickup Where You Left"
+        function recordProgress(page) {
+            try {
+                const progress = {
+                    id: {{ book.id }},
+                    title: {{ book.title | tojson }},
+                    author: {{ (book.author or 'Author') | tojson }},
+                    cover: {{ (book.cover_image or '') | tojson }},
+                    page: page,
+                    total: totalPages || 50,
+                    updatedAt: Date.now()
+                };
+                localStorage.setItem('pv_last_read_book', JSON.stringify(progress));
+            } catch(e) {}
+        }
+
+        // --- WEB AUDIO API AMBIENCE GENERATOR ---
+        let audioCtx = null;
+        let currentNoiseSource = null;
+        let masterGain = null;
+        let isAmbienceActive = false;
+        let selectedSound = 'rain';
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.4;
+                masterGain.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function selectSoundscape(type) {
+            selectedSound = type;
+            document.querySelectorAll('.sound-card').forEach(el => {
+                el.classList.toggle('active', el.getAttribute('data-sound') === type);
+            });
+            if (isAmbienceActive) {
+                startSoundGenerator(type);
+            }
+        }
+
+        function startSoundGenerator(type) {
+            initAudio();
+            if (currentNoiseSource) {
+                try { currentNoiseSource.stop(); currentNoiseSource.disconnect(); } catch(e) {}
+            }
+
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            if (type === 'rain') {
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    data[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = data[i];
+                    data[i] *= 3.5;
+                }
+            } else if (type === 'binaural') {
+                // 432Hz Pure Harmonic Drone
+                for (let i = 0; i < bufferSize; i++) {
+                    const t = i / audioCtx.sampleRate;
+                    data[i] = 0.15 * Math.sin(2 * Math.PI * 432 * t) + 0.08 * Math.sin(2 * Math.PI * 216 * t);
+                }
+            } else if (type === 'forest') {
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    data[i] = (lastOut + (0.01 * white)) / 1.01;
+                    lastOut = data[i];
+                    data[i] *= 2.2;
+                }
             } else {
-                drawer.style.display = 'none';
+                // Brown Noise
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    data[i] = (lastOut + (0.05 * white)) / 1.05;
+                    lastOut = data[i];
+                    data[i] *= 3.0;
+                }
+            }
+
+            currentNoiseSource = audioCtx.createBufferSource();
+            currentNoiseSource.buffer = buffer;
+            currentNoiseSource.loop = true;
+            currentNoiseSource.connect(masterGain);
+            currentNoiseSource.start();
+        }
+
+        function toggleMasterAmbience() {
+            initAudio();
+            const btn = document.getElementById('ambienceMasterBtn');
+            const pill = document.getElementById('ambienceBtn');
+            const label = document.getElementById('ambienceBtnLabel');
+
+            if (isAmbienceActive) {
+                if (currentNoiseSource) {
+                    try { currentNoiseSource.stop(); } catch(e) {}
+                }
+                isAmbienceActive = false;
+                if (btn) { btn.textContent = '▶ Play Ambience'; btn.style.background = '#059669'; }
+                if (pill) pill.classList.remove('playing');
+                if (label) label.textContent = 'Ambience';
+            } else {
+                startSoundGenerator(selectedSound);
+                isAmbienceActive = true;
+                if (btn) { btn.textContent = '⏹ Stop Ambience'; btn.style.background = '#dc2626'; }
+                if (pill) pill.classList.add('playing');
+                if (label) label.textContent = 'Playing';
             }
         }
 
-        function loadBookNotes() {
-            const area = document.getElementById('bookNotesArea');
-            if (area) {
-                area.value = localStorage.getItem(NOTES_KEY) || '';
-                updateNotesCount();
+        function setAmbienceVolume(val) {
+            initAudio();
+            const gain = val / 100;
+            if (masterGain) masterGain.gain.value = gain;
+            const text = document.getElementById('volumeValText');
+            if (text) text.textContent = `${val}%`;
+        }
+
+        function toggleAmbienceModal() {
+            const modal = document.getElementById('ambienceModal');
+            if (!modal) return;
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // --- THEME CYCLING ---
+        const themes = ['theme-dark', 'theme-sepia', 'theme-light'];
+        let currentThemeIdx = 0;
+
+        function cycleTheme() {
+            currentThemeIdx = (currentThemeIdx + 1) % themes.length;
+            const nextTheme = themes[currentThemeIdx];
+            document.body.className = nextTheme;
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                icon.textContent = nextTheme === 'theme-sepia' ? '📜' : (nextTheme === 'theme-light' ? '☀️' : '🌙');
+            }
+            try { localStorage.setItem('pv_reader_theme', nextTheme); } catch(e) {}
+        }
+
+        // Restore saved theme
+        try {
+            const saved = localStorage.getItem('pv_reader_theme');
+            if (saved && themes.includes(saved)) {
+                document.body.className = saved;
+                currentThemeIdx = themes.indexOf(saved);
+                const icon = document.getElementById('themeIcon');
+                if (icon) icon.textContent = saved === 'theme-sepia' ? '📜' : (saved === 'theme-light' ? '☀️' : '🌙');
+            }
+        } catch(e) {}
+
+        // --- CERTIFICATE DIALOG ---
+        function openCertDialog() {
+            const dialog = document.getElementById('certDialog');
+            if (dialog) dialog.style.display = 'flex';
+        }
+        function closeCertDialog() {
+            const dialog = document.getElementById('certDialog');
+            if (dialog) dialog.style.display = 'none';
+        }
+
+        // --- STUDY DRAWER CONTROLLER ---
+        function toggleStudyDrawer() {
+            const drawer = document.getElementById('studyDrawer');
+            if (!drawer) return;
+            drawer.style.display = drawer.style.display === 'flex' ? 'none' : 'flex';
+            if (drawer.style.display === 'flex') loadStudyData();
+        }
+
+        function switchDrawerTab(tab) {
+            document.querySelectorAll('.drawer-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById('tabNotesContent').style.display = 'none';
+            document.getElementById('tabBookmarksContent').style.display = 'none';
+            document.getElementById('tabFlashcardsContent').style.display = 'none';
+
+            if (tab === 'notes') {
+                document.getElementById('tabNotesBtn').classList.add('active');
+                document.getElementById('tabNotesContent').style.display = 'flex';
+            } else if (tab === 'bookmarks') {
+                document.getElementById('tabBookmarksBtn').classList.add('active');
+                document.getElementById('tabBookmarksContent').style.display = 'flex';
+                loadBookmarks();
+            } else if (tab === 'flashcards') {
+                document.getElementById('tabFlashcardsBtn').classList.add('active');
+                document.getElementById('tabFlashcardsContent').style.display = 'flex';
+                loadFlashcards();
             }
         }
 
-        function saveBookNotes() {
-            const area = document.getElementById('bookNotesArea');
-            const status = document.getElementById('notesSaveStatus');
+        function loadStudyData() {
+            const area = document.getElementById('studyNotesArea');
             if (area) {
-                localStorage.setItem(NOTES_KEY, area.value);
-                updateNotesCount();
+                area.value = localStorage.getItem('pv_notes_{{ book.id }}') || '';
+            }
+        }
+
+        function saveStudyNotes() {
+            const area = document.getElementById('studyNotesArea');
+            const status = document.getElementById('notesStatusText');
+            if (area) {
+                localStorage.setItem('pv_notes_{{ book.id }}', area.value);
                 if (status) {
                     status.textContent = 'Saved';
-                    status.style.color = '#16a34a';
+                    status.style.color = '#10b981';
                 }
             }
         }
 
-        function updateNotesCount() {
-            const area = document.getElementById('bookNotesArea');
-            const countEl = document.getElementById('notesCountText');
-            if (area && countEl) {
-                const len = area.value.length;
-                const words = area.value.trim() ? area.value.trim().split(/\s+/).length : 0;
-                countEl.textContent = words + ' words (' + len + ' chars)';
-            }
-        }
-
-        function copyBookNotes() {
-            const area = document.getElementById('bookNotesArea');
+        function copyStudyNotes() {
+            const area = document.getElementById('studyNotesArea');
             if (area && area.value) {
-                navigator.clipboard.writeText(area.value).then(() => {
-                    alert("Notes copied to clipboard!");
-                }).catch(() => {
-                    alert("Notes copied!");
-                });
-            }
-        }
-
-        function downloadBookNotes() {
-            const area = document.getElementById('bookNotesArea');
-            if (!area || !area.value.trim()) {
-                alert("Please write some notes first before downloading.");
-                return;
-            }
-            const blob = new Blob([area.value], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'Notes_' + {{ book.title|tojson }}.replace(/[^a-zA-Z0-9]/g, '_') + '.txt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // Reading Theme Switcher
-        function setViewerTheme(theme) {
-            const body = document.body;
-            const container = document.getElementById('viewerContainer');
-            if (theme === 'sepia') {
-                body.style.backgroundColor = '#f4ecd8';
-                if (container) container.style.filter = 'sepia(0.35) contrast(0.95)';
-            } else if (theme === 'light') {
-                body.style.backgroundColor = '#f8fafc';
-                if (container) container.style.filter = 'none';
-            } else {
-                body.style.backgroundColor = '#18181b';
-                if (container) container.style.filter = 'none';
-            }
-            localStorage.setItem('pv_viewer_theme', theme);
-        }
-
-        const savedTheme = localStorage.getItem('pv_viewer_theme');
-        if (savedTheme) {
-            setViewerTheme(savedTheme);
-        }
-
-        // Fullscreen Toggle
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-        }
-
-        // Dynamically change the PDF view mode for internal files
-        function changeView(viewMode) {
-            const frame = document.getElementById('pdf-frame');
-            if (frame) {
-                const baseUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
-                frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
-            }
-        }
-
-        // Disable common keyboard shortcuts used for saving/printing/inspecting
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'f' || e.key === 'F') {
-                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-                    toggleFullscreen();
-                }
-            }
-            if ((e.ctrlKey && e.key === 's') || 
-                (e.ctrlKey && e.key === 'p') || 
-                (e.key === 'F12') || 
-                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-                (e.ctrlKey && e.shiftKey && e.key === 'C')) {
-                e.preventDefault();
-                alert('Downloading and Printing are disabled to protect author copyrights.');
-                return false;
-            }
-        });
-
-        // Focus Reading Timer Controller
-        let timerSeconds = 0;
-        let timerInterval = null;
-        let timerRunning = false;
-
-        function toggleFocusTimer() {
-            const btn = document.getElementById('focusTimerBtn');
-            const display = document.getElementById('timerDisplay');
-            if (timerRunning) {
-                clearInterval(timerInterval);
-                timerRunning = false;
-                if (btn) btn.style.background = '#d97706';
-            } else {
-                timerRunning = true;
-                if (btn) btn.style.background = '#047857';
-                timerInterval = setInterval(() => {
-                    timerSeconds++;
-                    const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
-                    const secs = String(timerSeconds % 60).padStart(2, '0');
-                    if (display) display.textContent = `${mins}:${secs}`;
-                }, 1000);
-            }
-        }
-
-        // Reader Brightness Dimmer Controller
-        function adjustBrightness(val) {
-            const container = document.getElementById('viewerContainer');
-            if (container) {
-                const currentFilter = container.style.filter || '';
-                const baseFilter = currentFilter.replace(/brightness\([^)]+\)/g, '').trim();
-                container.style.filter = `${baseFilter} brightness(${val / 100})`.trim();
-            }
-        }
-
-        // Automatic Reading Progress & Daily Streak Recorder
-        (function recordReadingSession() {
-            const bookId = {{ (book.id if book and book.id else 0) }};
-            const bookTitle = {{ (book.title if book and book.title else '')|tojson }};
-            const bookAuthor = {{ (book.author if book and book.author else '')|tojson }};
-            const bookCover = {{ (book.cover_image if book and book.cover_image else '')|tojson }};
-            
-            // Get URL param for page if any
-            const urlParams = new URLSearchParams(window.location.search);
-            const pageNum = parseInt(urlParams.get('page') || '1', 10);
-
-            const progress = {
-                id: bookId,
-                title: bookTitle,
-                author: bookAuthor,
-                cover: bookCover,
-                page: pageNum,
-                total: 50,
-                updatedAt: Date.now()
-            };
-            try {
-                localStorage.setItem('pv_last_read_book', JSON.stringify(progress));
-
-                // Update Reading Streak
-                const today = new Date().toISOString().slice(0, 10);
-                const lastDate = localStorage.getItem('pv_last_active_date');
-                let streak = parseInt(localStorage.getItem('pv_reading_streak') || '1', 10);
-
-                if (lastDate && lastDate !== today) {
-                    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-                    if (lastDate === yesterday) {
-                        streak += 1;
-                    } else {
-                        streak = 1;
-                    }
-                }
-                localStorage.setItem('pv_last_active_date', today);
-                localStorage.setItem('pv_reading_streak', streak.toString());
-            } catch (err) {}
-        })();
-
-        // Multi-Bookmark Management
-        function toggleBookmarksModal() {
-            const modal = document.getElementById('bookmarksModal');
-            if (modal) {
-                modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-                if (modal.style.display === 'flex') loadBookmarks();
+                navigator.clipboard.writeText(area.value).then(() => alert('Notes copied!'));
             }
         }
 
         function loadBookmarks() {
-            const bookId = {{ (book.id if book and book.id else 0) }};
-            fetch(`/api/bookmarks?book_id=${bookId}`)
+            fetch('/api/bookmarks?book_id={{ book.id }}')
                 .then(r => r.json())
                 .then(data => {
-                    const list = document.getElementById('bookmarksList');
-                    if (!list) return;
+                    const box = document.getElementById('bookmarksContainer');
+                    if (!box) return;
                     if (data.success && data.bookmarks && data.bookmarks.length > 0) {
-                        list.innerHTML = data.bookmarks.map(bm => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        box.innerHTML = data.bookmarks.map(bm => `
+                            <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <strong style="color: #0f172a; font-size: 0.9rem;">${bm.title}</strong>
-                                    <div style="font-size: 0.78rem; color: #64748b;">Page ${bm.page_number} &bull; ${new Date(bm.created_at).toLocaleDateString()}</div>
+                                    <strong style="color: #ffffff; font-size: 0.88rem;">${bm.title}</strong>
+                                    <div style="font-size: 0.74rem; color: #94a3b8;">Page ${bm.page_number}</div>
                                 </div>
-                                <button type="button" onclick="deleteBookmark(${bm.id})" style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;">&times;</button>
+                                <button onclick="jumpToPage(${bm.page_number})" style="background: #334155; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Jump</button>
                             </div>
                         `).join('');
                     } else {
-                        list.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; text-align: center; padding: 12px;">No bookmarks saved yet.</div>';
+                        box.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 16px;">No bookmarks saved yet.</div>';
                     }
                 }).catch(() => {});
         }
 
-        function addNewBookmark() {
-            const input = document.getElementById('bmTitleInput');
-            const title = (input && input.value ? input.value.trim() : 'Chapter Marker');
-            const bookId = {{ (book.id if book and book.id else 0) }};
-            
+        function addBookmarkHere() {
+            const input = document.getElementById('newBmInput');
+            const title = (input && input.value ? input.value.trim() : `Page ${currentPageNum}`);
             fetch('/api/bookmarks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
-                body: JSON.stringify({ book_id: bookId, title: title, page_number: 1 })
-            }).then(r => r.json()).then(data => {
+                body: JSON.stringify({ book_id: {{ book.id }}, title: title, page_number: currentPageNum })
+            }).then(r => r.json()).then(() => {
                 if (input) input.value = '';
                 loadBookmarks();
             }).catch(() => {});
         }
 
-        function deleteBookmark(bmId) {
-            fetch(`/api/bookmarks?bookmark_id=${bmId}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
-            }).then(r => r.json()).then(data => {
-                loadBookmarks();
-            }).catch(() => {});
-        }
-
-        // GranthMind Study Flashcards
-        function toggleFlashcardsDrawer() {
-            const drawer = document.getElementById('flashcardsDrawer');
-            if (drawer) {
-                drawer.style.display = drawer.style.display === 'flex' ? 'none' : 'flex';
-                if (drawer.style.display === 'flex') loadFlashcards();
-            }
-        }
-
         function loadFlashcards() {
-            const bookId = {{ (book.id if book and book.id else 0) }};
-            const list = document.getElementById('flashcardsList');
-            if (!list) return;
-            
-            fetch(`/api/flashcards/${bookId}`)
+            fetch('/api/flashcards/{{ book.id }}')
                 .then(r => r.json())
                 .then(data => {
+                    const box = document.getElementById('flashcardsContainer');
+                    if (!box) return;
                     if (data.success && data.flashcards) {
-                        list.innerHTML = data.flashcards.map((f, i) => `
-                            <div style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 12px; padding: 14px;">
-                                <div style="font-size: 0.75rem; font-weight: 800; color: #7e22ce; text-transform: uppercase; margin-bottom: 4px;">Card #${i+1}</div>
-                                <div style="font-weight: 700; color: #1e1b4b; font-size: 0.92rem; margin-bottom: 8px;">${f.q}</div>
-                                <div style="font-size: 0.86rem; color: #4c1d95; line-height: 1.5; background: white; padding: 8px 10px; border-radius: 6px; border: 1px dashed #c084fc;">${f.a}</div>
+                        box.innerHTML = data.flashcards.map((f, i) => `
+                            <div style="background: #0f172a; border: 1px solid #7c3aed; border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                                <div style="font-size: 0.72rem; font-weight: 800; color: #a78bfa; text-transform: uppercase;">Card #${i+1}</div>
+                                <div style="font-weight: 700; color: #ffffff; font-size: 0.88rem; margin: 4px 0 6px;">${f.q}</div>
+                                <div style="font-size: 0.82rem; color: #cbd5e1; background: #1e1b4b; padding: 8px; border-radius: 6px;">${f.a}</div>
                             </div>
                         `).join('');
                     }
-                }).catch(() => {
-                    list.innerHTML = '<div style="color: #ef4444; font-size: 0.88rem; text-align: center;">Could not load flashcards.</div>';
-                });
+                }).catch(() => {});
         }
 
-        // Social Quote Card Generator
-        function openQuoteModal() {
-            const modal = document.getElementById('quoteModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                const input = document.getElementById('quoteTextInput');
-                if (input && !input.value) {
-                    input.value = "“A room without books is like a body without a soul.”";
-                }
-                renderQuoteCanvas();
-            }
-        }
-
-        function renderQuoteCanvas() {
-            const canvas = document.getElementById('quoteCanvas');
-            const input = document.getElementById('quoteTextInput');
-            if (!canvas || !input) return;
-            const ctx = canvas.getContext('2d');
-            const text = input.value.trim() || 'Knowledge is power.';
-            const bookTitle = {{ (book.title if book and book.title else 'PustakVerse')|tojson }};
-            const authorName = {{ (book.author if book and book.author else 'Library')|tojson }};
-
-            // Gradient background
-            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            grad.addColorStop(0, '#0f172a');
-            grad.addColorStop(1, '#1e293b');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Border glow
-            ctx.strokeStyle = '#ea580c';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
-
-            // Watermark logo text
-            ctx.fillStyle = '#ea580c';
-            ctx.font = 'bold 16px Plus Jakarta Sans, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('PUSTAKVERSE', 36, 46);
-
-            // Main quote text (wrap text)
-            ctx.fillStyle = '#f8fafc';
-            ctx.font = 'italic 18px Playfair Display, Georgia, serif';
-            ctx.textAlign = 'center';
-            
-            const words = text.split(' ');
-            let line = '';
-            let y = 130;
-            const maxW = 500;
-
-            for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
-                const metrics = ctx.measureText(testLine);
-                if (metrics.width > maxW && n > 0) {
-                    ctx.fillText(line, canvas.width / 2, y);
-                    line = words[n] + ' ';
-                    y += 28;
-                } else {
-                    line = testLine;
-                }
-            }
-            ctx.fillText(line, canvas.width / 2, y);
-
-            // Attribution Footer
-            ctx.fillStyle = '#fdba74';
-            ctx.font = 'bold 14px Plus Jakarta Sans, sans-serif';
-            ctx.fillText(`— from "${bookTitle}" by ${authorName}`, canvas.width / 2, canvas.height - 45);
-        }
-
-        function downloadQuoteCard() {
-            const canvas = document.getElementById('quoteCanvas');
-            if (!canvas) return;
-            const link = document.createElement('a');
-            link.download = `pustakverse_quote_${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        // Web Audio API Ambient Focus Sound Generator (Pink / Rain / Brown Noise)
-        let audioCtx = null;
-        let noiseNode = null;
-        let gainNode = null;
-        let isAmbiencePlaying = false;
-
-        function toggleAmbientAudio() {
-            const btn = document.getElementById('ambientAudioBtn');
-            if (isAmbiencePlaying) {
-                if (noiseNode) {
-                    noiseNode.stop();
-                    noiseNode.disconnect();
-                }
-                isAmbiencePlaying = false;
-                if (btn) {
-                    btn.style.background = '#0d9488';
-                    btn.textContent = '🎧 Ambience';
-                }
+        // Fullscreen Toggle (F key)
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
             } else {
-                try {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                    const bufferSize = audioCtx.sampleRate * 2;
-                    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                    const output = noiseBuffer.getChannelData(0);
-                    let lastOut = 0.0;
-                    for (let i = 0; i < bufferSize; i++) {
-                        const white = Math.random() * 2 - 1;
-                        output[i] = (lastOut + (0.02 * white)) / 1.02; // Soft brown/rain noise filter
-                        lastOut = output[i];
-                        output[i] *= 3.5;
-                    }
-                    noiseNode = audioCtx.createBufferSource();
-                    noiseNode.buffer = noiseBuffer;
-                    noiseNode.loop = true;
-
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.value = 0.15; // Pleasant soothing background volume
-
-                    noiseNode.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-                    noiseNode.start();
-                    isAmbiencePlaying = true;
-                    if (btn) {
-                        btn.style.background = '#059669';
-                        btn.textContent = '🔊 Rain Ambience';
-                    }
-                } catch(err) {
-                    alert('Audio is not supported by your browser.');
-                }
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
-        // Prevent Dragging elements (like images)
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') changePage(1);
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') changePage(-1);
+            if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+            if (e.key === '+' || e.key === '=') adjustZoom(0.15);
+            if (e.key === '-' || e.key === '_') adjustZoom(-0.15);
+        });
+
+        // Initialize reader on load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPdfDocument();
         });
     </script>
 </body>
