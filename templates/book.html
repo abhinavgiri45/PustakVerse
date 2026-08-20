@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ book.title }} - PustakVerse</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        (function() {
+            try {
+                const theme = localStorage.getItem('pustakverse_theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                } else if (theme === 'sepia') {
+                    document.documentElement.classList.add('sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         :root { 
             --nav-bg: #0f172a; 
@@ -298,7 +310,10 @@
         </div>
         <div class="navbar-links" style="display: flex; align-items: center; gap: 14px;">
             <a href="/">← Back to Library</a>
-            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☾</span></button>
+            <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">Dark Mode</span>
+            </button>
         </div>
     </nav>
 
@@ -624,16 +639,23 @@
 
         // Multi-Theme Controller
         function applyTheme(theme) {
+            document.documentElement.classList.remove('dark-theme', 'sepia-theme');
             document.body.classList.remove('dark-theme', 'sepia-theme');
             const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
             if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
                 document.body.classList.add('dark-theme');
                 if (icon) icon.textContent = '🌙';
+                if (text) text.textContent = 'Dark Mode';
             } else if (theme === 'sepia') {
+                document.documentElement.classList.add('sepia-theme');
                 document.body.classList.add('sepia-theme');
                 if (icon) icon.textContent = '📜';
+                if (text) text.textContent = 'Sepia Mode';
             } else {
-                if (icon) icon.textContent = '☾';
+                if (icon) icon.textContent = '☀️';
+                if (text) text.textContent = 'Light Mode';
             }
             try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
         }

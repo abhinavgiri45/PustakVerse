@@ -37,6 +37,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
+    <script>
+        (function() {
+            try {
+                const theme = localStorage.getItem('pustakverse_theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                } else if (theme === 'sepia') {
+                    document.documentElement.classList.add('sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    
     <style>
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
@@ -65,6 +78,16 @@
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
     <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
         <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        
+        <div class="sidebar-theme-card">
+            <span class="sidebar-theme-title">Theme Mode</span>
+            <div class="sidebar-theme-group">
+                <button type="button" onclick="applyTheme('light')" class="sidebar-theme-btn" id="sbHomeThemeLight">☀️ Day</button>
+                <button type="button" onclick="applyTheme('dark')" class="sidebar-theme-btn" id="sbHomeThemeDark">🌙 Dark</button>
+                <button type="button" onclick="applyTheme('sepia')" class="sidebar-theme-btn" id="sbHomeThemeSepia">📜 Sepia</button>
+            </div>
+        </div>
+
         <h3>Browse by category</h3>
         {% for cat in site_catalogs %}
             <a href="/?category={{ cat.name }}">{{ cat.name }}</a>
@@ -109,7 +132,10 @@
                 <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.18); color: var(--brand-orange-light); border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
                     🔥 <span id="heroStreakDisplay">1</span>d
                 </span>
-                <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☾</span></button>
+                <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeText">Dark Mode</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -493,16 +519,35 @@
 
         // Multi-Theme Controller (Light, Dark, Sepia)
         function applyTheme(theme) {
+            document.documentElement.classList.remove('dark-theme', 'sepia-theme');
             document.body.classList.remove('dark-theme', 'sepia-theme');
             const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+
+            ['sbHomeThemeLight', 'sbHomeThemeDark', 'sbHomeThemeSepia'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.remove('active');
+            });
+
             if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
                 document.body.classList.add('dark-theme');
                 if (icon) icon.textContent = '🌙';
+                if (text) text.textContent = 'Dark Mode';
+                const sb = document.getElementById('sbHomeThemeDark');
+                if (sb) sb.classList.add('active');
             } else if (theme === 'sepia') {
+                document.documentElement.classList.add('sepia-theme');
                 document.body.classList.add('sepia-theme');
                 if (icon) icon.textContent = '📜';
+                if (text) text.textContent = 'Sepia Mode';
+                const sb = document.getElementById('sbHomeThemeSepia');
+                if (sb) sb.classList.add('active');
             } else {
-                if (icon) icon.textContent = '☾';
+                if (icon) icon.textContent = '☀️';
+                if (text) text.textContent = 'Light Mode';
+                const sb = document.getElementById('sbHomeThemeLight');
+                if (sb) sb.classList.add('active');
             }
             try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
         }

@@ -72,7 +72,7 @@
 }
 
 /* --- 2. DARK THEME OVERRIDES --- */
-body.dark-theme {
+html.dark-theme, body.dark-theme {
     --bg-main: #090d16;
     --bg-pattern: radial-gradient(rgba(148, 163, 184, 0.15) 1.2px, transparent 1.2px);
     --surface: #111a2e;
@@ -93,7 +93,7 @@ body.dark-theme {
 }
 
 /* --- 3. WARM SEPIA EYE-CARE THEME OVERRIDES --- */
-body.sepia-theme {
+html.sepia-theme, body.sepia-theme {
     --bg-main: #f4ecdc;
     --bg-pattern: radial-gradient(rgba(138, 109, 59, 0.16) 1.2px, transparent 1.2px);
     --surface: #fbf3e4;
@@ -269,6 +269,29 @@ nav, .navbar {
     box-shadow: 0 6px 20px var(--brand-orange-glow);
 }
 
+.theme-toggle-pill {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f8fafc;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.theme-toggle-pill:hover {
+    background: rgba(234, 88, 12, 0.25);
+    border-color: var(--brand-orange);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--brand-orange-glow);
+}
 .theme-toggle {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -302,6 +325,44 @@ nav, .navbar {
     padding-top: 60px;
     box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5);
     border-right: 1px solid var(--navy-border);
+}
+
+.sidebar-theme-card {
+    margin: 0 16px 14px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+}
+.sidebar-theme-title {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+}
+.sidebar-theme-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+}
+.sidebar-theme-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+    padding: 6px 4px;
+    border-radius: var(--radius-xs);
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.sidebar-theme-btn:hover, .sidebar-theme-btn.active {
+    background: var(--brand-orange);
+    color: #ffffff;
+    border-color: var(--brand-orange);
 }
 
 .sidebar h3 {
@@ -887,6 +948,62 @@ tr:hover td {
     .nav-links a:not(.nav-btn-highlight), .navbar-links a:not(.nav-btn-highlight) { display: none; }
     .grid-2 { grid-template-columns: 1fr; }
     .book-actions { flex-direction: column; }
+}
+
+/* --- 20. DARK THEME SPECIALIZED COMPONENT POLISH --- */
+html.dark-theme .panel, body.dark-theme .panel,
+html.dark-theme .card, body.dark-theme .card,
+html.dark-theme .book-header, body.dark-theme .book-header,
+html.dark-theme .dashboard-header, body.dark-theme .dashboard-header,
+html.dark-theme .modal-box, body.dark-theme .modal-box,
+html.dark-theme .popup-box, body.dark-theme .popup-box {
+    background-color: var(--surface);
+    border-color: var(--border-subtle);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+}
+
+html.dark-theme input:not([type="checkbox"]):not([type="radio"]), 
+body.dark-theme input:not([type="checkbox"]):not([type="radio"]),
+html.dark-theme select, body.dark-theme select,
+html.dark-theme textarea, body.dark-theme textarea {
+    background-color: #0b1120 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+html.dark-theme th, body.dark-theme th {
+    background-color: #0b1120;
+    color: #94a3b8;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.dark-theme td, body.dark-theme td {
+    background-color: var(--surface);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+html.dark-theme tr:hover td, body.dark-theme tr:hover td {
+    background-color: var(--surface-hover);
+}
+
+html.dark-theme .search-autocomplete-dropdown, 
+body.dark-theme .search-autocomplete-dropdown {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+html.dark-theme .autocomplete-item,
+body.dark-theme .autocomplete-item {
+    color: #f8fafc;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+html.dark-theme .autocomplete-item:hover,
+body.dark-theme .autocomplete-item:hover {
+    background: #1e293b;
 }
 
 @media (prefers-reduced-motion: reduce) {

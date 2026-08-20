@@ -17,24 +17,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-    <!-- SMART ONBOARDING REDIRECT -->
     <script>
-        // Trigger intro once per browser session for all users
         (function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('skip_intro') === '1') {
-                sessionStorage.setItem('pustakverse_intro_seen', 'true');
-                return;
-            }
-            const introSeen = sessionStorage.getItem('pustakverse_intro_seen');
-            if (!introSeen) {
-                const currentPath = window.location.pathname;
-                const allowedPaths = ['/intro', '/login', '/register', '/forgot-password'];
-                if (!allowedPaths.includes(currentPath)) {
-                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
-                    window.location.replace('/intro');
+            try {
+                const theme = localStorage.getItem('pustakverse_theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                } else if (theme === 'sepia') {
+                    document.documentElement.classList.add('sepia-theme');
                 }
-            }
+            } catch(e) {}
         })();
     </script>
 </head>
@@ -44,6 +36,16 @@
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
     <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
         <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        
+        <div class="sidebar-theme-card">
+            <span class="sidebar-theme-title">Theme Mode</span>
+            <div class="sidebar-theme-group">
+                <button type="button" onclick="applyTheme('light')" class="sidebar-theme-btn" id="sbThemeLight">☀️ Day</button>
+                <button type="button" onclick="applyTheme('dark')" class="sidebar-theme-btn" id="sbThemeDark">🌙 Dark</button>
+                <button type="button" onclick="applyTheme('sepia')" class="sidebar-theme-btn" id="sbThemeSepia">📜 Sepia</button>
+            </div>
+        </div>
+
         <h3>Browse by category</h3>
         {% for cat in site_catalogs %}
             <a href="/?category={{ cat.name }}">{{ cat.name }}</a>
@@ -86,7 +88,10 @@
             <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.15); color: #f66d2f; border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
                 🔥 <span id="baseStreakCount">1</span>d
             </span>
-            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
+            <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">Dark Mode</span>
+            </button>
         </div>
     </nav>
 
@@ -137,26 +142,46 @@
         function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
         function dismissPopup() { const popup = document.getElementById('tgPopup'); if (popup) { popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); } localStorage.setItem('pustakverse_tg_seen', 'true'); }
         function applyTheme(theme) {
+            document.documentElement.classList.remove('dark-theme', 'sepia-theme');
             document.body.classList.remove('dark-theme', 'sepia-theme');
             const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+            
+            ['sbThemeLight', 'sbThemeDark', 'sbThemeSepia'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.remove('active');
+            });
+
             if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
                 document.body.classList.add('dark-theme');
                 if (icon) icon.textContent = '🌙';
+                if (text) text.textContent = 'Dark Mode';
+                const sb = document.getElementById('sbThemeDark');
+                if (sb) sb.classList.add('active');
             } else if (theme === 'sepia') {
+                document.documentElement.classList.add('sepia-theme');
                 document.body.classList.add('sepia-theme');
                 if (icon) icon.textContent = '📜';
+                if (text) text.textContent = 'Sepia Mode';
+                const sb = document.getElementById('sbThemeSepia');
+                if (sb) sb.classList.add('active');
             } else {
                 if (icon) icon.textContent = '☀️';
+                if (text) text.textContent = 'Light Mode';
+                const sb = document.getElementById('sbThemeLight');
+                if (sb) sb.classList.add('active');
             }
+            try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
         }
         function toggleTheme() {
             const current = localStorage.getItem('pustakverse_theme') || 'light';
-            const next = current === 'light' ? 'sepia' : (current === 'sepia' ? 'dark' : 'light');
-            localStorage.setItem('pustakverse_theme', next);
+            const next = current === 'light' ? 'dark' : (current === 'dark' ? 'sepia' : 'light');
             applyTheme(next);
         }
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         document.addEventListener('DOMContentLoaded', function() {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
             applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
             
             const streakCountEl = document.getElementById('baseStreakCount');

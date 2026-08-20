@@ -6,6 +6,19 @@
     <title>Dashboard - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        (function() {
+            try {
+                const theme = localStorage.getItem('pustakverse_theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                } else if (theme === 'sepia') {
+                    document.documentElement.classList.add('sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         :root { 
             --nav-bg: #2d3748; 
@@ -239,10 +252,14 @@
                 <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
             </a>
         </div>
-        <div class="navbar-links">
+        <div class="navbar-links" style="display: flex; align-items: center; gap: 14px;">
             <a href="/">Global Library</a> 
             <a href="{{ url_for('my_library') }}">My Library</a>
             <a href="{{ url_for('payment_history') }}">Payment History</a>
+            <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">Dark Mode</span>
+            </button>
             <a href="{{ url_for('logout') }}">
                 <button class="btn-logout">Logout</button>
             </a>
@@ -2282,7 +2299,36 @@
             }).catch(() => {});
         }
 
+        // Multi-Theme Controller
+        function applyTheme(theme) {
+            document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+            document.body.classList.remove('dark-theme', 'sepia-theme');
+            const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+                if (icon) icon.textContent = '🌙';
+                if (text) text.textContent = 'Dark Mode';
+            } else if (theme === 'sepia') {
+                document.documentElement.classList.add('sepia-theme');
+                document.body.classList.add('sepia-theme');
+                if (icon) icon.textContent = '📜';
+                if (text) text.textContent = 'Sepia Mode';
+            } else {
+                if (icon) icon.textContent = '☀️';
+                if (text) text.textContent = 'Light Mode';
+            }
+            try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
+        }
+        function toggleTheme() {
+            const current = localStorage.getItem('pustakverse_theme') || 'light';
+            const next = current === 'light' ? 'dark' : (current === 'dark' ? 'sepia' : 'light');
+            applyTheme(next);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
             loadReaderShelves();
             loadDeveloperAiModels();
         });
