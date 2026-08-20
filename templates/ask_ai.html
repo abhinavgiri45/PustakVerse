@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <style>
@@ -559,6 +560,105 @@
     .typing i:nth-child(3){ animation-delay: .4s; }
     @keyframes blink { to { opacity: .2; transform: translateY(-3px); } }
 
+    /* Mermaid Mind Maps & Diagrams */
+    .mermaid-container {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .mermaid-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+
+    /* Interactive MCQ Practice Quiz */
+    .interactive-quiz {
+      background: #fdf4ff;
+      border: 1.5px solid #f5d0fe;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 16px 0;
+    }
+    .quiz-q-title {
+      font-weight: 700;
+      color: #86198f;
+      font-size: 0.98rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .quiz-opt-btn {
+      text-align: left;
+      background: #ffffff;
+      border: 1.5px solid #e9d5ff;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      color: #3b0764;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .quiz-opt-btn:hover:not(:disabled) {
+      background: #faf5ff;
+      border-color: #c084fc;
+      transform: translateY(-1px);
+    }
+    .quiz-opt-btn.is-correct {
+      background: #f0fdf4 !important;
+      border-color: #22c55e !important;
+      color: #15803d !important;
+      font-weight: 700;
+    }
+    .quiz-opt-btn.is-wrong {
+      background: #fef2f2 !important;
+      border-color: #ef4444 !important;
+      color: #b91c1c !important;
+      text-decoration: line-through;
+    }
+    .quiz-feedback {
+      background: #ffffff;
+      border-left: 4px solid #a855f7;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #475569;
+      display: none;
+      margin-top: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
     @media (max-width: 768px) {
       .shell { display: flex; flex-direction: column; width: 100vw; height: calc(100vh - 56px); border: 0; }
       .sidebar { display: none; }
@@ -566,6 +666,17 @@
       .chat-area { flex: 1 1 0%; padding: 12px 14px 6px; }
       .composer-wrap { padding: 6px 12px 8px; }
       .study-modes { padding: 6px 12px; }
+    }
+
+    /* Print / PDF Export Stylesheet */
+    @media print {
+      body { background: #fff !important; color: #000 !important; overflow: visible !important; }
+      .topbar, .sidebar, .study-modes, .composer-wrap, .msg-actions, .typing, .status-pill, .brand-badge { display: none !important; }
+      .shell { display: block !important; height: auto !important; width: 100% !important; }
+      .conversation { height: auto !important; overflow: visible !important; }
+      .chat-area { height: auto !important; overflow: visible !important; padding: 0 !important; }
+      .message-row { margin: 15px 0 !important; max-width: 100% !important; page-break-inside: avoid; }
+      .user .message { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
     }
   </style>
 </head>
@@ -596,8 +707,14 @@
       </div>
 
       <div class="sidebar-actions">
-        <button type="button" class="sidebar-btn" onclick="exportChatNotes()">
-          💾 Export Study Notes (.txt)
+        <button type="button" class="sidebar-btn" onclick="exportChatMarkdown()" style="display:flex; align-items:center; gap:6px;">
+          📄 Export Markdown (.md)
+        </button>
+        <button type="button" class="sidebar-btn" onclick="printChatNotes()" style="display:flex; align-items:center; gap:6px;">
+          📑 Print / Save as PDF
+        </button>
+        <button type="button" class="sidebar-btn" onclick="copyFullSession()" style="display:flex; align-items:center; gap:6px;">
+          📋 Copy Full Session
         </button>
       </div>
     </aside>
@@ -610,14 +727,19 @@
             {% if book %}Ask questions, request summaries, or quiz yourself on <strong>{{ book.title }}</strong>{% else %}Ask any concept, study question, or get personalized reading guidance.{% endif %}
           </p>
         </div>
-        <span class="status-pill">● Online & Ready</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" onclick="printChatNotes()" class="mode-chip" style="border-radius:6px; padding:4px 10px; font-size:0.75rem; background:#f1f5f9;" title="Print or save as clean PDF">📑 Print / PDF</button>
+          <span class="status-pill">● Online & Ready</span>
+        </div>
       </header>
 
       <!-- Study Mode Selectors -->
       <div class="study-modes">
         <button type="button" class="mode-chip active" onclick="setStudyMode('general', this)">⚡ Fast Answer</button>
+        <button type="button" class="mode-chip" onclick="setStudyMode('mindmap', this)">🧠 Mind Map</button>
+        <button type="button" class="mode-chip" onclick="setStudyMode('cheatsheet', this)">📑 Exam Cheat Sheet</button>
+        <button type="button" class="mode-chip" onclick="setStudyMode('quiz', this)">🎯 Mock Quiz</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('summary', this)">📝 Chapter Summary</button>
-        <button type="button" class="mode-chip" onclick="setStudyMode('quiz', this)">🃏 Flashcards / Quiz</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('eli5', this)">💡 Explain Simply (ELI5)</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('deep', this)">🔬 Deep Breakdown</button>
       </div>
@@ -652,17 +774,20 @@
             <h2>Welcome to GranthMind 🧠</h2>
             <p>Your intelligent study tutor and research assistant. Ask any concept, paste text / screenshots (Ctrl+V), or upload PDFs & notes:</p>
             <div class="quick-prompts">
+              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('[Format: Visual Mermaid.js Mind Map & Diagram in ```mermaid code block]\nGenerate a comprehensive visual mind map and concept flowchart for this topic.')">
+                🧠 Visual Mind Map
+              </button>
+              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('[Format: 1-Page High-Yield Exam Cheat Sheet with formula table and exam traps]\nGenerate a 1-page High-Yield Exam Cheat Sheet with formulas, core definitions, and exam traps.')">
+                📑 Exam Cheat Sheet
+              </button>
+              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('[Format: 4 Interactive Multiple-Choice Questions (MCQs) with options A, B, C, D and marked correct answers]\nGenerate 4 interactive practice quiz MCQs with explanations.')">
+                🎯 Mock Practice Quiz
+              </button>
               <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Summarize the main themes and key takeaways of this material in 5 structured bullet points.')">
-                📝 Summarize in 5 key points
+                📝 Summarize in 5 points
               </button>
-              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Generate 4 interactive practice quiz questions with answers and explanations.')">
-                🃏 Create practice quiz
-              </button>
-              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Explain the core concept using a simple, relatable real-world analogy.')">
+              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Explain the core concept using a simple, relatable real-world analogy (ELI5).')">
                 💡 Explain with real-world analogy
-              </button>
-              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('What are the most practical, actionable insights from this book?')">
-                🚀 Actionable takeaways
               </button>
             </div>
           </div>
@@ -743,16 +868,34 @@
     function setStudyMode(mode, btn) {
       document.querySelectorAll('.mode-chip').forEach(c => c.classList.remove('active'));
       if (btn) btn.classList.add('active');
-      if (mode === 'summary') {
-        activeModePrefix = '[Format: Structured Chapter Summary with Key Takeaways]\n';
+      if (mode === 'mindmap') {
+        activeModePrefix = '[Format: Visual Mermaid.js Mind Map & Diagram in ```mermaid code block]\n';
+      } else if (mode === 'cheatsheet') {
+        activeModePrefix = '[Format: 1-Page High-Yield Exam Cheat Sheet with formula table and exam traps]\n';
       } else if (mode === 'quiz') {
-        activeModePrefix = '[Format: 4 Flashcard Q&A Pairs with Explanations]\n';
+        activeModePrefix = '[Format: 4 Interactive Multiple-Choice Questions (MCQs) with options A, B, C, D and marked correct answers]\n';
+      } else if (mode === 'summary') {
+        activeModePrefix = '[Format: Structured Chapter Summary with Key Takeaways]\n';
       } else if (mode === 'eli5') {
         activeModePrefix = '[Format: Simple Explanation with Everyday Analogy (ELI5)]\n';
       } else if (mode === 'deep') {
-        activeModePrefix = '[Format: In-Depth Analytical Breakdown with Equations]\n';
+        activeModePrefix = '[Format: In-Depth Analytical Breakdown with Equations & Derivations]\n';
       } else {
         activeModePrefix = '';
+      }
+    }
+
+    // Initialize Mermaid
+    if (window.mermaid) {
+      try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'neutral',
+          securityLevel: 'loose',
+          flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+        });
+      } catch (err) {
+        console.warn('Mermaid init warning:', err);
       }
     }
 
@@ -895,13 +1038,21 @@
       }, false);
     }
 
-    // Markdown & KaTeX Math Rendering Engine
+    // Markdown, Math, & Mermaid Rendering Engine
     function renderMarkdownAndMath(rawText) {
       if (!rawText) return '';
       
       let text = rawText
         .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')
         .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
+
+      const mermaidBlocks = [];
+      // 0. Extract Mermaid Code Blocks
+      text = text.replace(/```mermaid\s*([\s\S]*?)```/gi, (match, code) => {
+        const id = `@@MERMAID_BLOCK_${mermaidBlocks.length}@@`;
+        mermaidBlocks.push(code.trim());
+        return id;
+      });
 
       const mathBlocks = [];
       
@@ -957,6 +1108,18 @@
         html = html.split(token).join(renderedMath);
       });
 
+      // 4. Render Mermaid Blocks back into the HTML
+      mermaidBlocks.forEach((code, index) => {
+        const token = `@@MERMAID_BLOCK_${index}@@`;
+        const mermaidHtml = `
+          <div class="mermaid-container">
+            <div class="mermaid-title">🧠 Visual Mind Map / Concept Flowchart</div>
+            <pre class="mermaid">${escapeHtml(code)}</pre>
+          </div>
+        `;
+        html = html.split(token).join(mermaidHtml);
+      });
+
       return html;
     }
 
@@ -985,10 +1148,134 @@
       return html;
     }
 
+    function handleQuizOptionClick(btn, correctLetter, encodedExplanation) {
+      const container = btn.closest('.interactive-quiz');
+      if (!container) return;
+      const explanation = decodeURIComponent(encodedExplanation || '');
+      const allBtns = container.querySelectorAll('.quiz-opt-btn');
+      allBtns.forEach(b => {
+        b.disabled = true;
+        const opt = b.getAttribute('data-opt');
+        if (opt === correctLetter) {
+          b.classList.add('is-correct');
+          if (!b.querySelector('.status-badge')) {
+            const span = document.createElement('span');
+            span.className = 'status-badge';
+            span.style.cssText = 'font-weight:700; color:#16a34a; margin-left:auto;';
+            span.textContent = '✓ Correct';
+            b.appendChild(span);
+          }
+        } else if (b === btn && opt !== correctLetter) {
+          b.classList.add('is-wrong');
+          if (!b.querySelector('.status-badge')) {
+            const span = document.createElement('span');
+            span.className = 'status-badge';
+            span.style.cssText = 'font-weight:700; color:#dc2626; margin-left:auto;';
+            span.textContent = '✗ Incorrect';
+            b.appendChild(span);
+          }
+        }
+      });
+      const feedback = container.querySelector('.quiz-feedback');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.innerHTML = `<strong>💡 Scholar Explanation:</strong> ${explanation || 'Great job checking this concept!'}`;
+      }
+    }
+
+    function processInteractiveQuizzes(element) {
+      const headings = element.querySelectorAll('h3, h4, p');
+      headings.forEach(h => {
+        const hText = h.textContent.trim();
+        if (/^(Question\s+\d+|Quiz\s+\d+|\d+\.)/i.test(hText) && !h.closest('.interactive-quiz')) {
+          let list = h.nextElementSibling;
+          while (list && list.tagName !== 'UL' && list.tagName !== 'OL' && list.tagName !== 'H3' && list.tagName !== 'H4') {
+            list = list.nextElementSibling;
+          }
+          if (list && (list.tagName === 'UL' || list.tagName === 'OL')) {
+            const items = Array.from(list.querySelectorAll('li'));
+            const optA = items.find(li => /^[A-D]\)/i.test(li.textContent.trim()));
+            if (optA && items.length >= 2) {
+              let nextP = list.nextElementSibling;
+              let ansLetter = '', explanation = '', nodesToRemove = [];
+              let pCount = 0;
+              while (nextP && pCount < 4) {
+                const pText = nextP.textContent.trim();
+                const ansMatch = pText.match(/(?:Correct Answer|Answer)\s*:\s*([A-D])/i);
+                const expMatch = pText.match(/(?:Explanation)\s*:\s*(.+)/i);
+                if (ansMatch) {
+                  ansLetter = ansMatch[1].toUpperCase();
+                  nodesToRemove.push(nextP);
+                } else if (expMatch) {
+                  explanation = expMatch[1];
+                  nodesToRemove.push(nextP);
+                } else if (pText.toLowerCase().includes('explanation') || pText.toLowerCase().includes('correct')) {
+                  nodesToRemove.push(nextP);
+                }
+                nextP = nextP.nextElementSibling;
+                pCount++;
+              }
+              
+              if (ansLetter) {
+                const quizCard = document.createElement('div');
+                quizCard.className = 'interactive-quiz';
+                
+                const qTitle = document.createElement('div');
+                qTitle.className = 'quiz-q-title';
+                qTitle.textContent = '🎯 ' + hText;
+                quizCard.appendChild(qTitle);
+                
+                const optContainer = document.createElement('div');
+                optContainer.className = 'quiz-options';
+                
+                items.forEach(li => {
+                  const liText = li.textContent.trim();
+                  const letterMatch = liText.match(/^([A-D])\)\s*(.*)/i);
+                  const letter = letterMatch ? letterMatch[1].toUpperCase() : 'A';
+                  const text = letterMatch ? letterMatch[2] : liText;
+                  
+                  const btn = document.createElement('button');
+                  btn.type = 'button';
+                  btn.className = 'quiz-opt-btn';
+                  btn.setAttribute('data-opt', letter);
+                  btn.innerHTML = `<strong>${letter})</strong> <span style="margin-left:6px;">${escapeHtml(text)}</span>`;
+                  btn.onclick = () => handleQuizOptionClick(btn, ansLetter, encodeURIComponent(explanation));
+                  optContainer.appendChild(btn);
+                });
+                
+                quizCard.appendChild(optContainer);
+                
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'quiz-feedback';
+                quizCard.appendChild(feedbackDiv);
+                
+                h.parentNode.insertBefore(quizCard, h);
+                h.remove();
+                list.remove();
+                nodesToRemove.forEach(n => n.remove());
+              }
+            }
+          }
+        }
+      });
+    }
+
     function enhanceMessage(element) {
       const raw = element.getAttribute('data-raw') || element.textContent;
       element.setAttribute('data-raw', raw);
       element.innerHTML = renderMarkdownAndMath(raw);
+      
+      // Process interactive quiz cards
+      processInteractiveQuizzes(element);
+
+      // Render Mermaid diagrams
+      if (window.mermaid && element.querySelectorAll('.mermaid').length > 0) {
+        try {
+          window.mermaid.run({ nodes: element.querySelectorAll('.mermaid') });
+        } catch (e) {
+          console.warn('Mermaid render error:', e);
+        }
+      }
     }
 
     const enhanceAllMessages = () => {
@@ -1080,10 +1367,42 @@
       }
     }
 
-    function exportChatNotes() {
+    function exportChatMarkdown() {
       const messages = document.querySelectorAll('.message-row');
       if (messages.length === 0) {
         alert("No study conversation to export yet.");
+        return;
+      }
+      let md = "# GranthMind Scholar Study Guide\n\n";
+      md += `*Generated on PustakVerse · ${new Date().toLocaleDateString()}*\n\n---\n\n`;
+      messages.forEach(row => {
+        const isUser = row.classList.contains('user');
+        const rawText = row.querySelector('.message-text')?.getAttribute('data-raw') || row.querySelector('.message-text')?.innerText || '';
+        if (isUser) {
+          md += `### 👤 Student Query\n\n${rawText}\n\n`;
+        } else {
+          md += `### 🧠 GranthMind Scholar Insights\n\n${rawText}\n\n---\n\n`;
+        }
+      });
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'GranthMind_Study_Guide.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function printChatNotes() {
+      window.print();
+    }
+
+    function copyFullSession() {
+      const messages = document.querySelectorAll('.message-row');
+      if (messages.length === 0) {
+        alert("No study conversation to copy yet.");
         return;
       }
       let content = "=== GranthMind Study Guide ===\n\n";
@@ -1092,15 +1411,13 @@
         const text = row.querySelector('.message-text')?.innerText || '';
         content += `${isUser ? 'Student' : 'GranthMind AI'}:\n${text}\n\n-------------------\n\n`;
       });
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'GranthMind_Study_Notes.txt';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      navigator.clipboard.writeText(content).then(() => {
+        alert("✓ Complete study session copied to clipboard!");
+      });
+    }
+
+    function exportChatNotes() {
+      exportChatMarkdown();
     }
 
     document.getElementById('newChatBtn').addEventListener('click', async () => {

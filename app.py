@@ -429,7 +429,105 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
     context_snippet = context[:600]
     query_lower = concept.lower()
 
-    if any(k in query_lower for k in ['equality', 'right to equality', 'constitution', 'article 14', 'fundamental right']):
+    if any(k in query_lower for k in ['mind map', 'mindmap', 'mermaid', 'diagram', 'flowchart']):
+        clean_title = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
+        clean_title = re.sub(r'^(mind map of|generate a mind map for|create a mind map on|diagram of)\s+', '', clean_title, flags=re.I).strip() or 'Knowledge Framework'
+        explanation = (
+            f"### 🧠 Visual Concept Mind Map: {clean_title}\n\n"
+            "```mermaid\n"
+            "graph TD\n"
+            f"    Root[\"🌟 {clean_title}\"] --> Def[\"📖 Core Definition\"]\n"
+            f"    Root --> Pillars[\"🏛️ Pillars & Principles\"]\n"
+            f"    Root --> Apps[\"💡 Practical Applications\"]\n"
+            f"    Root --> Traps[\"⚠️ Key Traps & Nuances\"]\n"
+            "    \n"
+            "    Def --> D1[\"Foundational Concept\"]\n"
+            "    Def --> D2[\"Historical / Theoretical Context\"]\n"
+            "    Pillars --> P1[\"Governing Axioms & Formulas\"]\n"
+            "    Pillars --> P2[\"Step-by-Step Mechanisms\"]\n"
+            "    Apps --> A1[\"Real-World Case Study\"]\n"
+            "    Apps --> A2[\"Textbook Problem Solving\"]\n"
+            "    Traps --> T1[\"Common Misconceptions\"]\n"
+            "    Traps --> T2[\"Boundary Conditions\"]\n"
+            "```\n\n"
+            "#### 💡 Mind Map Structure Breakdown\n"
+            f"- **Central Focus**: Centers on the core definition of **{clean_title}**.\n"
+            "- **Primary Branches**: Organizes theoretical foundations, governing equations, and real-world implementations into high-yield visual nodes.\n"
+            "- **Review Strategy**: Follow the branches clockwise to test active recall of each component."
+        )
+        key_points = [
+            f"The central node establishes the core identity of {clean_title}.",
+            "Pillars define governing axioms, mathematical formulas, or constitutional articles.",
+            "Applications and Traps prevent common conceptual errors during exams."
+        ]
+        example = f"Trace the branches of {clean_title} from top to bottom, explaining each sub-node in your own words."
+        questions = [
+            f"Which branch of {clean_title} is most critical for solving exam problems?",
+            f"How do the governing pillars of {clean_title} connect to its real-world applications?"
+        ]
+    elif any(k in query_lower for k in ['cheat sheet', 'cheatsheet', 'formula sheet', 'revision notes']):
+        clean_title = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
+        clean_title = re.sub(r'^(cheat sheet for|exam cheat sheet on|formula sheet for)\s+', '', clean_title, flags=re.I).strip() or 'Exam Revision'
+        explanation = (
+            f"### 📑 High-Yield Exam Cheat Sheet: {clean_title}\n\n"
+            "| Focus Area | Core Principle / Formula | High-Yield Exam Tip |\n"
+            "| :--- | :--- | :--- |\n"
+            f"| **1. Primary Definition** | Foundational law governing {clean_title} | State exact terminology and boundary bounds |\n"
+            f"| **2. Governing Equations** | $\\text{{Formula / Standard Law}}$ | Check dimensional consistency on both sides |\n"
+            f"| **3. Practical Utility** | Real-world engineering & legal applications | Always provide units or constitutional citations |\n\n"
+            "#### ⚡ 3-Minute Rapid Fire Review\n"
+            f"1. **Core Axiom**: Understand the primary definition of {clean_title} before attempting complex numericals or legal analysis.\n"
+            f"2. **Governing Rules**: Verify all constraints, boundary values, and standard assumptions.\n"
+            f"3. **Exam Trap**: Do not confuse {clean_title} with adjacent sub-disciplines."
+        )
+        key_points = [
+            f"Review the 1-page summary table for {clean_title} before entering exams.",
+            "Verify all formula notations and mathematical fractions.",
+            "Memorize the top 3 distinctions to ace multiple-choice and descriptive questions."
+        ]
+        example = f"Before an exam, write out the formula table for {clean_title} from memory in under 2 minutes."
+        questions = [
+            f"What is the single most commonly tested equation or provision in {clean_title}?",
+            f"What is the top mistake students make when analyzing {clean_title}?"
+        ]
+    elif any(k in query_lower for k in ['mock quiz', 'practice quiz', 'mcq', 'quiz questions', 'quiz']):
+        clean_title = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
+        clean_title = re.sub(r'^(quiz on|mock quiz for|practice questions for)\s+', '', clean_title, flags=re.I).strip() or 'Academic Mastery'
+        explanation = (
+            f"### 🎯 Interactive Practice Quiz: {clean_title}\n\n"
+            f"#### Question 1: What is the primary definition of {clean_title}?\n"
+            "- A) A secondary hypothesis with no empirical validation\n"
+            f"- B) The fundamental governing principle and theoretical framework of {clean_title}\n"
+            "- C) An obsolete framework replaced by unrelated models\n"
+            "- D) A purely subjective viewpoint\n"
+            "**Correct Answer**: B\n"
+            f"**Explanation**: Option B accurately describes the foundational definition and academic consensus regarding {clean_title}.\n\n"
+            f"#### Question 2: Which approach is essential when solving problems in {clean_title}?\n"
+            "- A) Applying governing formulas and verifying constraints systematically\n"
+            "- B) Guessing arbitrary values without checking boundary conditions\n"
+            "- C) Ignoring units and dimensional consistency\n"
+            "- D) Skipping definition axioms\n"
+            "**Correct Answer**: A\n"
+            f"**Explanation**: Rigorous analysis requires establishing known parameters, stating the governing formula, and verifying constraints.\n\n"
+            f"#### Question 3: How does {clean_title} connect to modern real-world applications?\n"
+            "- A) It has zero practical utility\n"
+            "- B) It provides the critical foundation for engineering, scientific, and policy implementations\n"
+            "- C) It only applies in hypothetical vacuums\n"
+            "- D) It cannot be measured or observed\n"
+            "**Correct Answer**: B\n"
+            "**Explanation**: Foundational principles directly govern modern technology, legal protections, and scientific discoveries."
+        )
+        key_points = [
+            f"Test yourself by answering all 3 questions on {clean_title} without looking at the explanations.",
+            "Analyze the rationale behind both correct and incorrect options.",
+            "Target weak areas by reviewing the corresponding core principles."
+        ]
+        example = f"Practice solving MCQs on {clean_title} under timed conditions to build speed and accuracy."
+        questions = [
+            f"Did you achieve 100% accuracy on this quiz for {clean_title}?",
+            f"Which concept in {clean_title} requires further deep-dive review?"
+        ]
+    elif any(k in query_lower for k in ['equality', 'right to equality', 'constitution', 'article 14', 'fundamental right']):
         explanation = (
             "### ⚖️ Understanding the Right to Equality (Articles 14–18 of the Constitution)\n\n"
             "The **Right to Equality** is one of the foundational Fundamental Rights guaranteed by the Constitution. "
@@ -944,12 +1042,22 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         "   - **Fractions**: ALWAYS use `\\frac{numerator}{denominator}` (e.g., `\\frac{1}{2}`, `\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}`, `\\frac{dy}{dx}`). NEVER use plain-text slashes like `a/b` for mathematical fractions.\n"
         "   - **Display Equations**: Put standalone equations on their own line wrapped in `$$ ... $$` or `\\[ ... \\]` (e.g., `$$\\int_{a}^{b} f(x)\\,dx = F(b) - F(a)$$`).\n"
         "   - **Inline Formulas & Variables**: Wrap inline math, symbols, and variables with `$ ... $` (e.g., `$x = \\frac{3}{4}$`, `$\\theta = \\pi$`, `$\\alpha$`).\n"
-        "   - **Problem Solving Flow**: Always follow: (1) **Given & Objective** $\\rightarrow$ (2) **Governing Formula** $\\rightarrow$ (3) **Step-by-Step Derivation/Calculation** $\\rightarrow$ (4) **Final Answer** (clearly highlighted) $\\rightarrow$ (5) **Intuitive Insight**.\n"
+        "   - **Problem Solving Flow**: Always follow: (1) **Given & Objective** $\\rightarrow$ (2) **Governing Formula** $\\rightarrow$ (3) **Step-by-Step Derivation/Calculation** $\rightarrow$ (4) **Final Answer** (clearly highlighted) $\rightarrow$ (5) **Intuitive Insight**.\n"
         "4. **Structure & Formatting**:\n"
         "   - Use structured Markdown with clear section headers (`###`), bullet points, and numbered lists.\n"
         "   - Bold key definitions and important principles.\n"
         "   - If asked for a summary, provide 'Core Philosophy', 'Key Takeaways (bulleted)', and 'Real-World Applications'.\n"
-        "   - If asked for practice, generate high-yield Question & Answer pairs with comprehensive step-by-step explanations.\n"
+        "5. **SPECIALIZED STUDY MODES (CRITICAL)**:\n"
+        "   - **Visual Mind Maps**: When asked for a mind map, flowchart, or diagram, ALWAYS output a clean, valid Mermaid.js diagram inside a ```mermaid\\ngraph TD\\n...``` code block with central focus, core axioms, equations, and real-world branches.\n"
+        "   - **Exam Cheat Sheets**: When asked for a cheat sheet, format as a high-density 1-page table with 'Core Definition', 'Governing Formula / Provision', 'High-Yield Exam Trap', plus a 3-minute rapid review.\n"
+        "   - **Interactive Quizzes & MCQs**: When asked for practice questions or quizzes, format each question as:\n"
+        "     `#### Question N: [Question Text]`\n"
+        "     `- A) [Option A]`\n"
+        "     `- B) [Option B]`\n"
+        "     `- C) [Option C]`\n"
+        "     `- D) [Option D]`\n"
+        "     `**Correct Answer**: [Letter]`\n"
+        "     `**Explanation**: [Clear explanation why this option is correct]`\n"
         f"\n--- BOOK & ATTACHMENT CONTEXT ---\n{book_context or 'General library study & student learning.'}\n"
         f"\n--- RECENT CONVERSATION ---\n{conversation or 'No earlier messages.'}\n"
         f"\n--- STUDENT QUERY ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
