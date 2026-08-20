@@ -47,66 +47,19 @@
                 window.location.replace('/intro');
             }
         })();
-    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
     <style>
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #1e293b; font-size: 16px; }
-        
-        .navbar { background-color: #2d3748; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-        .navbar-brand img, .logo-img { height: 52px; width: auto; max-width: 220px; background: transparent; padding: 0; object-fit: contain; display: block; }
-        
-        .navbar-links { display: flex; gap: 16px; align-items: center; margin-left: auto; }
-        .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 1rem; transition: 0.2s; padding: 12px 16px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box; }
-        .navbar-links a:hover { color: #992b00; }
-        
-        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #992b00; }
-        .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
-        .hero-section p { font-size: 1.2rem; color: #cbd5e1; margin-top: 10px; }
-
-        .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: white; border-radius: 30px; padding: 5px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: #1e293b; background: transparent; }
-        .search-container input::placeholder { color: #334155; opacity: 1; }
-        
-        .icon-btn { background: none; border: none; cursor: pointer; color: #334155; min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; padding: 0; }
-        .icon-btn:hover { color: #992b00; transform: scale(1.1); }
-
-        .filter-nav { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; }
-        .filter-nav a { padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 1rem; color: #334155; background: #edf2f7; transition: 0.2s; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
-        .filter-nav a.active, .filter-nav a:hover { background: #992b00; color: white; }
-
-        .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
-        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
-        
-        .book-card { background: white; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s; }
-        .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        
-        .book-cover { width: 100%; height: auto; aspect-ratio: 250 / 320; object-fit: cover; background: #e2e8f0; display: block; transition: opacity 0.2s; }
-        .book-cover-link:hover .book-cover { opacity: 0.85; }
-        
-        .book-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-        .book-tag { color: #992b00; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-        
-        .book-title { font-size: 1.15rem; color: #1e293b; margin: 0 0 5px 0; font-weight: bold; line-height: 1.3; }
-        .book-title a { color: inherit; text-decoration: none; }
-        .book-title a:hover { color: #992b00; }
-        
-        .book-author { font-size: 1rem; color: #334155; margin: 0 0 15px 0; }
-        
-        .book-actions { display: flex; gap: 12px; margin-top: auto; }
-        .btn { flex: 1; padding: 12px 0; min-height: 48px; text-align: center; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
-        .btn:hover { opacity: 0.85; }
-        .btn-read { background-color: #2d3748; color: white; }
-        .btn-save { background-color: #edf2f7; color: #1e293b; }
-        .btn-premium { background-color: #14532d; color: white; }
-
         .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 40px 0; }
-        .no-results h2 { color: #1e293b; margin-bottom: 10px; font-size: 1.8rem;}
-        .no-results p { color: #334155; }
+        .no-results { display: none; text-align: center; grid-column: 1 / -1; padding: 50px 0; }
+        .no-results h2 { color: var(--text-primary); margin-bottom: 10px; font-size: 1.8rem;}
+        .no-results p { color: var(--text-muted); }
 
         .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); }
         .popup-box { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -118,19 +71,21 @@
         .btn-telegram:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4); color: white; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; transition: color 0.2s; }
         .close-btn:hover { color: #0f172a; }
-
-        @media (max-width: 768px) {
-            .navbar { flex-direction: column; padding: 15px; }
-            .navbar-links { width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-            .hero-section { padding: 40px 20px; }
-            .hero-section h1 { font-size: 2.5rem; }
-            .container { padding: 20px; }
-            .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-            .book-actions { flex-direction: column; }
-        }
     </style>
 </head>
 <body>
+    <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
+    <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
+        <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        <h3>Browse by category</h3>
+        {% for cat in site_catalogs %}
+            <a href="/?category={{ cat.name }}">{{ cat.name }}</a>
+        {% endfor %}
+        <h3>Special collections</h3>
+        <a href="/?category=Archives">Archives (Free Books)</a>
+    </aside>
 
     {% if show_telegram_popup %}
     <div id="telegramPopup" class="popup-overlay">
@@ -149,9 +104,10 @@
     {% endif %}
 
     <nav class="navbar">
-        <div class="navbar-brand">
+        <div class="nav-brand">
+            <button class="hamburger-btn" type="button" onclick="openNav()" aria-label="Open navigation">☰</button>
             <a href="/" aria-label="PustakVerse Homepage">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 52px; width: auto; object-fit: contain;" fetchpriority="high" loading="eager">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 48px; width: auto; object-fit: contain;" fetchpriority="high" loading="eager">
             </a>
         </div>
         <div class="navbar-links">
@@ -159,66 +115,72 @@
             {% if session.user_id %}
                 <a href="{{ url_for('my_library') }}">My Library</a>
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('logout') }}" style="background: #e53e3e; border-radius: 25px;">Logout</a>
+                <a href="{{ url_for('logout') }}" class="btn-red btn-sm" style="color: white !important;">Logout</a>
             {% else %}
-                <a href="{{ url_for('login') }}" style="background: #992b00; border-radius: 25px;">Sign In / Login</a>
+                <a href="{{ url_for('login') }}" class="nav-btn-highlight">Sign In / Join</a>
             {% endif %}
+            <div style="display: flex; align-items: center; gap: 8px; margin-left: 6px;">
+                <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.18); color: var(--brand-orange-light); border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
+                    🔥 <span id="heroStreakDisplay">1</span>d
+                </span>
+                <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☾</span></button>
+            </div>
         </div>
     </nav>
 
     <div class="hero-section">
-        <h1>{{ site_settings.hero_title }}</h1>
+        <h1 class="serif-title">{{ site_settings.hero_title }}</h1>
         <p>{{ site_settings.hero_subtitle }}</p>
         
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
             <input type="search" id="searchInput" name="search" placeholder="Search for a book, author, or category... (Ctrl + K)" aria-label="Search for a book or author">
             <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
             </button>
         </form>
 
-        <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-            <button type="button" onclick="discoverRandomBook()" style="background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; padding: 8px 18px; font-size: 0.9rem; font-weight: 700; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.2s;">
+        <div style="margin-top: 22px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+            <button type="button" onclick="discoverRandomBook()" style="background: rgba(255, 255, 255, 0.12); color: white; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 20px; padding: 8px 18px; font-size: 0.88rem; font-weight: 700; cursor: pointer; backdrop-filter: blur(8px); transition: all 0.2s;">
                 🎲 Surprise Me (Random Book)
             </button>
-            <span style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600;">
-                🔥 <span id="heroStreakDisplay">1</span> Day Reading Streak
+            <span style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.08); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.25); border-radius: 20px; padding: 8px 16px; font-size: 0.84rem; font-weight: 600;">
+                🔥 Daily Knowledge Quest Active
             </span>
         </div>
     </div>
 
     <div class="filter-nav">
-        <button type="button" onclick="applyQuickFilter('all', this)" class="quick-filter-btn active" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: none; background: #992b00; color: #ffffff; cursor: pointer; transition: 0.2s;">🌟 All Books</button>
-        <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🆓 100% Free</button>
-        <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">⭐ 4.5+ Rating</button>
+        <button type="button" onclick="applyQuickFilter('all', this)" class="quick-filter-btn active">🌟 All Books</button>
+        <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn">🆓 100% Free</button>
+        <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn">⭐ 4.5+ Rating</button>
         {% for cat in site_catalogs %}
-            <button type="button" onclick="applyQuickFilter('category:{{ cat.name | escape }}', this)" class="quick-filter-btn" data-cat-name="{{ cat.name | escape | lower }}" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">📚 {{ cat.name }}</button>
+            <button type="button" onclick="applyQuickFilter('category:{{ cat.name | escape }}', this)" class="quick-filter-btn" data-cat-name="{{ cat.name | escape | lower }}">📚 {{ cat.name }}</button>
         {% endfor %}
-        <button type="button" onclick="applyQuickFilter('category:Archives', this)" class="quick-filter-btn" data-cat-name="archives" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🏛️ Archives</button>
+        <button type="button" onclick="applyQuickFilter('category:Archives', this)" class="quick-filter-btn" data-cat-name="archives">🏛️ Archives</button>
     </div>
 
     <div class="container">
         <!-- Dynamic Continue Reading Hero Widget -->
-        <div id="continueReadingWidget" style="display: none; margin-bottom: 24px; padding: 18px 24px; background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.08); align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+        <div id="continueReadingWidget" style="display: none; margin-bottom: 24px; padding: 18px 24px; background: var(--surface-card); border: 1.5px solid #fed7aa; border-radius: 16px; box-shadow: var(--shadow-md); align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 16px;">
                 <img id="crCover" src="" alt="Book Cover" style="width: 46px; height: 64px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);" onerror="this.src='/static/PustakVerse.png'">
                 <div>
-                    <div style="font-size: 0.75rem; font-weight: 800; color: #ea580c; text-transform: uppercase; letter-spacing: 0.08em;">📖 Pick Up Where You Left Off</div>
-                    <h3 id="crTitle" style="margin: 3px 0 2px; font-size: 1.12rem; color: #0f172a;"></h3>
-                    <div style="font-size: 0.84rem; color: #64748b;" id="crMeta"></div>
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--brand-orange); text-transform: uppercase; letter-spacing: 0.08em;">📖 Pick Up Where You Left Off</div>
+                    <h3 id="crTitle" style="margin: 3px 0 2px; font-size: 1.12rem; color: var(--text-primary);"></h3>
+                    <div style="font-size: 0.84rem; color: var(--text-muted);" id="crMeta"></div>
                 </div>
             </div>
-            <a id="crLink" href="#" class="btn btn-read" style="background: #ea580c; min-width: 170px; border-radius: 10px; font-weight: 700; text-decoration: none;">Resume Reading →</a>
+            <a id="crLink" href="#" class="btn btn-orange" style="min-width: 170px; font-weight: 700;">Resume Reading →</a>
         </div>
 
-        <div style="margin-bottom: 24px; padding: 22px 24px; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fdba74; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div style="margin-bottom: 24px; padding: 22px 24px; background: linear-gradient(135deg, rgba(254, 243, 199, 0.3) 0%, rgba(255, 237, 213, 0.4) 100%); border: 1px solid rgba(253, 186, 116, 0.6); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
             <div>
-                <div style="font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9a4d12; font-weight: 800;">AI Learning Assistant</div>
-                <h2 style="margin: 8px 0 0; color: #7c2d12; font-size: clamp(1.5rem, 2vw, 2.2rem);">Ask any doubt for free</h2>
+                <div style="font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-orange); font-weight: 800;">🧠 AI Study Companion</div>
+                <h2 style="margin: 6px 0 0; font-size: clamp(1.4rem, 2vw, 2rem);">Ask GranthMind any doubt for free</h2>
             </div>
-            <a href="{{ url_for('ask_ai') }}" class="btn btn-read" style="background: #f97316; border-radius: 12px; padding: 14px 24px; min-width: 220px;">Ask AI Tutor</a>
+            <a href="{{ url_for('ask_ai') }}" class="btn btn-orange" style="padding: 12px 24px; min-width: 200px;">Ask AI Tutor →</a>
         </div>
 
         {% if site_settings.donation_active and site_settings.donation_qr %}
@@ -232,7 +194,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div style="padding: 15px; margin-bottom: 30px; text-align: center; border-radius: 8px; background: #fed7d7; color: #991b1b; font-weight: bold;">{{ message }}</div>
+                    <div class="flash {{ category }}">{{ message }}</div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
@@ -481,15 +443,9 @@
         function applyQuickFilter(type, btn) {
             document.querySelectorAll('.quick-filter-btn').forEach(el => {
                 el.classList.remove('active');
-                el.style.background = '#edf2f7';
-                el.style.color = '#334155';
-                el.style.border = '1px solid #cbd5e1';
             });
             if (btn) {
                 btn.classList.add('active');
-                btn.style.background = '#992b00';
-                btn.style.color = '#ffffff';
-                btn.style.border = 'none';
             }
 
             const searchInput = document.getElementById('searchInput');
@@ -535,6 +491,67 @@
             if (noResults) noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
         }
 
+        // Sidebar Navigation
+        function openNav() { 
+            const sb = document.getElementById('mySidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            if (sb) sb.style.width = '300px'; 
+            if (ov) ov.style.display = 'block'; 
+        }
+        function closeNav() { 
+            const sb = document.getElementById('mySidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            if (sb) sb.style.width = '0'; 
+            if (ov) ov.style.display = 'none'; 
+        }
+
+        // Multi-Theme Controller (Light, Dark, Sepia)
+        function applyTheme(theme) {
+            document.body.classList.remove('dark-theme', 'sepia-theme');
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                if (icon) icon.textContent = '🌙';
+            } else if (theme === 'sepia') {
+                document.body.classList.add('sepia-theme');
+                if (icon) icon.textContent = '📜';
+            } else {
+                if (icon) icon.textContent = '☾';
+            }
+            try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
+        }
+        function toggleTheme() {
+            const current = localStorage.getItem('pustakverse_theme') || 'light';
+            const next = current === 'light' ? 'dark' : (current === 'dark' ? 'sepia' : 'light');
+            applyTheme(next);
+        }
+        (function() {
+            const saved = localStorage.getItem('pustakverse_theme') || 'light';
+            applyTheme(saved);
+        })();
+
+        // Scroll Progress Bar & Back to Top
+        window.addEventListener('scroll', function() {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            const bar = document.getElementById('myBar');
+            if (bar) bar.style.width = scrolled + '%';
+
+            const backBtn = document.getElementById('backToTop');
+            if (backBtn) {
+                if (winScroll > 300) {
+                    backBtn.classList.add('is-visible');
+                } else {
+                    backBtn.classList.remove('is-visible');
+                }
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const catParam = urlParams.get('category');
@@ -543,5 +560,13 @@
             }
         });
     </script>
+
+    <!-- Floating AI Tutor Quick Button -->
+    <a href="{{ url_for('ask_ai') }}" id="floatingAiBtn" title="Ask AI Study Companion" style="position: fixed; bottom: 24px; left: 24px; background: var(--brand-gradient); color: white; border-radius: 30px; padding: 10px 18px; font-weight: 700; font-size: 0.88rem; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px var(--brand-orange-glow); z-index: 999; transition: transform 0.2s;">
+        <span>🧠</span>
+        <span>Ask GranthMind AI</span>
+    </a>
+
+    <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
 </body>
 </html>

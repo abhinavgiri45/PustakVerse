@@ -5,28 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #f4f6f9; 
-            color: #1e293b; 
-            font-size: 16px; 
-        }
-        
-        .navbar { 
-            background-color: #2d3748; 
-            padding: 10px 40px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap; 
-            gap: 16px; 
-        }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
         .navbar-brand img, .logo-img { 
-            height: 52px; 
+            height: 48px; 
             width: auto;
             max-width: 220px;
             background: transparent; 
@@ -281,19 +265,22 @@
 </head>
 <body>
 
+    <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
+
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
+            <a href="/" aria-label="PustakVerse">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 48px; width: auto; object-fit: contain;">
             </a>
         </div>
-        <div class="navbar-links">
+        <div class="navbar-links" style="display: flex; align-items: center; gap: 12px;">
             <a href="/">← Back to Library</a>
             {% if session.user_id %}
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>
             {% else %}
-                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('login') }}" class="nav-btn-highlight">Sign In / Join</a>
             {% endif %}
+            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme"><span id="themeIcon">☾</span></button>
         </div>
     </nav>
 
@@ -441,7 +428,40 @@
         } else if (micBtn) {
             micBtn.style.display = 'none';
         }
-    </script>
 
+        // Multi-Theme Controller
+        function applyTheme(theme) {
+            document.body.classList.remove('dark-theme', 'sepia-theme');
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                if (icon) icon.textContent = '🌙';
+            } else if (theme === 'sepia') {
+                document.body.classList.add('sepia-theme');
+                if (icon) icon.textContent = '📜';
+            } else {
+                if (icon) icon.textContent = '☾';
+            }
+            try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
+        }
+        function toggleTheme() {
+            const current = localStorage.getItem('pustakverse_theme') || 'light';
+            const next = current === 'light' ? 'dark' : (current === 'dark' ? 'sepia' : 'light');
+            applyTheme(next);
+        }
+        (function() {
+            const saved = localStorage.getItem('pustakverse_theme') || 'light';
+            applyTheme(saved);
+        })();
+
+        // Scroll Progress Bar
+        window.addEventListener('scroll', function() {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            const bar = document.getElementById('myBar');
+            if (bar) bar.style.width = scrolled + '%';
+        });
+    </script>
 </body>
 </html>
