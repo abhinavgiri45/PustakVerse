@@ -194,9 +194,9 @@
         <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🆓 100% Free</button>
         <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">⭐ 4.5+ Rating</button>
         {% for cat in site_catalogs %}
-            <a href="/category/{{ cat.name }}">{{ cat.name }}</a>
+            <button type="button" onclick="applyQuickFilter('category:{{ cat.name | escape }}', this)" class="quick-filter-btn" data-cat-name="{{ cat.name | escape | lower }}" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">📚 {{ cat.name }}</button>
         {% endfor %}
-        <a href="/archives" style="background: #2d3748; color: white;">Archives (Free)</a>
+        <button type="button" onclick="applyQuickFilter('category:Archives', this)" class="quick-filter-btn" data-cat-name="archives" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🏛️ Archives</button>
     </div>
 
     <div class="container">
@@ -261,7 +261,7 @@
 
                 <div class="book-info">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                        <div class="book-tag">{{ book.catalog }}</div>
+                        <div class="book-tag" onclick="filterByCategory('{{ book.catalog | escape }}')" style="cursor: pointer;" title="Click to filter by {{ book.catalog }}">{{ book.catalog }}</div>
                         {% if book.is_featured %}
                             <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
                         {% endif %}
@@ -466,15 +466,24 @@
         }
         renderContinueReading();
 
-        // Quick Filter Functionality (Free / 4.5+ Stars / All)
+        // Helper to filter from book card tag click or external link
+        function filterByCategory(catName) {
+            const normalized = (catName || '').toLowerCase().trim();
+            const btn = document.querySelector(`.quick-filter-btn[data-cat-name="${normalized}"]`);
+            applyQuickFilter('category:' + catName, btn);
+            const filterNav = document.querySelector('.filter-nav');
+            if (filterNav) {
+                window.scrollTo({ top: filterNav.offsetTop - 20, behavior: 'smooth' });
+            }
+        }
+
+        // Quick Filter Functionality (Free / 4.5+ Stars / Categories / All)
         function applyQuickFilter(type, btn) {
-            document.querySelectorAll('.quick-filter-btn, .filter-nav a').forEach(el => {
+            document.querySelectorAll('.quick-filter-btn').forEach(el => {
                 el.classList.remove('active');
-                if (el.tagName === 'BUTTON') {
-                    el.style.background = '#edf2f7';
-                    el.style.color = '#334155';
-                    el.style.border = '1px solid #cbd5e1';
-                }
+                el.style.background = '#edf2f7';
+                el.style.color = '#334155';
+                el.style.border = '1px solid #cbd5e1';
             });
             if (btn) {
                 btn.classList.add('active');
@@ -493,16 +502,22 @@
 
             const cards = document.querySelectorAll('.book-card');
             let visibleCount = 0;
+            const isCategory = type.startsWith('category:');
+            const targetCategory = isCategory ? type.substring(9).trim().toLowerCase() : '';
+
             cards.forEach(card => {
                 const isPaid = card.getAttribute('data-is-paid') === 'true';
                 const price = parseFloat(card.getAttribute('data-price') || '0');
                 const rating = parseFloat(card.getAttribute('data-rating') || '5.0');
+                const catalog = (card.getAttribute('data-catalog') || '').trim().toLowerCase();
                 let matches = true;
 
                 if (type === 'free') {
                     matches = (!isPaid && price === 0);
                 } else if (type === 'stars') {
                     matches = (rating >= 4.5);
+                } else if (isCategory) {
+                    matches = (catalog === targetCategory || catalog.includes(targetCategory));
                 } else if (type === 'all') {
                     matches = true;
                 }
@@ -519,6 +534,14 @@
             const noResults = document.getElementById('noResultsMsg');
             if (noResults) noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const catParam = urlParams.get('category');
+            if (catParam) {
+                filterByCategory(catParam);
+            }
+        });
     </script>
 </body>
 </html>

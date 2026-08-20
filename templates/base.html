@@ -46,10 +46,10 @@
         <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
         <h3>Browse by category</h3>
         {% for cat in site_catalogs %}
-            <a href="{{ url_for('category_view', name=cat.name) }}">{{ cat.name }}</a>
+            <a href="/?category={{ cat.name }}">{{ cat.name }}</a>
         {% endfor %}
         <h3>Special collections</h3>
-        <a href="{{ url_for('archives_view') }}">Archives (Free Books)</a>
+        <a href="/?category=Archives">Archives (Free Books)</a>
     </aside>
 
     <nav>
