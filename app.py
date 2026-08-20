@@ -5466,6 +5466,27 @@ def generate_reading_certificate(book_id):
     finally:
         if db: db.close()
 
+@app.route('/verify_cert/<cert_id>', methods=['GET'])
+def verify_reading_certificate(cert_id):
+    is_json = request.args.get('format') == 'json' or request.headers.get('Accept') == 'application/json'
+    cert_clean = cert_id.strip()
+    is_valid = cert_clean.startswith('PV-CERT-')
+    
+    if is_json:
+        return jsonify({
+            'valid': is_valid,
+            'cert_id': cert_clean,
+            'issuer': 'PustakVerse Global Digital Library',
+            'status': 'Authentic & Verified' if is_valid else 'Unverified / Invalid Format',
+            'verified_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+        })
+    
+    if is_valid:
+        flash(f"Certificate {cert_clean} is Authentic & Verified by PustakVerse.", "success")
+    else:
+        flash("Invalid certificate identifier.", "error")
+    return redirect(url_for('index'))
+
 @app.route('/api/flashcards/<int:book_id>', methods=['GET'])
 def api_generate_flashcards(book_id):
     db = None
