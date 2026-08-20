@@ -2097,6 +2097,55 @@ def healthz():
         'cached_items': fast_cache.size()
     }), 200
 
+
+@app.route('/api/search_books')
+def api_search_books():
+    q = (request.args.get('q') or '').strip().lower()
+    if not q:
+        return jsonify([])
+
+    cached_books = fast_cache.get('books_index')
+    if cached_books is None:
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT id, title, author, cover_image, price, catalog, rating, reviews_count FROM books WHERE is_public = TRUE")
+            cached_books = cursor.fetchall()
+            fast_cache.set('books_index', cached_books, ttl=60)
+        except Exception:
+            cached_books = []
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+    matches = []
+    for b in (cached_books or []):
+        t = (b.get('title') or '').lower()
+        a = (b.get('author') or '').lower()
+        c = (b.get('catalog') or '').lower()
+        if q in t or q in a or q in c:
+            cover = b.get('cover_image') or 'default.jpg'
+            if cover.startswith('http'):
+                cover_url = cover
+            else:
+                cover_url = f"/static/uploads/covers/{cover}"
+            matches.append({
+                'id': b.get('id'),
+                'title': b.get('title'),
+                'author': b.get('author'),
+                'cover_url': cover_url,
+                'price': float(b.get('price') or 0),
+                'catalog': b.get('catalog'),
+                'rating': float(b.get('rating') or 5.0)
+            })
+            if len(matches) >= 8:
+                break
+
+    return jsonify(matches)
+
+
 @app.route('/')
 def index():
     if request.args.get('skip_intro') == '1' or session.get('user_id'):

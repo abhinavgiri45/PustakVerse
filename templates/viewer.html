@@ -409,6 +409,47 @@
             }
         }
 
+        // Automatic Reading Progress & Daily Streak Recorder
+        (function recordReadingSession() {
+            const bookId = {{ (book.id if book and book.id else 0) }};
+            const bookTitle = {{ (book.title if book and book.title else '')|tojson }};
+            const bookAuthor = {{ (book.author if book and book.author else '')|tojson }};
+            const bookCover = {{ (book.cover_image if book and book.cover_image else '')|tojson }};
+            
+            // Get URL param for page if any
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageNum = parseInt(urlParams.get('page') || '1', 10);
+
+            const progress = {
+                id: bookId,
+                title: bookTitle,
+                author: bookAuthor,
+                cover: bookCover,
+                page: pageNum,
+                total: 50,
+                updatedAt: Date.now()
+            };
+            try {
+                localStorage.setItem('pv_last_read_book', JSON.stringify(progress));
+
+                // Update Reading Streak
+                const today = new Date().toISOString().slice(0, 10);
+                const lastDate = localStorage.getItem('pv_last_active_date');
+                let streak = parseInt(localStorage.getItem('pv_reading_streak') || '1', 10);
+
+                if (lastDate && lastDate !== today) {
+                    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+                    if (lastDate === yesterday) {
+                        streak += 1;
+                    } else {
+                        streak = 1;
+                    }
+                }
+                localStorage.setItem('pv_last_active_date', today);
+                localStorage.setItem('pv_reading_streak', streak.toString());
+            } catch (err) {}
+        })();
+
         // Prevent Dragging elements (like images)
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();

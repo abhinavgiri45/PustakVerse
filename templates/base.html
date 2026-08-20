@@ -63,9 +63,10 @@
         </div>
         <div class="nav-search" aria-label="Global search">
             <form class="nav-search-form" role="search" id="globalSearchForm" action="javascript:void(0);">
-                <input type="search" id="globalSearchInput" placeholder="Search books, authors, categories... (Ctrl + K)" aria-label="Search books">
+                <input type="search" id="globalSearchInput" placeholder="Search books, authors, categories... (Ctrl + K)" aria-label="Search books" autocomplete="off">
                 <button type="button" id="globalMicBtn" class="nav-search-btn" title="Search by Voice" aria-label="Search by Voice">🎤</button>
             </form>
+            <div class="search-autocomplete-dropdown" id="searchAutocompleteDropdown"></div>
         </div>
         <div class="nav-links">
             <a href="{{ url_for('index') }}">Global Library</a>
@@ -124,8 +125,25 @@
         function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
         function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
         function dismissPopup() { const popup = document.getElementById('tgPopup'); popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); localStorage.setItem('pustakverse_tg_seen', 'true'); }
-        function applyTheme(theme) { document.body.classList.toggle('dark-theme', theme === 'dark'); document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '☾'; }
-        function toggleTheme() { const nextTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark'; localStorage.setItem('pustakverse_theme', nextTheme); applyTheme(nextTheme); }
+        function applyTheme(theme) {
+            document.body.classList.remove('dark-theme', 'sepia-theme');
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                if (icon) icon.textContent = '🌙';
+            } else if (theme === 'sepia') {
+                document.body.classList.add('sepia-theme');
+                if (icon) icon.textContent = '📜';
+            } else {
+                if (icon) icon.textContent = '☀️';
+            }
+        }
+        function toggleTheme() {
+            const current = localStorage.getItem('pustakverse_theme') || 'light';
+            const next = current === 'light' ? 'sepia' : (current === 'sepia' ? 'dark' : 'light');
+            localStorage.setItem('pustakverse_theme', next);
+            applyTheme(next);
+        }
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         document.addEventListener('DOMContentLoaded', function() {
             applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
@@ -151,6 +169,8 @@
             if (event.key === 'Escape') { 
                 dismissPopup(); 
                 closeNav(); 
+                const dd = document.getElementById('searchAutocompleteDropdown');
+                if (dd) dd.style.display = 'none';
             }
             if ((event.ctrlKey && event.key.toLowerCase() === 'k') || (event.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) {
                 event.preventDefault();
@@ -161,6 +181,15 @@
                 }
             }
         });
+
+        document.addEventListener('click', function(e) {
+            const navSearch = document.querySelector('.nav-search');
+            const dropdown = document.getElementById('searchAutocompleteDropdown');
+            if (dropdown && navSearch && !navSearch.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
         window.addEventListener('scroll', function() {
             const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
@@ -171,6 +200,47 @@
         const globalSearchInput = document.getElementById('globalSearchInput');
         const globalSearchForm = document.getElementById('globalSearchForm');
         const globalMicBtn = document.getElementById('globalMicBtn');
+        const searchDropdown = document.getElementById('searchAutocompleteDropdown');
+
+        let searchDebounceTimer = null;
+        function performLiveAutocomplete(query) {
+            if (!searchDropdown) return;
+            const q = (query || '').trim();
+            if (q.length < 2) {
+                searchDropdown.style.display = 'none';
+                searchDropdown.innerHTML = '';
+                return;
+            }
+
+            fetch('/api/search_books?q=' + encodeURIComponent(q))
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        searchDropdown.innerHTML = '<div style="padding:14px; text-align:center; color:#64748b; font-size:0.88rem;">No books found matching "<strong>' + q + '</strong>"</div>';
+                        searchDropdown.style.display = 'block';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(item => {
+                        html += `
+                            <a href="/book/${item.id}" class="autocomplete-item">
+                                <img src="${item.cover_url}" alt="${item.title}" class="autocomplete-thumb" onerror="this.src='/static/PustakVerse.png'">
+                                <div class="autocomplete-info">
+                                    <div class="autocomplete-title">${item.title}</div>
+                                    <div class="autocomplete-meta">by ${item.author} · ${item.catalog || 'General'}</div>
+                                </div>
+                                <div class="autocomplete-price">${item.price > 0 ? '₹' + item.price.toFixed(0) : 'Free'}</div>
+                            </a>
+                        `;
+                    });
+                    searchDropdown.innerHTML = html;
+                    searchDropdown.style.display = 'block';
+                })
+                .catch(() => {
+                    searchDropdown.style.display = 'none';
+                });
+        }
 
         function filterVisibleCards(query) {
             const cards = document.querySelectorAll('.book-card');
@@ -193,8 +263,14 @@
         }
 
         if (globalSearchInput) {
-            globalSearchInput.addEventListener('keyup', function() {
-                filterVisibleCards(this.value);
+            globalSearchInput.addEventListener('input', function() {
+                const val = this.value;
+                filterVisibleCards(val);
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => performLiveAutocomplete(val), 200);
+            });
+            globalSearchInput.addEventListener('focus', function() {
+                if (this.value.trim().length >= 2) performLiveAutocomplete(this.value);
             });
         }
 
@@ -202,6 +278,7 @@
             globalSearchForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 filterVisibleCards(globalSearchInput?.value || '');
+                if (searchDropdown) searchDropdown.style.display = 'none';
                 globalSearchInput?.blur();
             });
         }
@@ -222,6 +299,7 @@
             recognition.onresult = (event) => {
                 globalSearchInput.value = event.results[0][0].transcript;
                 filterVisibleCards(globalSearchInput.value);
+                performLiveAutocomplete(globalSearchInput.value);
             };
 
             recognition.onerror = () => {

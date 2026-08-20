@@ -323,8 +323,29 @@
             </button>
         </form>
 
+        <!-- Reading Goals & Daily Streak Banner -->
+        <div class="reading-goals-banner" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 22px 28px; margin: 25px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 18px;">
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: #fff7ed; border: 1.5px solid #fdba74; display: grid; place-items: center; font-size: 1.6rem;">🔥</div>
+                <div>
+                    <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; color: #ea580c; letter-spacing: 0.08em;">Reader Habit Tracker</div>
+                    <h2 style="margin: 2px 0 0; font-size: 1.3rem; color: #0f172a;"><span id="myLibStreak">1</span>-Day Reading Streak</h2>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Keep learning every day to expand your horizons!</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 220px; max-width: 360px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                    <span>🎯 Monthly Reading Challenge</span>
+                    <span><span id="booksReadCount">{{ saved_books|length }}</span> / 5 Books</span>
+                </div>
+                <div style="height: 10px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+                    <div id="goalProgressBar" style="height: 100%; width: {{ [(((saved_books|length) / 5) * 100)|round|int, 100]|min }}%; background: linear-gradient(90deg, #f97316, #ea580c); border-radius: 10px;"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Shelf Filter Tabs -->
-        <div style="display: flex; justify-content: center; gap: 10px; margin: 25px 0 30px; flex-wrap: wrap;">
+        <div style="display: flex; justify-content: center; gap: 10px; margin: 15px 0 30px; flex-wrap: wrap;">
             <button type="button" class="shelf-tab active" onclick="filterByShelf('all', this)" style="background: #2d3748; color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
                 📚 All Books ({{ saved_books|length }})
             </button>
@@ -466,7 +487,16 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', initShelfStatuses);
+        function updateStreakDisplay() {
+            const streak = localStorage.getItem('pv_reading_streak') || '1';
+            const streakEl = document.getElementById('myLibStreak');
+            if (streakEl) streakEl.textContent = streak;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initShelfStatuses();
+            updateStreakDisplay();
+        });
 
         const searchInput = document.getElementById('searchInput');
         const searchForm = document.getElementById('searchForm');
