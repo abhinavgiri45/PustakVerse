@@ -4316,27 +4316,27 @@ def read_book(book_id):
 
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
-    if 'user_id' not in session: 
-        abort(401)
-        
     db = None
     book = None
     can_read = False
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT author_id, pdf_file, is_paid, private_pdf, preview_pages FROM books WHERE id = %s', (book_id,))
+        cursor.execute('SELECT id, author_id, pdf_file, is_paid, private_pdf, preview_pages FROM books WHERE id = %s', (book_id,))
         book = cursor.fetchone()
         if not book: 
             abort(404)
             
         user_id = session.get('user_id')
         user_role = session.get('role')
-        can_read = not book['is_paid'] or user_id == book['author_id'] or user_role == 'developer'
+        can_read = not book['is_paid'] or (user_id and (user_id == book['author_id'] or user_role == 'developer'))
         
         if book['is_paid'] and not can_read and user_id: 
             cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))
             can_read = bool(cursor.fetchone())
+            
+        if not can_read:
+            abort(403)
     except Exception: 
         abort(500)
     finally:
@@ -4349,14 +4349,46 @@ def serve_secure_pdf(book_id):
 
     if book['pdf_file'].startswith('http'):
         pdf_url = book['pdf_file']
+        file_id = None
         if 'drive.google.com' in pdf_url or 'docs.google.com' in pdf_url:
             m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_url)
             if m:
                 file_id = m.group(1)
-                pdf_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
+                
         try:
-            req = requests.get(pdf_url, stream=True, timeout=12, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-            if req.status_code == 200:
+            s = requests.Session()
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': '*/*'
+            }
+            req = None
+            if file_id:
+                endpoints = [
+                    f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t",
+                    f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t",
+                    f"https://docs.google.com/uc?export=download&id={file_id}&confirm=t"
+                ]
+                for ep in endpoints:
+                    try:
+                        r = s.get(ep, stream=True, timeout=18, headers=headers)
+                        if r.status_code == 200:
+                            ct = r.headers.get('Content-Type', '').lower()
+                            if 'text/html' in ct:
+                                for k, v in s.cookies.items():
+                                    if 'download_warning' in k:
+                                        r2 = s.get(f"https://drive.google.com/uc?export=download&confirm={v}&id={file_id}", stream=True, timeout=20, headers=headers)
+                                        if r2.status_code == 200:
+                                            req = r2
+                                            break
+                            else:
+                                req = r
+                                break
+                    except Exception:
+                        continue
+            else:
+                req = s.get(pdf_url, stream=True, timeout=20, headers=headers)
+                
+            if req and req.status_code == 200:
                 def generate():
                     for chunk in req.iter_content(chunk_size=65536):
                         if chunk:
@@ -4364,11 +4396,14 @@ def serve_secure_pdf(book_id):
                 resp = Response(stream_with_context(generate()), mimetype='application/pdf')
                 resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
                 resp.headers['X-Content-Type-Options'] = 'nosniff'
+                resp.headers['Access-Control-Allow-Origin'] = '*'
+                resp.headers['Accept-Ranges'] = 'bytes'
                 return resp
             else:
-                return redirect(book['pdf_file'].replace('/view', '/preview'))
-        except Exception:
-            return redirect(book['pdf_file'].replace('/view', '/preview'))
+                abort(502)
+        except Exception as e:
+            logging.error(f"Error streaming cloud PDF {book_id}: {e}")
+            abort(502)
         
     folder = app.config['PRIVATE_PDF_FOLDER'] if book['is_paid'] or book['private_pdf'] else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
     full_path = os.path.join(folder, book['pdf_file'])

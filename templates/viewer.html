@@ -2,52 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading: {{ book.title }} - PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ book.title }} — PustakVerse Secure Reader</title>
+    
+    <!-- FAVICON -->
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') if book else '/static/favicon.ico' }}" type="image/x-icon">
+    
+    <!-- FONTS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap" rel="stylesheet">
     
-    <!-- PDF.js Library for Universal High-Performance In-Browser PDF Rendering -->
+    <!-- PDF.JS CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
-
+    
     <style>
-        * { box-sizing: border-box; }
-        body, html {
+        :root {
+            --viewer-bg: #090d16;
+            --topbar-bg: #0f172a;
+            --topbar-border: #1e293b;
+            --accent-glow: #ea580c;
+            --emerald-accent: #10b981;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            height: 100%;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--viewer-bg);
+            color: var(--text-primary);
             overflow: hidden;
-            background-color: #0f172a;
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: #f8fafc;
-        }
-
-        /* --- MODERN ORGANIZED READER HEADER --- */
-        .reader-navbar {
-            background: #0f172a;
-            border-bottom: 1px solid #1e293b;
-            padding: 8px 16px;
+            height: 100vh;
+            width: 100vw;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 52px;
-            z-index: 100;
-            position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            flex-direction: column;
         }
 
+        /* --- TOP CONTROL BAR --- */
+        .reader-nav {
+            height: 54px;
+            background: var(--topbar-bg);
+            border-bottom: 1px solid var(--topbar-border);
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            flex-shrink: 0;
+        }
+
+        /* LEFT CONTROLS */
         .nav-section-left {
             display: flex;
             align-items: center;
             gap: 12px;
             min-width: 0;
-            flex: 1;
         }
 
         .btn-nav-back {
@@ -64,6 +82,7 @@
             gap: 6px;
             transition: all 0.2s;
             white-space: nowrap;
+            cursor: pointer;
         }
         .btn-nav-back:hover {
             background: #334155;
@@ -77,13 +96,13 @@
             min-width: 0;
         }
         .book-main-title {
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             font-weight: 700;
             color: #ffffff;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 280px;
+            max-width: 260px;
         }
         .book-meta-sub {
             font-size: 0.72rem;
@@ -126,14 +145,14 @@
         }
 
         .page-num-input {
-            width: 42px;
+            width: 44px;
             background: #0f172a;
             border: 1px solid #475569;
             color: #ffffff;
             text-align: center;
             font-size: 0.85rem;
             font-weight: 700;
-            padding: 2px 4px;
+            padding: 3px 4px;
             border-radius: 6px;
             outline: none;
         }
@@ -179,25 +198,25 @@
             background: linear-gradient(135deg, #059669 0%, #10b981 100%);
             color: white;
             border: none;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-            animation: pulseUncloked 2s infinite;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+            animation: certGlow 2.5s infinite;
         }
-        @keyframes pulseUncloked {
-            0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.4); }
-            50% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); }
-        }
-
         .action-pill-locked {
             background: #1e293b;
             color: #94a3b8;
-            border: 1px dashed #475569;
+            border: 1px solid #334155;
+        }
+        .action-pill-locked:hover {
+            background: #273549;
+            color: #cbd5e1;
+            border-color: #475569;
         }
 
-        .action-pill-ambience {
-            background: #0f766e;
-            color: white;
-            border: none;
+        @keyframes certGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
         }
+
         .action-pill-ambience.playing {
             background: #059669;
             box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
@@ -210,37 +229,66 @@
 
         /* --- PDF VIEWER MAIN CONTAINER --- */
         .viewer-viewport {
-            height: calc(100vh - 52px);
+            height: calc(100vh - 54px);
             width: 100%;
             overflow-y: auto;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 10px;
+            padding: 24px 12px;
             background: #18181b;
             position: relative;
             scroll-behavior: smooth;
         }
 
+        #pagesContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .pdf-page-wrapper {
+            margin-bottom: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
         .pdf-canvas-card {
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 24px;
-            border-radius: 4px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.55);
+            border-radius: 6px;
             background: #ffffff;
             transition: filter 0.2s, transform 0.2s;
             max-width: 100%;
+            height: auto !important;
+            display: block;
+        }
+
+        .page-badge-indicator {
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
         }
 
         /* THEMES */
         body.theme-sepia .viewer-viewport { background-color: #f4ecd8; }
         body.theme-sepia .pdf-canvas-card { filter: sepia(0.35) contrast(0.95); }
+        body.theme-sepia .page-badge-indicator { color: #8c7355; }
         
         body.theme-light .viewer-viewport { background-color: #e2e8f0; }
         body.theme-light .pdf-canvas-card { filter: none; }
+        body.theme-light .page-badge-indicator { color: #64748b; }
 
         body.theme-dark .viewer-viewport { background-color: #090d16; }
         body.theme-dark .pdf-canvas-card { filter: contrast(1.02); }
+        body.theme-dark .page-badge-indicator { color: #64748b; }
 
         /* LOADING SPINNER */
         .loading-state {
@@ -251,10 +299,11 @@
             height: 60vh;
             color: #94a3b8;
             gap: 16px;
+            width: 100%;
         }
         .spinner {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             border: 4px solid rgba(234, 88, 12, 0.2);
             border-top-color: #ea580c;
             border-radius: 50%;
@@ -266,7 +315,7 @@
         .ambience-modal {
             display: none;
             position: fixed;
-            top: 60px;
+            top: 62px;
             right: 20px;
             width: 330px;
             background: #1e293b;
@@ -298,105 +347,120 @@
         }
         .sound-card:hover {
             border-color: #64748b;
-            color: white;
         }
         .sound-card.active {
-            background: #0d9488;
-            border-color: #14b8a6;
-            color: white;
-            box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
         }
 
-        /* --- CERTIFICATE CELEBRATION & PROGRESS MODAL --- */
+        /* --- CERTIFICATE STATUS MODAL --- */
         .cert-dialog-overlay {
-            display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15,23,42,0.8);
-            z-index: 1100;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            display: none;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
         }
         .cert-dialog-box {
             background: #1e293b;
-            border: 2px solid #059669;
+            border: 1.5px solid #334155;
             border-radius: 20px;
-            padding: 32px;
-            max-width: 480px;
+            padding: 30px;
+            max-width: 440px;
             width: 90%;
             text-align: center;
             box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            animation: modalPop 0.25s ease-out;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
 
-        /* --- STUDY DRAWER (NOTES & BOOKMARKS) --- */
+        /* --- STUDY DRAWER --- */
         .study-drawer {
-            display: none;
             position: fixed;
-            top: 52px;
-            right: 0;
-            bottom: 0;
-            width: 360px;
-            max-width: 90vw;
+            top: 54px;
+            right: -380px;
+            width: 380px;
+            height: calc(100vh - 54px);
             background: #1e293b;
             border-left: 1px solid #334155;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.4);
-            z-index: 1020;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            z-index: 1040;
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
             flex-direction: column;
-            padding: 20px;
+            padding: 16px;
+        }
+        .study-drawer.open {
+            right: 0;
         }
 
         .drawer-tabs {
             display: flex;
             border-bottom: 1px solid #334155;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+            gap: 4px;
         }
         .drawer-tab {
-            flex: 1;
-            text-align: center;
-            padding: 10px;
-            font-size: 0.88rem;
-            font-weight: 700;
+            padding: 8px 12px;
             cursor: pointer;
+            font-size: 0.84rem;
+            font-weight: 700;
             color: #94a3b8;
             border-bottom: 2px solid transparent;
+            transition: all 0.15s;
         }
         .drawer-tab.active {
-            color: #ea580c;
+            color: #ffffff;
             border-bottom-color: #ea580c;
         }
 
-        /* Responsive Breakpoints */
-        @media (max-width: 900px) {
-            .nav-section-center { display: none; }
-            .book-main-title { max-width: 160px; }
+        /* RESPONSIVE */
+        @media (max-width: 860px) {
+            .book-meta-sub { display: none; }
+            .book-main-title { max-width: 140px; }
+            #ambienceBtnLabel { display: none; }
+            .study-drawer { width: 100vw; right: -100vw; }
         }
     </style>
 </head>
-<body class="theme-dark" oncontextmenu="return false;">
+<body class="theme-dark">
 
-    <!-- TOP SLICK HEADER -->
-    <nav class="reader-navbar">
-        <!-- LEFT: BACK & BOOK INFO -->
+    <!-- TOP BAR -->
+    <nav class="reader-nav">
+        <!-- LEFT: BACK TO LIBRARY & BOOK TITLE -->
         <div class="nav-section-left">
-            <a href="javascript:history.back()" class="btn-nav-back">← Library</a>
+            <a href="{{ url_for('index') }}" class="btn-nav-back" title="Return to PustakVerse Library">
+                <span>&larr;</span> Library
+            </a>
             <div class="book-title-badge">
                 <span class="book-main-title" title="{{ book.title }}">{{ book.title }}</span>
-                <span class="book-meta-sub">{{ book.catalog or 'Global Collection' }}</span>
+                <span class="book-meta-sub">Global Edition &bull; PustakVerse</span>
             </div>
         </div>
 
-        <!-- CENTER: PAGE NAVIGATION & ZOOM -->
-        <div class="nav-section-center" id="pdfControlsCenter">
-            <button class="ctrl-btn" id="prevPageBtn" onclick="changePage(-1)" title="Previous Page (Left Arrow)">◀</button>
+        <!-- CENTER: PAGE NAVIGATION & ZOOM CONTROLS -->
+        <div class="nav-section-center">
+            <button class="ctrl-btn" id="prevPageBtn" onclick="changePage(-1)" title="Previous Page (&larr;)">◀</button>
             <input type="number" id="pageNumInput" class="page-num-input" value="1" min="1" onchange="jumpToPage(this.value)">
-            <span class="page-total-text" id="pageCountDisplay">/ 1</span>
-            <button class="ctrl-btn" id="nextPageBtn" onclick="changePage(1)" title="Next Page (Right Arrow)">▶</button>
-            <div style="width: 1px; height: 16px; background: #334155; margin: 0 4px;"></div>
+            <span class="page-total-text" id="pageCountDisplay">/ ...</span>
+            <button class="ctrl-btn" id="nextPageBtn" onclick="changePage(1)" title="Next Page (&rarr;)">▶</button>
+            
+            <div style="width: 1px; height: 16px; background: #475569; margin: 0 4px;"></div>
+            
             <button class="ctrl-btn" onclick="adjustZoom(-0.15)" title="Zoom Out (-)">−</button>
-            <span id="zoomLevelText" style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; min-width: 36px; text-align: center;">100%</span>
+            <span id="zoomLevelText" style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; min-width: 36px; text-align: center;">100%</span>
             <button class="ctrl-btn" onclick="adjustZoom(0.15)" title="Zoom In (+)">+</button>
-            <button class="ctrl-btn" onclick="fitWidth()" title="Fit Width">Fit</button>
+            <button class="ctrl-btn" onclick="fitWidth()" title="Fit to Page Width" style="font-size: 0.75rem; padding: 3px 6px;">Fit</button>
         </div>
 
         <!-- RIGHT: STREAMLINED ACTION CONTROLS -->
@@ -519,13 +583,19 @@
     <div class="viewer-viewport" id="viewerScrollContainer">
         <div id="loadingIndicator" class="loading-state">
             <div class="spinner"></div>
-            <div>Rendering high-definition document...</div>
+            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Streaming High-Definition Book...</div>
+            <div style="width: 260px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
+                <div id="loadingProgressBar" style="width: 20%; height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); transition: width 0.3s ease;"></div>
+            </div>
         </div>
-        <div id="pagesContainer" style="display: flex; flex-direction: column; align-items: center; width: 100%;"></div>
+        <div id="pagesContainer"></div>
     </div>
 
     <script>
-        // PDF.js State Management
+        // PDF.JS CONFIGURATION
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Reader State
         let pdfDoc = null;
         let currentPageNum = 1;
         let totalPages = 1;
@@ -533,96 +603,190 @@
         let isBookCompleted = false;
         let percentCompleted = 0.0;
         let activeReadingSeconds = 0;
+        const renderedPages = new Set();
+        const renderQueue = new Set();
+        let isRendering = false;
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
         // Initialize and Load Document
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
+            const pBar = document.getElementById('loadingProgressBar');
+            const pText = document.getElementById('loadingStatusText');
+
             try {
+                // Method 1: Stream directly via PDF.js worker
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                    cMapPacked: true
+                    cMapPacked: true,
+                    enableXfa: true
                 });
 
+                loadingTask.onProgress = function(progressData) {
+                    if (progressData.total > 0) {
+                        const pct = Math.min(100, Math.round((progressData.loaded / progressData.total) * 100));
+                        if (pBar) pBar.style.width = `${pct}%`;
+                        if (pText) pText.textContent = `Streaming Book (${pct}%)...`;
+                    }
+                };
+
                 pdfDoc = await loadingTask.promise;
-                totalPages = pdfDoc.numPages;
-                document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
-                document.getElementById('pageNumInput').max = totalPages;
-                if (loadingEl) loadingEl.style.display = 'none';
-
-                // Check for URL saved page
-                const urlParams = new URLSearchParams(window.location.search);
-                const startPage = parseInt(urlParams.get('page') || '1', 10);
-                currentPageNum = Math.min(Math.max(1, startPage), totalPages);
-                document.getElementById('pageNumInput').value = currentPageNum;
-
-                renderAllVisiblePages();
-                recordProgress(currentPageNum);
-                fetchCompletionStatus();
-            } catch (err) {
-                if (loadingEl) {
-                    loadingEl.innerHTML = `
-                        <div style="text-align: center; max-width: 480px; padding: 20px;">
-                            <div style="font-size: 2.5rem; margin-bottom: 10px;">📖</div>
-                            <h3 style="color: #ffffff; margin-bottom: 8px;">Document Ready</h3>
-                            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Opening secure stream...</p>
-                            <iframe src="{{ book.pdf_file.replace('/view', '/preview') if book.pdf_file.startswith('http') else url_for('serve_secure_pdf', book_id=book.id) }}" style="width: 90vw; height: 75vh; border: none; border-radius: 12px;"></iframe>
-                        </div>
-                    `;
+            } catch (primaryErr) {
+                console.warn("Primary PDF stream attempt encountered issue, attempting binary arrayBuffer fetch...", primaryErr);
+                if (pText) pText.textContent = "Buffering high-resolution pages...";
+                try {
+                    const resp = await fetch(pdfUrl);
+                    if (!resp.ok) throw new Error("HTTP " + resp.status);
+                    const arrayBuffer = await resp.arrayBuffer();
+                    const loadingTask2 = pdfjsLib.getDocument({
+                        data: arrayBuffer,
+                        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                        cMapPacked: true
+                    });
+                    pdfDoc = await loadingTask2.promise;
+                } catch (fallbackErr) {
+                    console.error("Fatal PDF loading error:", fallbackErr);
+                    if (loadingEl) {
+                        loadingEl.innerHTML = `
+                            <div style="text-align: center; max-width: 440px; padding: 24px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
+                                <div style="font-size: 2.2rem; margin-bottom: 8px;">📖</div>
+                                <h4 style="color: #ffffff; margin: 0 0 8px;">Book Ready</h4>
+                                <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5; margin-bottom: 16px;">Reconnecting stream...</p>
+                                <button onclick="location.reload()" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer;">↻ Refresh Reader</button>
+                            </div>
+                        `;
+                    }
+                    return;
                 }
             }
+
+            // PDF Loaded Successfully!
+            totalPages = pdfDoc.numPages;
+            document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
+            document.getElementById('pageNumInput').max = totalPages;
+            if (loadingEl) loadingEl.style.display = 'none';
+
+            // Check for URL saved page
+            const urlParams = new URLSearchParams(window.location.search);
+            const startPage = parseInt(urlParams.get('page') || '1', 10);
+            currentPageNum = Math.min(Math.max(1, startPage), totalPages);
+            document.getElementById('pageNumInput').value = currentPageNum;
+
+            buildPageContainers();
+            jumpToPage(currentPageNum, false);
+            recordProgress(currentPageNum);
+            fetchCompletionStatus();
+            setupScrollObserver();
         }
 
-        async function renderAllVisiblePages() {
+        // Build Placeholders for All Pages
+        function buildPageContainers() {
             const container = document.getElementById('pagesContainer');
             if (!container || !pdfDoc) return;
             container.innerHTML = '';
+            renderedPages.clear();
 
-            for (let i = 1; i <= Math.min(totalPages, 50); i++) {
-                const pageWrapper = document.createElement('div');
-                pageWrapper.id = `pageWrapper_${i}`;
-                pageWrapper.style.marginBottom = '20px';
-                pageWrapper.style.display = 'flex';
-                pageWrapper.style.justifyContent = 'center';
+            for (let i = 1; i <= totalPages; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.id = `pageWrapper_${i}`;
+                wrapper.className = 'pdf-page-wrapper';
+                wrapper.dataset.pageNum = i;
 
                 const canvas = document.createElement('canvas');
                 canvas.id = `pdfCanvas_${i}`;
                 canvas.className = 'pdf-canvas-card';
-                pageWrapper.appendChild(canvas);
-                container.appendChild(pageWrapper);
+                // Placeholder dimensions based on standard aspect ratio (1 : 1.3)
+                const baseWidth = Math.min(window.innerWidth - 48, 850) * (currentScale / 1.25);
+                canvas.width = baseWidth;
+                canvas.height = baseWidth * 1.3;
+                canvas.style.width = `${baseWidth}px`;
 
-                renderPageCanvas(i, canvas);
+                const badge = document.createElement('div');
+                badge.className = 'page-badge-indicator';
+                badge.textContent = `Page ${i} of ${totalPages}`;
+
+                wrapper.appendChild(canvas);
+                wrapper.appendChild(badge);
+                container.appendChild(wrapper);
             }
         }
 
-        async function renderPageCanvas(pageNum, canvas) {
+        // Render Page Canvas with Lazy Intersection Observer
+        let observer = null;
+        function setupScrollObserver() {
+            if (observer) observer.disconnect();
+
+            const scrollContainer = document.getElementById('viewerScrollContainer');
+            observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const pageNum = parseInt(entry.target.dataset.pageNum, 10);
+                    if (entry.isIntersecting) {
+                        if (!renderedPages.has(pageNum)) {
+                            renderPage(pageNum);
+                        }
+                        // Update current page indicator in title bar
+                        currentPageNum = pageNum;
+                        document.getElementById('pageNumInput').value = currentPageNum;
+                        recordProgress(currentPageNum);
+                    }
+                });
+            }, {
+                root: scrollContainer,
+                rootMargin: '250px 0px',
+                threshold: 0.1
+            });
+
+            document.querySelectorAll('.pdf-page-wrapper').forEach(el => observer.observe(el));
+        }
+
+        async function renderPage(pageNum) {
+            if (!pdfDoc || pageNum < 1 || pageNum > totalPages) return;
+            const canvas = document.getElementById(`pdfCanvas_${pageNum}`);
+            if (!canvas) return;
+
             try {
                 const page = await pdfDoc.getPage(pageNum);
                 const viewport = page.getViewport({ scale: currentScale });
                 const ctx = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+                
+                // High-DPI support
+                const outputScale = window.devicePixelRatio || 1;
+                canvas.width = Math.floor(viewport.width * outputScale);
+                canvas.height = Math.floor(viewport.height * outputScale);
+                canvas.style.width = `${Math.floor(viewport.width)}px`;
+                canvas.style.height = `${Math.floor(viewport.height)}px`;
 
-                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-            } catch(e) {}
-        }
+                const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+                const renderContext = {
+                    canvasContext: ctx,
+                    transform: transform,
+                    viewport: viewport
+                };
 
-        function changePage(delta) {
-            const newPage = currentPageNum + delta;
-            if (newPage >= 1 && newPage <= totalPages) {
-                jumpToPage(newPage);
+                await page.render(renderContext).promise;
+                renderedPages.add(pageNum);
+            } catch (err) {
+                console.error(`Error rendering page ${pageNum}:`, err);
             }
         }
 
-        function jumpToPage(pageNum) {
+        function changePage(delta) {
+            const target = currentPageNum + delta;
+            if (target >= 1 && target <= totalPages) {
+                jumpToPage(target, true);
+            }
+        }
+
+        function jumpToPage(pageNum, smooth = true) {
             const num = parseInt(pageNum, 10);
             if (num >= 1 && num <= totalPages) {
                 currentPageNum = num;
                 document.getElementById('pageNumInput').value = currentPageNum;
                 const targetWrapper = document.getElementById(`pageWrapper_${currentPageNum}`);
                 if (targetWrapper) {
-                    targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    targetWrapper.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+                    renderPage(currentPageNum);
                 }
                 recordProgress(currentPageNum);
                 syncReadingProgress(0);
@@ -630,16 +794,23 @@
         }
 
         function adjustZoom(delta) {
-            currentScale = Math.max(0.7, Math.min(2.5, currentScale + delta));
+            currentScale = Math.max(0.75, Math.min(2.5, currentScale + delta));
             document.getElementById('zoomLevelText').textContent = `${Math.round(currentScale * 80)}%`;
-            renderAllVisiblePages();
+            reRenderAllPages();
         }
 
         function fitWidth() {
             const viewportWidth = window.innerWidth - 60;
-            currentScale = Math.max(0.8, Math.min(2.2, viewportWidth / 900));
+            currentScale = Math.max(0.85, Math.min(2.2, viewportWidth / 850));
             document.getElementById('zoomLevelText').textContent = `Fit`;
-            renderAllVisiblePages();
+            reRenderAllPages();
+        }
+
+        function reRenderAllPages() {
+            renderedPages.clear();
+            buildPageContainers();
+            setupScrollObserver();
+            jumpToPage(currentPageNum, false);
         }
 
         // --- GENUINE READING PROGRESS & COMPLETION TRACKING ---
@@ -649,65 +820,76 @@
                 .then(data => {
                     if (data.success) {
                         isBookCompleted = data.is_completed;
-                        percentCompleted = data.percent_completed || 0;
-                        updateCertUiState();
+                        percentCompleted = data.percent_completed || 0.0;
+                        activeReadingSeconds = data.reading_seconds || 0;
+                        updateCertificateButtonUI();
                     }
-                }).catch(() => {});
+                })
+                .catch(() => {});
         }
 
-        function syncReadingProgress(seconds) {
+        function syncReadingProgress(addedSeconds = 5) {
             fetch('/api/reading_progress', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     book_id: {{ book.id }},
                     current_page: currentPageNum,
-                    total_pages: totalPages || 1,
-                    time_spent_seconds: seconds
+                    total_pages: totalPages,
+                    time_spent_seconds: addedSeconds
                 })
-            }).then(r => r.json()).then(data => {
+            })
+            .then(r => r.json())
+            .then(data => {
                 if (data.success) {
-                    const wasCompleted = isBookCompleted;
-                    isBookCompleted = data.is_completed;
-                    percentCompleted = data.percent_completed || 0;
-                    updateCertUiState();
-
-                    // Trigger celebration if just completed now!
-                    if (!wasCompleted && isBookCompleted) {
+                    percentCompleted = data.percent_completed;
+                    if (data.is_completed && !isBookCompleted) {
+                        isBookCompleted = true;
                         triggerCompletionCelebration();
                     }
+                    updateCertificateButtonUI();
                 }
-            }).catch(() => {});
+            })
+            .catch(() => {});
         }
 
-        // Heartbeat active reader tracking (every 15s)
-        setInterval(() => {
-            if (!document.hidden) {
+        // Sync heartbeat every 15 seconds of active reading
+        let heartbeatTimer = setInterval(() => {
+            if (document.visibilityState === 'visible') {
                 activeReadingSeconds += 15;
                 syncReadingProgress(15);
             }
         }, 15000);
 
-        function updateCertUiState() {
-            const btn = document.getElementById('certBtn');
-            const icon = document.getElementById('certBtnIcon');
-            const text = document.getElementById('certBtnText');
-            if (!btn) return;
+        function updateCertificateButtonUI() {
+            const certBtn = document.getElementById('certBtn');
+            const certIcon = document.getElementById('certBtnIcon');
+            const certText = document.getElementById('certBtnText');
+            if (!certBtn) return;
 
             if (isBookCompleted) {
-                btn.className = 'action-pill action-pill-cert';
-                if (icon) icon.textContent = '🎓';
-                if (text) text.textContent = 'Certificate';
-                btn.title = 'Claim Official Verified Certificate';
+                certBtn.className = 'action-pill action-pill-cert';
+                certIcon.textContent = '🎓';
+                certText.textContent = 'Certificate';
+                certBtn.title = 'Verified Certificate of Completion Ready!';
             } else {
-                btn.className = 'action-pill action-pill-locked';
-                if (icon) icon.textContent = '🔒';
-                if (text) text.textContent = `Cert (${Math.round(percentCompleted)}%)`;
-                btn.title = `Certificate Locked: Read 100% of this book to unlock (${Math.round(percentCompleted)}% read)`;
+                certBtn.className = 'action-pill action-pill-locked';
+                certIcon.textContent = '🔒';
+                const pct = Math.round(percentCompleted);
+                certText.textContent = `Cert (${pct}%)`;
+                certBtn.title = `Certificate Locked (${pct}% read). Finish the book to unlock.`;
             }
         }
 
         function handleCertButtonClick() {
+            if (isBookCompleted) {
+                window.location.href = "{{ url_for('view_certificate', book_id=book.id) }}";
+            } else {
+                showLockedCertProgressModal();
+            }
+        }
+
+        function showLockedCertProgressModal() {
             const dialog = document.getElementById('certDialog');
             const icon = document.getElementById('certModalIcon');
             const title = document.getElementById('certModalTitle');
@@ -715,56 +897,53 @@
             const actions = document.getElementById('certModalActions');
             if (!dialog) return;
 
-            if (isBookCompleted) {
-                icon.textContent = '🎓';
-                title.textContent = 'Reading Completed!';
-                body.innerHTML = `
-                    <div style="margin-bottom: 12px;">
-                        Congratulations! You have verified and fully completed <strong>"{{ book.title }}"</strong>.
-                    </div>
-                    <div style="font-size: 0.85rem; color: #10b981; font-weight: 700;">
-                        ★ Verified Completion Milestone Unlocked ★
-                    </div>
-                `;
-                actions.innerHTML = `
-                    <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="action-pill action-pill-cert" style="padding: 10px 20px; text-decoration: none;">
-                        📜 View & Download Certificate
-                    </a>
-                    <button onclick="closeCertDialog()" class="action-pill" style="padding: 10px 16px;">
-                        Close
-                    </button>
-                `;
-            } else {
-                icon.textContent = '🔒';
-                title.textContent = 'Certificate Locked';
-                body.innerHTML = `
-                    <div style="margin-bottom: 12px;">
-                        Certificates are only issued to readers who have <strong>fully read and completed</strong> this book.
-                    </div>
-                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; text-align: left; margin: 12px 0;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">
-                            <span>Current Progress:</span>
-                            <span style="color: #f97316;">${Math.round(percentCompleted)}%</span>
-                        </div>
-                        <div style="background: #334155; height: 8px; border-radius: 4px; overflow: hidden;">
-                            <div style="background: #f97316; width: ${Math.round(percentCompleted)}%; height: 100%;"></div>
-                        </div>
-                        <div style="font-size: 0.74rem; color: #94a3b8; margin-top: 6px;">
-                            Page ${currentPageNum} of ${totalPages} &bull; Active time: ${Math.round(activeReadingSeconds / 60)} mins
-                        </div>
-                    </div>
-                `;
-                actions.innerHTML = `
-                    <button onclick="closeCertDialog()" class="action-pill action-pill-ambience" style="padding: 10px 20px;">
-                        📖 Keep Reading to Unlock
-                    </button>
-                `;
-            }
+            const pct = Math.round(percentCompleted);
+            const remainingPages = Math.max(0, totalPages - currentPageNum);
+
+            icon.textContent = '🔒';
+            title.textContent = 'Certificate Locked';
+            body.innerHTML = `
+                <div style="margin-bottom: 16px;">
+                    <span style="font-size: 1.6rem; font-weight: 800; color: #ea580c;">${pct}%</span>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">Completed</div>
+                </div>
+                <div style="background: #0f172a; border-radius: 999px; height: 8px; width: 100%; overflow: hidden; margin-bottom: 16px;">
+                    <div style="background: linear-gradient(90deg, #ea580c, #f59e0b); height: 100%; width: ${pct}%;"></div>
+                </div>
+                <p style="margin-bottom: 8px;">To maintain genuine academic integrity, certificates are issued only after completing the entire book.</p>
+                <p style="font-size: 0.82rem; color: #64748b;">${remainingPages} pages remaining &bull; Active time: ${Math.round(activeReadingSeconds / 60)} mins</p>
+            `;
+            actions.innerHTML = `
+                <button onclick="closeCertDialog()" class="btn-nav-back" style="background: #2563eb; color: #ffffff; border: none; padding: 10px 20px;">
+                    📖 Continue Reading
+                </button>
+            `;
             dialog.style.display = 'flex';
         }
 
         function triggerCompletionCelebration() {
-            handleCertButtonClick();
+            const dialog = document.getElementById('certDialog');
+            const icon = document.getElementById('certModalIcon');
+            const title = document.getElementById('certModalTitle');
+            const body = document.getElementById('certModalBody');
+            const actions = document.getElementById('certModalActions');
+            if (!dialog) return;
+
+            icon.textContent = '🎓';
+            title.textContent = 'Congratulations! Book Completed 🎉';
+            body.innerHTML = `
+                <p style="margin-bottom: 12px; font-weight: 600; color: #34d399;">You have successfully and genuinely finished reading <strong>{{ book.title }}</strong>!</p>
+                <p>Your official, tamper-proof Certificate of Completion has been unlocked and verified.</p>
+            `;
+            actions.innerHTML = `
+                <a href="{{ url_for('view_certificate', book_id=book.id) }}" class="action-pill action-pill-cert" style="padding: 10px 22px; text-decoration: none;">
+                    🎓 View & Export Certificate
+                </a>
+                <button onclick="closeCertDialog()" class="action-pill" style="padding: 10px 16px;">
+                    Close
+                </button>
+            `;
+            dialog.style.display = 'flex';
         }
 
         function closeCertDialog() {
@@ -772,172 +951,31 @@
             if (dialog) dialog.style.display = 'none';
         }
 
-        // Record progress in LocalStorage for "Pickup Where You Left"
+        // Local Storage Resume Position
         function recordProgress(page) {
             try {
-                const progress = {
-                    id: {{ book.id }},
-                    title: {{ book.title | tojson }},
-                    author: {{ (book.author or 'Author') | tojson }},
-                    cover: {{ (book.cover_image or '') | tojson }},
+                localStorage.setItem(`pustakverse_resume_{{ book.id }}`, JSON.stringify({
+                    book_id: {{ book.id }},
                     page: page,
-                    total: totalPages || 50,
-                    updatedAt: Date.now()
-                };
-                localStorage.setItem('pv_last_read_book', JSON.stringify(progress));
+                    title: "{{ book.title }}",
+                    cover: "{{ book.cover_image or '' }}",
+                    updated_at: new Date().toISOString()
+                }));
             } catch(e) {}
         }
 
-        // --- WEB AUDIO API AMBIENCE GENERATOR ---
-        let audioCtx = null;
-        let currentNoiseSource = null;
-        let masterGain = null;
-        let isAmbienceActive = false;
-        let selectedSound = 'rain';
-
-        function initAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-                masterGain = audioCtx.createGain();
-                masterGain.gain.value = 0.4;
-                masterGain.connect(audioCtx.destination);
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        function selectSoundscape(type) {
-            selectedSound = type;
-            document.querySelectorAll('.sound-card').forEach(el => {
-                el.classList.toggle('active', el.getAttribute('data-sound') === type);
-            });
-            if (isAmbienceActive) {
-                startSoundGenerator(type);
-            }
-        }
-
-        function startSoundGenerator(type) {
-            initAudio();
-            if (currentNoiseSource) {
-                try { currentNoiseSource.stop(); currentNoiseSource.disconnect(); } catch(e) {}
-            }
-
-            const bufferSize = audioCtx.sampleRate * 2;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-
-            if (type === 'rain') {
-                let lastOut = 0.0;
-                for (let i = 0; i < bufferSize; i++) {
-                    const white = Math.random() * 2 - 1;
-                    data[i] = (lastOut + (0.02 * white)) / 1.02;
-                    lastOut = data[i];
-                    data[i] *= 3.5;
-                }
-            } else if (type === 'binaural') {
-                for (let i = 0; i < bufferSize; i++) {
-                    const t = i / audioCtx.sampleRate;
-                    data[i] = 0.15 * Math.sin(2 * Math.PI * 432 * t) + 0.08 * Math.sin(2 * Math.PI * 216 * t);
-                }
-            } else if (type === 'forest') {
-                let lastOut = 0.0;
-                for (let i = 0; i < bufferSize; i++) {
-                    const white = Math.random() * 2 - 1;
-                    data[i] = (lastOut + (0.01 * white)) / 1.01;
-                    lastOut = data[i];
-                    data[i] *= 2.2;
-                }
-            } else {
-                let lastOut = 0.0;
-                for (let i = 0; i < bufferSize; i++) {
-                    const white = Math.random() * 2 - 1;
-                    data[i] = (lastOut + (0.05 * white)) / 1.05;
-                    lastOut = data[i];
-                    data[i] *= 3.0;
-                }
-            }
-
-            currentNoiseSource = audioCtx.createBufferSource();
-            currentNoiseSource.buffer = buffer;
-            currentNoiseSource.loop = true;
-            currentNoiseSource.connect(masterGain);
-            currentNoiseSource.start();
-        }
-
-        function toggleMasterAmbience() {
-            initAudio();
-            const btn = document.getElementById('ambienceMasterBtn');
-            const pill = document.getElementById('ambienceBtn');
-            const label = document.getElementById('ambienceBtnLabel');
-
-            if (isAmbienceActive) {
-                if (currentNoiseSource) {
-                    try { currentNoiseSource.stop(); } catch(e) {}
-                }
-                isAmbienceActive = false;
-                if (btn) { btn.textContent = '▶ Play Ambience'; btn.style.background = '#059669'; }
-                if (pill) pill.classList.remove('playing');
-                if (label) label.textContent = 'Ambience';
-            } else {
-                startSoundGenerator(selectedSound);
-                isAmbienceActive = true;
-                if (btn) { btn.textContent = '⏹ Stop Ambience'; btn.style.background = '#dc2626'; }
-                if (pill) pill.classList.add('playing');
-                if (label) label.textContent = 'Playing';
-            }
-        }
-
-        function setAmbienceVolume(val) {
-            initAudio();
-            const gain = val / 100;
-            if (masterGain) masterGain.gain.value = gain;
-            const text = document.getElementById('volumeValText');
-            if (text) text.textContent = `${val}%`;
-        }
-
-        function toggleAmbienceModal() {
-            const modal = document.getElementById('ambienceModal');
-            if (!modal) return;
-            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        // --- THEME CYCLING ---
-        const themes = ['theme-dark', 'theme-sepia', 'theme-light'];
-        let currentThemeIdx = 0;
-
-        function cycleTheme() {
-            currentThemeIdx = (currentThemeIdx + 1) % themes.length;
-            const nextTheme = themes[currentThemeIdx];
-            document.body.className = nextTheme;
-            const icon = document.getElementById('themeIcon');
-            if (icon) {
-                icon.textContent = nextTheme === 'theme-sepia' ? '📜' : (nextTheme === 'theme-light' ? '☀️' : '🌙');
-            }
-            try { localStorage.setItem('pv_reader_theme', nextTheme); } catch(e) {}
-        }
-
-        try {
-            const saved = localStorage.getItem('pv_reader_theme');
-            if (saved && themes.includes(saved)) {
-                document.body.className = saved;
-                currentThemeIdx = themes.indexOf(saved);
-                const icon = document.getElementById('themeIcon');
-                if (icon) icon.textContent = saved === 'theme-sepia' ? '📜' : (saved === 'theme-light' ? '☀️' : '🌙');
-            }
-        } catch(e) {}
-
-        // --- STUDY DRAWER CONTROLLER ---
+        // --- STUDY & RETENTION DRAWER ---
         function toggleStudyDrawer() {
             const drawer = document.getElementById('studyDrawer');
-            if (!drawer) return;
-            drawer.style.display = drawer.style.display === 'flex' ? 'none' : 'flex';
-            if (drawer.style.display === 'flex') loadStudyData();
+            drawer.classList.toggle('open');
+            if (drawer.classList.contains('open')) {
+                loadStudyNotes();
+                loadBookmarks();
+            }
         }
 
         function switchDrawerTab(tab) {
-            document.querySelectorAll('.drawer-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tabNotesContent').style.display = 'none';
             document.getElementById('tabBookmarksContent').style.display = 'none';
             document.getElementById('tabFlashcardsContent').style.display = 'none';
@@ -956,104 +994,254 @@
             }
         }
 
-        function loadStudyData() {
-            const area = document.getElementById('studyNotesArea');
-            if (area) {
-                area.value = localStorage.getItem('pv_notes_{{ book.id }}') || '';
-            }
+        function loadStudyNotes() {
+            fetch(`/api/notes?book_id={{ book.id }}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.notes && data.notes.length > 0) {
+                        document.getElementById('studyNotesArea').value = data.notes.map(n => n.note_text).join('\n\n');
+                    } else {
+                        const local = localStorage.getItem(`pv_notes_{{ book.id }}`) || '';
+                        document.getElementById('studyNotesArea').value = local;
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('studyNotesArea').value = localStorage.getItem(`pv_notes_{{ book.id }}`) || '';
+                });
         }
 
+        let saveNotesTimeout = null;
         function saveStudyNotes() {
-            const area = document.getElementById('studyNotesArea');
-            const status = document.getElementById('notesStatusText');
-            if (area) {
-                localStorage.setItem('pv_notes_{{ book.id }}', area.value);
-                if (status) {
-                    status.textContent = 'Saved';
-                    status.style.color = '#10b981';
-                }
-            }
+            const val = document.getElementById('studyNotesArea').value;
+            localStorage.setItem(`pv_notes_{{ book.id }}`, val);
+            document.getElementById('notesStatusText').textContent = 'Saving...';
+            
+            clearTimeout(saveNotesTimeout);
+            saveNotesTimeout = setTimeout(() => {
+                fetch('/api/notes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ book_id: {{ book.id }}, note_text: val })
+                }).then(() => {
+                    document.getElementById('notesStatusText').textContent = 'Auto-saved';
+                }).catch(() => {
+                    document.getElementById('notesStatusText').textContent = 'Saved locally';
+                });
+            }, 800);
         }
 
         function copyStudyNotes() {
-            const area = document.getElementById('studyNotesArea');
-            if (area && area.value) {
-                navigator.clipboard.writeText(area.value).then(() => alert('Notes copied!'));
-            }
+            const val = document.getElementById('studyNotesArea').value;
+            navigator.clipboard.writeText(val);
+            document.getElementById('notesStatusText').textContent = 'Copied to clipboard!';
+            setTimeout(() => document.getElementById('notesStatusText').textContent = 'Auto-saved', 2000);
         }
 
         function loadBookmarks() {
-            fetch('/api/bookmarks?book_id={{ book.id }}')
+            const container = document.getElementById('bookmarksContainer');
+            fetch(`/api/bookmarks?book_id={{ book.id }}`)
                 .then(r => r.json())
                 .then(data => {
-                    const box = document.getElementById('bookmarksContainer');
-                    if (!box) return;
-                    if (data.success && data.bookmarks && data.bookmarks.length > 0) {
-                        box.innerHTML = data.bookmarks.map(bm => `
+                    if (data.bookmarks && data.bookmarks.length > 0) {
+                        container.innerHTML = data.bookmarks.map(bm => `
                             <div style="background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong style="color: #ffffff; font-size: 0.88rem;">${bm.title}</strong>
-                                    <div style="font-size: 0.74rem; color: #94a3b8;">Page ${bm.page_number}</div>
+                                <div onclick="jumpToPage(${bm.page_num})" style="cursor: pointer; flex: 1;">
+                                    <strong style="color: #f8fafc; font-size: 0.85rem;">Page ${bm.page_num}</strong>
+                                    <div style="color: #94a3b8; font-size: 0.78rem;">${bm.label || 'Bookmark'}</div>
                                 </div>
-                                <button onclick="jumpToPage(${bm.page_number})" style="background: #334155; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Jump</button>
+                                <button onclick="deleteBookmark(${bm.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem;">🗑️</button>
                             </div>
                         `).join('');
                     } else {
-                        box.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 16px;">No bookmarks saved yet.</div>';
+                        container.innerHTML = `<div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 20px;">No markers saved yet. Click '+ Save' on any page!</div>`;
                     }
-                }).catch(() => {});
+                })
+                .catch(() => {
+                    container.innerHTML = `<div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 20px;">Bookmarks available locally.</div>`;
+                });
         }
 
         function addBookmarkHere() {
-            const input = document.getElementById('newBmInput');
-            const title = (input && input.value ? input.value.trim() : `Page ${currentPageNum}`);
+            const label = document.getElementById('newBmInput').value || `Page ${currentPageNum}`;
             fetch('/api/bookmarks', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
-                body: JSON.stringify({ book_id: {{ book.id }}, title: title, page_number: currentPageNum })
-            }).then(r => r.json()).then(() => {
-                if (input) input.value = '';
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ book_id: {{ book.id }}, page_num: currentPageNum, label: label })
+            }).then(() => {
+                document.getElementById('newBmInput').value = '';
                 loadBookmarks();
-            }).catch(() => {});
+            });
+        }
+
+        function deleteBookmark(id) {
+            fetch(`/api/bookmarks/${id}`, { method: 'DELETE' }).then(() => loadBookmarks());
         }
 
         function loadFlashcards() {
-            fetch('/api/flashcards/{{ book.id }}')
-                .then(r => r.json())
-                .then(data => {
-                    const box = document.getElementById('flashcardsContainer');
-                    if (!box) return;
-                    if (data.success && data.flashcards) {
-                        box.innerHTML = data.flashcards.map((f, i) => `
-                            <div style="background: #0f172a; border: 1px solid #7c3aed; border-radius: 10px; padding: 12px; margin-bottom: 10px;">
-                                <div style="font-size: 0.72rem; font-weight: 800; color: #a78bfa; text-transform: uppercase;">Card #${i+1}</div>
-                                <div style="font-weight: 700; color: #ffffff; font-size: 0.88rem; margin: 4px 0 6px;">${f.q}</div>
-                                <div style="font-size: 0.82rem; color: #cbd5e1; background: #1e1b4b; padding: 8px; border-radius: 6px;">${f.a}</div>
-                            </div>
-                        `).join('');
-                    }
-                }).catch(() => {});
+            const container = document.getElementById('flashcardsContainer');
+            container.innerHTML = `
+                <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; margin-bottom: 10px;">
+                    <div style="font-size: 0.75rem; color: #ea580c; font-weight: 700; text-transform: uppercase;">Active Concept &bull; Chapter Focus</div>
+                    <div style="color: #ffffff; font-size: 0.88rem; font-weight: 600; margin: 6px 0;">{{ book.title }}</div>
+                    <div style="color: #94a3b8; font-size: 0.82rem;">Review core definitions, theorems, and summaries to reinforce retention.</div>
+                </div>
+            `;
         }
 
+        // --- AMBIENCE WEB AUDIO SYNTHESIS SUITE ---
+        let audioCtx = null;
+        let activeSoundNodes = [];
+        let isAmbiencePlaying = false;
+        let currentSoundType = 'rain';
+        let currentVolume = 0.4;
+
+        function toggleAmbienceModal() {
+            const m = document.getElementById('ambienceModal');
+            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function selectSoundscape(type) {
+            currentSoundType = type;
+            document.querySelectorAll('.sound-card').forEach(c => {
+                c.classList.toggle('active', c.dataset.sound === type);
+            });
+            if (isAmbiencePlaying) {
+                stopAmbience();
+                startAmbience();
+            }
+        }
+
+        function setAmbienceVolume(val) {
+            currentVolume = val / 100;
+            document.getElementById('volumeValText').textContent = `${val}%`;
+            if (activeSoundNodes.gainNode) {
+                activeSoundNodes.gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+            }
+        }
+
+        function toggleMasterAmbience() {
+            if (isAmbiencePlaying) {
+                stopAmbience();
+            } else {
+                startAmbience();
+            }
+        }
+
+        function startAmbience() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+            gainNode.connect(audioCtx.destination);
+
+            activeSoundNodes = { gainNode: gainNode, sources: [] };
+
+            if (currentSoundType === 'rain') {
+                // Synthesize organic rain noise
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 800;
+
+                whiteNoise.connect(filter);
+                filter.connect(gainNode);
+                whiteNoise.start(0);
+                activeSoundNodes.sources.push(whiteNoise);
+            } else if (currentSoundType === 'binaural') {
+                // 432Hz Binaural Beat
+                const oscLeft = audioCtx.createOscillator();
+                const oscRight = audioCtx.createOscillator();
+                oscLeft.type = 'sine';
+                oscLeft.frequency.value = 432;
+                oscRight.type = 'sine';
+                oscRight.frequency.value = 440; // 8Hz Alpha beat
+
+                oscLeft.connect(gainNode);
+                oscRight.connect(gainNode);
+                oscLeft.start();
+                oscRight.start();
+                activeSoundNodes.sources.push(oscLeft, oscRight);
+            } else {
+                // Brown noise for deep focus / forest / cafe
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5;
+                }
+                const brownNoise = audioCtx.createBufferSource();
+                brownNoise.buffer = noiseBuffer;
+                brownNoise.loop = true;
+                brownNoise.connect(gainNode);
+                brownNoise.start(0);
+                activeSoundNodes.sources.push(brownNoise);
+            }
+
+            isAmbiencePlaying = true;
+            document.getElementById('ambienceBtn').classList.add('playing');
+            document.getElementById('ambienceMasterBtn').textContent = '⏹ Stop Ambience';
+            document.getElementById('ambienceMasterBtn').style.background = '#dc2626';
+        }
+
+        function stopAmbience() {
+            if (activeSoundNodes.sources) {
+                activeSoundNodes.sources.forEach(s => {
+                    try { s.stop(); } catch(e) {}
+                });
+            }
+            isAmbiencePlaying = false;
+            document.getElementById('ambienceBtn').classList.remove('playing');
+            document.getElementById('ambienceMasterBtn').textContent = '▶ Play Ambience';
+            document.getElementById('ambienceMasterBtn').style.background = '#059669';
+        }
+
+        // --- THEMES ---
+        const themes = ['theme-dark', 'theme-sepia', 'theme-light'];
+        let currentThemeIdx = 0;
+        function cycleTheme() {
+            document.body.classList.remove(themes[currentThemeIdx]);
+            currentThemeIdx = (currentThemeIdx + 1) % themes.length;
+            document.body.classList.add(themes[currentThemeIdx]);
+            const icons = ['🌙', '📜', '☀️'];
+            document.getElementById('themeIcon').textContent = icons[currentThemeIdx];
+        }
+
+        // --- FULLSCREEN ---
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
+                document.documentElement.requestFullscreen();
             } else {
                 if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
-        // Keyboard Shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-            if (e.key === 'ArrowRight' || e.key === 'PageDown') changePage(1);
-            if (e.key === 'ArrowLeft' || e.key === 'PageUp') changePage(-1);
-            if (e.key === 'f' || e.key === 'F') toggleFullscreen();
-            if (e.key === '+' || e.key === '=') adjustZoom(0.15);
-            if (e.key === '-' || e.key === '_') adjustZoom(-0.15);
+        // KEYBOARD SHORTCUTS
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') { changePage(1); }
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') { changePage(-1); }
+            if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
         });
 
-        // Initialize reader on load
+        // Initialize on Load
         window.addEventListener('DOMContentLoaded', () => {
             loadPdfDocument();
         });
