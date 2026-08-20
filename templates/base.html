@@ -102,6 +102,7 @@
 
     {% block content %}{% endblock %}
 
+    {% if request.endpoint not in ['login', 'register', 'google_set_password', 'forgot_password'] %}
     <div class="popup-overlay" id="tgPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle" aria-hidden="true">
         <div class="popup-content">
             <button class="popup-close" type="button" onclick="dismissPopup()" aria-label="Close popup">&times;</button>
@@ -114,6 +115,7 @@
             <button class="close-popup" type="button" onclick="dismissPopup()">Maybe later</button>
         </div>
     </div>
+    {% endif %}
     
     <!-- Floating AI Tutor Quick Button -->
     <a href="{{ url_for('ask_ai') }}" id="floatingAiBtn" title="Ask AI Study Companion" style="position: fixed; bottom: 25px; left: 25px; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; border-radius: 30px; padding: 10px 18px; font-weight: 700; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35); z-index: 999; transition: transform 0.2s;">
@@ -126,7 +128,7 @@
     <script>
         function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
         function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
-        function dismissPopup() { const popup = document.getElementById('tgPopup'); popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); localStorage.setItem('pustakverse_tg_seen', 'true'); }
+        function dismissPopup() { const popup = document.getElementById('tgPopup'); if (popup) { popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); } localStorage.setItem('pustakverse_tg_seen', 'true'); }
         function applyTheme(theme) {
             document.body.classList.remove('dark-theme', 'sepia-theme');
             const icon = document.getElementById('themeIcon');
@@ -156,7 +158,8 @@
                 streakCountEl.textContent = s;
             }
 
-            if (!localStorage.getItem('pustakverse_tg_seen')) {
+            const isAuthPage = ['/login', '/register', '/google_set_password', '/forgot_password'].some(p => window.location.pathname.startsWith(p));
+            if (!isAuthPage && !localStorage.getItem('pustakverse_tg_seen')) {
                 setTimeout(function() { 
                     const popup = document.getElementById('tgPopup'); 
                     if (popup) {
