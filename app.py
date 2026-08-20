@@ -343,6 +343,14 @@ def clean_book_data(books):
         b['pdf_file'] = str(b.get('pdf_file') or "")
         b['author_name'] = str(b.get('author_name') or "Unknown")
         b['description'] = str(b.get('description') or "")
+        try:
+            b['avg_rating'] = float(b.get('avg_rating') if b.get('avg_rating') is not None else 5.0)
+        except Exception:
+            b['avg_rating'] = 5.0
+        try:
+            b['price_paise'] = int(b.get('price_paise') if b.get('price_paise') is not None else 0)
+        except Exception:
+            b['price_paise'] = 0
     return books
 
 STOP_WORDS = {
@@ -2167,8 +2175,14 @@ def index():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role 
-            FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC""")
+        cursor.execute("""
+            SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role, COALESCE(AVG(interactions.rating), 5.0) as avg_rating
+            FROM books 
+            JOIN users ON books.author_id = users.id 
+            LEFT JOIN interactions ON books.id = interactions.book_id
+            GROUP BY books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.created_at, users.username, users.role
+            ORDER BY books.created_at DESC
+        """)
         books = clean_book_data(cursor.fetchall())
         fast_cache.set('books_index', books, ttl=45)
     except Exception: 
@@ -2197,8 +2211,15 @@ def category_view(name):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("""SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role 
-            FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = %s ORDER BY books.created_at DESC""", (name,))
+        cursor.execute("""
+            SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role, COALESCE(AVG(interactions.rating), 5.0) as avg_rating
+            FROM books 
+            JOIN users ON books.author_id = users.id 
+            LEFT JOIN interactions ON books.id = interactions.book_id
+            WHERE books.catalog = %s
+            GROUP BY books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.created_at, users.username, users.role
+            ORDER BY books.created_at DESC
+        """, (name,))
         books = clean_book_data(cursor.fetchall())
         fast_cache.set(cache_key, books, ttl=45)
     except Exception: 
