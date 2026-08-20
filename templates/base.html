@@ -90,6 +90,13 @@
         </div>
     </nav>
 
+    {% if site_settings.alert_ticker_active and site_settings.alert_ticker_message %}
+    <div style="background: linear-gradient(90deg, #ea580c 0%, #f97316 50%, #ea580c 100%); color: white; padding: 8px 16px; text-align: center; font-size: 0.88rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 10px rgba(234, 88, 12, 0.25);">
+        <span>📢</span>
+        <span>{{ site_settings.alert_ticker_message }}</span>
+    </div>
+    {% endif %}
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="container flash-container">

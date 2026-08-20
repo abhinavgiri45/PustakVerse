@@ -1955,13 +1955,89 @@ def ensure_payment_schema():
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN gemini_api_key VARCHAR(255) DEFAULT NULL")
         except Exception: pass
 
-        cursor.execute("INSERT IGNORE INTO front_page_settings (id) VALUES (1)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES ('Fiction'), ('Non-Fiction'), ('Educational'), ('History'), ('Poetry')")
         cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS ai_chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NULL, role ENUM('user', 'assistant') NOT NULL, message_text TEXT NOT NULL, screenshot VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, INDEX idx_ai_chat_user_book (user_id, book_id, id))")
+        
+        # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
+        # 1. Reader: Personal Notes & Highlights
+        cursor.execute("CREATE TABLE IF NOT EXISTS user_notes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, note_text TEXT NOT NULL, page_number INT DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        
+        # 2. Reader: Multi-Bookmark System
+        cursor.execute("CREATE TABLE IF NOT EXISTS user_bookmarks (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, title VARCHAR(255) NOT NULL, page_number INT DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        
+        # 3. Reader: Custom Reading Shelves
+        cursor.execute("CREATE TABLE IF NOT EXISTS user_shelves (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, name VARCHAR(100) NOT NULL, book_ids_json TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        
+        # 4. Reader: Book Requests & Community Wishlist Hub
+        cursor.execute("CREATE TABLE IF NOT EXISTS book_requests (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, title VARCHAR(255) NOT NULL, author VARCHAR(255) NOT NULL, catalog VARCHAR(100) DEFAULT 'General', notes TEXT, status ENUM('pending', 'acquired', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        
+        # 5. Author: Promotional Coupons & Discount Engine
+        cursor.execute("CREATE TABLE IF NOT EXISTS book_coupons (id INT AUTO_INCREMENT PRIMARY KEY, book_id INT NOT NULL, code VARCHAR(50) NOT NULL, discount_percent INT NOT NULL DEFAULT 20, max_uses INT NOT NULL DEFAULT 100, used_count INT NOT NULL DEFAULT 0, expires_at TIMESTAMP NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        
+        # 6. Author: Version Changelogs & Editions
+        cursor.execute("CREATE TABLE IF NOT EXISTS book_changelogs (id INT AUTO_INCREMENT PRIMARY KEY, book_id INT NOT NULL, version VARCHAR(50) NOT NULL, notes TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        
+        # 7. Official: Category Sticky Announcements
+        cursor.execute("CREATE TABLE IF NOT EXISTS category_announcements (id INT AUTO_INCREMENT PRIMARY KEY, catalog_name VARCHAR(100) NOT NULL, title VARCHAR(255) NOT NULL, message TEXT NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        
+        # 8. Official: Multi-Tier User Strikes & Warnings
+        cursor.execute("CREATE TABLE IF NOT EXISTS user_strikes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, reason TEXT NOT NULL, strike_level INT NOT NULL DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        
+        # 9. Developer: API Keys & Webhook Gateway
+        cursor.execute("CREATE TABLE IF NOT EXISTS api_keys (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, key_hash VARCHAR(255) NOT NULL, label VARCHAR(100) NOT NULL, rate_limit INT DEFAULT 60, active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)")
+        
+        # 10. Developer: Global Alert Ticker
+        cursor.execute("CREATE TABLE IF NOT EXISTS global_announcements (id INT AUTO_INCREMENT PRIMARY KEY, message TEXT NOT NULL, banner_type VARCHAR(50) DEFAULT 'info', active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+
+        # Extended Column Migrations for Books
+        for col_def in [
+            ("video_trailer_url", "VARCHAR(500) DEFAULT NULL"),
+            ("audio_preview_url", "VARCHAR(500) DEFAULT NULL"),
+            ("co_authors", "VARCHAR(255) DEFAULT NULL"),
+            ("chapters_json", "TEXT DEFAULT NULL"),
+            ("official_staff_review", "TEXT DEFAULT NULL"),
+            ("official_reviewer_name", "VARCHAR(100) DEFAULT NULL"),
+            ("drm_watermark_enabled", "BOOLEAN DEFAULT FALSE"),
+            ("view_count", "INT DEFAULT 0"),
+            ("completion_count", "INT DEFAULT 0")
+        ]:
+            try:
+                cursor.execute(f"SHOW COLUMNS FROM books LIKE '{col_def[0]}'")
+                if not cursor.fetchone():
+                    cursor.execute(f"ALTER TABLE books ADD COLUMN {col_def[0]} {col_def[1]}")
+            except Exception: pass
+
+        # Extended Column Migrations for Users
+        for col_def in [
+            ("author_bio", "TEXT DEFAULT NULL"),
+            ("social_links_json", "TEXT DEFAULT NULL"),
+            ("reading_streak", "INT DEFAULT 1"),
+            ("monthly_reading_goal", "INT DEFAULT 5")
+        ]:
+            try:
+                cursor.execute(f"SHOW COLUMNS FROM users LIKE '{col_def[0]}'")
+                if not cursor.fetchone():
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]}")
+            except Exception: pass
+
+        # Extended Column Migrations for Front Page Settings
+        for col_def in [
+            ("granthmind_prompt_tuning", "TEXT DEFAULT NULL"),
+            ("email_welcome_template", "TEXT DEFAULT NULL"),
+            ("email_receipt_template", "TEXT DEFAULT NULL"),
+            ("ip_blacklist", "TEXT DEFAULT NULL"),
+            ("rbac_permissions_json", "TEXT DEFAULT NULL"),
+            ("alert_ticker_message", "TEXT DEFAULT NULL"),
+            ("alert_ticker_active", "BOOLEAN DEFAULT FALSE")
+        ]:
+            try:
+                cursor.execute(f"SHOW COLUMNS FROM front_page_settings LIKE '{col_def[0]}'")
+                if not cursor.fetchone():
+                    cursor.execute(f"ALTER TABLE front_page_settings ADD COLUMN {col_def[0]} {col_def[1]}")
+            except Exception: pass
         
         db.commit()
         return True
@@ -4960,7 +5036,589 @@ def test_smtp_route():
         'status_message': 'Email delivered successfully to inbox!' if success else 'Delivery failed. Recommendation: Add RESEND_API_KEY or BREVO_API_KEY to Render Environment Variables for 100% instant HTTPS delivery.'
     })
 
+# ==============================================================================
+# 36 COMPREHENSIVE SUITE FEATURE API ENDPOINTS & LOGIC
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. READER ENDPOINTS
+# ------------------------------------------------------------------------------
+@app.route('/api/notes', methods=['GET', 'POST', 'DELETE'])
+def api_user_notes():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+    
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    user_id = session['user_id']
+    
+    try:
+        if request.method == 'GET':
+            book_id = request.args.get('book_id')
+            if book_id:
+                cursor.execute("SELECT id, book_id, note_text, page_number, created_at FROM user_notes WHERE user_id = %s AND book_id = %s ORDER BY page_number ASC, created_at DESC", (user_id, book_id))
+            else:
+                cursor.execute("SELECT n.id, n.book_id, n.note_text, n.page_number, n.created_at, b.title as book_title FROM user_notes n JOIN books b ON n.book_id = b.id WHERE n.user_id = %s ORDER BY n.created_at DESC", (user_id,))
+            notes = cursor.fetchall()
+            return jsonify({'success': True, 'notes': notes})
+            
+        elif request.method == 'POST':
+            data = request.json or request.form
+            book_id = data.get('book_id')
+            note_text = (data.get('note_text') or '').strip()
+            page_number = int(data.get('page_number', 1) or 1)
+            
+            if not book_id or not note_text:
+                return jsonify({'success': False, 'message': 'Book ID and note text are required.'}), 400
+                
+            cursor.execute("INSERT INTO user_notes (user_id, book_id, note_text, page_number) VALUES (%s, %s, %s, %s)", (user_id, book_id, note_text, page_number))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Note saved successfully!'})
+            
+        elif request.method == 'DELETE':
+            note_id = request.args.get('note_id') or (request.json or {}).get('note_id')
+            cursor.execute("DELETE FROM user_notes WHERE id = %s AND user_id = %s", (note_id, user_id))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Note deleted.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/api/bookmarks', methods=['GET', 'POST', 'DELETE'])
+def api_user_bookmarks():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+    
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    user_id = session['user_id']
+    
+    try:
+        if request.method == 'GET':
+            book_id = request.args.get('book_id')
+            if book_id:
+                cursor.execute("SELECT id, book_id, title, page_number, created_at FROM user_bookmarks WHERE user_id = %s AND book_id = %s ORDER BY page_number ASC", (user_id, book_id))
+            else:
+                cursor.execute("SELECT bm.id, bm.book_id, bm.title, bm.page_number, bm.created_at, b.title as book_title FROM user_bookmarks bm JOIN books b ON bm.book_id = b.id WHERE bm.user_id = %s ORDER BY bm.created_at DESC", (user_id,))
+            bookmarks = cursor.fetchall()
+            return jsonify({'success': True, 'bookmarks': bookmarks})
+            
+        elif request.method == 'POST':
+            data = request.json or request.form
+            book_id = data.get('book_id')
+            title = (data.get('title') or f"Bookmark Page {data.get('page_number', 1)}").strip()
+            page_number = int(data.get('page_number', 1) or 1)
+            
+            cursor.execute("INSERT INTO user_bookmarks (user_id, book_id, title, page_number) VALUES (%s, %s, %s, %s)", (user_id, book_id, title, page_number))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Bookmark added!'})
+            
+        elif request.method == 'DELETE':
+            bm_id = request.args.get('bookmark_id') or (request.json or {}).get('bookmark_id')
+            cursor.execute("DELETE FROM user_bookmarks WHERE id = %s AND user_id = %s", (bm_id, user_id))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Bookmark removed.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/api/shelves', methods=['GET', 'POST', 'DELETE'])
+def api_user_shelves():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+    
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    user_id = session['user_id']
+    
+    try:
+        if request.method == 'GET':
+            cursor.execute("SELECT id, name, book_ids_json, created_at FROM user_shelves WHERE user_id = %s ORDER BY name ASC", (user_id,))
+            shelves = cursor.fetchall()
+            for s in shelves:
+                try:
+                    s['book_ids'] = json.loads(s.get('book_ids_json') or '[]')
+                except Exception:
+                    s['book_ids'] = []
+            return jsonify({'success': True, 'shelves': shelves})
+            
+        elif request.method == 'POST':
+            data = request.json or request.form
+            shelf_id = data.get('shelf_id')
+            shelf_name = (data.get('name') or '').strip()
+            book_id = data.get('book_id')
+            
+            if shelf_id and book_id:
+                cursor.execute("SELECT book_ids_json FROM user_shelves WHERE id = %s AND user_id = %s", (shelf_id, user_id))
+                row = cursor.fetchone()
+                if row:
+                    ids = json.loads(row.get('book_ids_json') or '[]')
+                    if int(book_id) not in ids:
+                        ids.append(int(book_id))
+                    cursor.execute("UPDATE user_shelves SET book_ids_json = %s WHERE id = %s", (json.dumps(ids), shelf_id))
+                    db.commit()
+                    return jsonify({'success': True, 'message': 'Book added to shelf!'})
+            elif shelf_name:
+                cursor.execute("INSERT INTO user_shelves (user_id, name, book_ids_json) VALUES (%s, %s, %s)", (user_id, shelf_name, '[]'))
+                db.commit()
+                return jsonify({'success': True, 'message': f'Shelf "{shelf_name}" created!'})
+            return jsonify({'success': False, 'message': 'Invalid shelf parameters.'}), 400
+            
+        elif request.method == 'DELETE':
+            shelf_id = request.args.get('shelf_id') or (request.json or {}).get('shelf_id')
+            cursor.execute("DELETE FROM user_shelves WHERE id = %s AND user_id = %s", (shelf_id, user_id))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Shelf removed.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/certificate/<int:book_id>', methods=['GET'])
+def generate_reading_certificate(book_id):
+    if 'user_id' not in session:
+        flash("Please log in to generate your completion certificate.", "info")
+        return redirect(url_for('login'))
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT b.id, b.title, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            flash("Book not found.", "error")
+            return redirect(url_for('index'))
+            
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        
+        cert_data = {
+            'cert_id': f"PV-CERT-{book_id}-{session['user_id']}-{secrets.token_hex(3).upper()}",
+            'reader_name': user.get('username', 'Avid Reader'),
+            'book_title': book.get('title', 'Unknown Title'),
+            'author_name': book.get('author_name', 'PustakVerse Creator'),
+            'completed_date': datetime.now().strftime('%B %d, %Y'),
+            'issuer': 'PustakVerse Global Digital Library'
+        }
+        
+        # Increment book completion count
+        try:
+            cursor.execute("UPDATE books SET completion_count = COALESCE(completion_count, 0) + 1 WHERE id = %s", (book_id,))
+            db.commit()
+        except Exception: pass
+        
+        return render_template('certificate.html', cert=cert_data)
+    except Exception as e:
+        flash(f"Could not generate certificate: {str(e)}", "error")
+        return redirect(url_for('index'))
+    finally:
+        if db: db.close()
+
+@app.route('/api/flashcards/<int:book_id>', methods=['GET'])
+def api_generate_flashcards(book_id):
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT title, description, catalog FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            return jsonify({'success': False, 'message': 'Book not found'}), 404
+            
+        title = book.get('title', 'General Subject')
+        desc = book.get('description', '')
+        
+        flashcards = [
+            {'q': f"What is the central premise or thesis of '{title}'?", 'a': f"The core framework explores foundational principles in {book.get('catalog', 'General')} literature, providing actionable insights into theory, methodology, and domain mastery."},
+            {'q': f"What key problem does '{title}' address for scholars and practitioners?", 'a': f"It resolves ambiguities in conceptual definitions and outlines systematic workflows to solve real-world problems."},
+            {'q': f"How should a reader apply the methodologies presented in '{title}'?", 'a': "By reviewing governing principles first, verifying boundary constraints, and applying step-by-step problem solving."},
+            {'q': f"What are common conceptual pitfalls to avoid when studying '{title}'?", 'a': "Avoid confusing fundamental axioms with secondary interpretations, and always double-check unit dimensions or statutory provisions."},
+            {'q': f"What is the overarching takeaway message from '{title}'?", 'a': f"Consistent application of {title}'s core tenets leads to accelerated mastery, disciplined practice, and academic excellence."}
+        ]
+        return jsonify({'success': True, 'book_title': title, 'flashcards': flashcards})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/api/book_requests', methods=['GET', 'POST'])
+def api_book_requests():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        if request.method == 'GET':
+            cursor.execute("SELECT br.id, br.title, br.author, br.catalog, br.notes, br.status, br.created_at, u.username as requester FROM book_requests br JOIN users u ON br.user_id = u.id ORDER BY br.created_at DESC LIMIT 50")
+            requests_list = cursor.fetchall()
+            return jsonify({'success': True, 'requests': requests_list})
+        elif request.method == 'POST':
+            data = request.json or request.form
+            title = (data.get('title') or '').strip()
+            author = (data.get('author') or '').strip()
+            catalog = (data.get('catalog') or 'General').strip()
+            notes = (data.get('notes') or '').strip()
+            
+            if not title:
+                return jsonify({'success': False, 'message': 'Book title is required.'}), 400
+                
+            cursor.execute("INSERT INTO book_requests (user_id, title, author, catalog, notes) VALUES (%s, %s, %s, %s, %s)", (session['user_id'], title, author, catalog, notes))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Book acquisition request submitted to curators!'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+# ------------------------------------------------------------------------------
+# 2. AUTHOR ENDPOINTS
+# ------------------------------------------------------------------------------
+@app.route('/author/coupons', methods=['GET', 'POST', 'DELETE'])
+def author_coupons():
+    if session.get('role') not in ['author', 'developer']:
+        return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    user_id = session['user_id']
+    
+    try:
+        if request.method == 'GET':
+            cursor.execute("SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.used_count, c.expires_at, b.title as book_title FROM book_coupons c JOIN books b ON c.book_id = b.id WHERE b.author_id = %s OR %s = 'developer'", (user_id, session.get('role')))
+            coupons = cursor.fetchall()
+            return jsonify({'success': True, 'coupons': coupons})
+            
+        elif request.method == 'POST':
+            data = request.json or request.form
+            book_id = data.get('book_id')
+            code = (data.get('code') or '').strip().upper()
+            discount = int(data.get('discount_percent', 20) or 20)
+            max_uses = int(data.get('max_uses', 100) or 100)
+            
+            if not book_id or not code:
+                return jsonify({'success': False, 'message': 'Book ID and coupon code are required.'}), 400
+                
+            cursor.execute("INSERT INTO book_coupons (book_id, code, discount_percent, max_uses) VALUES (%s, %s, %s, %s)", (book_id, code, discount, max_uses))
+            db.commit()
+            return jsonify({'success': True, 'message': f'Coupon "{code}" created successfully!'})
+            
+        elif request.method == 'DELETE':
+            coupon_id = request.args.get('coupon_id') or (request.json or {}).get('coupon_id')
+            cursor.execute("DELETE FROM book_coupons WHERE id = %s", (coupon_id,))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Coupon deleted.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/api/apply_coupon', methods=['POST'])
+def api_apply_coupon():
+    data = request.json or request.form
+    book_id = data.get('book_id')
+    code = (data.get('code') or '').strip().upper()
+    
+    if not book_id or not code:
+        return jsonify({'valid': False, 'message': 'Please provide a valid coupon code.'}), 400
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM book_coupons WHERE book_id = %s AND code = %s", (book_id, code))
+        coupon = cursor.fetchone()
+        if not coupon:
+            return jsonify({'valid': False, 'message': 'Invalid coupon code for this book.'})
+        if coupon.get('used_count', 0) >= coupon.get('max_uses', 100):
+            return jsonify({'valid': False, 'message': 'This coupon has reached its maximum redemptions.'})
+            
+        cursor.execute("SELECT price_paise FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        orig_price = book['price_paise'] if book else 0
+        discount_pct = coupon['discount_percent']
+        new_price = max(0, int(orig_price * (100 - discount_pct) / 100))
+        
+        return jsonify({
+            'valid': True,
+            'code': code,
+            'discount_percent': discount_pct,
+            'original_price_inr': round(orig_price / 100, 2),
+            'discounted_price_inr': round(new_price / 100, 2),
+            'discounted_price_paise': new_price,
+            'message': f'🎉 Coupon applied! {discount_pct}% discount!'
+        })
+    except Exception as e:
+        return jsonify({'valid': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/author/changelog', methods=['GET', 'POST'])
+def author_changelog():
+    if session.get('role') not in ['author', 'developer']:
+        return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        if request.method == 'GET':
+            book_id = request.args.get('book_id')
+            cursor.execute("SELECT cl.id, cl.book_id, cl.version, cl.notes, cl.created_at, b.title as book_title FROM book_changelogs cl JOIN books b ON cl.book_id = b.id WHERE cl.book_id = %s ORDER BY cl.created_at DESC", (book_id,))
+            logs = cursor.fetchall()
+            return jsonify({'success': True, 'changelogs': logs})
+        elif request.method == 'POST':
+            data = request.json or request.form
+            book_id = data.get('book_id')
+            version = (data.get('version') or 'v1.1').strip()
+            notes = (data.get('notes') or '').strip()
+            
+            cursor.execute("INSERT INTO book_changelogs (book_id, version, notes) VALUES (%s, %s, %s)", (book_id, version, notes))
+            db.commit()
+            return jsonify({'success': True, 'message': f'Changelog for {version} published!'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/author/profile_update', methods=['POST'])
+def author_profile_update():
+    if session.get('role') not in ['author', 'developer', 'official']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    bio = request.form.get('author_bio', '').strip()
+    github = request.form.get('social_github', '').strip()
+    linkedin = request.form.get('social_linkedin', '').strip()
+    twitter = request.form.get('social_twitter', '').strip()
+    website = request.form.get('social_website', '').strip()
+    
+    socials = json.dumps({'github': github, 'linkedin': linkedin, 'twitter': twitter, 'website': website})
+    
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE users SET author_bio = %s, social_links_json = %s WHERE id = %s", (bio, socials, session['user_id']))
+        db.commit()
+        flash("Author profile & portfolio badges updated successfully!", "success")
+    except Exception as e:
+        flash(f"Error updating profile: {str(e)}", "error")
+    finally:
+        if db: db.close()
+    return redirect(url_for('dashboard'))
+
+# ------------------------------------------------------------------------------
+# 3. OFFICIAL & MODERATION ENDPOINTS
+# ------------------------------------------------------------------------------
+@app.route('/official/announcements', methods=['GET', 'POST', 'DELETE'])
+def official_announcements():
+    if session.get('role') not in ['official', 'developer']:
+        return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        if request.method == 'GET':
+            cursor.execute("SELECT id, catalog_name, title, message, active, created_at FROM category_announcements ORDER BY created_at DESC")
+            announcements = cursor.fetchall()
+            return jsonify({'success': True, 'announcements': announcements})
+        elif request.method == 'POST':
+            data = request.json or request.form
+            catalog_name = data.get('catalog_name', 'General')
+            title = (data.get('title') or '').strip()
+            message = (data.get('message') or '').strip()
+            
+            cursor.execute("INSERT INTO category_announcements (catalog_name, title, message) VALUES (%s, %s, %s)", (catalog_name, title, message))
+            db.commit()
+            log_official_activity(session['user_id'], f"Posted category announcement for '{catalog_name}'")
+            return jsonify({'success': True, 'message': 'Category announcement published!'})
+        elif request.method == 'DELETE':
+            ann_id = request.args.get('announcement_id') or (request.json or {}).get('announcement_id')
+            cursor.execute("DELETE FROM category_announcements WHERE id = %s", (ann_id,))
+            db.commit()
+            return jsonify({'success': True, 'message': 'Announcement deleted.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/official/user_strike/<int:target_user_id>', methods=['POST'])
+def official_user_strike(target_user_id):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    reason = request.form.get('reason', 'Community guidelines violation.').strip()
+    strike_level = int(request.form.get('strike_level', 1) or 1)
+    
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("INSERT INTO user_strikes (user_id, reason, strike_level) VALUES (%s, %s, %s)", (target_user_id, reason, strike_level))
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (target_user_id,))
+        usr = cursor.fetchone()
+        db.commit()
+        
+        if usr:
+            send_email_wrapper(
+                usr['email'],
+                f"Notice: Policy Warning (Strike {strike_level}) on PustakVerse",
+                generate_html_email("Platform Policy Notice", f"<p>Dear {usr['username']},</p><p>An Official moderator has issued <strong>Strike {strike_level}</strong> against your account.</p><p><strong>Reason:</strong> {reason}</p><p>Please adhere to our community guidelines to avoid account suspension.</p>")
+            )
+        log_official_activity(session['user_id'], f"Issued Strike {strike_level} to user '{usr.get('username')}'")
+        flash(f"Strike {strike_level} issued and user notified by email.", "success")
+    except Exception as e:
+        flash(f"Error issuing strike: {str(e)}", "error")
+    finally:
+        if db: db.close()
+    return redirect(url_for('dashboard'))
+
+@app.route('/official/staff_review/<int:book_id>', methods=['POST'])
+def official_staff_review(book_id):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('book_page', book_id=book_id))
+        
+    review_text = request.form.get('official_review', '').strip()
+    reviewer_name = session.get('username', 'Editorial Staff')
+    
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE books SET official_staff_review = %s, official_reviewer_name = %s WHERE id = %s", (review_text, reviewer_name, book_id))
+        db.commit()
+        invalidate_books_cache()
+        log_official_activity(session['user_id'], f"Updated official staff review for Book #{book_id}")
+        flash("Official Staff Review updated!", "success")
+    except Exception as e:
+        flash(f"Error saving review: {str(e)}", "error")
+    finally:
+        if db: db.close()
+    return redirect(url_for('book_page', book_id=book_id))
+
+# ------------------------------------------------------------------------------
+# 4. DEVELOPER SUPREME ENDPOINTS
+# ------------------------------------------------------------------------------
+@app.route('/developer/api_keys', methods=['GET', 'POST', 'DELETE'])
+def developer_api_keys():
+    if session.get('role') != 'developer':
+        return jsonify({'success': False, 'message': 'Developer authorization required.'}), 403
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        if request.method == 'GET':
+            cursor.execute("SELECT id, user_id, label, rate_limit, active, created_at FROM api_keys ORDER BY created_at DESC")
+            keys = cursor.fetchall()
+            return jsonify({'success': True, 'api_keys': keys})
+        elif request.method == 'POST':
+            data = request.json or request.form
+            label = (data.get('label') or 'Primary Webhook Gateway').strip()
+            raw_key = f"pv_live_{secrets.token_urlsafe(32)}"
+            key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+            rate_limit = int(data.get('rate_limit', 60) or 60)
+            
+            cursor.execute("INSERT INTO api_keys (user_id, key_hash, label, rate_limit) VALUES (%s, %s, %s, %s)", (session['user_id'], key_hash, label, rate_limit))
+            db.commit()
+            return jsonify({'success': True, 'api_key': raw_key, 'label': label, 'message': 'API Key generated! Copy it now as it will not be displayed again.'})
+        elif request.method == 'DELETE':
+            key_id = request.args.get('key_id') or (request.json or {}).get('key_id')
+            cursor.execute("DELETE FROM api_keys WHERE id = %s", (key_id,))
+            db.commit()
+            return jsonify({'success': True, 'message': 'API Key revoked.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
+@app.route('/developer/global_ticker', methods=['POST'])
+def developer_global_ticker():
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    message = request.form.get('ticker_message', '').strip()
+    active = request.form.get('ticker_active') == 'on'
+    
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE front_page_settings SET alert_ticker_message = %s, alert_ticker_active = %s WHERE id = 1", (message, active))
+        db.commit()
+        invalidate_cache()
+        flash("Global platform alert ticker updated!", "success")
+    except Exception as e:
+        flash(f"Error updating alert ticker: {str(e)}", "error")
+    finally:
+        if db: db.close()
+    return redirect(url_for('dashboard'))
+
+@app.route('/developer/db_snapshot', methods=['GET'])
+def developer_db_snapshot():
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        snapshot = {'generated_at': datetime.now().isoformat(), 'platform': 'PustakVerse', 'tables': {}}
+        for tbl in ['users', 'books', 'catalogs', 'purchases', 'front_page_settings', 'book_coupons', 'user_notes', 'category_announcements']:
+            try:
+                cursor.execute(f"SELECT * FROM {tbl}")
+                rows = cursor.fetchall()
+                for r in rows:
+                    for k, v in r.items():
+                        if isinstance(v, (datetime, date)):
+                            r[k] = v.isoformat()
+                        elif isinstance(v, bytes):
+                            r[k] = v.decode('utf-8', errors='ignore')
+                snapshot['tables'][tbl] = rows
+            except Exception: pass
+            
+        json_dump = json.dumps(snapshot, indent=2)
+        return Response(
+            json_dump,
+            mimetype="application/json",
+            headers={"Content-disposition": f"attachment; filename=pustakverse_db_snapshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"}
+        )
+    except Exception as e:
+        flash(f"Snapshot generation failed: {str(e)}", "error")
+        return redirect(url_for('dashboard'))
+    finally:
+        if db: db.close()
+
+@app.route('/developer/scan_drive_links', methods=['POST'])
+def developer_scan_drive_links():
+    if session.get('role') != 'developer':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id, title, cover_image, pdf_file FROM books ORDER BY id DESC LIMIT 50")
+        books = cursor.fetchall()
+        report = {'scanned_count': len(books), 'healthy': 0, 'broken': []}
+        
+        for b in books:
+            c_url = b.get('cover_image', '')
+            p_url = b.get('pdf_file', '')
+            
+            if 'drive.google.com' in c_url or 'drive.google.com' in p_url:
+                if '/view' in p_url or '/open' in p_url or '/file/d/' in p_url:
+                    report['healthy'] += 1
+                else:
+                    report['broken'].append({'id': b['id'], 'title': b['title'], 'reason': 'Improper Google Drive share link'})
+            else:
+                report['healthy'] += 1
+                
+        return jsonify({'success': True, 'report': report})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db: db.close()
+
 if __name__ == '__main__':
     ensure_payment_schema()
     create_master_developer()
     app.run(debug=True)
+

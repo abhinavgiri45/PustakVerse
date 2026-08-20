@@ -742,10 +742,120 @@
         </script>
 
         {% if session.role == 'reader' %}
-            <div class="panel" style="text-align: center; padding: 60px;">
-                <h2 style="border: none;">Start Reading</h2>
-                <p style="color: var(--text-light); margin-bottom: 30px;">Head over to the Global Library to discover amazing books.</p>
-                <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library</a>
+            <!-- READER POWER SUITE: Shelves, Book Requests & Habit Goals -->
+            <div class="grid-2" style="margin-top: 25px;">
+                <!-- 1. Custom Reading Shelves -->
+                <div class="panel" style="border-left: 4px solid #3b82f6;">
+                    <h2 style="color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
+                        <span>📚</span> My Custom Reading Shelves
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Organize your reading journey into curated collections like "Want to Read", "Favorites", and "Tech Stack 2026".</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                        <input type="text" id="dashShelfName" placeholder="New Shelf Name (e.g. UPSC Prelims)..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <button type="button" onclick="createReaderShelf()" class="btn-sm btn-dark" style="padding: 8px 14px;">+ Create</button>
+                    </div>
+                    <div id="dashShelvesContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 10px;">Loading your shelves...</div>
+                    </div>
+                </div>
+
+                <!-- 2. Book Acquisition & Community Wishlist -->
+                <div class="panel" style="border-left: 4px solid #ea580c;">
+                    <h2 style="color: #ea580c; display: flex; align-items: center; gap: 8px;">
+                        <span>💡</span> Book Acquisition Wishlist Hub
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Request rare books, academic papers, or classic archives to be acquired by verified authors and curators.</p>
+                    <form onsubmit="submitBookRequest(event)" style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="reqBookTitle" placeholder="Book Title *" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <input type="text" id="reqBookAuthor" placeholder="Author / Publisher *" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <input type="text" id="reqBookNotes" placeholder="Edition, ISBN, or topic details..." style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <button type="submit" class="btn-sm btn-orange" style="align-self: flex-start; padding: 8px 18px;">Submit Acquisition Request</button>
+                    </form>
+                    <div id="reqStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
+                </div>
+            </div>
+
+            <div class="panel" style="text-align: center; padding: 40px; margin-top: 25px;">
+                <h2 style="border: none; margin-bottom: 6px;">Explore the Universe of Knowledge</h2>
+                <p style="color: var(--text-light); margin-bottom: 20px;">Browse thousands of free and premium books in the Global Library.</p>
+                <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library →</a>
+            </div>
+        {% endif %}
+
+        {% if session.role in ['author', 'developer'] %}
+            <!-- AUTHOR CREATOR SUITE: Bio & Socials, Promotional Coupons & Changelogs -->
+            <div class="grid-2" style="margin-top: 25px;">
+                <!-- 1. Author Bio & Social Portfolio -->
+                <div class="panel" style="border-left: 4px solid #10b981;">
+                    <h2 style="color: #059669; display: flex; align-items: center; gap: 8px;">
+                        <span>👤</span> Author Profile & Creator Shield
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Customize your public creator biography, GitHub, Twitter/X, and portfolio links displayed across your published books.</p>
+                    <form action="{{ url_for('author_profile_update') }}" method="POST">
+                        <div class="form-group">
+                            <label>Creator Biography</label>
+                            <textarea name="author_bio" rows="2" placeholder="Write a short summary about your background, publications, or research..." style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.88rem;">{{ user_profile.author_bio or '' }}</textarea>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                            <input type="text" name="social_github" placeholder="GitHub URL" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;">
+                            <input type="text" name="social_linkedin" placeholder="LinkedIn URL" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;">
+                            <input type="text" name="social_twitter" placeholder="Twitter/X Handle" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;">
+                            <input type="text" name="social_website" placeholder="Personal Website URL" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;">
+                        </div>
+                        <button type="submit" class="btn-sm btn-green" style="padding: 8px 16px;">Save Creator Profile</button>
+                    </form>
+                </div>
+
+                <!-- 2. Promotional Discount Coupon Engine -->
+                <div class="panel" style="border-left: 4px solid #f59e0b;">
+                    <h2 style="color: #d97706; display: flex; align-items: center; gap: 8px;">
+                        <span>🎟️</span> Promotional Coupon & Discount Engine
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Create promotional discount promo codes for your paid books to boost student and reader engagement.</p>
+                    <form onsubmit="createAuthorCoupon(event)" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 8px;">
+                            <select id="couponBookSelect" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+                                <option value="">Select Paid Book...</option>
+                                {% for b in my_books %}
+                                    {% if b.is_paid %}
+                                        <option value="{{ b.id }}">{{ b.title }} (₹{{ (b.price_paise / 100)|round(2) }})</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            <input type="text" id="couponCodeInput" placeholder="Code (e.g. SAVE30)" required style="width: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; text-transform: uppercase;">
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" id="couponDiscountInput" min="5" max="90" value="25" placeholder="Discount %" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+                            <input type="number" id="couponMaxUses" min="1" max="1000" value="100" placeholder="Max Redemptions" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+                            <button type="submit" class="btn-sm btn-orange" style="padding: 8px 16px;">Create Coupon</button>
+                        </div>
+                    </form>
+                    <div id="couponStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if session.role in ['official', 'developer'] %}
+            <!-- OFFICIAL MODERATION SUITE: Category Announcements -->
+            <div class="panel" style="border-left: 4px solid #8b5cf6; margin-top: 25px;">
+                <h2 style="color: #7c3aed; display: flex; align-items: center; gap: 8px;">
+                    <span>📢</span> Category Sticky Announcements & Guidelines
+                </h2>
+                <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Pin announcements, syllabus updates, or curation highlights to the top of specific category bookshelves.</p>
+                <form onsubmit="createCategoryAnnouncement(event)" style="display: flex; flex-direction: column; gap: 10px; max-width: 700px;">
+                    <div style="display: flex; gap: 8px;">
+                        <select id="annCategorySelect" required style="width: 200px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+                            <option value="General">General (All Categories)</option>
+                            {% for cat in site_catalogs %}
+                                <option value="{{ cat.name }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" id="annTitleInput" placeholder="Announcement Headline *" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
+                    </div>
+                    <textarea id="annMessageInput" rows="2" placeholder="Announcement details, links, or guidelines..." required style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.88rem;"></textarea>
+                    <button type="submit" class="btn-sm btn-dark" style="align-self: flex-start; padding: 8px 18px;">Publish Announcement</button>
+                </form>
+                <div id="annStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
             </div>
         {% endif %}
 
@@ -1424,6 +1534,53 @@
             {% endif %}
         </div>
 
+        <!-- DEVELOPER SUPREME SUITE: API Keys, Database Snapshot, Global Ticker & Drive Scanner -->
+        <div class="panel" style="border-left: 5px solid #ea580c; margin-top: 30px;">
+            <h2 style="color: #ea580c; display: flex; align-items: center; gap: 8px;">
+                <span>👑</span> Developer Supreme Power Suite
+            </h2>
+            <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 20px;">Master platform controls: API Webhook Tokens, 1-Click Database Backups, Global Site Alerts, and Drive Link Health Scanner.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <!-- 1. Database Snapshot -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="margin: 0 0 8px; font-size: 1.05rem; color: #0f172a;">💾 Database Backup Snapshot</h3>
+                    <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 14px;">Download an instantaneous, complete JSON/SQL dump of all tables, catalogs, purchases, and settings.</p>
+                    <a href="{{ url_for('developer_db_snapshot') }}" class="btn btn-dark" style="padding: 10px 16px; font-size: 0.88rem; font-weight: 700; width: 100%; box-sizing: border-box; text-decoration: none; text-align: center; display: block;">📥 Export Database Dump</a>
+                </div>
+
+                <!-- 2. Drive Link Health Scanner -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="margin: 0 0 8px; font-size: 1.05rem; color: #0f172a;">🛡️ Drive Asset Health Scanner</h3>
+                    <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 14px;">Scan all Google Drive cover images and PDFs for public permission integrity and preview format.</p>
+                    <button type="button" onclick="runDriveScanner()" class="btn btn-green" style="padding: 10px 16px; font-size: 0.88rem; font-weight: 700; width: 100%; box-sizing: border-box; cursor: pointer;">🔍 Scan Drive Links</button>
+                    <div id="driveScanResults" style="display: none; margin-top: 10px; font-size: 0.82rem; padding: 8px; border-radius: 6px;"></div>
+                </div>
+
+                <!-- 3. Global Platform Alert Ticker -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="margin: 0 0 8px; font-size: 1.05rem; color: #0f172a;">📢 Global Platform Alert Ticker</h3>
+                    <form action="{{ url_for('developer_global_ticker') }}" method="POST">
+                        <input type="text" name="ticker_message" placeholder="Maintenance / Event message..." style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label style="font-size: 0.82rem; font-weight: 600; color: #334155;">
+                                <input type="checkbox" name="ticker_active" checked> Active on Site
+                            </label>
+                            <button type="submit" class="btn-sm btn-orange" style="padding: 6px 14px;">Set Ticker</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 4. API Key Generator -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="margin: 0 0 8px; font-size: 1.05rem; color: #0f172a;">⚡ API & Webhook Tokens</h3>
+                    <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 10px;">Issue rate-limited developer API credentials for webhook dispatching.</p>
+                    <button type="button" onclick="generateApiKey()" class="btn-sm btn-dark" style="width: 100%; padding: 8px; font-size: 0.85rem;">+ Generate API Key</button>
+                    <div id="apiKeyDisplay" style="display: none; margin-top: 10px; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; word-break: break-all;"></div>
+                </div>
+            </div>
+        </div>
+
         {% endif %}
 
     </div>
@@ -1763,6 +1920,170 @@
             }
         }
 
+        // --- 36 Features Frontend Handlers ---
+        // Reader: Shelves
+        function loadReaderShelves() {
+            fetch('/api/shelves')
+                .then(r => r.json())
+                .then(data => {
+                    const cont = document.getElementById('dashShelvesContainer');
+                    if (!cont) return;
+                    if (data.success && data.shelves && data.shelves.length > 0) {
+                        cont.innerHTML = data.shelves.map(s => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <strong style="color: #1e293b; font-size: 0.9rem;">${s.name}</strong>
+                                    <div style="font-size: 0.78rem; color: #64748b;">${s.book_ids ? s.book_ids.length : 0} books in shelf</div>
+                                </div>
+                                <button type="button" onclick="deleteReaderShelf(${s.id})" style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;">&times;</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        cont.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 10px;">No custom shelves created yet.</div>';
+                    }
+                }).catch(() => {});
+        }
+
+        function createReaderShelf() {
+            const input = document.getElementById('dashShelfName');
+            const name = (input && input.value ? input.value.trim() : '');
+            if (!name) return;
+            fetch('/api/shelves', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ name: name })
+            }).then(r => r.json()).then(data => {
+                if (input) input.value = '';
+                loadReaderShelves();
+            }).catch(() => {});
+        }
+
+        function deleteReaderShelf(id) {
+            fetch(`/api/shelves?shelf_id=${id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+            }).then(r => r.json()).then(data => {
+                loadReaderShelves();
+            }).catch(() => {});
+        }
+
+        // Reader: Book Request
+        function submitBookRequest(e) {
+            e.preventDefault();
+            const title = document.getElementById('reqBookTitle').value.trim();
+            const author = document.getElementById('reqBookAuthor').value.trim();
+            const notes = document.getElementById('reqBookNotes').value.trim();
+            const statusDiv = document.getElementById('reqStatusMsg');
+            
+            fetch('/api/book_requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ title: title, author: author, notes: notes })
+            }).then(r => r.json()).then(data => {
+                if (statusDiv) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    statusDiv.style.color = data.success ? '#166534' : '#991b1b';
+                    statusDiv.textContent = data.message || 'Request submitted.';
+                    if (data.success) {
+                        document.getElementById('reqBookTitle').value = '';
+                        document.getElementById('reqBookAuthor').value = '';
+                        document.getElementById('reqBookNotes').value = '';
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        // Author: Promotional Coupons
+        function createAuthorCoupon(e) {
+            e.preventDefault();
+            const bookId = document.getElementById('couponBookSelect').value;
+            const code = document.getElementById('couponCodeInput').value.trim();
+            const discount = document.getElementById('couponDiscountInput').value;
+            const maxUses = document.getElementById('couponMaxUses').value;
+            const statusDiv = document.getElementById('couponStatusMsg');
+
+            fetch('/author/coupons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ book_id: bookId, code: code, discount_percent: discount, max_uses: maxUses })
+            }).then(r => r.json()).then(data => {
+                if (statusDiv) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    statusDiv.style.color = data.success ? '#166534' : '#991b1b';
+                    statusDiv.textContent = data.message || 'Coupon generated!';
+                    if (data.success) {
+                        document.getElementById('couponCodeInput').value = '';
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        // Official: Announcements
+        function createCategoryAnnouncement(e) {
+            e.preventDefault();
+            const cat = document.getElementById('annCategorySelect').value;
+            const title = document.getElementById('annTitleInput').value.trim();
+            const msg = document.getElementById('annMessageInput').value.trim();
+            const statusDiv = document.getElementById('annStatusMsg');
+
+            fetch('/official/announcements', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ catalog_name: cat, title: title, message: msg })
+            }).then(r => r.json()).then(data => {
+                if (statusDiv) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    statusDiv.style.color = data.success ? '#166534' : '#991b1b';
+                    statusDiv.textContent = data.message || 'Announcement posted!';
+                    if (data.success) {
+                        document.getElementById('annTitleInput').value = '';
+                        document.getElementById('annMessageInput').value = '';
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        // Developer: Drive Scanner & API Keys
+        function runDriveScanner() {
+            const res = document.getElementById('driveScanResults');
+            if (res) {
+                res.style.display = 'block';
+                res.style.background = '#fef3c7';
+                res.style.color = '#92400e';
+                res.textContent = 'Scanning Google Drive asset URLs...';
+            }
+            fetch('/developer/scan_drive_links', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+            }).then(r => r.json()).then(data => {
+                if (res && data.success) {
+                    res.style.background = '#dcfce7';
+                    res.style.color = '#166534';
+                    res.textContent = `✓ Scan Complete: ${data.report.healthy} / ${data.report.scanned_count} Drive links properly formatted.`;
+                }
+            }).catch(() => {});
+        }
+
+        function generateApiKey() {
+            fetch('/developer/api_keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ label: 'Primary Webhook Token' })
+            }).then(r => r.json()).then(data => {
+                const display = document.getElementById('apiKeyDisplay');
+                if (display && data.success) {
+                    display.style.display = 'block';
+                    display.innerHTML = `<strong>Your New API Key:</strong><br><code>${data.api_key}</code>`;
+                }
+            }).catch(() => {});
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadReaderShelves();
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Completion - {{ cert.book_title }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: #0b1120;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .cert-card {
+            background: linear-gradient(135deg, #fffdfa 0%, #fdfbf7 100%);
+            width: 900px;
+            max-width: 95vw;
+            padding: 50px 60px;
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+            border: 12px solid #1e293b;
+            position: relative;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .cert-border-inner {
+            border: 2px dashed #d97706;
+            padding: 35px 30px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .cert-logo {
+            height: 60px;
+            width: auto;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .cert-badge {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #d97706;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .cert-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.4rem;
+            font-weight: 900;
+            color: #0f172a;
+            letter-spacing: 2px;
+            margin: 0 0 16px;
+            text-transform: uppercase;
+        }
+
+        .cert-present {
+            font-size: 1.05rem;
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .recipient-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #ea580c;
+            border-bottom: 2px solid #fdba74;
+            display: inline-block;
+            padding: 0 30px 8px;
+            margin: 10px 0 20px;
+        }
+
+        .cert-desc {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #334155;
+            max-width: 680px;
+            margin: 0 auto 30px;
+        }
+
+        .cert-meta-grid {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .meta-col {
+            text-align: center;
+        }
+
+        .meta-signature {
+            font-family: 'Playfair Display', cursive;
+            font-size: 1.4rem;
+            color: #0f172a;
+            font-style: italic;
+            border-bottom: 1px solid #94a3b8;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+        }
+
+        .meta-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .cert-id-tag {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            letter-spacing: 0.08em;
+            margin-top: 20px;
+        }
+
+        .actions-bar {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 25px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
+            transition: transform 0.2s;
+        }
+        .btn-print:hover { transform: translateY(-2px); }
+
+        .btn-back {
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .actions-bar { display: none; }
+            .cert-card { box-shadow: none; border-width: 8px; width: 100%; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="cert-card">
+        <div class="cert-border-inner">
+            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="cert-logo">
+            <div class="cert-badge">Academic Honor & Literacy Achievement</div>
+            <h1 class="cert-title">Certificate of Completion</h1>
+            <div class="cert-present">This certifies that</div>
+            <div class="recipient-name">{{ cert.reader_name }}</div>
+            <div class="cert-desc">
+                has successfully read and completed the comprehensive edition of <strong>"{{ cert.book_title }}"</strong> by <em>{{ cert.author_name }}</em>, demonstrating scholarly discipline, active reflection, and lifelong curiosity.
+            </div>
+
+            <div class="cert-meta-grid">
+                <div class="meta-col">
+                    <div class="meta-signature">{{ cert.completed_date }}</div>
+                    <div class="meta-label">Date Completed</div>
+                </div>
+                <div class="meta-col">
+                    <div style="font-size: 2.2rem;">🏅</div>
+                    <div class="meta-label">Verified Reader</div>
+                </div>
+                <div class="meta-col">
+                    <div class="meta-signature">Abhinav Giri</div>
+                    <div class="meta-label">Platform Dean, PustakVerse</div>
+                </div>
+            </div>
+
+            <div class="cert-id-tag">Verification ID: {{ cert.cert_id }} &bull; Issued by {{ cert.issuer }}</div>
+        </div>
+    </div>
+
+    <div class="actions-bar">
+        <button type="button" class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <a href="/" class="btn-back">← Back to Library</a>
+    </div>
+</body>
+</html>

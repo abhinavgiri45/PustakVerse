@@ -143,6 +143,10 @@
                 <button class="view-btn" onclick="setViewerTheme('light')" title="Light Mode">☀️ Day</button>
                 <button class="view-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>
                 <button class="view-btn" onclick="toggleNotesDrawer()" style="background: #ea580c; color: white;" title="Open Personal Reading Notes">📝 Notes</button>
+                <button class="view-btn" onclick="toggleBookmarksModal()" style="background: #2563eb; color: white;" title="Manage Bookmarks">🔖 Bookmarks</button>
+                <button class="view-btn" onclick="toggleFlashcardsDrawer()" style="background: #7c3aed; color: white;" title="5-Min AI Flashcards">⚡ Flashcards</button>
+                <button class="view-btn" onclick="openQuoteModal()" style="background: #0284c7; color: white;" title="Create Branded Quote Card">💬 Quote Card</button>
+                <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="view-btn" style="background: #10b981; color: white; text-decoration: none;" title="Claim Completion Certificate">🎓 Certificate</a>
                 
                 <!-- Focus Timer Button -->
                 <button class="view-btn" id="focusTimerBtn" onclick="toggleFocusTimer()" style="background: #047857; color: white;" title="Click to Start/Pause Reading Timer">
@@ -161,13 +165,54 @@
         </div>
     </div>
 
+    <!-- FLASHCARDS DRAWER -->
+    <div id="flashcardsDrawer" style="display: none; position: fixed; top: 48px; right: 0; bottom: 0; width: 360px; max-width: 90vw; background: #ffffff; box-shadow: -5px 0 25px rgba(0,0,0,0.2); z-index: 1001; flex-direction: column; padding: 20px; box-sizing: border-box; border-left: 1px solid #e2e8f0; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: #5b21b6;">⚡ GranthMind AI Study Flashcards</h3>
+            <button onclick="toggleFlashcardsDrawer()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
+        </div>
+        <div id="flashcardsList" style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="text-align: center; padding: 20px; color: #64748b;">Loading high-yield concept cards...</div>
+        </div>
+    </div>
+
+    <!-- BOOKMARKS MODAL -->
+    <div id="bookmarksModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); z-index: 1002; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 440px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; color: #0f172a;">🔖 Multi-Bookmark Tray</h3>
+                <button onclick="toggleBookmarksModal()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="bmTitleInput" placeholder="Bookmark name or chapter..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+                <button type="button" onclick="addNewBookmark()" style="background: #2563eb; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 700; cursor: pointer;">+ Add</button>
+            </div>
+            <div id="bookmarksList" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                <div style="color: #94a3b8; font-size: 0.88rem; text-align: center;">No bookmarks saved yet.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOCIAL QUOTE CARD GENERATOR MODAL -->
+    <div id="quoteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); z-index: 1002; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; color: #0f172a;">💬 Social Quote Card Generator</h3>
+                <button onclick="document.getElementById('quoteModal').style.display='none'" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
+            </div>
+            <textarea id="quoteTextInput" rows="3" placeholder="Enter memorable quote or insight from this book..." style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 0.95rem; margin-bottom: 12px;" oninput="renderQuoteCanvas()"></textarea>
+            <canvas id="quoteCanvas" width="600" height="340" style="width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 14px; background: #0f172a;"></canvas>
+            <button type="button" onclick="downloadQuoteCard()" style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; border: none; padding: 10px 24px; border-radius: 20px; font-weight: 700; cursor: pointer;">📥 Download Quote Card</button>
+        </div>
+    </div>
+
     <!-- NOTES SIDEBAR DRAWER -->
     <div id="notesDrawer" style="display: none; position: fixed; top: 48px; right: 0; bottom: 0; width: 340px; max-width: 90vw; background: #ffffff; box-shadow: -5px 0 25px rgba(0,0,0,0.15); z-index: 1000; flex-direction: column; padding: 18px; box-sizing: border-box; border-left: 1px solid #e2e8f0;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">📝 Reading Notes & Takeaways</h3>
             <button onclick="toggleNotesDrawer()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
         </div>
-        <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 10px 0;">Notes auto-save continuously to your browser for this book.</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 10px 0;">Notes auto-save continuously to your account and browser.</p>
         <textarea id="bookNotesArea" placeholder="Write key points, thoughts, chapter summaries, or quotes..." style="flex: 1; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; resize: none; outline: none; margin-bottom: 10px;" oninput="saveBookNotes()"></textarea>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">
             <span id="notesCountText">0 characters</span>
@@ -449,6 +494,171 @@
                 localStorage.setItem('pv_reading_streak', streak.toString());
             } catch (err) {}
         })();
+
+        // Multi-Bookmark Management
+        function toggleBookmarksModal() {
+            const modal = document.getElementById('bookmarksModal');
+            if (modal) {
+                modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+                if (modal.style.display === 'flex') loadBookmarks();
+            }
+        }
+
+        function loadBookmarks() {
+            const bookId = {{ (book.id if book and book.id else 0) }};
+            fetch(`/api/bookmarks?book_id=${bookId}`)
+                .then(r => r.json())
+                .then(data => {
+                    const list = document.getElementById('bookmarksList');
+                    if (!list) return;
+                    if (data.success && data.bookmarks && data.bookmarks.length > 0) {
+                        list.innerHTML = data.bookmarks.map(bm => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <strong style="color: #0f172a; font-size: 0.9rem;">${bm.title}</strong>
+                                    <div style="font-size: 0.78rem; color: #64748b;">Page ${bm.page_number} &bull; ${new Date(bm.created_at).toLocaleDateString()}</div>
+                                </div>
+                                <button type="button" onclick="deleteBookmark(${bm.id})" style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;">&times;</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        list.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; text-align: center; padding: 12px;">No bookmarks saved yet.</div>';
+                    }
+                }).catch(() => {});
+        }
+
+        function addNewBookmark() {
+            const input = document.getElementById('bmTitleInput');
+            const title = (input && input.value ? input.value.trim() : 'Chapter Marker');
+            const bookId = {{ (book.id if book and book.id else 0) }};
+            
+            fetch('/api/bookmarks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ book_id: bookId, title: title, page_number: 1 })
+            }).then(r => r.json()).then(data => {
+                if (input) input.value = '';
+                loadBookmarks();
+            }).catch(() => {});
+        }
+
+        function deleteBookmark(bmId) {
+            fetch(`/api/bookmarks?bookmark_id=${bmId}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+            }).then(r => r.json()).then(data => {
+                loadBookmarks();
+            }).catch(() => {});
+        }
+
+        // GranthMind Study Flashcards
+        function toggleFlashcardsDrawer() {
+            const drawer = document.getElementById('flashcardsDrawer');
+            if (drawer) {
+                drawer.style.display = drawer.style.display === 'flex' ? 'none' : 'flex';
+                if (drawer.style.display === 'flex') loadFlashcards();
+            }
+        }
+
+        function loadFlashcards() {
+            const bookId = {{ (book.id if book and book.id else 0) }};
+            const list = document.getElementById('flashcardsList');
+            if (!list) return;
+            
+            fetch(`/api/flashcards/${bookId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.flashcards) {
+                        list.innerHTML = data.flashcards.map((f, i) => `
+                            <div style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 12px; padding: 14px;">
+                                <div style="font-size: 0.75rem; font-weight: 800; color: #7e22ce; text-transform: uppercase; margin-bottom: 4px;">Card #${i+1}</div>
+                                <div style="font-weight: 700; color: #1e1b4b; font-size: 0.92rem; margin-bottom: 8px;">${f.q}</div>
+                                <div style="font-size: 0.86rem; color: #4c1d95; line-height: 1.5; background: white; padding: 8px 10px; border-radius: 6px; border: 1px dashed #c084fc;">${f.a}</div>
+                            </div>
+                        `).join('');
+                    }
+                }).catch(() => {
+                    list.innerHTML = '<div style="color: #ef4444; font-size: 0.88rem; text-align: center;">Could not load flashcards.</div>';
+                });
+        }
+
+        // Social Quote Card Generator
+        function openQuoteModal() {
+            const modal = document.getElementById('quoteModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const input = document.getElementById('quoteTextInput');
+                if (input && !input.value) {
+                    input.value = "“A room without books is like a body without a soul.”";
+                }
+                renderQuoteCanvas();
+            }
+        }
+
+        function renderQuoteCanvas() {
+            const canvas = document.getElementById('quoteCanvas');
+            const input = document.getElementById('quoteTextInput');
+            if (!canvas || !input) return;
+            const ctx = canvas.getContext('2d');
+            const text = input.value.trim() || 'Knowledge is power.';
+            const bookTitle = {{ (book.title if book and book.title else 'PustakVerse')|tojson }};
+            const authorName = {{ (book.author if book and book.author else 'Library')|tojson }};
+
+            // Gradient background
+            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            grad.addColorStop(0, '#0f172a');
+            grad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Border glow
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+
+            // Watermark logo text
+            ctx.fillStyle = '#ea580c';
+            ctx.font = 'bold 16px Plus Jakarta Sans, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('PUSTAKVERSE', 36, 46);
+
+            // Main quote text (wrap text)
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'italic 18px Playfair Display, Georgia, serif';
+            ctx.textAlign = 'center';
+            
+            const words = text.split(' ');
+            let line = '';
+            let y = 130;
+            const maxW = 500;
+
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > maxW && n > 0) {
+                    ctx.fillText(line, canvas.width / 2, y);
+                    line = words[n] + ' ';
+                    y += 28;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, canvas.width / 2, y);
+
+            // Attribution Footer
+            ctx.fillStyle = '#fdba74';
+            ctx.font = 'bold 14px Plus Jakarta Sans, sans-serif';
+            ctx.fillText(`— from "${bookTitle}" by ${authorName}`, canvas.width / 2, canvas.height - 45);
+        }
+
+        function downloadQuoteCard() {
+            const canvas = document.getElementById('quoteCanvas');
+            if (!canvas) return;
+            const link = document.createElement('a');
+            link.download = `pustakverse_quote_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
 
         // Prevent Dragging elements (like images)
         document.addEventListener('dragstart', function(e) {

@@ -358,7 +358,13 @@
                             <div style="color: #047857; font-weight: bold; margin-bottom: 10px;">✓ You own this premium book</div>
                             <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark">Read Full Book Now</a>
                         {% else %}
-                            <div class="price">₹{{ "%.2f"|format(book.price_paise/100) }}</div>
+                            <div class="price" id="bookDisplayPrice">₹{{ "%.2f"|format(book.price_paise/100) }}</div>
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                <input type="text" id="checkoutCouponCode" placeholder="Promo Coupon Code (e.g. SAVE30)..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; text-transform: uppercase;">
+                                <button type="button" onclick="applyBookCoupon({{ book.id }})" class="btn-sm btn-dark" style="padding: 8px 14px; font-size: 0.82rem; cursor: pointer;">Apply</button>
+                            </div>
+                            <div id="couponResultMsg" style="display: none; font-size: 0.84rem; margin-bottom: 10px; padding: 6px 10px; border-radius: 6px;"></div>
+                            
                             <div style="display: flex; gap: 10px;">
                                 <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569;">Free Preview</a>
                                 <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2;">
@@ -379,7 +385,7 @@
                     {% endif %}
                     <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">🤖 Learn with AI Tutor</a>
-                        <a href="/category/{{ book.catalog }}" class="btn btn-outline" style="flex: 1; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1;">📚 More in {{ book.catalog }}</a>
+                        <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="btn btn-outline" style="flex: 1; background: #f0fdf4; color: #15803d; border: 1px solid #86efac;">🎓 Claim Certificate</a>
                     </div>
                 </div>
             </div>
@@ -387,6 +393,16 @@
 
         <!-- REVIEWS SECTION -->
         <div class="reviews-section">
+            {% if book.official_staff_review %}
+            <div style="background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border: 1.5px solid #e879f9; border-radius: 14px; padding: 18px 24px; margin-bottom: 28px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="background: #a855f7; color: white; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">★ Staff Pick</span>
+                    <strong style="color: #581c87; font-size: 0.95rem;">Official Editorial Review by {{ book.official_reviewer_name or 'PustakVerse Board' }}</strong>
+                </div>
+                <p style="color: #4a044e; line-height: 1.6; margin: 0; font-size: 0.95rem; font-style: italic;">“{{ book.official_staff_review }}”</p>
+            </div>
+            {% endif %}
+            
             <h2>Community Reviews & Ratings</h2>
             
             <!-- RATING SUMMARY VISUALIZATION -->
@@ -639,6 +655,31 @@
             const bar = document.getElementById('myBar');
             if (bar) bar.style.width = scrolled + '%';
         });
+
+        // Coupon Code Applicator
+        function applyBookCoupon(bookId) {
+            const input = document.getElementById('checkoutCouponCode');
+            const code = (input && input.value ? input.value.trim() : '');
+            const msg = document.getElementById('couponResultMsg');
+            const displayPrice = document.getElementById('bookDisplayPrice');
+            if (!code) return;
+
+            fetch('/api/apply_coupon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ book_id: bookId, code: code })
+            }).then(r => r.json()).then(data => {
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    msg.style.color = data.success ? '#166534' : '#991b1b';
+                    msg.textContent = data.message;
+                    if (data.success && displayPrice) {
+                        displayPrice.innerHTML = `<span style="text-decoration: line-through; color: #94a3b8; font-size: 1.1rem; margin-right: 8px;">₹${(data.original_price/100).toFixed(2)}</span> ₹${(data.discounted_price/100).toFixed(2)} <span style="font-size: 0.8rem; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px;">${data.discount_percent}% OFF</span>`;
+                    }
+                }
+            }).catch(() => {});
+        }
     </script>
 </body>
 </html>
