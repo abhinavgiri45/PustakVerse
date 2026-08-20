@@ -351,6 +351,8 @@ def clean_book_data(books):
             b['price_paise'] = int(b.get('price_paise') if b.get('price_paise') is not None else 0)
         except Exception:
             b['price_paise'] = 0
+        b['is_quarantined'] = bool(b.get('is_quarantined', False))
+        b['is_featured'] = bool(b.get('is_featured', False))
     return books
 
 STOP_WORDS = {
@@ -1717,6 +1719,24 @@ def send_author_rejected_email(to_email, username, reason):
 def send_book_deleted_email(to_email, username, book_title, reason): 
     return send_email_wrapper(to_email, 'PustakVerse - Book Removal Notice', generate_html_email("Content Removed", f"<p>Hello {username},</p><p>Your book titled '{book_title}' has been removed from PustakVerse.</p><p><strong>Reason:</strong> {reason}</p>"))
 
+def send_username_notice_email(to_email, username, reason):
+    content = (
+        f"<p>Hello <strong>{username}</strong>,</p>"
+        f"<p>The PustakVerse Administration Team has noticed that your current username requires an update to align with our community guidelines.</p>"
+        f"<blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'><strong>Moderator Note:</strong> {reason}</blockquote>"
+        f"<p>Please log in to your account and change your username directly from your Dashboard profile.</p>"
+    )
+    return send_email_wrapper(to_email, 'Action Required: Update Your PustakVerse Username', generate_html_email("Username Policy Notice", content))
+
+def send_quarantine_notice_email(to_email, username, book_title, reason):
+    content = (
+        f"<p>Hello <strong>{username}</strong>,</p>"
+        f"<p>Your published book <strong>'{book_title}'</strong> has been temporarily placed in soft-quarantine (hidden from the Global Library).</p>"
+        f"<blockquote style='background: #fff5f5; border-left: 4px solid #e53e3e; padding: 10px; color: #c53030;'><strong>Reason:</strong> {reason}</blockquote>"
+        f"<p>Please review and edit your book details (such as Google Drive public permissions or cover) on your dashboard to restore public visibility.</p>"
+    )
+    return send_email_wrapper(to_email, f'Notice: Book Visibility Status - {book_title}', generate_html_email("Book Status Update", content))
+
 # ==========================================
 # HIGH-PERFORMANCE TiDB (MYSQL) CONNECTION POOL
 # ==========================================
@@ -1865,6 +1885,25 @@ def ensure_payment_schema():
             cursor.execute("SHOW COLUMNS FROM books LIKE 'description'")
             if not cursor.fetchone():
                 cursor.execute("ALTER TABLE books ADD COLUMN description TEXT")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'is_quarantined'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN is_quarantined BOOLEAN NOT NULL DEFAULT FALSE")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'is_featured'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN is_featured BOOLEAN NOT NULL DEFAULT FALSE")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'maintenance_mode'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN maintenance_mode BOOLEAN NOT NULL DEFAULT FALSE")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN upload_freeze BOOLEAN NOT NULL DEFAULT FALSE")
         except Exception: pass
 
         cursor.execute("CREATE TABLE IF NOT EXISTS personal_library (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, UNIQUE(user_id, book_id))")
@@ -3337,7 +3376,7 @@ def mass_message():
     return redirect(url_for('dashboard'))
 
 # ==========================================
-# CHANGE USERNAME LOGIC
+# CHANGE USERNAME (DIRECT UPDATE FOR ALL USERS)
 # ==========================================
 @app.route('/change_username', methods=['POST'])
 def change_username():
@@ -3345,8 +3384,6 @@ def change_username():
         return redirect(url_for('login'))
         
     new_username = request.form.get('new_username', '').strip()
-    reason = request.form.get('reason', '').strip()
-    role = session.get('role')
 
     if not new_username: 
         flash("New username cannot be empty.", "error")
@@ -3360,25 +3397,16 @@ def change_username():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s", (new_username,))
+        cursor.execute("SELECT id FROM users WHERE username = %s AND id != %s", (new_username, session['user_id']))
         
         if cursor.fetchone(): 
             flash("Username is already taken.", "error")
             return redirect(url_for('dashboard'))
 
-        if role in ['reader', 'developer']:
-            cursor.execute("UPDATE users SET username = %s WHERE id = %s", (new_username, session['user_id']))
-            db.commit()
-            session['username'] = new_username
-            flash("Username changed successfully!", "success")
-        else:
-            if not reason: 
-                flash("You must provide a reason for requesting a username change.", "error")
-                return redirect(url_for('dashboard'))
-                
-            cursor.execute("INSERT INTO username_requests (user_id, new_username, reason) VALUES (%s, %s, %s)", (session['user_id'], new_username, reason))
-            db.commit()
-            flash("Username change request submitted for administrative approval.", "info")
+        cursor.execute("UPDATE users SET username = %s WHERE id = %s", (new_username, session['user_id']))
+        db.commit()
+        session['username'] = new_username
+        flash("Username updated successfully!", "success")
     except Exception: 
         flash("Database connection error.", "error")
     finally:
@@ -3387,54 +3415,308 @@ def change_username():
             except: pass
     return redirect(url_for('dashboard'))
 
-@app.route('/handle_username_request/<int:req_id>/<action>', methods=['POST'])
-def handle_username_request(req_id, action):
-    role = session.get('role')
-    
-    if role not in ['official', 'developer']: 
+# ==========================================
+# 🛡️ OFFICIAL MODERATION & CURATION POWERS
+# ==========================================
+@app.route('/official/notify_username/<int:user_id>', methods=['POST'])
+def official_notify_username(user_id):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash("Please provide a reason for the username update notice.", "error")
         return redirect(url_for('dashboard'))
         
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM username_requests WHERE id = %s", (req_id,))
-        req = cursor.fetchone()
-        
-        if not req or req['status'] != 'pending': 
-            flash("Invalid or already processed request.", "error")
-            return redirect(url_for('dashboard'))
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if user:
+            send_username_notice_email(user['email'], user['username'], reason)
+            log_official_activity(session['user_id'], f"Sent Username Notice to '{user['username']}' (ID: {user_id}). Reason: {reason}")
+            flash(f"Username update notice sent to {user['username']}.", "success")
+        else:
+            flash("User not found.", "error")
+    except Exception:
+        flash("Database error while sending notice.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
 
-        cursor.execute("SELECT role FROM users WHERE id = %s", (req['user_id'],))
-        target_user = cursor.fetchone()
+@app.route('/official/toggle_quarantine/<int:book_id>', methods=['POST'])
+def official_toggle_quarantine(book_id):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
         
-        if target_user['role'] == 'official' and role != 'developer': 
-            flash("Only developers can approve official username changes.", "error")
+    reason = request.form.get('reason', 'Administrative content review or dead links.').strip()
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT b.id, b.title, b.is_quarantined, u.email, u.username FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            flash("Book not found.", "error")
             return redirect(url_for('dashboard'))
-
-        if action == 'approve':
-            cursor.execute("SELECT id FROM users WHERE username = %s", (req['new_username'],))
-            if cursor.fetchone():
-                flash("That username was taken by someone else while pending.", "error")
-                cursor.execute("UPDATE username_requests SET status = 'rejected' WHERE id = %s", (req_id,))
-                db.commit()
-                return redirect(url_for('dashboard'))
-                
-            cursor.execute("UPDATE users SET username = %s WHERE id = %s", (req['new_username'], req['user_id']))
-            cursor.execute("UPDATE username_requests SET status = 'approved' WHERE id = %s", (req_id,))
-            db.commit()
-            flash("Username change approved.", "success")
             
-        elif action == 'reject': 
-            cursor.execute("UPDATE username_requests SET status = 'rejected' WHERE id = %s", (req_id,))
-            db.commit()
-            flash("Username change rejected.", "info")
-    except Exception: 
+        new_status = not bool(book.get('is_quarantined'))
+        cursor.execute("UPDATE books SET is_quarantined = %s WHERE id = %s", (new_status, book_id))
+        db.commit()
+        invalidate_books_cache()
+        
+        status_word = "Soft-Quarantined (Hidden from public library)" if new_status else "Restored to Public Library"
+        log_official_activity(session['user_id'], f"{'Quarantined' if new_status else 'Unquarantined'} book '{book['title']}' (ID: {book_id})")
+        
+        if new_status:
+            send_quarantine_notice_email(book['email'], book['username'], book['title'], reason)
+            
+        flash(f"Book '{book['title']}' has been {status_word}.", "success")
+    except Exception:
+        flash("Database error toggling book quarantine.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/official/toggle_featured/<int:book_id>', methods=['POST'])
+def official_toggle_featured(book_id):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, title, is_featured FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            flash("Book not found.", "error")
+            return redirect(url_for('dashboard'))
+            
+        new_status = not bool(book.get('is_featured'))
+        cursor.execute("UPDATE books SET is_featured = %s WHERE id = %s", (new_status, book_id))
+        db.commit()
+        invalidate_books_cache()
+        
+        log_official_activity(session['user_id'], f"{'Marked as Staff Pick' if new_status else 'Removed Staff Pick'} for book '{book['title']}' (ID: {book_id})")
+        flash(f"Book '{book['title']}' Staff Pick badge {'granted' if new_status else 'removed'}.", "success")
+    except Exception:
         flash("Database error.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/official/delete_review/<int:review_id>', methods=['POST'])
+def official_delete_review(review_id):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(request.referrer or url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT i.id, i.book_id, u.username, b.title FROM interactions i JOIN users u ON i.user_id = u.id JOIN books b ON i.book_id = b.id WHERE i.id = %s", (review_id,))
+        review = cursor.fetchone()
+        if review:
+            cursor.execute("DELETE FROM interactions WHERE id = %s", (review_id,))
+            db.commit()
+            invalidate_books_cache()
+            log_official_activity(session['user_id'], f"Deleted review by '{review['username']}' on book '{review['title']}'")
+            flash("Review removed successfully.", "success")
+        else:
+            flash("Review not found.", "error")
+    except Exception:
+        flash("Database error deleting review.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/official/category_broadcast', methods=['POST'])
+def official_category_broadcast():
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    catalog_name = request.form.get('catalog_name', '').strip()
+    subject = request.form.get('subject', 'Important Catalog Update').strip()
+    message_body = request.form.get('message_body', '').strip()
+    
+    if not catalog_name or not message_body:
+        flash("Catalog and message body cannot be empty.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT DISTINCT u.email, u.username FROM books b JOIN users u ON b.author_id = u.id WHERE b.catalog = %s", (catalog_name,))
+        authors = cursor.fetchall()
+        
+        if authors:
+            emails = [a['email'] for a in authors]
+            send_mass_message(emails, f"[{catalog_name} Authors] {subject}", message_body, f"{catalog_name} Author")
+            log_official_activity(session['user_id'], f"Sent Category Broadcast to {len(emails)} authors in '{catalog_name}'")
+            flash(f"Broadcast dispatched to {len(emails)} authors in the '{catalog_name}' catalog.", "success")
+        else:
+            flash(f"No published authors found in the '{catalog_name}' catalog.", "info")
+    except Exception:
+        flash("Database error during category broadcast.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+# ==========================================
+# 👑 DEVELOPER MASTER SECURITY & SYSTEM POWERS
+# ==========================================
+@app.route('/developer/unlock_user/<int:user_id>', methods=['POST'])
+def developer_unlock_user(user_id):
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if user:
+            cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user_id,))
+            db.commit()
+            log_official_activity(session['user_id'], f"Developer unlocked account for '{user['username']}' (ID: {user_id})")
+            flash(f"Account for '{user['username']}' has been unlocked and login attempts reset.", "success")
+        else:
+            flash("User not found.", "error")
+    except Exception:
+        flash("Database error unlocking user.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/developer/change_role/<int:user_id>', methods=['POST'])
+def developer_change_role(user_id):
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    new_role = request.form.get('new_role', '').strip()
+    if new_role not in ['reader', 'author', 'official']:
+        flash("Invalid role selected.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT username, email, role FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            flash("User not found.", "error")
+            return redirect(url_for('dashboard'))
+            
+        if user['username'] == 'abhinavgiri45':
+            flash("Cannot alter master developer account role.", "error")
+            return redirect(url_for('dashboard'))
+            
+        is_verified_val = True if new_role in ['author', 'official'] else False
+        cursor.execute("UPDATE users SET role = %s, is_verified = %s WHERE id = %s", (new_role, is_verified_val, user_id))
+        db.commit()
+        
+        if new_role == 'official':
+            send_promotion_notification(user['email'], user['username'])
+        elif new_role == 'author':
+            send_approved_author(user['email'], user['username'])
+            
+        log_official_activity(session['user_id'], f"Developer changed role of '{user['username']}' from '{user['role']}' to '{new_role}'")
+        flash(f"Role for '{user['username']}' updated to '{new_role.capitalize()}'.", "success")
+    except Exception:
+        flash("Database error updating role.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/developer/toggle_maintenance', methods=['POST'])
+def developer_toggle_maintenance():
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT maintenance_mode FROM front_page_settings WHERE id = 1")
+        row = cursor.fetchone() or {}
+        new_mode = not bool(row.get('maintenance_mode'))
+        cursor.execute("UPDATE front_page_settings SET maintenance_mode = %s WHERE id = 1", (new_mode,))
+        db.commit()
+        invalidate_cache()
+        log_official_activity(session['user_id'], f"Developer {'ENABLED' if new_mode else 'DISABLED'} System Maintenance Mode")
+        flash(f"System Maintenance Mode is now {'ENABLED (Site is locked for visitors)' if new_mode else 'DISABLED (Site is live)'}.", "success")
+    except Exception:
+        flash("Database error toggling maintenance mode.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/developer/toggle_upload_freeze', methods=['POST'])
+def developer_toggle_upload_freeze():
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT upload_freeze FROM front_page_settings WHERE id = 1")
+        row = cursor.fetchone() or {}
+        new_freeze = not bool(row.get('upload_freeze'))
+        cursor.execute("UPDATE front_page_settings SET upload_freeze = %s WHERE id = 1", (new_freeze,))
+        db.commit()
+        invalidate_cache()
+        log_official_activity(session['user_id'], f"Developer {'FROZE' if new_freeze else 'UNFROZE'} Book Publishing")
+        flash(f"Book Uploads are now {'FROZEN (Only Developer can publish)' if new_freeze else 'UNFROZEN (Authors can publish)'}.", "success")
+    except Exception:
+        flash("Database error toggling upload freeze.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/developer/purge_cache', methods=['POST'])
+def developer_purge_cache():
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+        
+    invalidate_cache()
+    invalidate_books_cache()
+    log_official_activity(session['user_id'], "Developer purged all FastMemoryCache entries")
+    flash("FastMemoryCache has been purged across all pages and book indexes.", "success")
     return redirect(url_for('dashboard'))
 
 @app.route('/send_change_password_otp', methods=['POST'])
@@ -3863,6 +4145,13 @@ def dashboard():
             return redirect(url_for('dashboard'))
 
         if request.method == 'POST' and 'title' in request.form:
+            if role != 'developer':
+                cursor.execute("SELECT upload_freeze FROM front_page_settings WHERE id = 1")
+                fps_freeze = cursor.fetchone() or {}
+                if fps_freeze.get('upload_freeze'):
+                    flash("Book publishing is temporarily paused by the Developer for system maintenance.", "error")
+                    return redirect(url_for('dashboard'))
+
             catalog = request.form.get('catalog', '')
             if role == 'author':
                 cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
@@ -3985,7 +4274,7 @@ def dashboard():
 
         if role == 'developer':
             params = []
-            base_query = "SELECT id, username, email, role, last_activity FROM users WHERE role != 'developer'"
+            base_query = "SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users WHERE role != 'developer'"
             
             if search_query: 
                 base_query += " AND (username LIKE %s OR email LIKE %s)"
@@ -3994,42 +4283,71 @@ def dashboard():
                 base_query += " AND role = %s"
                 params.append(role_filter)
                 
-            base_query += " ORDER BY last_activity DESC LIMIT 50"
+            base_query += " ORDER BY last_activity DESC LIMIT 100"
             cursor.execute(base_query, tuple(params))
             searched_users = cursor.fetchall()
             
-            cursor.execute("SELECT dr.id, u.username as target_name, o.username as official_name, dr.reason FROM deletion_requests dr JOIN users u ON dr.target_user_id = u.id JOIN users o ON dr.requested_by = o.id WHERE dr.status = 'pending'")
+            cursor.execute("SELECT dr.id, u.username as target_name, o.username as official_name, dr.reason, dr.created_at FROM deletion_requests dr JOIN users u ON dr.target_user_id = u.id JOIN users o ON dr.requested_by = o.id WHERE dr.status = 'pending' ORDER BY dr.created_at DESC")
             del_requests = cursor.fetchall()
             
-            cursor.execute("SELECT bdr.id, b.title as book_title, u.username as author_name, o.username as official_name, bdr.reason FROM book_deletion_requests bdr JOIN books b ON bdr.book_id = b.id JOIN users u ON b.author_id = u.id JOIN users o ON bdr.requested_by = o.id WHERE bdr.status = 'pending'")
+            cursor.execute("SELECT bdr.id, b.title as book_title, u.username as author_name, o.username as official_name, bdr.reason, bdr.created_at FROM book_deletion_requests bdr JOIN books b ON bdr.book_id = b.id JOIN users u ON b.author_id = u.id JOIN users o ON bdr.requested_by = o.id WHERE bdr.status = 'pending' ORDER BY bdr.created_at DESC")
             book_del_requests = cursor.fetchall()
             
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
             
-            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id WHERE oa.timestamp >= NOW() - INTERVAL 30 DAY ORDER BY oa.timestamp DESC LIMIT 200")
+            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 100")
             official_logs = cursor.fetchall()
             
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
             archive_books = clean_book_data(cursor.fetchall())
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
             
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
+            # Real-time System Metrics for Developer
+            cursor.execute("SELECT COUNT(*) as total_users, SUM(role='reader') as readers, SUM(role='author') as authors, SUM(role='official') as officials FROM users")
+            user_counts = cursor.fetchone() or {}
+            
+            cursor.execute("SELECT COUNT(*) as total_books, SUM(is_paid=TRUE) as paid_books, SUM(COALESCE(is_quarantined, FALSE)=TRUE) as quarantined_books, SUM(COALESCE(is_featured, FALSE)=TRUE) as featured_books FROM books")
+            book_counts = cursor.fetchone() or {}
+            
+            cursor.execute("SELECT COUNT(*) as total_orders, COALESCE(SUM(amount_paise), 0) as total_revenue_paise FROM purchases WHERE status = 'paid'")
+            purchase_stats = cursor.fetchone() or {}
+            
+            cursor.execute("SELECT maintenance_mode, upload_freeze FROM front_page_settings WHERE id = 1")
+            fps_row = cursor.fetchone() or {}
+            
+            system_metrics = {
+                'total_users': user_counts.get('total_users', 0),
+                'readers': user_counts.get('readers', 0),
+                'authors': user_counts.get('authors', 0),
+                'officials': user_counts.get('officials', 0),
+                'total_books': book_counts.get('total_books', 0),
+                'paid_books': book_counts.get('paid_books', 0),
+                'quarantined_books': book_counts.get('quarantined_books', 0),
+                'featured_books': book_counts.get('featured_books', 0),
+                'total_orders': purchase_stats.get('total_orders', 0),
+                'total_revenue_inr': round(purchase_stats.get('total_revenue_paise', 0) / 100, 2),
+                'cached_items': fast_cache.size(),
+                'maintenance_mode': bool(fps_row.get('maintenance_mode')),
+                'upload_freeze': bool(fps_row.get('upload_freeze'))
+            }
+            
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics)
 
         if role == 'official':
             if search_query: 
-                cursor.execute("SELECT id, username, email, role, last_activity FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
+                cursor.execute("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
             else: 
-                cursor.execute("SELECT id, username, email, role, last_activity FROM users WHERE role IN ('reader', 'author') ORDER BY last_activity DESC")
+                cursor.execute("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users WHERE role IN ('reader', 'author') ORDER BY last_activity DESC LIMIT 100")
                 
             all_users = cursor.fetchall()
             
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
             
             return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
@@ -4039,7 +4357,7 @@ def dashboard():
             author_data = cursor.fetchone()
             session['is_verified'] = author_data['is_verified']
             
-            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description FROM books WHERE author_id = %s", (session['user_id'],))
+            cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description, is_quarantined, is_featured FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
             return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)

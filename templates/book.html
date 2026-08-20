@@ -562,6 +562,10 @@
                         <form action="{{ url_for('delete_review', review_id=r.id, book_id=book.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your review?');">
                             <button type="submit" style="background: none; border: none; color: #e53e3e; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: underline;">Delete My Review</button>
                         </form>
+                        {% elif session.role in ['official', 'developer'] %}
+                        <form action="{{ url_for('official_delete_review', review_id=r.id) }}" method="POST" onsubmit="return confirm('Official Action: Remove this inappropriate or spam review?');">
+                            <button type="submit" style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer;" title="Official Review Moderation">🗑️ Moderate</button>
+                        </form>
                         {% endif %}
                         
                     </div>

@@ -260,7 +260,12 @@
                 </a>
 
                 <div class="book-info">
-                    <div class="book-tag">{{ book.catalog }}</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag">{{ book.catalog }}</div>
+                        {% if book.is_featured %}
+                            <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
+                        {% endif %}
+                    </div>
                     
                     <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>

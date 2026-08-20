@@ -815,7 +815,7 @@
                                 <table>
                                     <tr>
                                         <th>Cover</th>
-                                        <th>Title</th>
+                                        <th>Title & Status</th>
                                         <th>Type</th>
                                         <th>Action</th>
                                     </tr>
@@ -825,18 +825,24 @@
                                             <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
                                         </td>
                                         <td style="font-weight: 500;" class="book-title-cell">
-                                            {{ book.title }} 
+                                            {% if book.is_featured %}
+                                                <span style="background: #fef08a; color: #854d0e; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">⭐ Staff Pick</span>
+                                            {% endif %}
+                                            {% if book.is_quarantined %}
+                                                <span style="background: #fee2e2; color: #991b1b; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">🔒 Soft-Quarantined</span>
+                                            {% endif %}
+                                            <div>{{ book.title }}</div>
                                             {% if session.role in ['official', 'developer'] %}
-                                                <br><small style="color: #718096;">by {{ book.author_name }}</small>
+                                                <small style="color: #718096;">by {{ book.author_name }}</small>
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if book.is_paid %}
                                                 <span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span><br>
                                                 {% if book.rp_verified %}
-                                                    <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#dcfce7; color:#166534;">✓ Payments verified</span>
+                                                    <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#dcfce7; color:#166534;">✓ Verified</span>
                                                 {% else %}
-                                                    <span title="{{ book.rp_verify_message or 'Razorpay details have not been verified yet. Edit the book to fix this.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#fef3c7; color:#92400e;">⚠ Payments unverified</span>
+                                                    <span title="{{ book.rp_verify_message or 'Razorpay details unverified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#fef3c7; color:#92400e;">⚠ Unverified</span>
                                                 {% endif %}
                                             {% else %}
                                                 Free
@@ -848,7 +854,6 @@
                                                 <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
                                                 {% endif %}
                                                 
-                                                <!-- data-pdflink & data-coverlink attributes allow editing Drive links -->
                                                 <button type="button" class="btn-sm btn-dark edit-btn" 
                                                         data-id="{{ book.id }}" 
                                                         data-title="{{ book.title | escape }}" 
@@ -864,14 +869,30 @@
                                                         data-coverlink="{{ book.cover_image if book.cover_image.startswith('http') else '' }}"
                                                         onclick="openEditModal(this)">Edit</button>
                                                 
+                                                {% if session.role in ['official', 'developer'] %}
+                                                    <!-- Power: Toggle Soft-Quarantine -->
+                                                    <form action="{{ url_for('official_toggle_quarantine', book_id=book.id) }}" method="POST" style="display:inline;">
+                                                        <button type="submit" class="btn-sm {{ 'btn-green' if book.is_quarantined else 'btn-warn' }}" title="Toggle visibility in Global Library">
+                                                            {{ 'Unhide' if book.is_quarantined else 'Quarantine' }}
+                                                        </button>
+                                                    </form>
+                                                    
+                                                    <!-- Power: Toggle Staff Pick Badge -->
+                                                    <form action="{{ url_for('official_toggle_featured', book_id=book.id) }}" method="POST" style="display:inline;">
+                                                        <button type="submit" class="btn-sm {{ 'btn-dark' if book.is_featured else 'btn-orange' }}" title="Toggle Staff Pick badge">
+                                                            {{ 'Unfeature' if book.is_featured else '⭐ Feature' }}
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+
                                                 {% if session.role == 'official' %}
                                                     <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;">
-                                                        <input type="text" name="reason" placeholder="Reason for Dev..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                                        <button type="submit" class="btn-sm btn-warn">Req. Delete</button>
+                                                        <input type="text" name="reason" placeholder="Reason for Dev..." required style="padding: 5px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                                        <button type="submit" class="btn-sm btn-red">Req. Delete</button>
                                                     </form>
                                                 {% elif session.role == 'developer' %}
                                                     <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this book permanently?');">
-                                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.75rem; width: 130px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
                                                         <button type="submit" class="btn-sm btn-red">Force Delete</button>
                                                     </form>
                                                 {% else %}
@@ -894,41 +915,28 @@
         {% endif %}
 
         {% if session.role in ['official', 'developer'] %}
-            <!-- Pending Username Requests -->
-            <div class="panel" style="border-left: 5px solid #3182ce;">
-                <h2>Pending Username Requests</h2>
-                {% if username_requests %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Current Username</th>
-                                <th>Requested Username</th>
-                                <th>Reason</th>
-                                <th>Action</th>
-                            </tr>
-                            {% for req in username_requests %}
-                            <tr>
-                                <td>{{ req.current_username }}</td>
-                                <td>{{ req.new_username }}</td>
-                                <td>{{ req.reason }}</td>
-                                <td style="display: flex; gap: 10px;">
-                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='approve') }}" method="POST">
-                                        <button type="submit" class="btn-sm btn-green">Approve</button>
-                                    </form>
-                                    <form action="{{ url_for('handle_username_request', req_id=req.id, action='reject') }}" method="POST">
-                                        <button type="submit" class="btn-sm btn-red">Reject</button>
-                                    </form>
-                                </td>
-                            </tr>
+            <!-- OFFICIAL POWER: Category Author Broadcaster -->
+            <div class="panel" style="border-left: 5px solid #8b5cf6;">
+                <h2 style="color: #6d28d9; display: flex; align-items: center; gap: 8px;">
+                    <span>📢</span> Category Author Broadcaster
+                </h2>
+                <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 15px;">Send curation guidelines, submission requests, or announcements to all published authors in a specific category.</p>
+                <form action="{{ url_for('official_category_broadcast') }}" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <select name="catalog_name" required style="padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: 600; min-width: 180px;">
+                            <option value="" disabled selected>Select Target Catalog...</option>
+                            {% for cat in site_catalogs %}
+                                <option value="{{ cat.name }}">{{ cat.name }}</option>
                             {% endfor %}
-                        </table>
+                        </select>
+                        <input type="text" name="subject" placeholder="Subject (e.g., New Guidelines for Educational Authors)" required style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
-                {% else %}
-                    <p>No pending username requests.</p>
-                {% endif %}
+                    <textarea name="message_body" rows="3" placeholder="Type your broadcast message to authors in this catalog..." required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;"></textarea>
+                    <button type="submit" class="btn-sm btn-dark" style="align-self: flex-start; padding: 10px 20px;">Send Category Broadcast</button>
+                </form>
             </div>
 
-            <!-- Approvals (Both Admins) -->
+            <!-- Approvals (Pending Authors) -->
             <div class="panel" style="border-left: 5px solid #38a169;">
                 <h2>Pending Author Approvals</h2>
                 {% if pending_authors %}
@@ -985,19 +993,27 @@
                                 <th>Username</th>
                                 <th>Email Address</th>
                                 <th>Role</th>
-                                <th>Action</th>
+                                <th>Actions</th>
                             </tr>
                             {% for user in all_users %}
                             <tr>
-                                <td>{{ user.username }}</td>
+                                <td style="font-weight: 500;">{{ user.username }}</td>
                                 <td style="color: #4a5568;">{{ user.email }}</td>
                                 <td style="text-transform: capitalize;">{{ user.role }}</td>
                                 <td>
-                                    <!-- OFFICIALS ONLY SEND REQUESTS TO THE DEVELOPER -->
-                                    <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Report Reason to Dev..." required style="padding: 6px; font-size: 0.85rem; width: 200px; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-orange">Submit Report</button>
-                                    </form>
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                        <!-- OFFICIAL POWER: Send Username Update Notice -->
+                                        <form action="{{ url_for('official_notify_username', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px 6px; font-size: 0.78rem; width: 140px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-dark" title="Send email notice to change username">Notice</button>
+                                        </form>
+
+                                        <!-- OFFICIAL LIMITATION: Request deletion via Developer Verification -->
+                                        <form action="{{ url_for('request_deletion', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Report to Dev..." required style="padding: 4px 6px; font-size: 0.78rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-orange" title="Submit report for Developer review">Report Dev</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1009,15 +1025,167 @@
             </div>
         {% endif %}
 
-        <!-- BOTTOM DEVELOPER SECTION -->
+        <!-- BOTTOM DEVELOPER SECTION (Supreme Master Controls) -->
         {% if session.role == 'developer' %}
+        
+        {% set sys = system_metrics | default({}) %}
+        <!-- DEVELOPER MASTER PANEL: Platform Health, Emergency Maintenance & FastCache -->
+        <div class="panel" style="border-left: 5px solid #ef4444; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <h2 style="color: #b91c1c; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span>👑</span> Developer Master Platform Intelligence & Controls
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0 0;">Live infrastructure health, emergency switches, and memory cache diagnostics.</p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <!-- Emergency Maintenance Switch -->
+                    <form action="{{ url_for('developer_toggle_maintenance') }}" method="POST">
+                        <button type="submit" class="btn-sm {{ 'btn-green' if sys.maintenance_mode else 'btn-red' }}" style="padding: 8px 14px; font-weight: 700;">
+                            {{ '🔓 Disable Maintenance' if sys.maintenance_mode else '🚨 Enable Maintenance Mode' }}
+                        </button>
+                    </form>
+                    
+                    <!-- Upload Freeze Switch -->
+                    <form action="{{ url_for('developer_toggle_upload_freeze') }}" method="POST">
+                        <button type="submit" class="btn-sm {{ 'btn-green' if sys.upload_freeze else 'btn-warn' }}" style="padding: 8px 14px; font-weight: 700;">
+                            {{ '▶ Unfreeze Uploads' if sys.upload_freeze else '❄️ Freeze Uploads' }}
+                        </button>
+                    </form>
+
+                    <!-- FastMemoryCache Purge -->
+                    <form action="{{ url_for('developer_purge_cache') }}" method="POST" onsubmit="return confirm('Purge in-memory FastCache across all routes?');">
+                        <button type="submit" class="btn-sm btn-dark" style="padding: 8px 14px; font-weight: 700;">
+                            🧹 Purge Cache ({{ sys.cached_items | default(0) }} keys)
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Live Metrics Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #1e293b;">{{ sys.total_users | default(0) }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Users</div>
+                </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #2563eb;">{{ sys.readers | default(0) }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Readers</div>
+                </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #d97706;">{{ sys.authors | default(0) }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Authors</div>
+                </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #16a34a;">{{ sys.officials | default(0) }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Officials</div>
+                </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #9333ea;">{{ sys.total_books | default(0) }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Books ({{ sys.paid_books | default(0) }} paid)</div>
+                </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #dc2626;">{{ sys.quarantined_books | default(0) }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Quarantined</div>
+                </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #0891b2;">₹{{ sys.total_revenue_inr | default('0.00') }}</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Sales Volume</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEVELOPER MASTER PANEL: Verification & Approvals Hub -->
+        <div class="grid-2">
+            <!-- Pending Book Deletions from Officials -->
+            <div class="panel" style="border-left: 5px solid #dc2626;">
+                <h2 style="color: #dc2626; display: flex; align-items: center; gap: 6px;">
+                    <span>🛡️</span> Official Book Deletion Requests
+                </h2>
+                {% if book_del_requests %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr>
+                                <th>Book</th>
+                                <th>Author</th>
+                                <th>Official & Reason</th>
+                                <th>Decision</th>
+                            </tr>
+                            {% for req in book_del_requests %}
+                            <tr>
+                                <td style="font-weight: 600;">{{ req.book_title }}</td>
+                                <td>{{ req.author_name }}</td>
+                                <td>
+                                    <strong>{{ req.official_name }}:</strong> 
+                                    <span style="color: #64748b; font-size: 0.85rem;">{{ req.reason }}</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 6px;">
+                                        <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='approve') }}" method="POST" onsubmit="return confirm('Confirm permanent deletion of book?');">
+                                            <input type="hidden" name="reason" value="Approved official moderation request: {{ req.reason }}">
+                                            <button type="submit" class="btn-sm btn-red">Approve Delete</button>
+                                        </form>
+                                        <form action="{{ url_for('handle_book_deletion', req_id=req.id, action='reject') }}" method="POST">
+                                            <button type="submit" class="btn-sm btn-dark">Reject</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="color: #64748b;">No pending book deletion requests from officials.</p>
+                {% endif %}
+            </div>
+
+            <!-- Pending User Deletion Reports from Officials -->
+            <div class="panel" style="border-left: 5px solid #ea580c;">
+                <h2 style="color: #ea580c; display: flex; align-items: center; gap: 6px;">
+                    <span>👤</span> Official User Moderation Reports
+                </h2>
+                {% if del_requests %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr>
+                                <th>Target User</th>
+                                <th>Official & Reason</th>
+                                <th>Decision</th>
+                            </tr>
+                            {% for req in del_requests %}
+                            <tr>
+                                <td style="font-weight: 600;">{{ req.target_name }}</td>
+                                <td>
+                                    <strong>{{ req.official_name }}:</strong> 
+                                    <span style="color: #64748b; font-size: 0.85rem;">{{ req.reason }}</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 6px;">
+                                        <form action="{{ url_for('handle_deletion', req_id=req.id, action='approve') }}" method="POST" onsubmit="return confirm('Permanently terminate this user account?');">
+                                            <input type="hidden" name="reason" value="Approved official moderation report: {{ req.reason }}">
+                                            <button type="submit" class="btn-sm btn-red">Approve Ban</button>
+                                        </form>
+                                        <form action="{{ url_for('handle_deletion', req_id=req.id, action='reject') }}" method="POST">
+                                            <button type="submit" class="btn-sm btn-dark">Reject</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="color: #64748b;">No pending user moderation reports.</p>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="grid-2">
             <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
             <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
                 <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
                 
-                <!-- NEW SEARCH BAR FOR ARCHIVES -->
                 <div style="margin-bottom: 20px;">
                     <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
                 </div>
@@ -1038,7 +1206,6 @@
                                 <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
                                 <td>
                                     <div style="display: flex; gap: 5px;">
-                                        <!-- NEW: Edit Button handles descriptions -->
                                         <button type="button" class="btn-sm btn-dark edit-btn" 
                                                 data-id="{{ book.id }}" 
                                                 data-title="{{ book.title | escape }}" 
@@ -1065,7 +1232,7 @@
                 {% endif %}
             </div>
 
-            <!-- DEVELOPER USER MANAGEMENT -->
+            <!-- DEVELOPER USER MANAGEMENT (Security, Unlock & Role Reassignment) -->
             <div class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
                 <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
                 <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -1083,44 +1250,62 @@
                     <div class="table-scroll-container">
                         <table>
                             <tr>
-                                <th>Username</th>
-                                <th>Email Address</th>
-                                <th>Role</th>
-                                <th>Last Active</th>
+                                <th>User</th>
+                                <th>Role & Status</th>
+                                <th>Role Reassign</th>
                                 <th>Actions</th>
                             </tr>
                             {% for user in searched_users %}
                             <tr>
-                                <td style="font-weight: 500;">{{ user.username }}</td>
-                                <td style="color: #4a5568;">{{ user.email }}</td>
-                                <td style="text-transform: capitalize; {% if user.role == 'official' %}color: #38a169; font-weight: bold;{% endif %}">{{ user.role }}</td>
-                                
-                                <!-- TIMEZONE FIX: Applying the to_ist filter here -->
-                                <td style="color: #718096; font-size: 0.85rem;">{{ user.last_activity | to_ist }}</td>
-                                
-                                <td style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                        <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                    </form>
-
-                                    {% if user.role in ['reader', 'author'] %}
-                                    <form action="{{ url_for('promote_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Promote this user to Official Administrator? This will notify them directly via email.');">
-                                        <button type="submit" class="btn-sm btn-green" style="height: 100%;">Promote</button>
-                                    </form>
+                                <td>
+                                    <div style="font-weight: 600;">{{ user.username }}</div>
+                                    <small style="color: #64748b;">{{ user.email }}</small><br>
+                                    <small style="color: #94a3b8;">Active: {{ user.last_activity | to_ist }}</small>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; text-transform: capitalize; {% if user.role == 'official' %}color: #16a34a;{% elif user.role == 'author' %}color: #d97706;{% else %}color: #2563eb;{% endif %}">{{ user.role }}</span>
+                                    {% if user.locked_until or (user.failed_attempts and user.failed_attempts >= 5) %}
+                                        <br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">🔒 Locked</span>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <!-- Power: Instant Role Switcher -->
+                                    <form action="{{ url_for('developer_change_role', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px; align-items: center;">
+                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
+                                            <option value="reader" {% if user.role == 'reader' %}selected{% endif %}>Reader</option>
+                                            <option value="author" {% if user.role == 'author' %}selected{% endif %}>Author</option>
+                                            <option value="official" {% if user.role == 'official' %}selected{% endif %}>Official</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                                        <!-- Power: Unlock Locked Accounts -->
+                                        {% if user.locked_until or (user.failed_attempts and user.failed_attempts > 0) %}
+                                            <form action="{{ url_for('developer_unlock_user', user_id=user.id) }}" method="POST">
+                                                <button type="submit" class="btn-sm btn-green" title="Reset failed attempts and unlock">🔓 Unlock</button>
+                                            </form>
+                                        {% endif %}
 
-                                    {% if user.role == 'official' %}
-                                        <form action="{{ url_for('revoke_official', user_id=user.id) }}" method="POST" onsubmit="return confirm('Revoke official rights and demote to reader?');">
-                                            <input type="hidden" name="reason" value="Administrative Decision.">
-                                            <button type="submit" class="btn-sm btn-dark" style="height: 100%;">Revoke</button>
+                                        <!-- Power: Send Username Notice -->
+                                        <form action="{{ url_for('official_notify_username', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
                                         </form>
-                                    {% endif %}
-                                    
-                                    <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: This completely deletes the user and all their books permanently. Continue?');" style="display: flex; gap: 5px;">
-                                        <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.8rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                        <button type="submit" class="btn-sm btn-red">Delete</button>
-                                    </form>
+
+                                        <!-- Warn User -->
+                                        <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
+                                        </form>
+
+                                        <!-- Permanent Force Delete -->
+                                        <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1131,6 +1316,35 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- DEVELOPER AUDIT TRAIL: Official Activities Log -->
+        <div class="panel" style="border-left: 5px solid #0284c7; margin-top: 30px;">
+            <h2 style="color: #0369a1; display: flex; align-items: center; gap: 8px;">
+                <span>📜</span> Real-Time Official Activity Audit Trail
+            </h2>
+            <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 15px;">Chronological live audit log tracking all moderation actions performed across the platform.</p>
+            {% if official_logs %}
+                <div class="table-scroll-container" style="max-height: 350px;">
+                    <table>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Administrator</th>
+                            <th>Action Details</th>
+                        </tr>
+                        {% for log in official_logs %}
+                        <tr>
+                            <td style="color: #64748b; font-size: 0.82rem; white-space: nowrap;">{{ log.timestamp | to_ist }}</td>
+                            <td style="font-weight: 700; color: #1e293b;">{{ log.username }}</td>
+                            <td style="color: #334155; font-size: 0.88rem;">{{ log.action }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% else %}
+                <p style="color: #64748b;">No official activities recorded yet.</p>
+            {% endif %}
+        </div>
+
         {% endif %}
 
     </div>
