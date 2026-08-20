@@ -687,9 +687,28 @@
       <span>PustakVerse</span>
       <span class="brand-badge">GranthMind AI</span>
     </a>
-    <a class="back" href="{{ url_for('view_book', book_id=book.id) if book else url_for('index') }}">
-      ← {{ 'Back to book' if book else 'Library Storefront' }}
-    </a>
+    
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <!-- Dynamic AI Model Choice Selector -->
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">AI Engine:</span>
+        <select id="userAiModelSelector" onchange="onUserSelectAiModel(this.value)" style="background: #fff7ed; border: 1.5px solid #fdba74; color: #c2410c; font-weight: 700; font-size: 0.85rem; padding: 6px 14px; border-radius: 20px; outline: none; cursor: pointer; box-shadow: 0 1px 4px rgba(234, 88, 12, 0.1);">
+          {% if available_models %}
+            {% for m in available_models %}
+              <option value="{{ m.id }}" {% if (selected_model_id and selected_model_id|string == m.id|string) or (not selected_model_id and m.is_default) %}selected{% endif %}>
+                🤖 {{ m.display_name }}
+              </option>
+            {% endfor %}
+          {% else %}
+            <option value="1">🤖 GranthMind Pro (Gemini 2.0 Flash)</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <a class="back" href="{{ url_for('view_book', book_id=book.id) if book else url_for('index') }}">
+        ← {{ 'Back to book' if book else 'Library Storefront' }}
+      </a>
+    </div>
   </header>
 
   <main class="shell">
@@ -710,6 +729,9 @@
         <button type="button" class="sidebar-btn" onclick="exportChatMarkdown()" style="display:flex; align-items:center; gap:6px;">
           📄 Export Markdown (.md)
         </button>
+        <button type="button" class="sidebar-btn" onclick="exportAnkiDeck()" style="display:flex; align-items:center; gap:6px;">
+          🗂️ Export Anki Flashcards (.tsv)
+        </button>
         <button type="button" class="sidebar-btn" onclick="printChatNotes()" style="display:flex; align-items:center; gap:6px;">
           📑 Print / Save as PDF
         </button>
@@ -729,7 +751,7 @@
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <button type="button" onclick="printChatNotes()" class="mode-chip" style="border-radius:6px; padding:4px 10px; font-size:0.75rem; background:#f1f5f9;" title="Print or save as clean PDF">📑 Print / PDF</button>
-          <span class="status-pill">● Online & Ready</span>
+          <span class="status-pill">● Multi-AI Online</span>
         </div>
       </header>
 
@@ -742,6 +764,10 @@
         <button type="button" class="mode-chip" onclick="setStudyMode('summary', this)">📝 Chapter Summary</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('eli5', this)">💡 Explain Simply (ELI5)</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('deep', this)">🔬 Deep Breakdown</button>
+        {% if book %}
+        <button type="button" class="mode-chip" onclick="openTimedMockExamModal({{ book.id }})" style="background: #fdf4ff; border-color: #f0abfc; color: #a21caf; font-weight: 700;">⏱️ Timed Mock Exam</button>
+        {% endif %}
+        <button type="button" class="mode-chip" onclick="openTranslateModal()" style="background: #f0fdf4; border-color: #86efac; color: #15803d; font-weight: 700;">🌐 Translate</button>
       </div>
 
       <div class="chat-area" id="chatArea">
@@ -1525,6 +1551,253 @@
         button.textContent = 'Ask AI';
       }
     });
+
+    // --- Dynamic AI Model & Multi-Tool Handlers ---
+    function onUserSelectAiModel(val) {
+      try { localStorage.setItem('pv_user_ai_model', val); } catch(e) {}
+    }
+
+    function getSelectedAiModelId() {
+      const sel = document.getElementById('userAiModelSelector');
+      if (sel && sel.value) return sel.value;
+      try { return localStorage.getItem('pv_user_ai_model') || '1'; } catch(e) { return '1'; }
+    }
+
+    (function initSavedAiModel() {
+      try {
+        const saved = localStorage.getItem('pv_user_ai_model');
+        const sel = document.getElementById('userAiModelSelector');
+        if (saved && sel) {
+          sel.value = saved;
+        }
+      } catch(e) {}
+    })();
+
+    // 1. Timed Mock Exam Controller
+    let currentExamQuestions = [];
+    let currentExamIndex = 0;
+    let examScore = 0;
+    let examTimer = null;
+    let examSecondsRemaining = 600;
+
+    async function openTimedMockExamModal(bookId) {
+      const modal = document.getElementById('mockExamModal');
+      const body = document.getElementById('mockExamBody');
+      if (modal) modal.style.display = 'flex';
+      if (body) body.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;">Generating high-yield exam questions using GranthMind AI... ⏳</div>';
+
+      try {
+        const resp = await fetch(`/api/ai_mock_exam/${bookId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' }
+        });
+        const data = await resp.json();
+        if (data.success && data.questions && data.questions.length > 0) {
+          currentExamQuestions = data.questions;
+          currentExamIndex = 0;
+          examScore = 0;
+          examSecondsRemaining = (data.time_limit_minutes || 10) * 60;
+          startExamTimer();
+          renderExamQuestion();
+        } else {
+          body.innerHTML = '<div style="color:#ef4444; padding:20px;">Could not generate exam right now. Please try again.</div>';
+        }
+      } catch (err) {
+        body.innerHTML = '<div style="color:#ef4444; padding:20px;">Error generating exam.</div>';
+      }
+    }
+
+    function startExamTimer() {
+      clearInterval(examTimer);
+      examTimer = setInterval(() => {
+        examSecondsRemaining--;
+        const mins = String(Math.floor(examSecondsRemaining / 60)).padStart(2, '0');
+        const secs = String(examSecondsRemaining % 60).padStart(2, '0');
+        const display = document.getElementById('examTimerDisplay');
+        if (display) display.textContent = `${mins}:${secs}`;
+        if (examSecondsRemaining <= 0) {
+          clearInterval(examTimer);
+          finishMockExam();
+        }
+      }, 1000);
+    }
+
+    function renderExamQuestion() {
+      const body = document.getElementById('mockExamBody');
+      if (!body || !currentExamQuestions[currentExamIndex]) return;
+      const q = currentExamQuestions[currentExamIndex];
+
+      body.innerHTML = `
+        <div style="font-size:0.8rem; font-weight:800; color:#c2410c; text-transform:uppercase; margin-bottom:8px;">Question ${currentExamIndex + 1} of ${currentExamQuestions.length}</div>
+        <h3 style="margin:0 0 16px; color:#0f172a; font-size:1.1rem; line-height:1.5;">${q.question}</h3>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+          ${q.options.map((opt, i) => `
+            <button type="button" onclick="selectExamOption(${i})" class="exam-opt-btn" id="examOpt${i}" style="text-align:left; background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px 16px; font-size:0.92rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
+              <span style="display:inline-block; width:24px; height:24px; border-radius:50%; background:#e2e8f0; text-align:center; line-height:24px; font-size:0.8rem; margin-right:8px;">${String.fromCharCode(65+i)}</span> ${opt}
+            </button>
+          `).join('')}
+        </div>
+        <div id="examFeedback" style="display:none; padding:12px; border-radius:8px; font-size:0.88rem; margin-bottom:14px;"></div>
+      `;
+    }
+
+    function selectExamOption(idx) {
+      const q = currentExamQuestions[currentExamIndex];
+      const feedback = document.getElementById('examFeedback');
+      const isCorrect = (idx === q.correct_index);
+      if (isCorrect) examScore++;
+
+      document.querySelectorAll('.exam-opt-btn').forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === q.correct_index) {
+          btn.style.background = '#dcfce7';
+          btn.style.borderColor = '#22c55e';
+          btn.style.color = '#15803d';
+        } else if (i === idx) {
+          btn.style.background = '#fee2e2';
+          btn.style.borderColor = '#ef4444';
+          btn.style.color = '#b91c1c';
+        }
+      });
+
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = isCorrect ? '#f0fdf4' : '#fff1f2';
+        feedback.style.border = isCorrect ? '1px solid #86efac' : '1px solid #fecdd3';
+        feedback.style.color = isCorrect ? '#166534' : '#9f1239';
+        feedback.innerHTML = `<strong>${isCorrect ? '✓ Correct!' : '✗ Incorrect'}</strong><br>${q.explanation}`;
+      }
+
+      setTimeout(() => {
+        currentExamIndex++;
+        if (currentExamIndex < currentExamQuestions.length) {
+          renderExamQuestion();
+        } else {
+          finishMockExam();
+        }
+      }, 2500);
+    }
+
+    function finishMockExam() {
+      clearInterval(examTimer);
+      const body = document.getElementById('mockExamBody');
+      if (!body) return;
+      const pct = Math.round((examScore / currentExamQuestions.length) * 100);
+      body.innerHTML = `
+        <div style="text-align:center; padding:20px;">
+          <div style="font-size:3rem; margin-bottom:10px;">${pct >= 70 ? '🏆' : '📚'}</div>
+          <h2 style="margin:0 0 8px; color:#0f172a;">Exam Completed!</h2>
+          <div style="font-size:1.8rem; font-weight:800; color:#ea580c; margin-bottom:12px;">Score: ${examScore} / ${currentExamQuestions.length} (${pct}%)</div>
+          <p style="color:#64748b; font-size:0.95rem; margin-bottom:20px;">${pct >= 80 ? 'Exceptional mastery! You understand the foundational axioms thoroughly.' : 'Good effort! Review key summaries and attempt again to reinforce retention.'}</p>
+          <button type="button" onclick="document.getElementById('mockExamModal').style.display='none'" class="send" style="padding:10px 24px; border-radius:20px;">Close Exam</button>
+        </div>
+      `;
+    }
+
+    // 2. Multilingual Translator Controller
+    function openTranslateModal() {
+      const modal = document.getElementById('translateModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    async function executeTranslate() {
+      const text = document.getElementById('translateSourceText').value.trim();
+      const lang = document.getElementById('translateTargetLang').value;
+      const resDiv = document.getElementById('translateResultArea');
+      if (!text || !resDiv) return;
+
+      resDiv.style.display = 'block';
+      resDiv.textContent = 'Translating with GranthMind... ⏳';
+
+      try {
+        const resp = await fetch('/api/ai_translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+          body: JSON.stringify({ text: text, target_language: lang })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          resDiv.textContent = data.translated_text;
+        } else {
+          resDiv.textContent = 'Translation failed.';
+        }
+      } catch (err) {
+        resDiv.textContent = 'Network error during translation.';
+      }
+    }
+
+    // 3. Anki Deck Exporter (.tsv)
+    function exportAnkiDeck() {
+      const messages = document.querySelectorAll('.message-text');
+      let tsvContent = "Front (Question / Prompt)\tBack (GranthMind Answer / Explanation)\n";
+      let count = 0;
+
+      messages.forEach(msg => {
+        const txt = msg.innerText.trim();
+        if (txt.includes('###') || txt.includes('**') || txt.length > 50) {
+          const lines = txt.split('\n');
+          const front = lines[0].replace(/\t/g, ' ').replace(/"/g, '""');
+          const back = lines.slice(1).join('<br>').replace(/\t/g, ' ').replace(/"/g, '""');
+          tsvContent += `"${front}"\t"${back}"\n`;
+          count++;
+        }
+      });
+
+      if (count === 0) {
+        tsvContent += `"GranthMind Sample Question"\t"Core conceptual insight from PustakVerse."\n`;
+      }
+
+      const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pustakverse_anki_deck_${Date.now()}.tsv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   </script>
+
+  <!-- TIMED MOCK EXAM MODAL -->
+  <div id="mockExamModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+    <div style="background:#ffffff; border-radius:18px; width:90%; max-width:620px; box-shadow:0 25px 60px rgba(0,0,0,0.35); overflow:hidden;">
+      <div style="background:linear-gradient(135deg, #ea580c 0%, #f97316 100%); color:white; padding:16px 22px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:1.1rem;">
+          <span>⏱️</span> GranthMind Timed Mock Exam
+        </div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span id="examTimerDisplay" style="background:rgba(0,0,0,0.25); padding:4px 10px; border-radius:12px; font-weight:800; font-size:0.95rem;">10:00</span>
+          <button type="button" onclick="document.getElementById('mockExamModal').style.display='none'" style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer;">&times;</button>
+        </div>
+      </div>
+      <div id="mockExamBody" style="padding:24px;"></div>
+    </div>
+  </div>
+
+  <!-- MULTILINGUAL TRANSLATOR MODAL -->
+  <div id="translateModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+    <div style="background:#ffffff; border-radius:18px; width:90%; max-width:580px; box-shadow:0 25px 60px rgba(0,0,0,0.35); padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; color:#0f172a; display:flex; align-items:center; gap:8px;">🌐 GranthMind Multilingual Translator</h3>
+        <button type="button" onclick="document.getElementById('translateModal').style.display='none'" style="background:none; border:none; color:#64748b; font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <select id="translateTargetLang" style="flex:1; padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; font-weight:600;">
+          <option value="Hindi">Hindi (हिन्दी)</option>
+          <option value="Bengali">Bengali (বাংলা)</option>
+          <option value="Marathi">Marathi (मराठी)</option>
+          <option value="Tamil">Tamil (தமிழ்)</option>
+          <option value="Telugu">Telugu (తెలుగు)</option>
+          <option value="Gujarati">Gujarati (ગુજરાતી)</option>
+          <option value="Spanish">Spanish (Español)</option>
+          <option value="French">French (Français)</option>
+          <option value="German">German (Deutsch)</option>
+          <option value="Japanese">Japanese (日本語)</option>
+        </select>
+        <button type="button" onclick="executeTranslate()" class="send" style="padding:8px 18px;">Translate</button>
+      </div>
+      <textarea id="translateSourceText" rows="4" placeholder="Enter text, notes, or paste explanation to translate..." style="width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:0.9rem; margin-bottom:12px;"></textarea>
+      <div id="translateResultArea" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.9rem; max-height:200px; overflow-y:auto; line-height:1.6; color:#0f172a; white-space:pre-wrap;"></div>
+    </div>
+  </div>
 </body>
 </html>

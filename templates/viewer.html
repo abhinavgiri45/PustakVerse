@@ -146,6 +146,7 @@
                 <button class="view-btn" onclick="toggleBookmarksModal()" style="background: #2563eb; color: white;" title="Manage Bookmarks">🔖 Bookmarks</button>
                 <button class="view-btn" onclick="toggleFlashcardsDrawer()" style="background: #7c3aed; color: white;" title="5-Min AI Flashcards">⚡ Flashcards</button>
                 <button class="view-btn" onclick="openQuoteModal()" style="background: #0284c7; color: white;" title="Create Branded Quote Card">💬 Quote Card</button>
+                <button class="view-btn" id="ambientAudioBtn" onclick="toggleAmbientAudio()" style="background: #0d9488; color: white;" title="Focus Ambient Noise Player">🎧 Ambience</button>
                 <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="view-btn" style="background: #10b981; color: white; text-decoration: none;" title="Claim Completion Certificate">🎓 Certificate</a>
                 
                 <!-- Focus Timer Button -->
@@ -658,6 +659,59 @@
             link.download = `pustakverse_quote_${Date.now()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
+        }
+
+        // Web Audio API Ambient Focus Sound Generator (Pink / Rain / Brown Noise)
+        let audioCtx = null;
+        let noiseNode = null;
+        let gainNode = null;
+        let isAmbiencePlaying = false;
+
+        function toggleAmbientAudio() {
+            const btn = document.getElementById('ambientAudioBtn');
+            if (isAmbiencePlaying) {
+                if (noiseNode) {
+                    noiseNode.stop();
+                    noiseNode.disconnect();
+                }
+                isAmbiencePlaying = false;
+                if (btn) {
+                    btn.style.background = '#0d9488';
+                    btn.textContent = '🎧 Ambience';
+                }
+            } else {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    const bufferSize = audioCtx.sampleRate * 2;
+                    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const output = noiseBuffer.getChannelData(0);
+                    let lastOut = 0.0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        output[i] = (lastOut + (0.02 * white)) / 1.02; // Soft brown/rain noise filter
+                        lastOut = output[i];
+                        output[i] *= 3.5;
+                    }
+                    noiseNode = audioCtx.createBufferSource();
+                    noiseNode.buffer = noiseBuffer;
+                    noiseNode.loop = true;
+
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = 0.15; // Pleasant soothing background volume
+
+                    noiseNode.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    noiseNode.start();
+                    isAmbiencePlaying = true;
+                    if (btn) {
+                        btn.style.background = '#059669';
+                        btn.textContent = '🔊 Rain Ambience';
+                    }
+                } catch(err) {
+                    alert('Audio is not supported by your browser.');
+                }
+            }
         }
 
         // Prevent Dragging elements (like images)

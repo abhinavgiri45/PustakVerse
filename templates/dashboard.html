@@ -832,6 +832,23 @@
                     </form>
                     <div id="couponStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
                 </div>
+
+                <!-- 3. Author AI Book Synopsis & Blurb Generator -->
+                <div class="panel" style="border-left: 4px solid #8b5cf6; grid-column: span 2;">
+                    <h2 style="color: #7c3aed; display: flex; align-items: center; gap: 8px;">
+                        <span>🪄</span> Author AI Book Blurb & Synopsis Enhancer
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Generate captivating marketing synopses, audience hooks, and SEO keywords for your new book drafts using GranthMind AI.</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="aiBlurbTitle" placeholder="Draft Book Title *" style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                            <input type="text" id="aiBlurbCatalog" placeholder="Category (e.g. Science, Fiction)" style="width: 200px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        </div>
+                        <textarea id="aiBlurbNotes" rows="2" placeholder="Rough plot summary, main thesis, or key concepts..." style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.88rem;"></textarea>
+                        <button type="button" onclick="generateAiBlurb()" class="btn-sm btn-dark" style="align-self: flex-start; padding: 8px 18px;">✨ Generate Professional Synopsis</button>
+                    </div>
+                    <div id="aiBlurbResultArea" style="display: none; background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 8px; padding: 14px; margin-top: 12px; font-size: 0.88rem; line-height: 1.6; color: #1e293b; white-space: pre-wrap;"></div>
+                </div>
             </div>
         {% endif %}
 
@@ -1579,6 +1596,24 @@
                     <div id="apiKeyDisplay" style="display: none; margin-top: 10px; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; word-break: break-all;"></div>
                 </div>
             </div>
+
+            <!-- 5. MULTI-AI MODELS & API PROVIDER GATEWAY -->
+            <div style="background: #ffffff; border: 1.5px solid #fdba74; border-radius: 14px; padding: 22px; margin-top: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h3 style="margin: 0 0 4px; font-size: 1.15rem; color: #c2410c; display: flex; align-items: center; gap: 8px;">
+                            <span>🤖</span> Multi-AI Models & Provider Gateway
+                        </h3>
+                        <p style="margin: 0; font-size: 0.84rem; color: #64748b;">Configure unlimited AI APIs (Google Gemini, OpenAI, Claude, DeepSeek, Groq, OpenRouter, Local Ollama) and name your models for user selection.</p>
+                    </div>
+                    <button type="button" onclick="toggleAddAiModelModal()" class="btn-sm btn-orange" style="padding: 8px 16px; font-weight: 700;">+ Add New AI Model</button>
+                </div>
+
+                <!-- Configured AI Models Table -->
+                <div id="developerAiModelsContainer" style="margin-top: 14px;">
+                    <div style="text-align: center; padding: 14px; color: #94a3b8; font-size: 0.88rem;">Loading configured AI models...</div>
+                </div>
+            </div>
         </div>
 
         {% endif %}
@@ -2081,9 +2116,226 @@
             }).catch(() => {});
         }
 
+        // Multi-AI Models Manager
+        function loadDeveloperAiModels() {
+            const container = document.getElementById('developerAiModelsContainer');
+            if (!container) return;
+            fetch('/developer/ai_models')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.models && data.models.length > 0) {
+                        container.innerHTML = `
+                            <div class="table-scroll-container">
+                                <table>
+                                    <tr>
+                                        <th>Model Display Name</th>
+                                        <th>Provider</th>
+                                        <th>Model ID</th>
+                                        <th>Key Status</th>
+                                        <th>Default</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                    ${data.models.map(m => `
+                                        <tr>
+                                            <td>
+                                                <strong style="color: #0f172a;">${m.display_name}</strong>
+                                                ${m.is_default ? '<span style="background: #dcfce7; color: #166534; font-size: 0.72rem; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 6px;">DEFAULT</span>' : ''}
+                                            </td>
+                                            <td><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600; text-transform: uppercase; font-size: 0.75rem;">${m.provider_type}</span></td>
+                                            <td style="font-family: monospace; font-size: 0.84rem; color: #334155;">${m.model_id}</td>
+                                            <td>${m.has_key ? '<span style="color: #16a34a; font-weight: 700;">✓ Configured</span>' : '<span style="color: #64748b;">(Env / Open)</span>'}</td>
+                                            <td>
+                                                ${m.is_default ? '⭐ Active Default' : `<button type="button" onclick="setDefaultAiModel(${m.id})" class="btn-sm btn-dark" style="padding: 3px 8px; font-size: 0.75rem;">Set Default</button>`}
+                                            </td>
+                                            <td>
+                                                <button type="button" onclick="deleteAiModel(${m.id})" class="btn-sm btn-red" style="padding: 3px 8px; font-size: 0.75rem;">Delete</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </table>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '<div style="color: #94a3b8; font-size: 0.88rem; text-align: center; padding: 14px;">No AI models configured yet. Click "+ Add New AI Model" above.</div>';
+                    }
+                }).catch(() => {});
+        }
+
+        function toggleAddAiModelModal() {
+            const modal = document.getElementById('addAiModelModal');
+            if (modal) modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function saveNewAiModel(e) {
+            e.preventDefault();
+            const name = document.getElementById('newModelDisplayName').value.trim();
+            const provider = document.getElementById('newModelProviderType').value;
+            const modelId = document.getElementById('newModelIdInput').value.trim();
+            const apiKey = document.getElementById('newModelApiKey').value.trim();
+            const baseUrl = document.getElementById('newModelBaseUrl').value.trim();
+            const isDefault = document.getElementById('newModelIsDefault').checked;
+            const statusDiv = document.getElementById('addModelStatusMsg');
+
+            fetch('/developer/ai_models', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({
+                    display_name: name,
+                    provider_type: provider,
+                    model_id: modelId,
+                    api_key: apiKey,
+                    base_url: baseUrl,
+                    is_default: isDefault
+                })
+            }).then(r => r.json()).then(data => {
+                if (statusDiv) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    statusDiv.style.color = data.success ? '#166534' : '#991b1b';
+                    statusDiv.textContent = data.message;
+                    if (data.success) {
+                        setTimeout(() => {
+                            toggleAddAiModelModal();
+                            loadDeveloperAiModels();
+                        }, 1200);
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        function testAiModelConnection() {
+            const provider = document.getElementById('newModelProviderType').value;
+            const modelId = document.getElementById('newModelIdInput').value.trim();
+            const apiKey = document.getElementById('newModelApiKey').value.trim();
+            const baseUrl = document.getElementById('newModelBaseUrl').value.trim();
+            const statusDiv = document.getElementById('addModelStatusMsg');
+
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#fef3c7';
+                statusDiv.style.color = '#92400e';
+                statusDiv.textContent = 'Testing connection with sample ping... ⏳';
+            }
+
+            fetch('/developer/ai_models/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({
+                    provider_type: provider,
+                    model_id: modelId,
+                    api_key: apiKey,
+                    base_url: baseUrl
+                })
+            }).then(r => r.json()).then(data => {
+                if (statusDiv) {
+                    statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    statusDiv.style.color = data.success ? '#166534' : '#991b1b';
+                    statusDiv.innerHTML = `<strong>${data.message}</strong>${data.latency_ms ? `<br><small>Latency: ${data.latency_ms}ms &bull; Reply: "${data.response}"</small>` : ''}`;
+                }
+            }).catch(() => {});
+        }
+
+        function deleteAiModel(id) {
+            if (!confirm('Are you sure you want to remove this AI model?')) return;
+            fetch(`/developer/ai_models?model_id=${id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+            }).then(r => r.json()).then(data => {
+                loadDeveloperAiModels();
+            }).catch(() => {});
+        }
+
+        function setDefaultAiModel(id) {
+            fetch(`/developer/ai_models/set_default/${id}`, {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+            }).then(r => r.json()).then(data => {
+                loadDeveloperAiModels();
+            }).catch(() => {});
+        }
+
+        // Author AI Blurb Generator
+        function generateAiBlurb() {
+            const title = document.getElementById('aiBlurbTitle').value.trim();
+            const catalog = document.getElementById('aiBlurbCatalog').value.trim();
+            const notes = document.getElementById('aiBlurbNotes').value.trim();
+            const resArea = document.getElementById('aiBlurbResultArea');
+
+            if (!title) {
+                alert('Please enter a draft book title first.');
+                return;
+            }
+
+            if (resArea) {
+                resArea.style.display = 'block';
+                resArea.textContent = 'Generating professional synopsis and SEO blurb with GranthMind... ⏳';
+            }
+
+            fetch('/api/author/ai_enhance_blurb', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+                body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
+            }).then(r => r.json()).then(data => {
+                if (resArea && data.success) {
+                    resArea.textContent = data.enhanced_blurb;
+                }
+            }).catch(() => {});
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadReaderShelves();
+            loadDeveloperAiModels();
         });
     </script>
+
+    <!-- ADD AI MODEL MODAL -->
+    <div id="addAiModelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+        <div style="background:#ffffff; border-radius:16px; width:90%; max-width:540px; box-shadow:0 25px 60px rgba(0,0,0,0.35); padding:26px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="margin:0; color:#0f172a; display:flex; align-items:center; gap:8px;">🤖 Configure New AI Model & API</h3>
+                <button type="button" onclick="toggleAddAiModelModal()" style="background:none; border:none; color:#64748b; font-size:1.4rem; cursor:pointer;">&times;</button>
+            </div>
+            <form onsubmit="saveNewAiModel(event)" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="form-group">
+                    <label>Display Name (Shown to Users) *</label>
+                    <input type="text" id="newModelDisplayName" placeholder="e.g. GranthMind DeepThink (DeepSeek R1)" required style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:6px;">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label>Provider Type *</label>
+                        <select id="newModelProviderType" required style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:6px;">
+                            <option value="gemini">Google Gemini</option>
+                            <option value="openai">OpenAI (GPT-4o / o1)</option>
+                            <option value="deepseek">DeepSeek AI</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="groq">Groq (LLaMA 3.3)</option>
+                            <option value="openrouter">OpenRouter</option>
+                            <option value="custom_openai_compatible">Custom OpenAI Compatible / Ollama</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model ID *</label>
+                        <input type="text" id="newModelIdInput" placeholder="e.g. gemini-2.0-flash, gpt-4o" required style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:6px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>API Key (Optional if configured in environment)</label>
+                    <input type="password" id="newModelApiKey" placeholder="sk-... or AIza..." style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Custom Base URL (Optional, for custom endpoints / Ollama)</label>
+                    <input type="text" id="newModelBaseUrl" placeholder="https://api.deepseek.com or http://localhost:11434/v1" style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:6px;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                    <label style="font-size:0.85rem; font-weight:600; color:#334155;">
+                        <input type="checkbox" id="newModelIsDefault"> Set as Platform Default
+                    </label>
+                    <button type="button" onclick="testAiModelConnection()" class="btn-sm btn-dark" style="padding:6px 12px;">⚡ Test Connection</button>
+                </div>
+                <div id="addModelStatusMsg" style="display:none; padding:8px 12px; border-radius:6px; font-size:0.84rem; margin-top:4px;"></div>
+                <button type="submit" class="btn btn-orange" style="width:100%; padding:10px; font-weight:700; margin-top:8px;">Save AI Model</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
