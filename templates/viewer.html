@@ -204,8 +204,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 16px 12px;
-            background: #18181b;
+            padding: 12px 16px;
+            background: #090d16;
             position: relative;
             scroll-behavior: smooth;
         }
@@ -245,25 +245,27 @@
             font-weight: 600;
         }
 
-        /* EMBEDDED READER FALLBACK FRAME */
+        /* EMBEDDED READER CONTAINER */
         #embeddedReaderWrapper {
-            display: none;
             width: 100%;
-            height: 100%;
-            max-width: 1100px;
+            height: calc(100vh - 76px);
+            min-height: 520px;
+            max-width: 1200px;
             margin: 0 auto;
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 12px 35px rgba(0,0,0,0.6);
             background: #0f172a;
+            border: 1px solid #1e293b;
         }
 
         .embedded-doc-frame {
             width: 100%;
             height: 100%;
+            min-height: 100%;
             border: none;
-            border-radius: 8px;
             background: #ffffff;
+            display: block;
         }
 
         /* THEMES */
@@ -302,9 +304,10 @@
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .book-main-title { max-width: 140px; font-size: 0.82rem; }
-            .reader-nav { padding: 0 10px; }
+            .book-main-title { max-width: 130px; font-size: 0.82rem; }
+            .reader-nav { padding: 0 8px; }
             .nav-section-center { gap: 4px; padding: 3px 6px; }
+            #embeddedReaderWrapper { height: calc(100vh - 66px); }
         }
     </style>
 </head>
@@ -339,6 +342,11 @@
 
         <!-- RIGHT: ESSENTIAL ACTIONS ONLY -->
         <div class="nav-section-right">
+            <!-- VIEW MODE TOGGLE (Canvas vs Cloud) -->
+            <button class="action-pill" id="viewModeToggleBtn" onclick="toggleViewerMode()" title="Toggle Reading Engine">
+                <span id="viewModeIcon">📖</span> <span id="viewModeLabel">Canvas</span>
+            </button>
+
             <!-- THEME SWITCHER -->
             <button class="action-pill" id="themeBtn" onclick="cycleTheme()" title="Switch Reading Theme">
                 <span id="themeIcon">🌙</span>
@@ -356,29 +364,23 @@
         </div>
     </nav>
 
-    <!-- MAIN VIEWPORT / CANVAS CONTAINER -->
+    <!-- MAIN VIEWPORT CONTAINER -->
     <div class="viewer-viewport" id="viewerScrollContainer">
-        <!-- LOADING INDICATOR -->
-        <div id="loadingIndicator" class="loading-state">
-            <div class="spinner"></div>
-            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
-            <div style="width: 240px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
-                <div id="loadingProgressBar" style="width: 35%; height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); transition: width 0.3s ease;"></div>
-            </div>
+        
+        <!-- INSTANT EMBEDDED CLOUD READER (ACTIVE BY DEFAULT FOR CLOUD BOOKS - ZERO FREEZING) -->
+        {% set default_cloud_url = gdrive_preview_url if gdrive_preview_url else (('https://docs.google.com/viewer?url=' ~ (book.pdf_file | urlencode) ~ '&embedded=true') if (book.pdf_file and book.pdf_file.startswith('http')) else url_for('serve_secure_pdf', book_id=book.id)) %}
+        
+        <div id="embeddedReaderWrapper" style="{% if default_cloud_url %}display: block;{% else %}display: none;{% endif %}">
+            <iframe id="embeddedReaderFrame" src="{{ default_cloud_url }}" class="embedded-doc-frame" allow="autoplay" allowfullscreen></iframe>
         </div>
 
         <!-- CANVAS PAGES CONTAINER -->
-        <div id="pagesContainer"></div>
+        <div id="pagesContainer" style="display: none;"></div>
 
-        <!-- SEAMLESS EMBEDDED VIEWER FALLBACK (ZERO STUCK SCREENS) -->
-        <div id="embeddedReaderWrapper">
-            {% if gdrive_preview_url %}
-                <iframe id="embeddedReaderFrame" src="{{ gdrive_preview_url }}" class="embedded-doc-frame" allow="autoplay" allowfullscreen></iframe>
-            {% elif book.pdf_file and book.pdf_file.startswith('http') %}
-                <iframe id="embeddedReaderFrame" src="https://docs.google.com/viewer?url={{ book.pdf_file | urlencode }}&embedded=true" class="embedded-doc-frame" allowfullscreen></iframe>
-            {% else %}
-                <iframe id="embeddedReaderFrame" src="{{ url_for('serve_secure_pdf', book_id=book.id) }}" class="embedded-doc-frame" allowfullscreen></iframe>
-            {% endif %}
+        <!-- LOADING INDICATOR -->
+        <div id="loadingIndicator" class="loading-state" style="{% if default_cloud_url %}display: none;{% else %}display: flex;{% endif %}">
+            <div class="spinner"></div>
+            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
         </div>
     </div>
 
@@ -394,99 +396,72 @@
         let isBookCompleted = false;
         let percentCompleted = 0.0;
         let activeReadingSeconds = 0;
-        let isFallbackActive = false;
+        let isCanvasMode = false; // Default to fast cloud mode for instantaneous load
         const renderedPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        // Switch Seamlessly to Embedded Reader Frame
-        function activateEmbeddedFallback() {
-            if (isFallbackActive) return;
-            isFallbackActive = true;
-            console.log("Activating high-compatibility embedded reader mode...");
-            
-            const loadingEl = document.getElementById('loadingIndicator');
-            const pagesEl = document.getElementById('pagesContainer');
-            const embeddedWrapper = document.getElementById('embeddedReaderWrapper');
-            const pageCountDisplay = document.getElementById('pageCountDisplay');
-
-            if (loadingEl) loadingEl.style.display = 'none';
-            if (pagesEl) pagesEl.style.display = 'none';
-            if (embeddedWrapper) embeddedWrapper.style.display = 'block';
-            if (pageCountDisplay) pageCountDisplay.textContent = ' (Live)';
-            
-            fetchCompletionStatus();
+        // Toggle Between Cloud Viewer and Canvas Viewer
+        function toggleViewerMode() {
+            if (isCanvasMode) {
+                switchToCloudMode();
+            } else {
+                switchToCanvasMode();
+            }
         }
 
-        // Initialize and Load Document with Auto-Fallback Safety Guard
+        function switchToCloudMode() {
+            isCanvasMode = false;
+            document.getElementById('embeddedReaderWrapper').style.display = 'block';
+            document.getElementById('pagesContainer').style.display = 'none';
+            document.getElementById('loadingIndicator').style.display = 'none';
+            document.getElementById('viewModeLabel').textContent = 'Canvas';
+            document.getElementById('viewModeIcon').textContent = '📖';
+            document.getElementById('pageCountDisplay').textContent = ' (Live)';
+        }
+
+        async function switchToCanvasMode() {
+            isCanvasMode = true;
+            document.getElementById('embeddedReaderWrapper').style.display = 'none';
+            document.getElementById('viewModeLabel').textContent = 'Cloud';
+            document.getElementById('viewModeIcon').textContent = '📄';
+
+            if (!pdfDoc) {
+                document.getElementById('loadingIndicator').style.display = 'flex';
+                document.getElementById('pagesContainer').style.display = 'none';
+                await loadPdfDocument();
+            } else {
+                document.getElementById('pagesContainer').style.display = 'flex';
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        // Initialize and Load Document for Canvas Mode
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
-            const pBar = document.getElementById('loadingProgressBar');
-            const pText = document.getElementById('loadingStatusText');
-
-            // Safety Timer: If PDF.js doesn't finish within 3.5 seconds, auto-switch to embedded reader
-            const fallbackTimer = setTimeout(() => {
-                if (!pdfDoc) {
-                    activateEmbeddedFallback();
-                }
-            }, 3500);
+            const pagesEl = document.getElementById('pagesContainer');
 
             try {
-                // Primary Stream Attempt via PDF.js
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                    cMapPacked: true,
-                    enableXfa: true
+                    cMapPacked: true
                 });
 
-                loadingTask.onProgress = function(progressData) {
-                    if (progressData.total > 0) {
-                        const pct = Math.min(100, Math.round((progressData.loaded / progressData.total) * 100));
-                        if (pBar) pBar.style.width = `${pct}%`;
-                        if (pText) pText.textContent = `Opening Book (${pct}%)...`;
-                    }
-                };
-
                 pdfDoc = await loadingTask.promise;
-                clearTimeout(fallbackTimer);
-            } catch (primaryErr) {
-                console.warn("Primary PDF stream encountered issue, attempting binary arrayBuffer fetch...", primaryErr);
-                try {
-                    const resp = await fetch(pdfUrl);
-                    if (!resp.ok) throw new Error("HTTP " + resp.status);
-                    const arrayBuffer = await resp.arrayBuffer();
-                    const loadingTask2 = pdfjsLib.getDocument({
-                        data: arrayBuffer,
-                        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                        cMapPacked: true
-                    });
-                    pdfDoc = await loadingTask2.promise;
-                    clearTimeout(fallbackTimer);
-                } catch (fallbackErr) {
-                    clearTimeout(fallbackTimer);
-                    console.warn("Switching to embedded reader fallback:", fallbackErr);
-                    activateEmbeddedFallback();
-                    return;
-                }
+                totalPages = pdfDoc.numPages;
+                document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
+                document.getElementById('pageNumInput').max = totalPages;
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (pagesEl) pagesEl.style.display = 'flex';
+
+                buildPageContainers();
+                jumpToPage(currentPageNum, false);
+                setupScrollObserver();
+            } catch (err) {
+                console.warn("Canvas stream could not load, defaulting to Cloud Reader:", err);
+                switchToCloudMode();
             }
-
-            // PDF Loaded Successfully in Canvas Mode!
-            totalPages = pdfDoc.numPages;
-            document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
-            document.getElementById('pageNumInput').max = totalPages;
-            if (loadingEl) loadingEl.style.display = 'none';
-
-            // Check for URL saved page
-            const urlParams = new URLSearchParams(window.location.search);
-            const startPage = parseInt(urlParams.get('page') || '1', 10);
-            currentPageNum = Math.min(Math.max(1, startPage), totalPages);
-            document.getElementById('pageNumInput').value = currentPageNum;
-
-            buildPageContainers();
-            jumpToPage(currentPageNum, false);
-            recordProgress(currentPageNum);
-            fetchCompletionStatus();
-            setupScrollObserver();
         }
 
         // Build Placeholders for All Pages
@@ -711,7 +686,9 @@
 
         // Initialize on Load
         window.addEventListener('DOMContentLoaded', () => {
-            loadPdfDocument();
+            fetchCompletionStatus();
+            // Start heartbeat sync
+            syncReadingProgress(5);
         });
     </script>
 </body>

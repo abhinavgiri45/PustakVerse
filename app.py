@@ -4325,12 +4325,14 @@ def read_book(book_id):
     gdrive_file_id = None
     gdrive_preview_url = None
     if book and book.get('pdf_file'):
-        pdf_val = str(book['pdf_file'])
+        pdf_val = str(book['pdf_file']).strip()
         if 'drive.google.com' in pdf_val or 'docs.google.com' in pdf_val:
-            m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_val) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_val)
+            m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_val) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_val) or re.search(r'/d/([a-zA-Z0-9_-]+)', pdf_val)
             if m:
                 gdrive_file_id = m.group(1)
                 gdrive_preview_url = f"https://drive.google.com/file/d/{gdrive_file_id}/preview"
+        elif pdf_val.startswith('http'):
+            gdrive_preview_url = f"https://docs.google.com/viewer?url={urllib.parse.quote(pdf_val)}&embedded=true"
 
     return render_template('viewer.html', book=book, can_read=can_read, gdrive_file_id=gdrive_file_id, gdrive_preview_url=gdrive_preview_url)
 
