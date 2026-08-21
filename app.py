@@ -1364,6 +1364,8 @@ def inject_global_settings():
             fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Free.")
             fetched_settings['intro_sub_tagline'] = str(fetched_settings.get('intro_sub_tagline') or "Prepare to explore the universe of knowledge...")
             fetched_settings['gemini_api_key'] = str(fetched_settings.get('gemini_api_key') or "")
+            fetched_settings['checkout_donation_active'] = bool(fetched_settings.get('checkout_donation_active') if fetched_settings.get('checkout_donation_active') is not None else True)
+            fetched_settings['donation_default_inr'] = int(fetched_settings.get('donation_default_inr') or 10)
             
             fast_cache.set('site_settings', fetched_settings, ttl=120)
             global_cache['settings'] = fetched_settings
@@ -2187,6 +2189,19 @@ def ensure_payment_schema():
 
         cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES ('Fiction'), ('Non-Fiction'), ('Educational'), ('History'), ('Poetry')")
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'checkout_donation_active'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN checkout_donation_active BOOLEAN DEFAULT TRUE")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN donation_default_inr INT DEFAULT 10")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM purchases LIKE 'donation_paise'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE purchases ADD COLUMN donation_paise INT DEFAULT 0")
+        except Exception: pass
+
         cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS ai_chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NULL, role ENUM('user', 'assistant') NOT NULL, message_text TEXT NOT NULL, screenshot VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, INDEX idx_ai_chat_user_book (user_id, book_id, id))")
@@ -4363,7 +4378,10 @@ def cancel_password_change():
 # ==========================================
 # E-COMMERCE & BUY NOW LOGIC 
 # ==========================================
-@app.route('/buy_book/<int:book_id>', methods=['POST'])
+# ==========================================
+# E-COMMERCE & BUY NOW LOGIC (WITH TEAM DONATION)
+# ==========================================
+@app.route('/buy_book/<int:book_id>', methods=['GET', 'POST'])
 def buy_book(book_id):
     if 'user_id' not in session: 
         flash('Please sign in or register before purchasing a book.', 'error')
@@ -4374,13 +4392,19 @@ def buy_book(book_id):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, u.username as author_name FROM books b JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        cursor.execute("""
+            SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, 
+                   b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, 
+                   u.username as author_name, b.catalog 
+            FROM books b 
+            JOIN users u ON b.author_id = u.id 
+            WHERE b.id = %s
+        """, (book_id,))
         book = cursor.fetchone()
         
-        if book: 
-            book['cover_image'] = book.get('cover_image') or ""
         if not book: 
             abort(404)
+        book['cover_image'] = book.get('cover_image') or ""
             
         if not book['is_paid'] or not book['price_paise']:
             cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], book_id))
@@ -4390,42 +4414,115 @@ def buy_book(book_id):
         cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
         if cursor.fetchone(): 
             return redirect(url_for('read_book', book_id=book_id))
-            
-    except Exception: 
-        flash("Database connection error. Please try again.", "error")
+
+        cursor.execute("SELECT checkout_donation_active, donation_default_inr, rp_key_id, rp_key_secret FROM front_page_settings WHERE id = 1")
+        fps = cursor.fetchone() or {}
+        
+        checkout_donation_active = bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True)
+        default_donation_inr = int(fps.get('donation_default_inr') or 10)
+        
+        author_key_id = book.get('author_key_id') or fps.get('rp_key_id')
+        author_key_secret = book.get('author_key_secret') or fps.get('rp_key_secret')
+
+        if not author_key_id or not author_key_secret: 
+            flash('Payment gateway credentials are not configured for this title. Please contact support.', 'error')
+            return redirect(request.referrer or url_for('index'))
+
+        total_paise = book['price_paise'] + (default_donation_inr * 100 if checkout_donation_active else 0)
+
+        return render_template(
+            'checkout.html', 
+            book=book, 
+            base_price=book['price_paise'], 
+            checkout_donation_active=checkout_donation_active, 
+            default_donation_inr=default_donation_inr, 
+            total_paise=total_paise, 
+            razorpay_key=author_key_id
+        )
+    except Exception as e: 
+        logging.error(f"Error initiating buy_book #{book_id}: {e}")
+        flash("Unable to initialize checkout. Please try again.", "error")
         return redirect(request.referrer or url_for('index'))
     finally:
         if db:
             try: db.close()
             except: pass
 
-    author_key_id = book.get('author_key_id')
-    author_key_secret = book.get('author_key_secret')
-    
-    if not author_key_id or not author_key_secret: 
-        flash('The author has not configured their payment gateway for this specific book. Purchases are temporarily disabled.', 'error')
-        return redirect(request.referrer or url_for('index'))
 
-    total_paise = book['price_paise']
+@app.route('/api/checkout/create_order/<int:book_id>', methods=['POST'])
+def api_checkout_create_order(book_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+
+    try:
+        donation_inr = int(request.form.get('donation_inr', 0) or 0)
+    except (ValueError, TypeError):
+        donation_inr = 0
+
+    donation_inr = max(0, min(5000, donation_inr)) # Safe boundary 0 - 5000 INR
+
     db = None
     try:
-        client = razorpay.Client(auth=(author_key_id, author_key_secret))
-        order_data = {'amount': total_paise, 'currency': 'INR', 'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"}
-        order = client.order.create(order_data)
-        
         db = get_db_connection()
-        cursor = db.cursor()
-        cursor.execute("INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, fee_paise, status) VALUES (%s, %s, %s, %s, %s, 'pending')", (session['user_id'], book_id, order['id'], book['price_paise'], 0))
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret
+            FROM books b 
+            WHERE b.id = %s
+        """, (book_id,))
+        book = cursor.fetchone()
+
+        if not book:
+            return jsonify({'success': False, 'error': 'Book not found.'}), 404
+
+        cursor.execute("SELECT checkout_donation_active, rp_key_id, rp_key_secret FROM front_page_settings WHERE id = 1")
+        fps = cursor.fetchone() or {}
+
+        checkout_donation_active = bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True)
+        if not checkout_donation_active:
+            donation_inr = 0
+
+        author_key_id = book.get('author_key_id') or fps.get('rp_key_id')
+        author_key_secret = book.get('author_key_secret') or fps.get('rp_key_secret')
+
+        if not author_key_id or not author_key_secret:
+            return jsonify({'success': False, 'error': 'Payment gateway keys are missing or invalid.'}), 400
+
+        donation_paise = donation_inr * 100
+        total_paise = book['price_paise'] + donation_paise
+
+        if not razorpay:
+            return jsonify({'success': False, 'error': 'Razorpay payment SDK not loaded on server.'}), 500
+
+        client = razorpay.Client(auth=(author_key_id, author_key_secret))
+        order_data = {
+            'amount': total_paise,
+            'currency': 'INR',
+            'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
+        }
+        order = client.order.create(order_data)
+
+        cursor.execute("""
+            INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, status) 
+            VALUES (%s, %s, %s, %s, %s, 0, 'pending')
+        """, (session['user_id'], book_id, order['id'], total_paise, donation_paise))
         db.commit()
-    except Exception: 
-        flash('Unable to connect to the payment gateway. The author keys may be invalid.', 'error')
-        return redirect(request.referrer or url_for('index'))
+
+        return jsonify({
+            'success': True,
+            'order_id': order['id'],
+            'amount_paise': total_paise,
+            'razorpay_key': author_key_id,
+            'book_title': book['title']
+        })
+    except Exception as e:
+        logging.error(f"Error creating checkout order: {e}")
+        return jsonify({'success': False, 'error': f'Payment gateway error: {str(e)}'}), 500
     finally:
         if db:
             try: db.close()
             except: pass
-            
-    return render_template('checkout.html', book=book, order_id=order['id'], total_paise=total_paise, fee_paise=0, base_price=book['price_paise'], razorpay_key=author_key_id)
+
 
 @app.route('/payment/verify', methods=['POST'])
 def verify_payment():
@@ -5256,24 +5353,25 @@ def update_front_page():
     font_color = request.form.get('font_color')
     logo_file = request.files.get('logo_image')
     donation_active = request.form.get('donation_active') == 'on'
+    checkout_donation_active = request.form.get('checkout_donation_active') == 'on'
+    donation_default_inr = int(request.form.get('donation_default_inr', 10) or 10)
     donation_qr_file = request.files.get('donation_qr')
     rp_key_id = request.form.get('rp_key_id', '').strip()
     rp_key_secret = request.form.get('rp_key_secret', '').strip()
     
-    # Capture intro texts and Gemini API key
+    # Capture intro texts
     intro_tagline = request.form.get('intro_tagline', '').strip()
     intro_sub_tagline = request.form.get('intro_sub_tagline', '').strip()
-    gemini_api_key = request.form.get('gemini_api_key', '').strip()
     
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT logo_image, donation_qr, rp_key_id, rp_key_secret, gemini_api_key FROM front_page_settings WHERE id=1")
-        settings_data = cursor.fetchone()
+        cursor.execute("SELECT logo_image, donation_qr, rp_key_id, rp_key_secret FROM front_page_settings WHERE id=1")
+        settings_data = cursor.fetchone() or {}
         
-        final_logo = settings_data['logo_image']
-        final_qr = settings_data['donation_qr']
+        final_logo = settings_data.get('logo_image', 'PustakVerse.png')
+        final_qr = settings_data.get('donation_qr')
         
         if logo_file and logo_file.filename: 
             final_logo = secure_filename(logo_file.filename)
@@ -5285,12 +5383,11 @@ def update_front_page():
         
         final_rp_id = rp_key_id if rp_key_id else settings_data.get('rp_key_id', '')
         final_rp_secret = rp_key_secret if rp_key_secret else settings_data.get('rp_key_secret', '')
-        final_gemini_key = gemini_api_key if gemini_api_key else settings_data.get('gemini_api_key', '')
         
         # Save everything to the database
         cursor.execute(
-            "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s, gemini_api_key=%s WHERE id=1", 
-            (title, subtitle, font_color, final_logo, donation_active, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline, final_gemini_key)
+            "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
+            (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
         )
         db.commit()
         invalidate_cache()

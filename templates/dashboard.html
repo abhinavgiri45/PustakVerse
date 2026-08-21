@@ -425,18 +425,34 @@
                         </div>
                         <!-- END OF INTRO SETTINGS -->
                         
-                        <!-- GRANTHMIND AI ENGINE SETTINGS -->
-                        <div style="background: #fdf2f8; padding: 15px; border-radius: 8px; border: 1.5px solid #fbcfe8; margin-bottom: 20px;">
-                            <label style="color: #9d174d; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                                <span>🧠</span> GranthMind AI Engine (Gemini API Key)
+<!-- DEVELOPER CHECKOUT DONATION & RAZORPAY GATEWAY SETTINGS -->
+                        <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1.5px solid #bbf7d0; margin-bottom: 20px;">
+                            <label style="color: #166534; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <span>🎁</span> "Donate to PustakVerse Team" at Book Checkout
                             </label>
-                            <small style="color: #be185d; display: block; font-size: 0.8rem; margin-bottom: 8px;">
-                                Enables high-speed multi-model AI tutoring, PDF document scanning, and LaTeX math derivations.
-                            </small>
-                            <input type="password" name="gemini_api_key" value="{{ site_settings.gemini_api_key or '' }}" placeholder="Paste your Google AI Studio key (AIzaSy...)" style="background: #ffffff; border: 1.5px solid #f472b6; border-radius: 6px; padding: 8px 12px; font-size: 0.88rem; width: 100%; box-sizing: border-box;" autocomplete="off">
-                            <small style="color: #64748b; display: block; margin-top: 6px; font-size: 0.76rem;">
-                                💡 Tip: You can also set <code>GEMINI_API_KEY</code> in Render Environment Variables.
-                            </small>
+                            <p style="color: #15803d; font-size: 0.8rem; margin-bottom: 12px;">
+                                Allow readers to optionally add a small platform donation during book purchases (defaults to ₹10, editable/unselectable by buyer).
+                            </p>
+                            
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e293b; margin-bottom: 12px; cursor: pointer;">
+                                <input type="checkbox" name="checkout_donation_active" {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}checked{% endif %} style="width: auto; accent-color: #ea580c;"> 
+                                Enable "Donate to PustakVerse Team" Option at Checkout
+                            </label>
+
+                            <div style="margin-bottom: 12px;">
+                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Default Donation Amount (₹ INR)</label>
+                                <input type="number" name="donation_default_inr" value="{{ site_settings.donation_default_inr or 10 }}" min="1" max="1000" style="padding: 8px 12px; font-size: 0.88rem; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white;">
+                            </div>
+
+                            <div style="margin-bottom: 10px;">
+                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Developer Razorpay Key ID (For Platform Donations & Revenue)</label>
+                                <input type="text" name="rp_key_id" value="{{ site_settings.rp_key_id or '' }}" placeholder="rzp_live_... or rzp_test_..." style="padding: 8px 12px; font-size: 0.88rem; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white;">
+                            </div>
+
+                            <div>
+                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Developer Razorpay Key Secret</label>
+                                <input type="password" name="rp_key_secret" value="{{ site_settings.rp_key_secret or '' }}" placeholder="Paste Razorpay Secret..." style="padding: 8px 12px; font-size: 0.88rem; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white;">
+                            </div>
                         </div>
                         
                         <button type="submit" class="btn-sm btn-dark">Update Settings</button>
@@ -468,29 +484,7 @@
                 </div>
             </div>
 
-            <div class="panel" style="border-left: 5px solid #805ad5;">
-                <h2 style="color: #805ad5;">Official Activity Logs (Last 30 Days)</h2>
-                {% if official_logs %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Official Name</th>
-                                <th>Action Taken</th>
-                            </tr>
-                            {% for log in official_logs %}
-                            <tr>
-                                <td style="color: #718096; font-size: 0.9rem;">{{ log.timestamp | to_ist }}</td>
-                                <td style="font-weight: bold; color: #2d3748;">{{ log.username }}</td>
-                                <td>{{ log.action }}</td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No official activity logged in the last 30 days.</p>
-                {% endif %}
-            </div>
+            
 
             <div class="panel" style="border-left: 5px solid #f6ad55;">
                 <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
