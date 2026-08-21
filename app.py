@@ -4499,12 +4499,11 @@ def api_checkout_create_order(book_id):
         donation_paise = donation_inr * 100
         total_paise = book_price_paise + donation_paise
 
-        # Standard Platform Convenience Fee charged from the author: 5% (min ₹2 / 200 paise)
-        convenience_fee_paise = max(200, int(round(book_price_paise * 0.05)))
-        if convenience_fee_paise >= book_price_paise:
-            convenience_fee_paise = int(round(book_price_paise * 0.05))
-
-        author_earning_paise = max(0, book_price_paise - convenience_fee_paise)
+        # Standard Razorpay Payment Gateway Convenience Fee charged on the author's book sale:
+        # Standard Razorpay rate in India = 2% + 18% GST on the fee = 2.36% total
+        razorpay_fee_paise = int(round(book_price_paise * 0.0236))
+        author_earning_paise = max(0, book_price_paise - razorpay_fee_paise)
+        convenience_fee_paise = razorpay_fee_paise
 
         # CREATE ONE SINGLE UNIFIED RAZORPAY ORDER FOR TOTAL AMOUNT
         client = razorpay.Client(auth=(gateway_key_id, gateway_key_secret))

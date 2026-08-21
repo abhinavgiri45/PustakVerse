@@ -147,7 +147,7 @@
             <div class="stat-card">
                 <span class="stat-title">Gross Book Sales</span>
                 <div class="stat-val">₹{{ "%.2f"|format((sales|length * book.price_paise)/100) }}</div>
-                <span class="stat-sub">Before Convenience Fees</span>
+                <span class="stat-sub">Before Razorpay Gateway Fees</span>
             </div>
         </div>
 
@@ -160,14 +160,14 @@
                             <th>Order ID</th>
                             <th>Buyer Username</th>
                             <th>Book Retail Price</th>
-                            <th>Platform Convenience Fee</th>
+                            <th>Razorpay Gateway Fee (2% + GST)</th>
                             <th>Author Net Royalty</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for sale in sales %}
-                        {% set fee = sale.fee_paise if sale.fee_paise else (book.price_paise * 0.05)|round|int %}
+                        {% set fee = sale.fee_paise if sale.fee_paise else (book.price_paise * 0.0236)|round|int %}
                         {% set earning = sale.author_earning_paise if sale.author_earning_paise else (book.price_paise - fee) %}
                         <tr>
                             <td style="color: #64748b; font-size: 0.85rem; white-space: nowrap;">
