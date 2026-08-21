@@ -1047,11 +1047,18 @@
                                 <button type="button" onclick="toggleLocalUpload('publish_local_upload')" style="background: transparent; border: none; color: #64748b; font-size: 0.82rem; font-weight: 600; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 5px;">
                                     <span>💾</span> <span>Or upload files directly from computer (Alternative) ▼</span>
                                 </button>
-                                <div id="publish_local_upload" style="display: none; margin-top: 10px; padding: 12px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;">
-                                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Upload Local Cover Image:</label>
-                                    <input type="file" name="cover_image" accept="image/*" style="margin-bottom: 12px; font-size: 0.85rem; width: 100%;">
-                                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Upload Local PDF Document:</label>
-                                    <input type="file" name="pdf_file" accept=".pdf" style="font-size: 0.85rem; width: 100%;">
+                                <div id="publish_local_upload" style="display: none; margin-top: 10px; padding: 14px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block;">Upload Cover Image (All Photo Formats):</label>
+                                        <span style="font-size: 0.72rem; font-weight: 700; background: #ffedd5; color: #c2410c; padding: 2px 7px; border-radius: 6px;">Max 50 KB</span>
+                                    </div>
+                                    <input type="file" name="cover_image" id="publish_cover_file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.tiff,.tif,.ico,.jfif,.avif,.heic,.heif" onchange="validateFileSize(this, 50, 'Cover Image')" style="margin-bottom: 12px; font-size: 0.85rem; width: 100%;">
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block;">Upload PDF Document:</label>
+                                        <span style="font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 6px;">Max 500 KB</span>
+                                    </div>
+                                    <input type="file" name="pdf_file" id="publish_pdf_file" accept=".pdf,application/pdf" onchange="validateFileSize(this, 500, 'PDF Document')" style="font-size: 0.85rem; width: 100%;">
                                 </div>
                             </div>
                         </div>
@@ -2453,6 +2460,19 @@
             loadReaderShelves();
             loadDeveloperAiModels();
         });
+    
+        function validateFileSize(input, maxKb, fileType) {
+            if (!input.files || !input.files[0]) return true;
+            const file = input.files[0];
+            const sizeKb = file.size / 1024;
+            if (sizeKb > maxKb) {
+                alert(`⚠️ Warning: Selected ${fileType} (${sizeKb.toFixed(1)} KB) exceeds the maximum allowed limit of ${maxKb} KB.\n\nPlease choose a file under ${maxKb} KB or optimize/compress it before uploading.`);
+                input.value = '';
+                return false;
+            }
+            return true;
+        }
+
     </script>
 
     <!-- ADD AI MODEL MODAL -->

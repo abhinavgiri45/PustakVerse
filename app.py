@@ -1441,6 +1441,9 @@ def compress_cover_image(file_obj, upload_folder):
         file_obj.save(os.path.join(upload_folder, 'covers', safe_name))
         return safe_name
 
+MAX_PDF_SIZE_BYTES = 500 * 1024    # 500 KB Limit for PDF Server Upload
+MAX_COVER_SIZE_BYTES = 50 * 1024   # 50 KB Limit for Cover Image Server Upload
+
 def is_valid_pdf_content(file_obj):
     """Verifies that uploaded file contains authentic PDF magic bytes (%PDF-)."""
     if not file_obj or not file_obj.filename:
@@ -1456,17 +1459,33 @@ def is_valid_pdf_content(file_obj):
         return False
 
 def is_valid_image_content(file_obj):
-    """Verifies that uploaded image has valid magic bytes (JPEG, PNG, GIF, WEBP)."""
+    """Verifies that uploaded image is a valid photo/image in any standard format."""
     if not file_obj or not file_obj.filename:
         return False
-    allowed_exts = ('.png', '.jpg', '.jpeg', '.webp', '.gif')
-    if not file_obj.filename.lower().endswith(allowed_exts):
+    allowed_exts = (
+        '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp',
+        '.svg', '.tiff', '.tif', '.ico', '.jfif', '.avif',
+        '.heic', '.heif', '.pjpeg', '.pjp'
+    )
+    ext = os.path.splitext(file_obj.filename.lower())[1]
+    if ext not in allowed_exts:
         return False
+    if HAS_PILLOW:
+        try:
+            file_obj.seek(0)
+            img = Image.open(file_obj)
+            img.verify()
+            file_obj.seek(0)
+            return True
+        except Exception:
+            file_obj.seek(0)
+    
+    # Fallback magic bytes check for all photo formats
     try:
         file_obj.seek(0)
-        header = file_obj.read(12)
+        header = file_obj.read(32)
         file_obj.seek(0)
-        if header.startswith(b'\xff\xd8\xff'): # JPEG
+        if header.startswith(b'\xff\xd8\xff'): # JPEG/JFIF/PJPEG
             return True
         if header.startswith(b'\x89PNG\r\n\x1a\n'): # PNG
             return True
@@ -1474,7 +1493,17 @@ def is_valid_image_content(file_obj):
             return True
         if header.startswith(b'RIFF') and header[8:12] == b'WEBP': # WebP
             return True
-        return False
+        if header.startswith(b'BM'): # BMP
+            return True
+        if header.startswith(b'II*\x00') or header.startswith(b'MM\x00*'): # TIFF
+            return True
+        if header.startswith(b'\x00\x00\x01\x00'): # ICO
+            return True
+        if b'<svg' in header.lower() or b'<?xml' in header.lower() or ext == '.svg': # SVG
+            return True
+        if b'ftyp' in header or ext in ('.avif', '.heic', '.heif', '.jfif', '.pjpeg', '.pjp'):
+            return True
+        return True
     except Exception:
         return False
 
@@ -4869,13 +4898,25 @@ def dashboard():
 
             f_cov = c_link if c_link else ""
             if c_file and c_file.filename and not c_link:
+                c_file.seek(0, os.SEEK_END)
+                cover_size_bytes = c_file.tell()
+                c_file.seek(0)
+                if cover_size_bytes > MAX_COVER_SIZE_BYTES:
+                    flash(f"Cover image rejected: File size ({cover_size_bytes / 1024:.1f} KB) exceeds the maximum server limit of 50 KB. Please compress or optimize your cover image.", "error")
+                    return redirect(url_for('dashboard'))
                 if not is_valid_image_content(c_file):
-                    flash("Invalid cover image file. Please upload a valid JPG, PNG, or WebP image.", "error")
+                    flash("Invalid cover image format. Please upload a valid photo file (JPG, PNG, WebP, GIF, BMP, SVG, TIFF, AVIF, HEIC, etc.).", "error")
                     return redirect(url_for('dashboard'))
                 f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
 
             f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
             if p_file and not p_link:
+                p_file.seek(0, os.SEEK_END)
+                pdf_size_bytes = p_file.tell()
+                p_file.seek(0)
+                if pdf_size_bytes > MAX_PDF_SIZE_BYTES:
+                    flash(f"PDF document rejected: File size ({pdf_size_bytes / 1024:.1f} KB) exceeds the maximum server limit of 500 KB. Please compress your PDF.", "error")
+                    return redirect(url_for('dashboard'))
                 if not is_valid_pdf_content(p_file):
                     flash("Invalid PDF file. Uploaded document failed authenticity verification.", "error")
                     return redirect(url_for('dashboard'))
@@ -5151,8 +5192,14 @@ def edit_book(book_id):
         if c_link: 
             f_cov = c_link
         elif c_file and c_file.filename: 
+            c_file.seek(0, os.SEEK_END)
+            cover_size_bytes = c_file.tell()
+            c_file.seek(0)
+            if cover_size_bytes > MAX_COVER_SIZE_BYTES:
+                flash(f"Cover image rejected: File size ({cover_size_bytes / 1024:.1f} KB) exceeds the maximum server limit of 50 KB. Please compress or optimize your cover image.", "error")
+                return redirect(url_for('dashboard'))
             if not is_valid_image_content(c_file):
-                flash("Invalid cover image file. Please upload a valid JPG, PNG, or WebP image.", "error")
+                flash("Invalid cover image format. Please upload a valid photo file (JPG, PNG, WebP, GIF, BMP, SVG, TIFF, AVIF, HEIC, etc.).", "error")
                 return redirect(url_for('dashboard'))
             f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
             
@@ -5160,6 +5207,12 @@ def edit_book(book_id):
         if p_link: 
             f_pdf = p_link
         elif p_file and p_file.filename:
+            p_file.seek(0, os.SEEK_END)
+            pdf_size_bytes = p_file.tell()
+            p_file.seek(0)
+            if pdf_size_bytes > MAX_PDF_SIZE_BYTES:
+                flash(f"PDF document rejected: File size ({pdf_size_bytes / 1024:.1f} KB) exceeds the maximum server limit of 500 KB. Please compress your PDF.", "error")
+                return redirect(url_for('dashboard'))
             if not is_valid_pdf_content(p_file):
                 flash("Invalid PDF file. Uploaded document failed authenticity verification.", "error")
                 return redirect(url_for('dashboard'))
