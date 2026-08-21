@@ -3734,7 +3734,7 @@ def mass_message():
     return redirect(url_for('dashboard'))
 
 # ==========================================
-# CHANGE USERNAME (DIRECT UPDATE FOR ALL USERS)
+# CHANGE USERNAME (WITH ROLE APPROVAL HIERARCHY)
 # ==========================================
 @app.route('/change_username', methods=['POST'])
 def change_username():
@@ -3742,10 +3742,191 @@ def change_username():
         return redirect(url_for('login'))
         
     new_username = request.form.get('new_username', '').strip()
+    reason = request.form.get('reason', '').strip()
+    user_id = session['user_id']
+    role = session.get('role', 'reader')
 
     if not new_username: 
         flash("New username cannot be empty.", "error")
         return redirect(url_for('dashboard'))
+        
+    if len(new_username) < 3 or len(new_username) > 30:
+        flash("Username must be between 3 and 30 characters.", "error")
+        return redirect(url_for('dashboard'))
+
+    if not re.match(r'^[a-zA-Z0-9_]+$', new_username): 
+        flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM users WHERE username = %s AND id != %s", (new_username, user_id))
+        
+        if cursor.fetchone(): 
+            flash(f"The username '{new_username}' is already taken. Please choose another.", "error")
+            return redirect(url_for('dashboard'))
+
+        # 1. OFFICIAL USERS: Require Developer Approval
+        if role == 'official':
+            if not reason:
+                flash("Reason is required for Official username change request.", "error")
+                return redirect(url_for('dashboard'))
+
+            cursor.execute("SELECT id FROM username_requests WHERE user_id = %s AND status = 'pending'", (user_id,))
+            if cursor.fetchone():
+                flash("You already have a pending username change request waiting for Developer review.", "info")
+                return redirect(url_for('dashboard'))
+
+            cursor.execute(
+                "INSERT INTO username_requests (user_id, new_username, reason, status) VALUES (%s, %s, %s, 'pending')",
+                (user_id, new_username, reason)
+            )
+            db.commit()
+            log_official_activity(user_id, f"Submitted official username change request to '{new_username}' (Pending Developer Approval)")
+            flash("Username change request submitted! Officials require approval from the Developer before the change takes effect.", "success")
+            return redirect(url_for('dashboard'))
+
+        # 2. AUTHOR USERS: Require Official Approval
+        elif role == 'author':
+            if not reason:
+                flash("Reason is required for Author username change request.", "error")
+                return redirect(url_for('dashboard'))
+
+            cursor.execute("SELECT id FROM username_requests WHERE user_id = %s AND status = 'pending'", (user_id,))
+            if cursor.fetchone():
+                flash("You already have a pending username change request waiting for Official review.", "info")
+                return redirect(url_for('dashboard'))
+
+            cursor.execute(
+                "INSERT INTO username_requests (user_id, new_username, reason, status) VALUES (%s, %s, %s, 'pending')",
+                (user_id, new_username, reason)
+            )
+            db.commit()
+            flash("Username change request submitted! Authors require approval from Platform Officials before the change takes effect.", "success")
+            return redirect(url_for('dashboard'))
+
+        # 3. DEVELOPER & READER: Direct Update
+        else:
+            cursor.execute("UPDATE users SET username = %s WHERE id = %s", (new_username, user_id))
+            db.commit()
+            session['username'] = new_username
+            flash("Username updated successfully!", "success")
+            return redirect(url_for('dashboard'))
+
+    except Exception as e: 
+        logging.error(f"Error submitting username change: {e}")
+        flash("Database error processing username request.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/developer/handle_username_request/<int:req_id>/<action>', methods=['POST'])
+def developer_handle_username_request(req_id, action):
+    if session.get('role') != 'developer':
+        flash("Unauthorized. Developer privileges required.", "error")
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT r.id, r.user_id, r.new_username, r.reason, u.username as current_username, u.email, u.role
+            FROM username_requests r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = %s AND r.status = 'pending'
+        """, (req_id,))
+        req = cursor.fetchone()
+
+        if not req:
+            flash("Username request not found or already processed.", "error")
+            return redirect(url_for('dashboard'))
+
+        if action == 'approve':
+            # Verify new_username is still free
+            cursor.execute("SELECT id FROM users WHERE username = %s AND id != %s", (req['new_username'], req['user_id']))
+            if cursor.fetchone():
+                flash(f"Cannot approve: '{req['new_username']}' was claimed by another user.", "error")
+                return redirect(url_for('dashboard'))
+
+            cursor.execute("UPDATE users SET username = %s WHERE id = %s", (req['new_username'], req['user_id']))
+            cursor.execute("UPDATE username_requests SET status = 'approved' WHERE id = %s", (req_id,))
+            db.commit()
+
+            log_official_activity(session['user_id'], f"Developer approved username change for {req['role']} '{req['current_username']}' -> '{req['new_username']}'")
+            flash(f"Approved! Username for '{req['current_username']}' has been updated to '{req['new_username']}'.", "success")
+        elif action == 'reject':
+            cursor.execute("UPDATE username_requests SET status = 'rejected' WHERE id = %s", (req_id,))
+            db.commit()
+            log_official_activity(session['user_id'], f"Developer rejected username change for '{req['current_username']}'")
+            flash(f"Username request for '{req['current_username']}' was rejected.", "info")
+    except Exception as e:
+        logging.error(f"Error handling username request #{req_id}: {e}")
+        flash("Database error processing request.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/official/handle_author_username_request/<int:req_id>/<action>', methods=['POST'])
+def official_handle_author_username_request(req_id, action):
+    if session.get('role') not in ['official', 'developer']:
+        flash("Unauthorized. Official privileges required.", "error")
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT r.id, r.user_id, r.new_username, r.reason, u.username as current_username, u.email, u.role
+            FROM username_requests r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = %s AND r.status = 'pending'
+        """, (req_id,))
+        req = cursor.fetchone()
+
+        if not req:
+            flash("Username request not found or already processed.", "error")
+            return redirect(url_for('dashboard'))
+
+        # Security check: Officials can ONLY approve Authors (not other Officials or Developers)
+        if session.get('role') == 'official' and req['role'] != 'author':
+            flash("Officials can only review and approve Author username requests.", "error")
+            return redirect(url_for('dashboard'))
+
+        if action == 'approve':
+            cursor.execute("SELECT id FROM users WHERE username = %s AND id != %s", (req['new_username'], req['user_id']))
+            if cursor.fetchone():
+                flash(f"Cannot approve: '{req['new_username']}' was claimed by another user.", "error")
+                return redirect(url_for('dashboard'))
+
+            cursor.execute("UPDATE users SET username = %s WHERE id = %s", (req['new_username'], req['user_id']))
+            cursor.execute("UPDATE username_requests SET status = 'approved' WHERE id = %s", (req_id,))
+            db.commit()
+
+            log_official_activity(session['user_id'], f"Official approved username change for author '{req['current_username']}' -> '{req['new_username']}'")
+            flash(f"Approved! Author username '{req['current_username']}' changed to '{req['new_username']}'.", "success")
+        elif action == 'reject':
+            cursor.execute("UPDATE username_requests SET status = 'rejected' WHERE id = %s", (req_id,))
+            db.commit()
+            log_official_activity(session['user_id'], f"Official rejected username change for author '{req['current_username']}'")
+            flash(f"Author username request for '{req['current_username']}' was rejected.", "info")
+    except Exception as e:
+        logging.error(f"Error handling author username request #{req_id}: {e}")
+        flash("Database error processing request.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
         
     if not re.match(r'^[a-zA-Z0-9_]+$', new_username): 
         flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
@@ -6622,6 +6803,33 @@ def api_self_published_quick_update(book_id):
     except Exception as e:
         logging.error(f"Error updating book #{book_id}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+@app.route('/author/<username>')
+def public_author_profile(username):
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, email, role, is_verified, author_bio, social_links_json, created_at FROM users WHERE username = %s", (username,))
+        author = cursor.fetchone()
+        if not author:
+            flash(f"Author '{username}' profile not found.", "error")
+            return redirect(url_for('index'))
+            
+        social_links = json.loads(author.get('social_links_json') or '{}') if author.get('social_links_json') else {}
+        
+        cursor.execute("SELECT id, title, catalog, cover_image, pdf_file, is_paid, price_paise, preview_pages, is_featured, description, created_at FROM books WHERE author_id = %s AND (is_quarantined IS NULL OR is_quarantined = FALSE) ORDER BY created_at DESC", (author['id'],))
+        books = clean_book_data(cursor.fetchall())
+        
+        return render_template('author_profile.html', author=author, social_links=social_links, books=books)
+    except Exception as e:
+        logging.error(f"Error loading public author profile: {e}")
+        return redirect(url_for('index'))
     finally:
         if db:
             try: db.close()

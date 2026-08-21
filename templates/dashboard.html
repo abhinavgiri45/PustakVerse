@@ -529,6 +529,58 @@
                 {% endif %}
             </div>
 
+                        <!-- DEVELOPER: PENDING USERNAME CHANGE REQUESTS (OFFICIALS & AUTHORS) -->
+            <div class="panel" style="border-left: 5px solid #8b5cf6;">
+                <h2 style="color: #6d28d9; display: flex; align-items: center; gap: 8px;">
+                    <span>🛡️</span> Pending Official & Author Username Change Requests
+                </h2>
+                <p style="color: #64748b; margin-bottom: 20px;">Review and approve/reject username modification requests submitted by Platform Officials and Authors.</p>
+                {% if username_requests %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User & Role</th>
+                                    <th>Current Username</th>
+                                    <th>Requested New Username</th>
+                                    <th>Reason Given</th>
+                                    <th>Your Decision</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in username_requests %}
+                                <tr>
+                                    <td><strong>{{ req.current_username }}</strong> <span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; text-transform:capitalize;">{{ req.user_role or 'Official' }}</span></td>
+                                    <td><code>{{ req.current_username }}</code></td>
+                                    <td><strong style="color: #2563eb;">{{ req.new_username }}</strong></td>
+                                    <td style="color: #475569; font-size: 0.88rem;">{{ req.reason }}</td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <form action="{{ url_for('developer_handle_username_request', req_id=req.id, action='approve') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn-sm btn-green" onclick="return confirm('Approve username change for {{ req.current_username }} to {{ req.new_username }}?');">
+                                                    ✓ Approve
+                                                </button>
+                                            </form>
+                                            <form action="{{ url_for('developer_handle_username_request', req_id=req.id, action='reject') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn-sm btn-dark" onclick="return confirm('Reject username change request?');">
+                                                    ✕ Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="color: #64748b;">No pending username change requests.</p>
+                {% endif %}
+            </div>
+
+
             <div class="panel" style="border-left: 5px solid #e53e3e;">
                 <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Officials for user termination.</p>
@@ -573,15 +625,22 @@
                         <label>New Username</label>
                         <input type="text" name="new_username" required>
                     </div>
-                    {% if session.role in ['author', 'official'] %}
+                    {% if session.role == 'official' %}
                         <div class="form-group">
-                            <label>Reason for Change (Required for approval)</label>
-                            <input type="text" name="reason" required placeholder="Why do you want to change your username?">
+                            <label>Reason for Request <span style="color: #ea580c;">*</span></label>
+                            <input type="text" name="reason" required placeholder="State reason for Developer approval…">
                         </div>
-                        <button type="submit" class="btn-sm btn-orange">Submit Request</button>
-                        <p style="color: #718096; font-size: 0.85rem; margin-top: 10px;">Your request will be reviewed by an administrator.</p>
+                        <button type="submit" class="btn-sm btn-orange">Submit for Developer Approval</button>
+                        <p style="color: #64748b; font-size: 0.82rem; margin-top: 8px;">🛡️ <strong>Official Notice:</strong> Username changes for Official accounts require review and approval by the Developer.</p>
+                    {% elif session.role == 'author' %}
+                        <div class="form-group">
+                            <label>Reason for Request <span style="color: #ea580c;">*</span></label>
+                            <input type="text" name="reason" required placeholder="State reason for Official verification…">
+                        </div>
+                        <button type="submit" class="btn-sm btn-orange">Submit for Official Review</button>
+                        <p style="color: #64748b; font-size: 0.82rem; margin-top: 8px;">✍️ <strong>Author Notice:</strong> Username updates for verified Authors require approval by Platform Officials to ensure library catalog integrity.</p>
                     {% else %}
-                        <button type="submit" class="btn-sm btn-orange">Change Username</button>
+                        <button type="submit" class="btn-sm btn-orange">Update Username</button>
                     {% endif %}
                 </form>
             </div>
@@ -1148,7 +1207,59 @@
         {% endif %}
 
         {% if session.role in ['official', 'developer'] %}
-            <!-- OFFICIAL POWER: Category Author Broadcaster -->
+                        <!-- OFFICIAL: PENDING AUTHOR USERNAME CHANGE REQUESTS -->
+            <div class="panel" style="border-left: 5px solid #3b82f6;">
+                <h2 style="color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
+                    <span>✍️</span> Pending Author Username Change Requests
+                </h2>
+                <p style="color: #64748b; margin-bottom: 20px;">Review and approve/reject username update requests submitted by verified Authors.</p>
+                {% if username_requests %}
+                    <div class="table-scroll-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Author</th>
+                                    <th>Current Username</th>
+                                    <th>Requested New Username</th>
+                                    <th>Reason Given</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in username_requests %}
+                                <tr>
+                                    <td><strong>{{ req.current_username }}</strong></td>
+                                    <td><code>{{ req.current_username }}</code></td>
+                                    <td><strong style="color: #2563eb;">{{ req.new_username }}</strong></td>
+                                    <td style="color: #475569; font-size: 0.88rem;">{{ req.reason }}</td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <form action="{{ url_for('official_handle_author_username_request', req_id=req.id, action='approve') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn-sm btn-green" onclick="return confirm('Approve username change for {{ req.current_username }} to {{ req.new_username }}?');">
+                                                    ✓ Approve
+                                                </button>
+                                            </form>
+                                            <form action="{{ url_for('official_handle_author_username_request', req_id=req.id, action='reject') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn-sm btn-dark" onclick="return confirm('Reject author username change request?');">
+                                                    ✕ Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="color: #64748b;">No pending author username change requests.</p>
+                {% endif %}
+            </div>
+
+
+        <!-- OFFICIAL POWER: Category Author Broadcaster -->
             <div class="panel" style="border-left: 5px solid #8b5cf6;">
                 <h2 style="color: #6d28d9; display: flex; align-items: center; gap: 8px;">
                     <span>📢</span> Category Author Broadcaster

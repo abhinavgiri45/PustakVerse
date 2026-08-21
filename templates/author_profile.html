@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ author.username }} · Author Profile · PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ea580c;
+            --primary-dark: #c2410c;
+            --nav-bg: #0f172a;
+            --card-bg: #ffffff;
+            --bg-canvas: #f8fafc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-line: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: var(--nav-bg);
+            color: white;
+            padding: 14px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a { color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+        .navbar a:hover { color: var(--primary-orange); }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .author-header-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border-line);
+            padding: 36px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            display: flex;
+            gap: 28px;
+            align-items: flex-start;
+            margin-bottom: 36px;
+        }
+        .author-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ea580c, #f97316);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            box-shadow: 0 8px 16px rgba(234, 88, 12, 0.25);
+        }
+        .author-info { flex: 1; }
+        .author-name {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--nav-bg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .author-badge {
+            font-size: 0.75rem;
+            background: #dcfce7;
+            color: #166534;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+        .author-bio {
+            color: #475569;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 12px 0 16px;
+            max-width: 680px;
+        }
+        .social-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .social-chip {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .social-chip:hover { background: #e2e8f0; color: var(--primary-orange); }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--nav-bg);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 24px;
+        }
+        .book-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border-line);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .book-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+        }
+        .book-cover {
+            width: 100%;
+            height: 260px;
+            object-fit: cover;
+            background: #e2e8f0;
+        }
+        .book-card-body {
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .book-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--nav-bg);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .book-card-cat {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .book-card-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .author-header-card { flex-direction: column; align-items: center; text-align: center; }
+            .social-links { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" style="display: flex; align-items: center; gap: 8px;">
+            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" style="height: 38px; width: auto; object-fit: contain;">
+            <span>PustakVerse</span>
+        </a>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <a href="{{ url_for('index') }}">Global Library</a>
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Sign In</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <!-- AUTHOR SHOWCASE CARD -->
+        <div class="author-header-card">
+            <div class="author-avatar">
+                {{ author.username[0].upper() }}
+            </div>
+            
+            <div class="author-info">
+                <div class="author-name">
+                    {{ author.username }}
+                    {% if author.is_verified %}
+                        <span class="author-badge">✓ Verified Author</span>
+                    {% endif %}
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                    Member of PustakVerse Community · {{ books|length }} Published Works
+                </div>
+
+                <p class="author-bio">
+                    {{ author.author_bio or 'This author has not added a biography yet.' }}
+                </p>
+
+                <div class="social-links">
+                    {% if social_links.website %}
+                        <a href="{{ social_links.website }}" target="_blank" class="social-chip">🌐 Website</a>
+                    {% endif %}
+                    {% if social_links.github %}
+                        <a href="{{ social_links.github }}" target="_blank" class="social-chip">💻 GitHub</a>
+                    {% endif %}
+                    {% if social_links.twitter %}
+                        <a href="{{ social_links.twitter }}" target="_blank" class="social-chip">🐦 Twitter / X</a>
+                    {% endif %}
+                    {% if social_links.linkedin %}
+                        <a href="{{ social_links.linkedin }}" target="_blank" class="social-chip">💼 LinkedIn</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- PUBLISHED WORKS -->
+        <div class="section-title">
+            <span>📚</span> Published Titles by {{ author.username }} ({{ books|length }})
+        </div>
+
+        {% if books %}
+            <div class="books-grid">
+                {% for book in books %}
+                <a href="{{ url_for('view_book', book_id=book.id) }}" class="book-card">
+                    <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" alt="{{ book.title }}" class="book-cover">
+                    <div class="book-card-body">
+                        <div class="book-card-title">{{ book.title }}</div>
+                        <div class="book-card-cat">{{ book.catalog }}</div>
+                        <div class="book-card-footer">
+                            {% if book.is_paid %}
+                                <span style="color: #166534;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                            {% else %}
+                                <span style="color: #475569;">Free</span>
+                            {% endif %}
+                            <span style="color: var(--primary-orange);">Read →</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--text-muted); text-align: center; padding: 40px;">No public books published yet.</p>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>

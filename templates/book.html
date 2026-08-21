@@ -335,7 +335,7 @@
                 <span class="tag">{{ book.catalog }}</span>
                 <h1>{{ book.title }}</h1>
                 <div class="author" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                    <span>By <strong>{{ book.author_name }}</strong></span>
+                    <span>By <a href="{{ url_for('public_author_profile', username=book.author_name) }}" style="color: var(--primary-orange); font-weight: 700; text-decoration: none;" title="View Author Showcase & Published Works">{{ book.author_name }}</a></span>
                     <span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✓ Verified Creator</span>
                 </div>
                 
