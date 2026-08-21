@@ -355,7 +355,7 @@
         <div id="errorIndicator" class="error-box">
             <div style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</div>
             <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Unable to Stream PDF Document</div>
-            <p style="color: #94a3b8; font-size: 0.9rem; max-width: 420px; line-height: 1.5; margin-bottom: 16px;">
+            <p style="color: #94a3b8; font-size: 0.9rem; max-width: 420px; line-height: 1.5; margin-bottom: 16px;" id="errorMessageText">
                 The server took longer than expected to download this file from cloud storage.
             </p>
             <button onclick="location.reload()" class="pill-btn" style="background: #ea580c; border: none; color: white;">
@@ -380,7 +380,7 @@
         const renderedPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        // Load PDF Document
+        // Load PDF Document via Progressive Stream Reader
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
             const errorEl = document.getElementById('errorIndicator');
@@ -388,58 +388,78 @@
             const pText = document.getElementById('loadingStatusText');
 
             try {
+                if (pText) pText.textContent = "Connecting to PustakVerse Cloud...";
+                if (pBar) pBar.style.width = "20%";
+
+                const response = await fetch(pdfUrl);
+                if (!response.ok) throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not stream document'}`);
+
+                const contentLength = response.headers.get('Content-Length');
+                const total = contentLength ? parseInt(contentLength, 10) : 0;
+                let loaded = 0;
+
+                const reader = response.body.getReader();
+                const chunks = [];
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    loaded += value.length;
+                    if (total > 0) {
+                        const pct = Math.min(99, Math.round((loaded / total) * 100));
+                        if (pBar) pBar.style.width = `${pct}%`;
+                        if (pText) pText.textContent = `Downloading Book (${pct}%)...`;
+                    } else {
+                        const mb = (loaded / (1024 * 1024)).toFixed(1);
+                        if (pText) pText.textContent = `Streaming Book (${mb} MB)...`;
+                    }
+                }
+
+                if (pText) pText.textContent = "Rendering Pages...";
+                if (pBar) pBar.style.width = "100%";
+
+                // Concatenate into single Uint8Array
+                const allBytes = new Uint8Array(loaded);
+                let offset = 0;
+                for (const chunk of chunks) {
+                    allBytes.set(chunk, offset);
+                    offset += chunk.length;
+                }
+
                 const loadingTask = pdfjsLib.getDocument({
-                    url: pdfUrl,
+                    data: allBytes,
                     cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                    cMapPacked: true,
-                    enableXfa: true
+                    cMapPacked: true
                 });
 
-                loadingTask.onProgress = function(progressData) {
-                    if (progressData.total > 0) {
-                        const pct = Math.min(100, Math.round((progressData.loaded / progressData.total) * 100));
-                        if (pBar) pBar.style.width = `${Math.max(25, pct)}%`;
-                        if (pText) pText.textContent = `Opening Book (${pct}%)...`;
-                    }
-                };
-
                 pdfDoc = await loadingTask.promise;
-            } catch (primaryErr) {
-                console.warn("Primary PDF.js stream encountered issue, attempting binary arrayBuffer fetch...", primaryErr);
-                try {
-                    const resp = await fetch(pdfUrl);
-                    if (!resp.ok) throw new Error("HTTP " + resp.status);
-                    const arrayBuffer = await resp.arrayBuffer();
-                    const loadingTask2 = pdfjsLib.getDocument({
-                        data: arrayBuffer,
-                        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                        cMapPacked: true
-                    });
-                    pdfDoc = await loadingTask2.promise;
-                } catch (fallbackErr) {
-                    console.error("Fatal PDF load error:", fallbackErr);
-                    if (loadingEl) loadingEl.style.display = 'none';
-                    if (errorEl) errorEl.style.display = 'flex';
-                    return;
+                totalPages = pdfDoc.numPages;
+                document.getElementById('totalPagesDisplay').textContent = `/ ${totalPages}`;
+                document.getElementById('pageNumberInput').max = totalPages;
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+
+                // Resume saved page
+                const urlParams = new URLSearchParams(window.location.search);
+                const startPage = parseInt(urlParams.get('page') || '1', 10);
+                currentPageNum = Math.min(Math.max(1, startPage), totalPages);
+                document.getElementById('pageNumberInput').value = currentPageNum;
+
+                buildPageContainers();
+                jumpToPage(currentPageNum, false);
+                recordProgress(currentPageNum);
+                fetchCompletionStatus();
+                setupScrollObserver();
+            } catch (err) {
+                console.error("Fatal PDF load error:", err);
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (errorEl) {
+                    errorEl.style.display = 'flex';
+                    const msgEl = document.getElementById('errorMessageText');
+                    if (msgEl) msgEl.textContent = err.message || "Failed to load document from cloud.";
                 }
             }
-
-            totalPages = pdfDoc.numPages;
-            document.getElementById('totalPagesDisplay').textContent = `/ ${totalPages}`;
-            document.getElementById('pageNumberInput').max = totalPages;
-            if (loadingEl) loadingEl.style.display = 'none';
-
-            // Resume page position
-            const urlParams = new URLSearchParams(window.location.search);
-            const startPage = parseInt(urlParams.get('page') || '1', 10);
-            currentPageNum = Math.min(Math.max(1, startPage), totalPages);
-            document.getElementById('pageNumberInput').value = currentPageNum;
-
-            buildPageContainers();
-            jumpToPage(currentPageNum, false);
-            recordProgress(currentPageNum);
-            fetchCompletionStatus();
-            setupScrollObserver();
         }
 
         // Build Page Containers
