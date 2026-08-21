@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GranthMind AI Companion · {{ book.title if book else 'PustakVerse' }}</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -285,6 +287,54 @@
       color: inherit;
       padding: 0;
     }
+    
+    /* Code Blocks & Copy Button */
+    .message-text pre {
+      position: relative;
+      background: #0f172a !important;
+      color: #f8fafc;
+      padding: 34px 16px 14px !important;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 14px 0;
+      border: 1px solid #334155;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .message-text pre code {
+      background: transparent !important;
+      font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+    .code-copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+      z-index: 5;
+    }
+    .code-copy-btn:hover {
+      background: #334155;
+      color: #ffffff;
+      border-color: #ea580c;
+    }
+    .code-copy-btn.copied {
+      background: #059669;
+      color: #ffffff;
+      border-color: #10b981;
+    }
+
     /* KaTeX Mathematical Formatting */
     .message-text .katex {
       font-size: 1.08em;
@@ -757,6 +807,9 @@
 
       <!-- Study Mode Selectors -->
       <div class="study-modes">
+      <button type="button" class="mode-chip" onclick="setStudyMode('coding', this)" title="Write code, debug errors & explain algorithms">💻 Code & Debug</button>
+      <button type="button" class="mode-chip" onclick="setStudyMode('math', this)" title="Step-by-step mathematical problem solving">🧮 Math & Proofs</button>
+
         <button type="button" class="mode-chip active" onclick="setStudyMode('general', this)">⚡ Fast Answer</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('mindmap', this)">🧠 Mind Map</button>
         <button type="button" class="mode-chip" onclick="setStudyMode('cheatsheet', this)">📑 Exam Cheat Sheet</button>
@@ -800,6 +853,13 @@
             <h2>Welcome to GranthMind 🧠</h2>
             <p>Your intelligent study tutor and research assistant. Ask any concept, paste text / screenshots (Ctrl+V), or upload PDFs & notes:</p>
             <div class="quick-prompts">
+              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Write a clean, production-ready Python solution with step-by-step logic and time complexity analysis.')">
+                💻 Write Code & Algorithms
+              </button>
+              <button type="button" class="prompt-pill" onclick="sendQuickPrompt('Solve this problem step-by-step with clear formulas in LaTeX mathematical notation.')">
+                🧮 Solve Math & Logic
+              </button>
+
               <button type="button" class="prompt-pill" onclick="sendQuickPrompt('[Format: Visual Mermaid.js Mind Map & Diagram in ```mermaid code block]\nGenerate a comprehensive visual mind map and concept flowchart for this topic.')">
                 🧠 Visual Mind Map
               </button>
@@ -894,7 +954,11 @@
     function setStudyMode(mode, btn) {
       document.querySelectorAll('.mode-chip').forEach(c => c.classList.remove('active'));
       if (btn) btn.classList.add('active');
-      if (mode === 'mindmap') {
+            if (mode === 'coding') {
+        activeModePrefix = '[Format: Full Working Code with step-by-step explanation, comments, and time/space complexity]\n';
+      } else if (mode === 'math') {
+        activeModePrefix = '[Format: Step-by-Step Derivation with LaTeX formulas and final boxed answer]\n';
+      } else if (mode === 'mindmap') {
         activeModePrefix = '[Format: Visual Mermaid.js Mind Map & Diagram in ```mermaid code block]\n';
       } else if (mode === 'cheatsheet') {
         activeModePrefix = '[Format: 1-Page High-Yield Exam Cheat Sheet with formula table and exam traps]\n';
@@ -1286,6 +1350,48 @@
       });
     }
 
+    
+    // Code Blocks Enhancement (Copy Button & Syntax Highlighting)
+    function processCodeBlocks(container) {
+      container.querySelectorAll('pre').forEach(pre => {
+        if (pre.classList.contains('mermaid') || pre.closest('.mermaid-container')) return;
+        
+        // 1. Highlight code with Highlight.js
+        const codeEl = pre.querySelector('code');
+        if (codeEl && window.hljs) {
+          try {
+            window.hljs.highlightElement(codeEl);
+          } catch(e) {}
+        }
+
+        // 2. Add 1-click Copy Code button
+        if (!pre.querySelector('.code-copy-btn')) {
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'code-copy-btn';
+          copyBtn.type = 'button';
+          copyBtn.innerHTML = '<span>📋 Copy Code</span>';
+          copyBtn.title = 'Copy code to clipboard';
+          
+          copyBtn.onclick = (e) => {
+            e.stopPropagation();
+            const textToCopy = (codeEl || pre).innerText || (codeEl || pre).textContent;
+            navigator.clipboard.writeText(textToCopy.trim()).then(() => {
+              copyBtn.innerHTML = '<span>✓ Copied!</span>';
+              copyBtn.classList.add('copied');
+              setTimeout(() => {
+                copyBtn.innerHTML = '<span>📋 Copy Code</span>';
+                copyBtn.classList.remove('copied');
+              }, 2000);
+            }).catch(err => {
+              console.error('Clipboard error:', err);
+            });
+          };
+
+          pre.appendChild(copyBtn);
+        }
+      });
+    }
+
     function enhanceMessage(element) {
       const raw = element.getAttribute('data-raw') || element.textContent;
       element.setAttribute('data-raw', raw);
@@ -1293,6 +1399,7 @@
       
       // Process interactive quiz cards
       processInteractiveQuizzes(element);
+      processCodeBlocks(element);
 
       // Render Mermaid diagrams
       if (window.mermaid && element.querySelectorAll('.mermaid').length > 0) {
