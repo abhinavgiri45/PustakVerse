@@ -44,7 +44,7 @@
             flex-direction: column;
         }
 
-        /* --- CLEAN STREAMLINED TOP CONTROL BAR --- */
+        /* --- CLEAN TOP CONTROL BAR --- */
         .reader-nav {
             height: 52px;
             background: var(--topbar-bg);
@@ -195,7 +195,7 @@
             display: none; /* Shown only when genuinely completed */
         }
 
-        /* --- PDF VIEWER MAIN CONTAINER --- */
+        /* --- PDF VIEWER MAIN VIEWPORT --- */
         .viewer-viewport {
             height: calc(100vh - 52px);
             width: 100%;
@@ -204,7 +204,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 12px 16px;
+            padding: 20px 16px;
             background: #090d16;
             position: relative;
             scroll-behavior: smooth;
@@ -229,7 +229,7 @@
         }
 
         .pdf-canvas-card {
-            box-shadow: 0 12px 35px rgba(0,0,0,0.55);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.65);
             border-radius: 6px;
             background: #ffffff;
             transition: filter 0.2s, transform 0.2s;
@@ -239,33 +239,10 @@
         }
 
         .page-badge-indicator {
-            margin-top: 6px;
-            font-size: 0.75rem;
+            margin-top: 8px;
+            font-size: 0.76rem;
             color: #64748b;
             font-weight: 600;
-        }
-
-        /* EMBEDDED READER CONTAINER */
-        #embeddedReaderWrapper {
-            width: 100%;
-            height: calc(100vh - 76px);
-            min-height: 520px;
-            max-width: 1200px;
-            margin: 0 auto;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
-            background: #0f172a;
-            border: 1px solid #1e293b;
-        }
-
-        .embedded-doc-frame {
-            width: 100%;
-            height: 100%;
-            min-height: 100%;
-            border: none;
-            background: #ffffff;
-            display: block;
         }
 
         /* THEMES */
@@ -287,7 +264,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 60vh;
+            height: 65vh;
             color: #94a3b8;
             gap: 16px;
             width: 100%;
@@ -302,12 +279,23 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ERROR STATE */
+        .error-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            text-align: center;
+            color: #f87171;
+            padding: 20px;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .book-main-title { max-width: 130px; font-size: 0.82rem; }
+            .book-main-title { max-width: 140px; font-size: 0.82rem; }
             .reader-nav { padding: 0 8px; }
             .nav-section-center { gap: 4px; padding: 3px 6px; }
-            #embeddedReaderWrapper { height: calc(100vh - 66px); }
         }
     </style>
 </head>
@@ -342,11 +330,6 @@
 
         <!-- RIGHT: ESSENTIAL ACTIONS ONLY -->
         <div class="nav-section-right">
-            <!-- VIEW MODE TOGGLE (Canvas vs Cloud) -->
-            <button class="action-pill" id="viewModeToggleBtn" onclick="toggleViewerMode()" title="Toggle Reading Engine">
-                <span id="viewModeIcon">📖</span> <span id="viewModeLabel">Canvas</span>
-            </button>
-
             <!-- THEME SWITCHER -->
             <button class="action-pill" id="themeBtn" onclick="cycleTheme()" title="Switch Reading Theme">
                 <span id="themeIcon">🌙</span>
@@ -364,24 +347,32 @@
         </div>
     </nav>
 
-    <!-- MAIN VIEWPORT CONTAINER -->
+    <!-- MAIN VIEWPORT / CANVAS CONTAINER -->
     <div class="viewer-viewport" id="viewerScrollContainer">
         
-        <!-- INSTANT EMBEDDED CLOUD READER (ACTIVE BY DEFAULT FOR CLOUD BOOKS - ZERO FREEZING) -->
-        {% set default_cloud_url = gdrive_preview_url if gdrive_preview_url else (('https://docs.google.com/viewer?url=' ~ (book.pdf_file | urlencode) ~ '&embedded=true') if (book.pdf_file and book.pdf_file.startswith('http')) else url_for('serve_secure_pdf', book_id=book.id)) %}
-        
-        <div id="embeddedReaderWrapper" style="{% if default_cloud_url %}display: block;{% else %}display: none;{% endif %}">
-            <iframe id="embeddedReaderFrame" src="{{ default_cloud_url }}" class="embedded-doc-frame" allow="autoplay" allowfullscreen></iframe>
+        <!-- LOADING SPINNER -->
+        <div id="loadingIndicator" class="loading-state">
+            <div class="spinner"></div>
+            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
+            <div style="width: 240px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
+                <div id="loadingProgressBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #ea580c, #10b981); transition: width 0.25s ease;"></div>
+            </div>
+        </div>
+
+        <!-- ERROR STATE (IF BACKEND ERROR) -->
+        <div id="errorIndicator" class="error-state">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Unable to Stream PDF Document</div>
+            <p style="color: #94a3b8; font-size: 0.9rem; max-width: 420px; line-height: 1.5; margin-bottom: 16px;">
+                The server is taking longer than expected to download this file from cloud storage.
+            </p>
+            <button onclick="location.reload()" class="action-pill" style="background: #ea580c; border: none; color: white;">
+                🔄 Retry Opening
+            </button>
         </div>
 
         <!-- CANVAS PAGES CONTAINER -->
-        <div id="pagesContainer" style="display: none;"></div>
-
-        <!-- LOADING INDICATOR -->
-        <div id="loadingIndicator" class="loading-state" style="{% if default_cloud_url %}display: none;{% else %}display: flex;{% endif %}">
-            <div class="spinner"></div>
-            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
-        </div>
+        <div id="pagesContainer"></div>
     </div>
 
     <script>
@@ -396,72 +387,70 @@
         let isBookCompleted = false;
         let percentCompleted = 0.0;
         let activeReadingSeconds = 0;
-        let isCanvasMode = false; // Default to fast cloud mode for instantaneous load
         const renderedPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        // Toggle Between Cloud Viewer and Canvas Viewer
-        function toggleViewerMode() {
-            if (isCanvasMode) {
-                switchToCloudMode();
-            } else {
-                switchToCanvasMode();
-            }
-        }
-
-        function switchToCloudMode() {
-            isCanvasMode = false;
-            document.getElementById('embeddedReaderWrapper').style.display = 'block';
-            document.getElementById('pagesContainer').style.display = 'none';
-            document.getElementById('loadingIndicator').style.display = 'none';
-            document.getElementById('viewModeLabel').textContent = 'Canvas';
-            document.getElementById('viewModeIcon').textContent = '📖';
-            document.getElementById('pageCountDisplay').textContent = ' (Live)';
-        }
-
-        async function switchToCanvasMode() {
-            isCanvasMode = true;
-            document.getElementById('embeddedReaderWrapper').style.display = 'none';
-            document.getElementById('viewModeLabel').textContent = 'Cloud';
-            document.getElementById('viewModeIcon').textContent = '📄';
-
-            if (!pdfDoc) {
-                document.getElementById('loadingIndicator').style.display = 'flex';
-                document.getElementById('pagesContainer').style.display = 'none';
-                await loadPdfDocument();
-            } else {
-                document.getElementById('pagesContainer').style.display = 'flex';
-                document.getElementById('loadingIndicator').style.display = 'none';
-            }
-        }
-
-        // Initialize and Load Document for Canvas Mode
+        // Initialize and Load Document directly into Native PDF.js
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
-            const pagesEl = document.getElementById('pagesContainer');
+            const errorEl = document.getElementById('errorIndicator');
+            const pBar = document.getElementById('loadingProgressBar');
+            const pText = document.getElementById('loadingStatusText');
 
             try {
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                    cMapPacked: true
+                    cMapPacked: true,
+                    enableXfa: true
                 });
 
-                pdfDoc = await loadingTask.promise;
-                totalPages = pdfDoc.numPages;
-                document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
-                document.getElementById('pageNumInput').max = totalPages;
-                
-                if (loadingEl) loadingEl.style.display = 'none';
-                if (pagesEl) pagesEl.style.display = 'flex';
+                loadingTask.onProgress = function(progressData) {
+                    if (progressData.total > 0) {
+                        const pct = Math.min(100, Math.round((progressData.loaded / progressData.total) * 100));
+                        if (pBar) pBar.style.width = `${Math.max(25, pct)}%`;
+                        if (pText) pText.textContent = `Opening Book (${pct}%)...`;
+                    }
+                };
 
-                buildPageContainers();
-                jumpToPage(currentPageNum, false);
-                setupScrollObserver();
-            } catch (err) {
-                console.warn("Canvas stream could not load, defaulting to Cloud Reader:", err);
-                switchToCloudMode();
+                pdfDoc = await loadingTask.promise;
+            } catch (primaryErr) {
+                console.warn("Primary PDF.js stream failed, trying raw fetch arrayBuffer...", primaryErr);
+                try {
+                    const resp = await fetch(pdfUrl);
+                    if (!resp.ok) throw new Error("HTTP " + resp.status);
+                    const arrayBuffer = await resp.arrayBuffer();
+                    const loadingTask2 = pdfjsLib.getDocument({
+                        data: arrayBuffer,
+                        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                        cMapPacked: true
+                    });
+                    pdfDoc = await loadingTask2.promise;
+                } catch (fallbackErr) {
+                    console.error("PDF loading error:", fallbackErr);
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    if (errorEl) errorEl.style.display = 'flex';
+                    return;
+                }
             }
+
+            // PDF Loaded Successfully!
+            totalPages = pdfDoc.numPages;
+            document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
+            document.getElementById('pageNumInput').max = totalPages;
+            if (loadingEl) loadingEl.style.display = 'none';
+
+            // Check for URL saved page
+            const urlParams = new URLSearchParams(window.location.search);
+            const startPage = parseInt(urlParams.get('page') || '1', 10);
+            currentPageNum = Math.min(Math.max(1, startPage), totalPages);
+            document.getElementById('pageNumInput').value = currentPageNum;
+
+            buildPageContainers();
+            jumpToPage(currentPageNum, false);
+            recordProgress(currentPageNum);
+            fetchCompletionStatus();
+            setupScrollObserver();
         }
 
         // Build Placeholders for All Pages
@@ -686,9 +675,7 @@
 
         // Initialize on Load
         window.addEventListener('DOMContentLoaded', () => {
-            fetchCompletionStatus();
-            // Start heartbeat sync
-            syncReadingProgress(5);
+            loadPdfDocument();
         });
     </script>
 </body>

@@ -4373,7 +4373,7 @@ def serve_secure_pdf(book_id):
         pdf_url = book['pdf_file']
         file_id = None
         if 'drive.google.com' in pdf_url or 'docs.google.com' in pdf_url:
-            m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_url)
+            m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'/d/([a-zA-Z0-9_-]+)', pdf_url)
             if m:
                 file_id = m.group(1)
                 
@@ -4385,34 +4385,50 @@ def serve_secure_pdf(book_id):
             }
             req = None
             if file_id:
-                # 1. Fast direct usercontent download attempt
+                # Strategy 1: Direct usercontent attempt with confirm=t
                 try:
-                    r = s.get(f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t", stream=True, timeout=5, headers=headers)
-                    if r.status_code == 200 and 'html' not in r.headers.get('Content-Type', '').lower():
-                        req = r
+                    r1 = s.get(f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t", stream=True, timeout=8, headers=headers)
+                    if r1.status_code == 200 and 'html' not in r1.headers.get('Content-Type', '').lower():
+                        req = r1
                 except Exception:
                     pass
-                    
+
+                # Strategy 2: Uc download with confirmation parsing & form extraction
                 if not req:
-                    # 2. Uc download attempt with confirmation parsing
                     try:
-                        r = s.get(f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t", headers=headers, timeout=5)
-                        if r.status_code == 200:
-                            if 'html' in r.headers.get('Content-Type', '').lower():
-                                m_conf = re.search(r'confirm=([0-9a-zA-Z_]+)', r.text) or re.search(r'name="confirm"\s+value="([^"]+)"', r.text)
-                                m_uuid = re.search(r'name="uuid"\s+value="([^"]+)"', r.text)
-                                if m_conf:
-                                    conf_code = m_conf.group(1)
-                                    uuid_code = m_uuid.group(1) if m_uuid else ""
-                                    r_dl = s.get(f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm={conf_code}&uuid={uuid_code}", stream=True, timeout=6, headers=headers)
+                        r_uc = s.get(f"https://drive.google.com/uc?export=download&id={file_id}", headers=headers, timeout=8)
+                        if r_uc.status_code == 200:
+                            if 'html' not in r_uc.headers.get('Content-Type', '').lower():
+                                req = r_uc
+                            else:
+                                html_text = r_uc.text
+                                # Check for uc-download-link
+                                m_link = re.search(r'id="uc-download-link"[^>]*href="([^"]+)"', html_text)
+                                if m_link:
+                                    dl_link = m_link.group(1).replace('&amp;', '&')
+                                    if dl_link.startswith('/'):
+                                        dl_link = "https://drive.google.com" + dl_link
+                                    r_dl = s.get(dl_link, stream=True, timeout=12, headers=headers)
                                     if r_dl.status_code == 200 and 'html' not in r_dl.headers.get('Content-Type', '').lower():
                                         req = r_dl
-                            else:
-                                req = r
+
+                                if not req:
+                                    # Extract form action and all hidden inputs
+                                    m_act = re.search(r'action="([^"]+)"', html_text)
+                                    act_url = m_act.group(1) if m_act else "https://drive.usercontent.google.com/download"
+                                    if act_url.startswith('/'):
+                                        act_url = "https://drive.google.com" + act_url
+                                    f_params = {}
+                                    for inp in re.finditer(r'<input\s+type="hidden"\s+name="([^"]+)"\s+value="([^"]*)"', html_text):
+                                        f_params[inp.group(1)] = inp.group(2)
+                                    if f_params:
+                                        r_form = s.get(act_url, params=f_params, stream=True, timeout=12, headers=headers)
+                                        if r_form.status_code == 200 and 'html' not in r_form.headers.get('Content-Type', '').lower():
+                                            req = r_form
                     except Exception:
                         pass
             else:
-                req = s.get(pdf_url, stream=True, timeout=6, headers=headers)
+                req = s.get(pdf_url, stream=True, timeout=12, headers=headers)
                 
             if req and req.status_code == 200:
                 def generate():
