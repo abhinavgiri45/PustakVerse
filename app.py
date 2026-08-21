@@ -5572,6 +5572,7 @@ def api_reading_progress():
     finally:
         if db: db.close()
 
+@app.route('/certificate/<int:book_id>', methods=['GET'], endpoint='view_certificate')
 @app.route('/certificate/<int:book_id>', methods=['GET'])
 def generate_reading_certificate(book_id):
     if 'user_id' not in session:
