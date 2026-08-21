@@ -677,9 +677,12 @@
             if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
         });
 
-        window.addEventListener('DOMContentLoaded', () => {
+        // Auto-run immediately regardless of document readiness
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadPdfDocument);
+        } else {
             loadPdfDocument();
-        });
+        }
     </script>
 </body>
 </html>
