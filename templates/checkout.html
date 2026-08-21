@@ -32,7 +32,7 @@
             padding: 24px 16px;
         }
 
-        /* Custom Scrollbars */
+        /* Sleek Scrollbars */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 2px solid #f1f5f9; }
@@ -45,7 +45,7 @@
             border: 1px solid var(--border-line);
             box-shadow: 0 10px 30px rgba(0,0,0,0.06);
             width: 100%;
-            max-width: 460px;
+            max-width: 450px;
             padding: 32px 28px;
             text-align: left;
         }
@@ -174,17 +174,11 @@
         .price-row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             padding: 8px 0;
             font-size: 0.88rem;
             color: #475569;
             border-bottom: 1px solid #f1f5f9;
-        }
-        .price-sub {
-            display: block;
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            margin-top: 2px;
         }
         .total-row {
             display: flex;
@@ -198,7 +192,7 @@
             margin-top: 4px;
         }
 
-        /* Pay Button */
+        /* Single Pay Button */
         .btn-pay {
             background: linear-gradient(135deg, #ea580c, #c2410c);
             color: white;
@@ -241,18 +235,20 @@
             color: var(--text-dark);
         }
 
-        /* Status Toast Box */
-        .status-msg-box {
-            display: none;
-            background: #e0f2fe;
-            border: 1px solid #bae6fd;
-            color: #0369a1;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 15px;
+        .terms-note {
             text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 14px;
+            line-height: 1.4;
+        }
+        .terms-note a {
+            color: var(--primary-orange);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .terms-note a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -275,16 +271,14 @@
             </div>
         </div>
 
-        <div id="statusMsgBox" class="status-msg-box"></div>
-
         {% if checkout_donation_active %}
-        <!-- OPTIONAL DONATION BOX (ROUTES DIRECTLY TO DEVELOPER ACCOUNT) -->
+        <!-- OPTIONAL DONATION BOX (ALLOTTED DIRECTLY TO DEVELOPER ACCOUNT) -->
         <div class="donation-box" id="donationContainer">
             <label class="donation-header">
                 <input type="checkbox" id="donationCheckbox" checked onchange="handleDonationToggle()">
                 <div>
                     <span class="donation-title">🎁 Donate to PustakVerse Team</span>
-                    <span class="donation-desc">Contribute directly to the developer team for platform servers, storage & polymath AI models.</span>
+                    <span class="donation-desc">Contribute to the developer team for servers, AI polymath models & cloud storage.</span>
                 </div>
             </label>
 
@@ -296,38 +290,45 @@
         </div>
         {% endif %}
 
-        <!-- PRICE BREAKDOWN & SEPARATE ACCOUNT DESTINATIONS -->
+        <!-- PRICE BREAKDOWN -->
         <div class="breakdown">
             <div class="price-row">
-                <div>
-                    <strong>Book Price</strong>
-                    <span class="price-sub">Routes 100% directly to Author: <strong>{{ book.author_name }}</strong></span>
-                </div>
-                <span id="basePriceDisplay" style="font-weight: 700; color: #0f172a;">₹{{ "%.2f"|format(base_price/100) }}</span>
+                <span>Book Price (Author Royalty)</span>
+                <span id="basePriceDisplay" style="font-weight: 700;">₹{{ "%.2f"|format(base_price/100) }}</span>
             </div>
 
             {% if checkout_donation_active %}
             <div class="price-row" id="donationSummaryRow">
-                <div>
-                    <strong>Platform Team Donation</strong>
-                    <span class="price-sub">Routes 100% directly to <strong>Developer Account</strong></span>
-                </div>
+                <span>PustakVerse Team Donation</span>
                 <span id="donationDisplay" style="color: #166534; font-weight: 800;">₹{{ "%.2f"|format(default_donation_inr or 10) }}</span>
             </div>
             {% endif %}
 
             <div class="total-row">
-                <span>Total Amount</span>
+                <span>Total to Pay (One-Time)</span>
                 <span id="totalDisplay" style="color: var(--primary-orange);">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span>
             </div>
         </div>
 
-        <button id="payButton" class="btn-pay" onclick="initiateMultiGatewayPayment()">
-            <span>🔒 Pay Securely</span>
+        <!-- SINGLE ONE-TIME PAYMENT BUTTON -->
+        <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
+            <span>🔒 Pay <span id="payBtnAmount">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span> Securely</span>
         </button>
 
         <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-cancel">← Return to Book Page</a>
+
+        <div class="terms-note">
+            By completing this purchase, you agree to the <a href="/terms" target="_blank">Terms & Conditions</a>. Single one-time secure transaction.
+        </div>
     </div>
+
+    <!-- Hidden verification form for seamless single submission -->
+    <form action="/payment/verify" method="POST" id="verifyForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="razorpay_order_id" id="order_id">
+        <input type="hidden" name="razorpay_payment_id" id="payment_id">
+        <input type="hidden" name="razorpay_signature" id="signature">
+    </form>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
@@ -351,6 +352,7 @@
             const summaryRow = document.getElementById('donationSummaryRow');
             const donationDisplay = document.getElementById('donationDisplay');
             const totalDisplay = document.getElementById('totalDisplay');
+            const payBtnAmount = document.getElementById('payBtnAmount');
 
             if (DONATION_ENABLED && cb && cb.checked) {
                 const val = parseFloat(input ? input.value : '0');
@@ -360,6 +362,7 @@
             }
 
             const totalPaise = BASE_PRICE_PAISE + (donationInr * 100);
+            const formattedTotal = `₹${(totalPaise / 100).toFixed(2)}`;
 
             if (donationDisplay) {
                 donationDisplay.textContent = `₹${donationInr.toFixed(2)}`;
@@ -369,47 +372,19 @@
             }
 
             if (totalDisplay) {
-                totalDisplay.textContent = `₹${(totalPaise / 100).toFixed(2)}`;
+                totalDisplay.textContent = formattedTotal;
+            }
+            if (payBtnAmount) {
+                payBtnAmount.textContent = formattedTotal;
             }
 
             return { donationInr, totalPaise };
         }
 
-        function showStatus(text, isError = false) {
-            const box = document.getElementById('statusMsgBox');
-            if (!box) return;
-            box.style.display = 'block';
-            box.textContent = text;
-            if (isError) {
-                box.style.background = '#fee2e2';
-                box.style.borderColor = '#fca5a5';
-                box.style.color = '#991b1b';
-            } else {
-                box.style.background = '#e0f2fe';
-                box.style.borderColor = '#bae6fd';
-                box.style.color = '#0369a1';
-            }
-        }
-
-        async function verifyPaymentAjax(orderId, paymentId, signature, orderType) {
-            const form = new FormData();
-            form.append('razorpay_order_id', orderId);
-            form.append('razorpay_payment_id', paymentId);
-            form.append('razorpay_signature', signature);
-            form.append('order_type', orderType);
-            form.append('csrf_token', "{{ csrf_token() }}");
-
-            const res = await fetch('/api/payment/verify_ajax', {
-                method: 'POST',
-                body: form
-            });
-            return await res.json();
-        }
-
-        async function initiateMultiGatewayPayment() {
+        async function initiateSinglePayment() {
             const btn = document.getElementById('payButton');
             btn.disabled = true;
-            btn.innerHTML = '<span>⏳ Preparing Gateways…</span>';
+            btn.innerHTML = '<span>⏳ Preparing Gateway…</span>';
 
             const { donationInr } = calculateTotal();
 
@@ -425,98 +400,46 @@
 
                 const data = await res.json();
                 if (!data.success) {
-                    showStatus(data.error || 'Failed to initialize payment gateway.', true);
+                    alert(data.error || 'Failed to initialize payment gateway. Please try again.');
                     btn.disabled = false;
-                    btn.innerHTML = '<span>🔒 Pay Securely</span>';
+                    calculateTotal();
                     return;
                 }
 
-                // STEP 1: OPEN AUTHOR RAZORPAY GATEWAY (Book Price)
-                showStatus(`Opening payment gateway for ${data.author_name} (Book: ₹${(data.book_order.amount_paise/100).toFixed(2)})…`);
-                
-                const authorOptions = {
-                    key: data.book_order.razorpay_key,
-                    amount: data.book_order.amount_paise,
+                // ONE SINGLE RAZORPAY GATEWAY CHECKOUT MODAL
+                const options = {
+                    key: data.razorpay_key,
+                    amount: data.amount_paise,
                     currency: "INR",
-                    name: `PustakVerse · ${data.author_name}`,
-                    description: `Book: "${data.book_title}"`,
+                    name: "PustakVerse",
+                    description: `Unlock "${data.book_title}"`,
                     image: "{{ url_for('static', filename='PustakVerse.png') }}",
-                    order_id: data.book_order.order_id,
-                    handler: async function (authorResp) {
-                        showStatus('Verifying book purchase…');
-                        const vResult = await verifyPaymentAjax(
-                            authorResp.razorpay_order_id,
-                            authorResp.razorpay_payment_id,
-                            authorResp.razorpay_signature,
-                            'book'
-                        );
-
-                        if (!vResult.success) {
-                            showStatus('Book verification failed. Please contact support.', true);
-                            btn.disabled = false;
-                            btn.innerHTML = '<span>🔒 Pay Securely</span>';
-                            return;
-                        }
-
-                        // STEP 2: IF DONATION ORDER EXISTS, OPEN DEVELOPER RAZORPAY GATEWAY
-                        if (data.donation_order) {
-                            showStatus('✓ Book purchased! Opening Team Support Donation gateway (₹' + (data.donation_order.amount_paise/100).toFixed(2) + ')…');
-                            
-                            const devOptions = {
-                                key: data.donation_order.razorpay_key,
-                                amount: data.donation_order.amount_paise,
-                                currency: "INR",
-                                name: "PustakVerse Team Support",
-                                description: "Platform Donation to Developers",
-                                image: "{{ url_for('static', filename='PustakVerse.png') }}",
-                                order_id: data.donation_order.order_id,
-                                handler: async function (devResp) {
-                                    showStatus('Verifying donation…');
-                                    await verifyPaymentAjax(
-                                        devResp.razorpay_order_id,
-                                        devResp.razorpay_payment_id,
-                                        devResp.razorpay_signature,
-                                        'donation'
-                                    );
-                                    window.location.href = `/read/${BOOK_ID}`;
-                                },
-                                modal: {
-                                    ondismiss: function() {
-                                        // If donation was skipped or closed, book is already unlocked!
-                                        window.location.href = `/read/${BOOK_ID}`;
-                                    }
-                                },
-                                theme: {
-                                    color: "#ea580c"
-                                }
-                            };
-
-                            const devRzp = new Razorpay(devOptions);
-                            devRzp.open();
-                        } else {
-                            // No donation - redirect directly to reader
-                            showStatus('✓ Payment complete! Redirecting to reader…');
-                            window.location.href = `/read/${BOOK_ID}`;
-                        }
+                    order_id: data.order_id,
+                    handler: function (response) {
+                        btn.innerHTML = '<span>✓ Verifying Payment…</span>';
+                        document.getElementById('order_id').value = response.razorpay_order_id;
+                        document.getElementById('payment_id').value = response.razorpay_payment_id;
+                        document.getElementById('signature').value = response.razorpay_signature;
+                        document.getElementById('verifyForm').submit();
                     },
                     modal: {
                         ondismiss: function() {
                             btn.disabled = false;
-                            btn.innerHTML = '<span>🔒 Pay Securely</span>';
+                            calculateTotal();
                         }
                     },
                     theme: {
-                        color: "#0f172a"
+                        color: "#ea580c"
                     }
                 };
 
-                const authorRzp = new Razorpay(authorOptions);
-                authorRzp.open();
+                const rzp = new Razorpay(options);
+                rzp.open();
 
             } catch (err) {
-                showStatus('Network error initializing payment gateway. Please try again.', true);
+                alert('Network error initializing payment gateway. Please try again.');
                 btn.disabled = false;
-                btn.innerHTML = '<span>🔒 Pay Securely</span>';
+                calculateTotal();
             }
         }
     </script>

@@ -2201,6 +2201,11 @@ def ensure_payment_schema():
             if not cursor.fetchone():
                 cursor.execute("ALTER TABLE purchases ADD COLUMN donation_paise INT DEFAULT 0")
         except Exception: pass
+        try:
+            cursor.execute("SHOW COLUMNS FROM purchases LIKE 'author_earning_paise'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE purchases ADD COLUMN author_earning_paise INT DEFAULT 0")
+        except Exception: pass
 
         cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
@@ -4376,7 +4381,7 @@ def cancel_password_change():
     return redirect(url_for('dashboard'))
 
 # ======================================================================
-# E-COMMERCE: SEPARATE GATEWAYS (BOOK -> AUTHOR, DONATION -> DEVELOPER)
+# E-COMMERCE: SINGLE ONE-TIME CHECKOUT (WITH CONVENIENCE FEE & DONATION SPLIT)
 # ======================================================================
 @app.route('/buy_book/<int:book_id>', methods=['GET', 'POST'])
 def buy_book(book_id):
@@ -4418,23 +4423,23 @@ def buy_book(book_id):
         checkout_donation_active = bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True)
         default_donation_inr = int(fps.get('donation_default_inr') or 10)
         
-        author_key_id = book.get('author_key_id') or fps.get('dev_key_id')
-        author_key_secret = book.get('author_key_secret') or fps.get('dev_key_secret')
+        primary_key_id = fps.get('dev_key_id') or book.get('author_key_id')
+        primary_key_secret = fps.get('dev_key_secret') or book.get('author_key_secret')
 
-        if not author_key_id or not author_key_secret: 
-            flash('Payment gateway credentials are not configured for this title. Please contact support.', 'error')
+        if not primary_key_id or not primary_key_secret: 
+            flash('Payment gateway credentials are not configured. Please contact support.', 'error')
             return redirect(request.referrer or url_for('index'))
 
-        has_dev_keys = bool(fps.get('dev_key_id') and fps.get('dev_key_secret'))
+        total_paise = book['price_paise'] + (default_donation_inr * 100 if checkout_donation_active else 0)
 
         return render_template(
             'checkout.html', 
             book=book, 
             base_price=book['price_paise'], 
-            checkout_donation_active=(checkout_donation_active and has_dev_keys), 
+            checkout_donation_active=checkout_donation_active, 
             default_donation_inr=default_donation_inr, 
-            author_key_id=author_key_id,
-            dev_key_id=fps.get('dev_key_id')
+            total_paise=total_paise, 
+            razorpay_key=primary_key_id
         )
     except Exception as e: 
         logging.error(f"Error initiating buy_book #{book_id}: {e}")
@@ -4477,138 +4482,55 @@ def api_checkout_create_order(book_id):
         fps = cursor.fetchone() or {}
 
         checkout_donation_active = bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True)
+        if not checkout_donation_active:
+            donation_inr = 0
 
-        author_key_id = book.get('author_key_id') or fps.get('dev_key_id')
-        author_key_secret = book.get('author_key_secret') or fps.get('dev_key_secret')
-        dev_key_id = fps.get('dev_key_id')
-        dev_key_secret = fps.get('dev_key_secret')
+        # Gateway Credentials (Developer primary, Author fallback)
+        gateway_key_id = fps.get('dev_key_id') or book.get('author_key_id')
+        gateway_key_secret = fps.get('dev_key_secret') or book.get('author_key_secret')
 
-        if not author_key_id or not author_key_secret:
-            return jsonify({'success': False, 'error': 'Author payment gateway keys are missing.'}), 400
+        if not gateway_key_id or not gateway_key_secret:
+            return jsonify({'success': False, 'error': 'Payment gateway credentials are not configured.'}), 400
 
         if not razorpay:
             return jsonify({'success': False, 'error': 'Razorpay payment SDK not available.'}), 500
 
-        # 1. CREATE BOOK ORDER (Funds route 100% to Author's Razorpay Account)
-        author_client = razorpay.Client(auth=(author_key_id, author_key_secret))
-        book_order_data = {
-            'amount': book['price_paise'],
+        book_price_paise = book['price_paise']
+        donation_paise = donation_inr * 100
+        total_paise = book_price_paise + donation_paise
+
+        # Standard Platform Convenience Fee charged from the author: 5% (min ₹2 / 200 paise)
+        convenience_fee_paise = max(200, int(round(book_price_paise * 0.05)))
+        if convenience_fee_paise >= book_price_paise:
+            convenience_fee_paise = int(round(book_price_paise * 0.05))
+
+        author_earning_paise = max(0, book_price_paise - convenience_fee_paise)
+
+        # CREATE ONE SINGLE UNIFIED RAZORPAY ORDER FOR TOTAL AMOUNT
+        client = razorpay.Client(auth=(gateway_key_id, gateway_key_secret))
+        order_data = {
+            'amount': total_paise,
             'currency': 'INR',
-            'receipt': f"pv-bk-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
+            'receipt': f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
         }
-        book_order = author_client.order.create(book_order_data)
+        order = client.order.create(order_data)
 
         cursor.execute("""
-            INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, status) 
-            VALUES (%s, %s, %s, %s, 0, 0, 'pending')
-        """, (session['user_id'], book_id, book_order['id'], book['price_paise']))
-
-        # 2. CREATE DONATION ORDER (Funds route 100% to Developer's Razorpay Account)
-        donation_order_obj = None
-        if checkout_donation_active and donation_inr > 0 and dev_key_id and dev_key_secret:
-            try:
-                dev_client = razorpay.Client(auth=(dev_key_id, dev_key_secret))
-                dev_order_data = {
-                    'amount': donation_inr * 100,
-                    'currency': 'INR',
-                    'receipt': f"pv-dn-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
-                }
-                dev_order = dev_client.order.create(dev_order_data)
-                
-                cursor.execute("""
-                    INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, status) 
-                    VALUES (%s, %s, %s, %s, %s, 0, 'pending')
-                """, (session['user_id'], book_id, dev_order['id'], donation_inr * 100, donation_inr * 100))
-
-                donation_order_obj = {
-                    'order_id': dev_order['id'],
-                    'amount_paise': donation_inr * 100,
-                    'razorpay_key': dev_key_id,
-                    'title': 'Donation to PustakVerse Team'
-                }
-            except Exception as e:
-                logging.error(f"Failed to create developer donation order: {e}")
-                donation_order_obj = None
-
+            INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, author_earning_paise, status) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
+        """, (session['user_id'], book_id, order['id'], total_paise, donation_paise, convenience_fee_paise, author_earning_paise))
         db.commit()
 
         return jsonify({
             'success': True,
-            'book_id': book['id'],
-            'book_title': book['title'],
-            'author_name': book['author_name'],
-            'book_order': {
-                'order_id': book_order['id'],
-                'amount_paise': book['price_paise'],
-                'razorpay_key': author_key_id,
-                'title': book['title']
-            },
-            'donation_order': donation_order_obj
+            'order_id': order['id'],
+            'amount_paise': total_paise,
+            'razorpay_key': gateway_key_id,
+            'book_title': book['title']
         })
     except Exception as e:
-        logging.error(f"Error creating checkout order: {e}")
+        logging.error(f"Error creating unified checkout order: {e}")
         return jsonify({'success': False, 'error': f'Payment gateway error: {str(e)}'}), 500
-    finally:
-        if db:
-            try: db.close()
-            except: pass
-
-
-@app.route('/api/payment/verify_ajax', methods=['POST'])
-def api_payment_verify_ajax():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
-
-    order_id = request.form.get('razorpay_order_id', '').strip()
-    payment_id = request.form.get('razorpay_payment_id', '').strip()
-    signature = request.form.get('razorpay_signature', '').strip()
-    order_type = request.form.get('order_type', 'book').strip() # 'book' or 'donation'
-
-    if not all([order_id, payment_id, signature]):
-        return jsonify({'success': False, 'error': 'Missing payment verification parameters.'}), 400
-
-    db = None
-    try:
-        db = get_db_connection()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT p.id, p.book_id, p.donation_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret FROM purchases p JOIN books b ON p.book_id = b.id WHERE p.razorpay_order_id = %s AND p.user_id = %s', (order_id, session['user_id']))
-        purchase = cursor.fetchone()
-
-        if not purchase:
-            return jsonify({'success': False, 'error': 'Order record not found.'}), 404
-
-        cursor.execute("SELECT rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1")
-        fps = cursor.fetchone() or {}
-
-        if order_type == 'donation':
-            key_id = fps.get('dev_key_id')
-            key_secret = fps.get('dev_key_secret')
-        else:
-            key_id = purchase.get('author_key_id') or fps.get('dev_key_id')
-            key_secret = purchase.get('author_key_secret') or fps.get('dev_key_secret')
-
-        if not key_id or not key_secret:
-            return jsonify({'success': False, 'error': 'Verification keys not found.'}), 400
-
-        client = razorpay.Client(auth=(key_id, key_secret))
-        client.utility.verify_payment_signature({
-            'razorpay_order_id': order_id,
-            'razorpay_payment_id': payment_id,
-            'razorpay_signature': signature
-        })
-
-        cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
-        
-        if order_type == 'book':
-            cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
-        elif order_type == 'donation':
-            log_official_activity(session['user_id'], f"Reader #{session['user_id']} donated ₹{purchase['donation_paise']/100:.2f} to PustakVerse Team (Order: {order_id})")
-
-        db.commit()
-        return jsonify({'success': True, 'book_id': purchase['book_id'], 'order_type': order_type})
-    except Exception as e:
-        logging.error(f"Error in ajax payment verification: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 400
     finally:
         if db:
             try: db.close()
@@ -4631,19 +4553,15 @@ def verify_payment():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT p.id, p.book_id, p.donation_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret FROM purchases p JOIN books b ON p.book_id = b.id WHERE p.razorpay_order_id = %s AND p.user_id = %s', (order_id, session['user_id']))
+        cursor.execute('SELECT p.id, p.book_id, p.donation_paise, p.fee_paise, p.author_earning_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret FROM purchases p JOIN books b ON p.book_id = b.id WHERE p.razorpay_order_id = %s AND p.user_id = %s', (order_id, session['user_id']))
         purchase = cursor.fetchone()
         
         if purchase:
             cursor.execute("SELECT rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1")
             fps = cursor.fetchone() or {}
 
-            if purchase.get('donation_paise', 0) > 0:
-                key_id = fps.get('dev_key_id')
-                key_secret = fps.get('dev_key_secret')
-            else:
-                key_id = purchase.get('author_key_id') or fps.get('dev_key_id')
-                key_secret = purchase.get('author_key_secret') or fps.get('dev_key_secret')
+            key_id = fps.get('dev_key_id') or purchase.get('author_key_id')
+            key_secret = fps.get('dev_key_secret') or purchase.get('author_key_secret')
             
             if key_id and key_secret:
                 client = razorpay.Client(auth=(key_id, key_secret))
@@ -4653,16 +4571,20 @@ def verify_payment():
                 cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
                 db.commit()
                 
-                flash('Payment successful! Book has been saved to My Library and unlocked.', 'success')
+                if purchase.get('donation_paise', 0) > 0:
+                    flash(f'Payment successful! Book has been unlocked in your library. Thank you for donating ₹{purchase["donation_paise"]/100:.2f} to the PustakVerse Team!', 'success')
+                else:
+                    flash('Payment successful! Book has been saved to My Library and unlocked.', 'success')
                 return redirect(url_for('read_book', book_id=purchase['book_id']))
             else: 
-                flash('Payment verification failed. Keys missing on this book.', 'error')
+                flash('Payment verification failed. Gateway credentials missing.', 'error')
                 return redirect(url_for('my_library'))
         else: 
             flash('Payment verification failed. Order not found.', 'error')
             return redirect(url_for('my_library'))
-    except Exception: 
-        flash('Payment verification failed.', 'error')
+    except Exception as e: 
+        logging.error(f"Payment verification failed: {e}")
+        flash('Payment verification failed. Please contact support.', 'error')
         return redirect(url_for('my_library'))
     finally:
         if db:
@@ -4707,7 +4629,7 @@ def book_sales(book_id):
             flash("Unauthorized access to book sales.", "error")
             return redirect(url_for('dashboard'))
             
-        cursor.execute("SELECT p.razorpay_order_id, p.amount_paise, p.status, p.paid_at, u.username as buyer_name, u.email as buyer_email FROM purchases p JOIN users u ON p.user_id = u.id WHERE p.book_id = %s AND p.status = 'paid' ORDER BY p.paid_at DESC", (book_id,))
+        cursor.execute("SELECT p.razorpay_order_id, p.amount_paise, p.fee_paise, p.author_earning_paise, p.status, p.paid_at, u.username as buyer_name, u.email as buyer_email FROM purchases p JOIN users u ON p.user_id = u.id WHERE p.book_id = %s AND p.status = 'paid' ORDER BY p.paid_at DESC", (book_id,))
         sales = cursor.fetchall()
     except Exception: 
         flash("Could not load sales history.", "error")
