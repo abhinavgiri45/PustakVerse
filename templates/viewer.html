@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{{ book.title }} — PustakVerse Secure Reader</title>
+    <title>{{ book.title }} — PustakVerse Reader</title>
     
     <!-- FAVICON -->
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') if book else '/static/favicon.ico' }}" type="image/x-icon">
@@ -11,7 +11,7 @@
     <!-- FONTS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- PDF.JS CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -31,8 +31,6 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         body {
@@ -206,7 +204,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 24px 12px;
+            padding: 16px 12px;
             background: #18181b;
             position: relative;
             scroll-behavior: smooth;
@@ -247,6 +245,27 @@
             font-weight: 600;
         }
 
+        /* EMBEDDED READER FALLBACK FRAME */
+        #embeddedReaderWrapper {
+            display: none;
+            width: 100%;
+            height: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+            background: #0f172a;
+        }
+
+        .embedded-doc-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
         /* THEMES */
         body.theme-sepia .viewer-viewport { background-color: #f4ecd8; }
         body.theme-sepia .pdf-canvas-card { filter: sepia(0.35) contrast(0.95); }
@@ -283,8 +302,9 @@
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .book-main-title { max-width: 150px; font-size: 0.82rem; }
+            .book-main-title { max-width: 140px; font-size: 0.82rem; }
             .reader-nav { padding: 0 10px; }
+            .nav-section-center { gap: 4px; padding: 3px 6px; }
         }
     </style>
 </head>
@@ -303,7 +323,7 @@
         </div>
 
         <!-- CENTER: CLEAN PAGE & ZOOM CONTROLS -->
-        <div class="nav-section-center">
+        <div class="nav-section-center" id="centerControls">
             <button class="ctrl-btn" id="prevPageBtn" onclick="changePage(-1)" title="Previous Page (&larr;)">◀</button>
             <input type="number" id="pageNumInput" class="page-num-input" value="1" min="1" onchange="jumpToPage(this.value)">
             <span class="page-total-text" id="pageCountDisplay">/ ...</span>
@@ -338,14 +358,28 @@
 
     <!-- MAIN VIEWPORT / CANVAS CONTAINER -->
     <div class="viewer-viewport" id="viewerScrollContainer">
+        <!-- LOADING INDICATOR -->
         <div id="loadingIndicator" class="loading-state">
             <div class="spinner"></div>
             <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
             <div style="width: 240px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
-                <div id="loadingProgressBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); transition: width 0.3s ease;"></div>
+                <div id="loadingProgressBar" style="width: 35%; height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); transition: width 0.3s ease;"></div>
             </div>
         </div>
+
+        <!-- CANVAS PAGES CONTAINER -->
         <div id="pagesContainer"></div>
+
+        <!-- SEAMLESS EMBEDDED VIEWER FALLBACK (ZERO STUCK SCREENS) -->
+        <div id="embeddedReaderWrapper">
+            {% if gdrive_preview_url %}
+                <iframe id="embeddedReaderFrame" src="{{ gdrive_preview_url }}" class="embedded-doc-frame" allow="autoplay" allowfullscreen></iframe>
+            {% elif book.pdf_file and book.pdf_file.startswith('http') %}
+                <iframe id="embeddedReaderFrame" src="https://docs.google.com/viewer?url={{ book.pdf_file | urlencode }}&embedded=true" class="embedded-doc-frame" allowfullscreen></iframe>
+            {% else %}
+                <iframe id="embeddedReaderFrame" src="{{ url_for('serve_secure_pdf', book_id=book.id) }}" class="embedded-doc-frame" allowfullscreen></iframe>
+            {% endif %}
+        </div>
     </div>
 
     <script>
@@ -360,17 +394,44 @@
         let isBookCompleted = false;
         let percentCompleted = 0.0;
         let activeReadingSeconds = 0;
+        let isFallbackActive = false;
         const renderedPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        // Initialize and Load Document
+        // Switch Seamlessly to Embedded Reader Frame
+        function activateEmbeddedFallback() {
+            if (isFallbackActive) return;
+            isFallbackActive = true;
+            console.log("Activating high-compatibility embedded reader mode...");
+            
+            const loadingEl = document.getElementById('loadingIndicator');
+            const pagesEl = document.getElementById('pagesContainer');
+            const embeddedWrapper = document.getElementById('embeddedReaderWrapper');
+            const pageCountDisplay = document.getElementById('pageCountDisplay');
+
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (pagesEl) pagesEl.style.display = 'none';
+            if (embeddedWrapper) embeddedWrapper.style.display = 'block';
+            if (pageCountDisplay) pageCountDisplay.textContent = ' (Live)';
+            
+            fetchCompletionStatus();
+        }
+
+        // Initialize and Load Document with Auto-Fallback Safety Guard
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
             const pBar = document.getElementById('loadingProgressBar');
             const pText = document.getElementById('loadingStatusText');
 
+            // Safety Timer: If PDF.js doesn't finish within 3.5 seconds, auto-switch to embedded reader
+            const fallbackTimer = setTimeout(() => {
+                if (!pdfDoc) {
+                    activateEmbeddedFallback();
+                }
+            }, 3500);
+
             try {
-                // Method 1: Stream directly via PDF.js
+                // Primary Stream Attempt via PDF.js
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -387,9 +448,9 @@
                 };
 
                 pdfDoc = await loadingTask.promise;
+                clearTimeout(fallbackTimer);
             } catch (primaryErr) {
-                console.warn("Primary PDF stream attempt encountered issue, attempting binary arrayBuffer fetch...", primaryErr);
-                if (pText) pText.textContent = "Loading pages...";
+                console.warn("Primary PDF stream encountered issue, attempting binary arrayBuffer fetch...", primaryErr);
                 try {
                     const resp = await fetch(pdfUrl);
                     if (!resp.ok) throw new Error("HTTP " + resp.status);
@@ -400,23 +461,16 @@
                         cMapPacked: true
                     });
                     pdfDoc = await loadingTask2.promise;
+                    clearTimeout(fallbackTimer);
                 } catch (fallbackErr) {
-                    console.error("Fatal PDF loading error:", fallbackErr);
-                    if (loadingEl) {
-                        loadingEl.innerHTML = `
-                            <div style="text-align: center; max-width: 440px; padding: 24px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
-                                <div style="font-size: 2.2rem; margin-bottom: 8px;">📖</div>
-                                <h4 style="color: #ffffff; margin: 0 0 8px;">Book Ready</h4>
-                                <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5; margin-bottom: 16px;">Reconnecting stream...</p>
-                                <button onclick="location.reload()" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer;">↻ Refresh Reader</button>
-                            </div>
-                        `;
-                    }
+                    clearTimeout(fallbackTimer);
+                    console.warn("Switching to embedded reader fallback:", fallbackErr);
+                    activateEmbeddedFallback();
                     return;
                 }
             }
 
-            // PDF Loaded Successfully!
+            // PDF Loaded Successfully in Canvas Mode!
             totalPages = pdfDoc.numPages;
             document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
             document.getElementById('pageNumInput').max = totalPages;

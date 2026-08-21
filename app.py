@@ -4312,7 +4312,18 @@ def read_book(book_id):
             try: db.close()
             except: pass
             
-    return render_template('viewer.html', book=book, can_read=can_read)
+    # Extract cloud / Google Drive preview details for seamless fallback
+    gdrive_file_id = None
+    gdrive_preview_url = None
+    if book and book.get('pdf_file'):
+        pdf_val = str(book['pdf_file'])
+        if 'drive.google.com' in pdf_val or 'docs.google.com' in pdf_val:
+            m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_val) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_val)
+            if m:
+                gdrive_file_id = m.group(1)
+                gdrive_preview_url = f"https://drive.google.com/file/d/{gdrive_file_id}/preview"
+
+    return render_template('viewer.html', book=book, can_read=can_read, gdrive_file_id=gdrive_file_id, gdrive_preview_url=gdrive_preview_url)
 
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
@@ -4363,30 +4374,34 @@ def serve_secure_pdf(book_id):
             }
             req = None
             if file_id:
-                endpoints = [
-                    f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t",
-                    f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t",
-                    f"https://docs.google.com/uc?export=download&id={file_id}&confirm=t"
-                ]
-                for ep in endpoints:
+                # 1. Fast direct usercontent download attempt
+                try:
+                    r = s.get(f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t", stream=True, timeout=5, headers=headers)
+                    if r.status_code == 200 and 'html' not in r.headers.get('Content-Type', '').lower():
+                        req = r
+                except Exception:
+                    pass
+                    
+                if not req:
+                    # 2. Uc download attempt with confirmation parsing
                     try:
-                        r = s.get(ep, stream=True, timeout=18, headers=headers)
+                        r = s.get(f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t", headers=headers, timeout=5)
                         if r.status_code == 200:
-                            ct = r.headers.get('Content-Type', '').lower()
-                            if 'text/html' in ct:
-                                for k, v in s.cookies.items():
-                                    if 'download_warning' in k:
-                                        r2 = s.get(f"https://drive.google.com/uc?export=download&confirm={v}&id={file_id}", stream=True, timeout=20, headers=headers)
-                                        if r2.status_code == 200:
-                                            req = r2
-                                            break
+                            if 'html' in r.headers.get('Content-Type', '').lower():
+                                m_conf = re.search(r'confirm=([0-9a-zA-Z_]+)', r.text) or re.search(r'name="confirm"\s+value="([^"]+)"', r.text)
+                                m_uuid = re.search(r'name="uuid"\s+value="([^"]+)"', r.text)
+                                if m_conf:
+                                    conf_code = m_conf.group(1)
+                                    uuid_code = m_uuid.group(1) if m_uuid else ""
+                                    r_dl = s.get(f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm={conf_code}&uuid={uuid_code}", stream=True, timeout=6, headers=headers)
+                                    if r_dl.status_code == 200 and 'html' not in r_dl.headers.get('Content-Type', '').lower():
+                                        req = r_dl
                             else:
                                 req = r
-                                break
                     except Exception:
-                        continue
+                        pass
             else:
-                req = s.get(pdf_url, stream=True, timeout=20, headers=headers)
+                req = s.get(pdf_url, stream=True, timeout=6, headers=headers)
                 
             if req and req.status_code == 200:
                 def generate():
