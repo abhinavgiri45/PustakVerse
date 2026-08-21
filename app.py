@@ -4383,11 +4383,12 @@ def serve_secure_pdf(book_id):
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = os.path.join(cache_dir, f"cloud_book_{book_id}.pdf")
         if os.path.exists(cache_file) and os.path.getsize(cache_file) > 1024:
-            resp = send_file(cache_file, mimetype='application/pdf')
+            resp = send_file(cache_file, mimetype='application/pdf', conditional=True)
             resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
             resp.headers['X-Content-Type-Options'] = 'nosniff'
             resp.headers['Access-Control-Allow-Origin'] = '*'
             resp.headers['Accept-Ranges'] = 'bytes'
+            resp.headers['Cache-Control'] = 'private, max-age=604800, immutable'
             return resp
                 
         try:
@@ -4451,11 +4452,12 @@ def serve_secure_pdf(book_id):
                             if chunk:
                                 cf.write(chunk)
                     if os.path.exists(cache_file) and os.path.getsize(cache_file) > 1024:
-                        resp = send_file(cache_file, mimetype='application/pdf')
+                        resp = send_file(cache_file, mimetype='application/pdf', conditional=True)
                         resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
                         resp.headers['X-Content-Type-Options'] = 'nosniff'
                         resp.headers['Access-Control-Allow-Origin'] = '*'
                         resp.headers['Accept-Ranges'] = 'bytes'
+                        resp.headers['Cache-Control'] = 'private, max-age=604800, immutable'
                         return resp
                 except Exception as cache_err:
                     logging.warning(f"Could not cache cloud PDF: {cache_err}")
@@ -4469,6 +4471,7 @@ def serve_secure_pdf(book_id):
                 resp.headers['X-Content-Type-Options'] = 'nosniff'
                 resp.headers['Access-Control-Allow-Origin'] = '*'
                 resp.headers['Accept-Ranges'] = 'bytes'
+                resp.headers['Cache-Control'] = 'private, max-age=604800, immutable'
                 return resp
             else:
                 abort(502)
@@ -4479,13 +4482,16 @@ def serve_secure_pdf(book_id):
     folder = app.config['PRIVATE_PDF_FOLDER'] if book['is_paid'] or book['private_pdf'] else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
     full_path = os.path.join(folder, book['pdf_file'])
     
-    if not os.path.exists(full_path): 
+    if not os.path.exists(full_path):
         abort(404)
         
-    if can_read: 
-        resp = send_from_directory(folder, book['pdf_file'], mimetype='application/pdf')
-        resp.headers['Content-Disposition'] = f'inline; filename="{os.path.basename(book["pdf_file"])}"'
+    if can_read:
+        resp = send_file(full_path, mimetype='application/pdf', conditional=True)
+        resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
         resp.headers['X-Content-Type-Options'] = 'nosniff'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Accept-Ranges'] = 'bytes'
+        resp.headers['Cache-Control'] = 'private, max-age=604800, immutable'
         return resp
         
     try:

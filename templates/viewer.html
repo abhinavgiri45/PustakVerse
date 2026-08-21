@@ -8,12 +8,15 @@
     <!-- FAVICON -->
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') if book else '/static/favicon.ico' }}" type="image/x-icon">
     
-    <!-- FONTS -->
+    <!-- PRECONNECT -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <!-- FONTS -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- PDF.JS CDN -->
+    <!-- PDF.JS CDN (FAST JSDELIVR CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     
     <style>
@@ -205,6 +208,7 @@
             background: #090d16;
             position: relative;
             scroll-behavior: smooth;
+            contain: strict;
         }
 
         #pagesContainer {
@@ -223,13 +227,14 @@
             align-items: center;
             position: relative;
             width: 100%;
+            min-height: 400px;
         }
 
         .pdf-canvas {
             box-shadow: 0 12px 35px rgba(0,0,0,0.65);
             border-radius: 6px;
             background: #ffffff;
-            transition: filter 0.2s, transform 0.2s;
+            transition: filter 0.2s;
             max-width: 100%;
             height: auto !important;
             display: block;
@@ -255,7 +260,7 @@
         body.theme-dark .pdf-canvas { filter: contrast(1.02); }
         body.theme-dark .page-badge { color: #64748b; }
 
-        /* LOADING SPINNER */
+        /* FAST LOADING SPINNER */
         .loading-box {
             display: flex;
             flex-direction: column;
@@ -267,12 +272,12 @@
             width: 100%;
         }
         .spinner-ring {
-            width: 48px;
-            height: 48px;
-            border: 4px solid rgba(234, 88, 12, 0.2);
+            width: 44px;
+            height: 44px;
+            border: 3.5px solid rgba(234, 88, 12, 0.2);
             border-top-color: #ea580c;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.7s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -345,21 +350,21 @@
         <!-- LOADING SPINNER -->
         <div id="loadingIndicator" class="loading-box">
             <div class="spinner-ring"></div>
-            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Connecting to PustakVerse Cloud...</div>
-            <div style="width: 240px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
-                <div id="loadingBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #ea580c, #10b981); transition: width 0.25s ease;"></div>
+            <div style="margin-top: 14px; font-weight: 600; font-size: 0.95rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
+            <div style="width: 220px; height: 5px; background: #334155; border-radius: 999px; margin: 10px auto 0; overflow: hidden;">
+                <div id="loadingBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #ea580c, #10b981); transition: width 0.2s ease;"></div>
             </div>
         </div>
 
         <!-- ERROR BOX -->
         <div id="errorIndicator" class="error-box">
             <div style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</div>
-            <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Unable to Stream PDF Document</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Unable to Open Book</div>
             <p style="color: #94a3b8; font-size: 0.9rem; max-width: 420px; line-height: 1.5; margin-bottom: 16px;" id="errorMessageText">
-                The server took longer than expected to download this file from cloud storage.
+                The document is taking longer than expected to load.
             </p>
             <button onclick="location.reload()" class="pill-btn" style="background: #ea580c; border: none; color: white;">
-                🔄 Retry Opening
+                🔄 Retry
             </button>
         </div>
 
@@ -368,15 +373,6 @@
     </div>
 
     <script>
-        // GLOBAL ERROR HANDLER
-        window.addEventListener('error', function(e) {
-            console.error("Reader Script Error:", e.message, e.filename, e.lineno);
-            const statusEl = document.getElementById('loadingStatusText');
-            if (statusEl && statusEl.textContent.includes('Connecting')) {
-                statusEl.textContent = "Loading Engine: " + (e.message || 'Initializing...');
-            }
-        });
-
         let pdfDoc = null;
         let currentPageNum = 1;
         let totalPages = 1;
@@ -384,14 +380,14 @@
         let isCompleted = false;
         let activeReadingSeconds = 0;
         const renderedPages = new Set();
+        const renderingPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        // Helper to get PDF.js instance safely
         function getPdfLib() {
             return window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
         }
 
-        // Load PDF Document via Progressive Stream Reader
+        // FAST LOAD PDF DOCUMENT WITH IMMEDIATE PAGE 1 STREAMING
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
             const errorEl = document.getElementById('errorIndicator');
@@ -399,67 +395,58 @@
             const pText = document.getElementById('loadingStatusText');
 
             try {
-                if (pText) pText.textContent = "Connecting to PustakVerse Cloud...";
-                if (pBar) pBar.style.width = "20%";
+                if (pText) pText.textContent = "Connecting to PustakVerse...";
+                if (pBar) pBar.style.width = "30%";
 
-                const response = await fetch(pdfUrl);
-                if (!response.ok) throw new Error(`HTTP Error ${response.status}: ${response.statusText || 'Could not stream document'}`);
-
-                const contentLength = response.headers.get('Content-Length');
-                const total = contentLength ? parseInt(contentLength, 10) : 0;
-                let loaded = 0;
-
-                const reader = response.body.getReader();
-                const chunks = [];
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    chunks.push(value);
-                    loaded += value.length;
-                    if (total > 0) {
-                        const pct = Math.min(99, Math.round((loaded / total) * 100));
-                        if (pBar) pBar.style.width = `${pct}%`;
-                        if (pText) pText.textContent = `Downloading Book (${pct}%)...`;
-                    } else {
-                        const mb = (loaded / (1024 * 1024)).toFixed(1);
-                        if (pText) pText.textContent = `Streaming Book (${mb} MB)...`;
-                    }
-                }
-
-                if (pText) pText.textContent = "Rendering Pages...";
-                if (pBar) pBar.style.width = "100%";
-
-                // Concatenate into single Uint8Array
-                const allBytes = new Uint8Array(loaded);
-                let offset = 0;
-                for (const chunk of chunks) {
-                    allBytes.set(chunk, offset);
-                    offset += chunk.length;
-                }
-
-                // Initialize PDF.js
                 const pdfjs = getPdfLib();
-                if (!pdfjs) throw new Error("PDF.js rendering engine could not be initialized from CDN.");
+                if (!pdfjs) throw new Error("PDF.js library is initializing, please retry.");
 
                 if (pdfjs.GlobalWorkerOptions) {
                     pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
                 }
 
-                const loadingTask = pdfjs.getDocument({
-                    data: allBytes,
-                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-                    cMapPacked: true
-                });
+                // Fast Direct Stream via PDF.js with Range Request Support
+                let doc = null;
+                try {
+                    const loadingTask = pdfjs.getDocument({
+                        url: pdfUrl,
+                        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                        cMapPacked: true,
+                        enableXfa: true,
+                        rangeChunkSize: 65536,
+                        disableAutoFetch: false
+                    });
 
-                pdfDoc = await loadingTask.promise;
+                    loadingTask.onProgress = function(progress) {
+                        if (progress.total > 0) {
+                            const pct = Math.min(99, Math.round((progress.loaded / progress.total) * 100));
+                            if (pBar) pBar.style.width = `${Math.max(30, pct)}%`;
+                            if (pText) pText.textContent = `Loading Book (${pct}%)...`;
+                        }
+                    };
+
+                    doc = await loadingTask.promise;
+                } catch (rangeErr) {
+                    console.warn("Direct range stream fallback to binary fetch...", rangeErr);
+                    const resp = await fetch(pdfUrl);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}: Could not fetch book stream`);
+                    const ab = await resp.arrayBuffer();
+                    const loadingTask2 = pdfjs.getDocument({
+                        data: ab,
+                        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                        cMapPacked: true
+                    });
+                    doc = await loadingTask2.promise;
+                }
+
+                pdfDoc = doc;
                 totalPages = pdfDoc.numPages;
                 document.getElementById('totalPagesDisplay').textContent = `/ ${totalPages}`;
                 document.getElementById('pageNumberInput').max = totalPages;
                 
                 if (loadingEl) loadingEl.style.display = 'none';
 
-                // Resume saved page
+                // Restore saved page
                 const urlParams = new URLSearchParams(window.location.search);
                 const startPage = parseInt(urlParams.get('page') || '1', 10);
                 currentPageNum = Math.min(Math.max(1, startPage), totalPages);
@@ -476,7 +463,7 @@
                 if (errorEl) {
                     errorEl.style.display = 'flex';
                     const msgEl = document.getElementById('errorMessageText');
-                    if (msgEl) msgEl.textContent = err.message || "Failed to load document from cloud.";
+                    if (msgEl) msgEl.textContent = err.message || "Failed to stream document.";
                 }
             }
         }
@@ -487,6 +474,7 @@
             if (!container || !pdfDoc) return;
             container.innerHTML = '';
             renderedPages.clear();
+            renderingPages.clear();
 
             for (let i = 1; i <= totalPages; i++) {
                 const card = document.createElement('div');
@@ -513,7 +501,7 @@
             }
         }
 
-        // Lazy Scroll Observer
+        // Ultra-Fast Lazy Scroll Observer with 600px Prefetch
         let observer = null;
         function setupScrollObserver() {
             if (observer) observer.disconnect();
@@ -523,7 +511,7 @@
                 entries.forEach(entry => {
                     const pageNum = parseInt(entry.target.dataset.pageNum, 10);
                     if (entry.isIntersecting) {
-                        if (!renderedPages.has(pageNum)) {
+                        if (!renderedPages.has(pageNum) && !renderingPages.has(pageNum)) {
                             renderPage(pageNum);
                         }
                         currentPageNum = pageNum;
@@ -533,8 +521,8 @@
                 });
             }, {
                 root: scrollContainer,
-                rootMargin: '300px 0px',
-                threshold: 0.1
+                rootMargin: '600px 0px',
+                threshold: 0.05
             });
 
             document.querySelectorAll('.page-card').forEach(el => observer.observe(el));
@@ -542,21 +530,25 @@
 
         async function renderPage(pageNum) {
             if (!pdfDoc || pageNum < 1 || pageNum > totalPages) return;
+            if (renderingPages.has(pageNum) || renderedPages.has(pageNum)) return;
+            
             const canvas = document.getElementById(`pageCanvas_${pageNum}`);
             if (!canvas) return;
+
+            renderingPages.add(pageNum);
 
             try {
                 const page = await pdfDoc.getPage(pageNum);
                 const viewport = page.getViewport({ scale: currentScale });
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { alpha: false });
                 
-                const outputScale = window.devicePixelRatio || 1;
-                canvas.width = Math.floor(viewport.width * outputScale);
-                canvas.height = Math.floor(viewport.height * outputScale);
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                canvas.width = Math.floor(viewport.width * dpr);
+                canvas.height = Math.floor(viewport.height * dpr);
                 canvas.style.width = `${Math.floor(viewport.width)}px`;
                 canvas.style.height = `${Math.floor(viewport.height)}px`;
 
-                const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+                const transform = dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null;
                 const renderContext = {
                     canvasContext: ctx,
                     transform: transform,
@@ -567,6 +559,8 @@
                 renderedPages.add(pageNum);
             } catch (err) {
                 console.error(`Error rendering page ${pageNum}:`, err);
+            } finally {
+                renderingPages.delete(pageNum);
             }
         }
 
@@ -607,6 +601,7 @@
 
         function reRenderAllPages() {
             renderedPages.clear();
+            renderingPages.clear();
             buildPageContainers();
             setupScrollObserver();
             jumpToPage(currentPageNum, false);
