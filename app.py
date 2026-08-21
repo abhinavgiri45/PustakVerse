@@ -4376,6 +4376,18 @@ def serve_secure_pdf(book_id):
             m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_url) or re.search(r'/d/([a-zA-Z0-9_-]+)', pdf_url)
             if m:
                 file_id = m.group(1)
+
+        # 1. Check high-speed disk cache first
+        cache_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'pdf_cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file = os.path.join(cache_dir, f"cloud_book_{book_id}.pdf")
+        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 1024:
+            resp = send_file(cache_file, mimetype='application/pdf')
+            resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
+            resp.headers['X-Content-Type-Options'] = 'nosniff'
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            resp.headers['Accept-Ranges'] = 'bytes'
+            return resp
                 
         try:
             s = requests.Session()
@@ -4431,6 +4443,22 @@ def serve_secure_pdf(book_id):
                 req = s.get(pdf_url, stream=True, timeout=12, headers=headers)
                 
             if req and req.status_code == 200:
+                # Cache PDF to disk for fast subsequent reads
+                try:
+                    with open(cache_file, 'wb') as cf:
+                        for chunk in req.iter_content(chunk_size=65536):
+                            if chunk:
+                                cf.write(chunk)
+                    if os.path.exists(cache_file) and os.path.getsize(cache_file) > 1024:
+                        resp = send_file(cache_file, mimetype='application/pdf')
+                        resp.headers['Content-Disposition'] = f'inline; filename="book_{book_id}.pdf"'
+                        resp.headers['X-Content-Type-Options'] = 'nosniff'
+                        resp.headers['Access-Control-Allow-Origin'] = '*'
+                        resp.headers['Accept-Ranges'] = 'bytes'
+                        return resp
+                except Exception as cache_err:
+                    logging.warning(f"Could not cache cloud PDF: {cache_err}")
+
                 def generate():
                     for chunk in req.iter_content(chunk_size=65536):
                         if chunk:

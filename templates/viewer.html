@@ -21,10 +21,10 @@
             --viewer-bg: #090d16;
             --topbar-bg: #0f172a;
             --topbar-border: #1e293b;
-            --accent-glow: #ea580c;
-            --emerald-accent: #10b981;
+            --accent-orange: #ea580c;
+            --accent-green: #10b981;
             --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
+            --text-muted: #94a3b8;
         }
 
         * {
@@ -42,10 +42,11 @@
             width: 100vw;
             display: flex;
             flex-direction: column;
+            user-select: none;
         }
 
-        /* --- CLEAN TOP CONTROL BAR --- */
-        .reader-nav {
+        /* --- CLEAN STREAMLINED NAVBAR --- */
+        .reader-navbar {
             height: 52px;
             background: var(--topbar-bg);
             border-bottom: 1px solid var(--topbar-border);
@@ -58,15 +59,15 @@
             flex-shrink: 0;
         }
 
-        /* LEFT: BACK TO LIBRARY & TITLE */
-        .nav-section-left {
+        /* LEFT: RETURN & TITLE */
+        .nav-left {
             display: flex;
             align-items: center;
             gap: 12px;
             min-width: 0;
         }
 
-        .btn-nav-back {
+        .btn-library {
             background: #1e293b;
             color: #e2e8f0;
             border: 1px solid #334155;
@@ -78,22 +79,18 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             white-space: nowrap;
             cursor: pointer;
         }
-        .btn-nav-back:hover {
+        .btn-library:hover {
             background: #334155;
             color: #ffffff;
             border-color: #475569;
+            transform: translateX(-1px);
         }
 
-        .book-title-badge {
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-        .book-main-title {
+        .book-title {
             font-size: 0.92rem;
             font-weight: 700;
             color: #ffffff;
@@ -103,8 +100,8 @@
             max-width: 320px;
         }
 
-        /* CENTER: CLEAN PAGE & ZOOM CONTROLS */
-        .nav-section-center {
+        /* CENTER: PAGE JUMP & ZOOM */
+        .nav-center {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -114,7 +111,7 @@
             border: 1px solid #334155;
         }
 
-        .ctrl-btn {
+        .nav-btn {
             background: transparent;
             color: #cbd5e1;
             border: none;
@@ -126,18 +123,18 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.15s;
+            transition: all 0.15s ease;
         }
-        .ctrl-btn:hover:not(:disabled) {
+        .nav-btn:hover:not(:disabled) {
             background: #334155;
             color: #ffffff;
         }
-        .ctrl-btn:disabled {
+        .nav-btn:disabled {
             opacity: 0.35;
             cursor: not-allowed;
         }
 
-        .page-num-input {
+        .page-input {
             width: 44px;
             background: #0f172a;
             border: 1px solid #475569;
@@ -149,24 +146,24 @@
             border-radius: 6px;
             outline: none;
         }
-        .page-num-input:focus {
+        .page-input:focus {
             border-color: #ea580c;
         }
-        .page-total-text {
+        .page-total {
             font-size: 0.82rem;
             color: #94a3b8;
             font-weight: 600;
         }
 
-        /* RIGHT: ESSENTIAL ACTIONS ONLY */
-        .nav-section-right {
+        /* RIGHT: THEME, CERTIFICATE, FULLSCREEN */
+        .nav-right {
             display: flex;
             align-items: center;
             gap: 8px;
             justify-content: flex-end;
         }
 
-        .action-pill {
+        .pill-btn {
             background: #1e293b;
             color: #e2e8f0;
             border: 1px solid #334155;
@@ -178,25 +175,25 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             text-decoration: none;
         }
-        .action-pill:hover {
+        .pill-btn:hover {
             background: #334155;
             color: #ffffff;
             border-color: #475569;
         }
 
-        .action-pill-cert {
+        .pill-cert {
             background: linear-gradient(135deg, #059669 0%, #10b981 100%);
             color: white;
             border: none;
             box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
-            display: none; /* Shown only when genuinely completed */
+            display: none;
         }
 
-        /* --- PDF VIEWER MAIN VIEWPORT --- */
-        .viewer-viewport {
+        /* --- MAIN VIEWPORT --- */
+        .reader-viewport {
             height: calc(100vh - 52px);
             width: 100%;
             overflow-y: auto;
@@ -215,11 +212,11 @@
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 1000px;
+            max-width: 960px;
             margin: 0 auto;
         }
 
-        .pdf-page-wrapper {
+        .page-card {
             margin-bottom: 28px;
             display: flex;
             flex-direction: column;
@@ -228,7 +225,7 @@
             width: 100%;
         }
 
-        .pdf-canvas-card {
+        .pdf-canvas {
             box-shadow: 0 12px 35px rgba(0,0,0,0.65);
             border-radius: 6px;
             background: #ffffff;
@@ -238,7 +235,7 @@
             display: block;
         }
 
-        .page-badge-indicator {
+        .page-badge {
             margin-top: 8px;
             font-size: 0.76rem;
             color: #64748b;
@@ -246,20 +243,20 @@
         }
 
         /* THEMES */
-        body.theme-sepia .viewer-viewport { background-color: #f4ecd8; }
-        body.theme-sepia .pdf-canvas-card { filter: sepia(0.35) contrast(0.95); }
-        body.theme-sepia .page-badge-indicator { color: #8c7355; }
+        body.theme-sepia .reader-viewport { background-color: #f4ecd8; }
+        body.theme-sepia .pdf-canvas { filter: sepia(0.35) contrast(0.95); }
+        body.theme-sepia .page-badge { color: #8c7355; }
         
-        body.theme-light .viewer-viewport { background-color: #e2e8f0; }
-        body.theme-light .pdf-canvas-card { filter: none; }
-        body.theme-light .page-badge-indicator { color: #64748b; }
+        body.theme-light .reader-viewport { background-color: #e2e8f0; }
+        body.theme-light .pdf-canvas { filter: none; }
+        body.theme-light .page-badge { color: #64748b; }
 
-        body.theme-dark .viewer-viewport { background-color: #090d16; }
-        body.theme-dark .pdf-canvas-card { filter: contrast(1.02); }
-        body.theme-dark .page-badge-indicator { color: #64748b; }
+        body.theme-dark .reader-viewport { background-color: #090d16; }
+        body.theme-dark .pdf-canvas { filter: contrast(1.02); }
+        body.theme-dark .page-badge { color: #64748b; }
 
         /* LOADING SPINNER */
-        .loading-state {
+        .loading-box {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -269,7 +266,7 @@
             gap: 16px;
             width: 100%;
         }
-        .spinner {
+        .spinner-ring {
             width: 48px;
             height: 48px;
             border: 4px solid rgba(234, 88, 12, 0.2);
@@ -280,7 +277,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ERROR STATE */
-        .error-state {
+        .error-box {
             display: none;
             flex-direction: column;
             align-items: center;
@@ -293,80 +290,75 @@
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .book-main-title { max-width: 140px; font-size: 0.82rem; }
-            .reader-nav { padding: 0 8px; }
-            .nav-section-center { gap: 4px; padding: 3px 6px; }
+            .book-title { max-width: 140px; font-size: 0.82rem; }
+            .reader-navbar { padding: 0 8px; }
+            .nav-center { gap: 4px; padding: 3px 6px; }
         }
     </style>
 </head>
 <body class="theme-dark">
 
-    <!-- CLEAN TOP CONTROL BAR -->
-    <nav class="reader-nav">
-        <!-- LEFT: BACK TO LIBRARY & BOOK TITLE -->
-        <div class="nav-section-left">
-            <a href="{{ url_for('index') }}" class="btn-nav-back" title="Return to Library">
+    <!-- TOP NAVBAR -->
+    <nav class="reader-navbar">
+        <!-- LEFT -->
+        <div class="nav-left">
+            <a href="{{ url_for('index') }}" class="btn-library" title="Return to Library">
                 <span>&larr;</span> Library
             </a>
-            <div class="book-title-badge">
-                <span class="book-main-title" title="{{ book.title }}">{{ book.title }}</span>
-            </div>
+            <span class="book-title" title="{{ book.title }}">{{ book.title }}</span>
         </div>
 
-        <!-- CENTER: CLEAN PAGE & ZOOM CONTROLS -->
-        <div class="nav-section-center" id="centerControls">
-            <button class="ctrl-btn" id="prevPageBtn" onclick="changePage(-1)" title="Previous Page (&larr;)">◀</button>
-            <input type="number" id="pageNumInput" class="page-num-input" value="1" min="1" onchange="jumpToPage(this.value)">
-            <span class="page-total-text" id="pageCountDisplay">/ ...</span>
-            <button class="ctrl-btn" id="nextPageBtn" onclick="changePage(1)" title="Next Page (&rarr;)">▶</button>
+        <!-- CENTER -->
+        <div class="nav-center">
+            <button class="nav-btn" onclick="changePage(-1)" title="Previous Page (&larr;)">◀</button>
+            <input type="number" id="pageNumberInput" class="page-input" value="1" min="1" onchange="jumpToPage(this.value)">
+            <span class="page-total" id="totalPagesDisplay">/ ...</span>
+            <button class="nav-btn" onclick="changePage(1)" title="Next Page (&rarr;)">▶</button>
             
             <div style="width: 1px; height: 16px; background: #475569; margin: 0 4px;"></div>
             
-            <button class="ctrl-btn" onclick="adjustZoom(-0.15)" title="Zoom Out (−)">−</button>
-            <span id="zoomLevelText" style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; min-width: 36px; text-align: center;">100%</span>
-            <button class="ctrl-btn" onclick="adjustZoom(0.15)" title="Zoom In (+)">+</button>
-            <button class="ctrl-btn" onclick="fitWidth()" title="Fit to Page Width" style="font-size: 0.75rem; padding: 3px 6px;">Fit</button>
+            <button class="nav-btn" onclick="adjustZoom(-0.15)" title="Zoom Out (−)">−</button>
+            <span id="zoomDisplayText" style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; min-width: 36px; text-align: center;">100%</span>
+            <button class="nav-btn" onclick="adjustZoom(0.15)" title="Zoom In (+)">+</button>
+            <button class="nav-btn" onclick="fitWidth()" title="Fit Width" style="font-size: 0.75rem; padding: 3px 6px;">Fit</button>
         </div>
 
-        <!-- RIGHT: ESSENTIAL ACTIONS ONLY -->
-        <div class="nav-section-right">
-            <!-- THEME SWITCHER -->
-            <button class="action-pill" id="themeBtn" onclick="cycleTheme()" title="Switch Reading Theme">
-                <span id="themeIcon">🌙</span>
+        <!-- RIGHT -->
+        <div class="nav-right">
+            <button class="pill-btn" onclick="cycleTheme()" title="Switch Theme">
+                <span id="themeEmoji">🌙</span>
             </button>
 
-            <!-- CERTIFICATE BUTTON (SHOWN WHEN COMPLETED) -->
-            <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" class="action-pill action-pill-cert" id="certBtn" title="Download Verified Certificate">
+            <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" class="pill-btn pill-cert" id="certBtn" title="Verified Certificate">
                 🎓 Certificate
             </a>
 
-            <!-- FULLSCREEN -->
-            <button class="action-pill" onclick="toggleFullscreen()" title="Fullscreen Mode (F)">
+            <button class="pill-btn" onclick="toggleFullscreen()" title="Fullscreen Mode (F)">
                 ⛶
             </button>
         </div>
     </nav>
 
-    <!-- MAIN VIEWPORT / CANVAS CONTAINER -->
-    <div class="viewer-viewport" id="viewerScrollContainer">
+    <!-- VIEWPORT CONTAINER -->
+    <div class="reader-viewport" id="viewportScrollArea">
         
         <!-- LOADING SPINNER -->
-        <div id="loadingIndicator" class="loading-state">
-            <div class="spinner"></div>
+        <div id="loadingIndicator" class="loading-box">
+            <div class="spinner-ring"></div>
             <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
             <div style="width: 240px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
-                <div id="loadingProgressBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #ea580c, #10b981); transition: width 0.25s ease;"></div>
+                <div id="loadingBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #ea580c, #10b981); transition: width 0.25s ease;"></div>
             </div>
         </div>
 
-        <!-- ERROR STATE (IF BACKEND ERROR) -->
-        <div id="errorIndicator" class="error-state">
+        <!-- ERROR BOX -->
+        <div id="errorIndicator" class="error-box">
             <div style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</div>
             <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Unable to Stream PDF Document</div>
             <p style="color: #94a3b8; font-size: 0.9rem; max-width: 420px; line-height: 1.5; margin-bottom: 16px;">
-                The server is taking longer than expected to download this file from cloud storage.
+                The server took longer than expected to download this file from cloud storage.
             </p>
-            <button onclick="location.reload()" class="action-pill" style="background: #ea580c; border: none; color: white;">
+            <button onclick="location.reload()" class="pill-btn" style="background: #ea580c; border: none; color: white;">
                 🔄 Retry Opening
             </button>
         </div>
@@ -379,22 +371,20 @@
         // PDF.JS CONFIGURATION
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Reader State
         let pdfDoc = null;
         let currentPageNum = 1;
         let totalPages = 1;
         let currentScale = 1.25;
-        let isBookCompleted = false;
-        let percentCompleted = 0.0;
+        let isCompleted = false;
         let activeReadingSeconds = 0;
         const renderedPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
 
-        // Initialize and Load Document directly into Native PDF.js
+        // Load PDF Document
         async function loadPdfDocument() {
             const loadingEl = document.getElementById('loadingIndicator');
             const errorEl = document.getElementById('errorIndicator');
-            const pBar = document.getElementById('loadingProgressBar');
+            const pBar = document.getElementById('loadingBar');
             const pText = document.getElementById('loadingStatusText');
 
             try {
@@ -415,7 +405,7 @@
 
                 pdfDoc = await loadingTask.promise;
             } catch (primaryErr) {
-                console.warn("Primary PDF.js stream failed, trying raw fetch arrayBuffer...", primaryErr);
+                console.warn("Primary PDF.js stream encountered issue, attempting binary arrayBuffer fetch...", primaryErr);
                 try {
                     const resp = await fetch(pdfUrl);
                     if (!resp.ok) throw new Error("HTTP " + resp.status);
@@ -427,24 +417,23 @@
                     });
                     pdfDoc = await loadingTask2.promise;
                 } catch (fallbackErr) {
-                    console.error("PDF loading error:", fallbackErr);
+                    console.error("Fatal PDF load error:", fallbackErr);
                     if (loadingEl) loadingEl.style.display = 'none';
                     if (errorEl) errorEl.style.display = 'flex';
                     return;
                 }
             }
 
-            // PDF Loaded Successfully!
             totalPages = pdfDoc.numPages;
-            document.getElementById('pageCountDisplay').textContent = `/ ${totalPages}`;
-            document.getElementById('pageNumInput').max = totalPages;
+            document.getElementById('totalPagesDisplay').textContent = `/ ${totalPages}`;
+            document.getElementById('pageNumberInput').max = totalPages;
             if (loadingEl) loadingEl.style.display = 'none';
 
-            // Check for URL saved page
+            // Resume page position
             const urlParams = new URLSearchParams(window.location.search);
             const startPage = parseInt(urlParams.get('page') || '1', 10);
             currentPageNum = Math.min(Math.max(1, startPage), totalPages);
-            document.getElementById('pageNumInput').value = currentPageNum;
+            document.getElementById('pageNumberInput').value = currentPageNum;
 
             buildPageContainers();
             jumpToPage(currentPageNum, false);
@@ -453,7 +442,7 @@
             setupScrollObserver();
         }
 
-        // Build Placeholders for All Pages
+        // Build Page Containers
         function buildPageContainers() {
             const container = document.getElementById('pagesContainer');
             if (!container || !pdfDoc) return;
@@ -461,14 +450,14 @@
             renderedPages.clear();
 
             for (let i = 1; i <= totalPages; i++) {
-                const wrapper = document.createElement('div');
-                wrapper.id = `pageWrapper_${i}`;
-                wrapper.className = 'pdf-page-wrapper';
-                wrapper.dataset.pageNum = i;
+                const card = document.createElement('div');
+                card.id = `pageCard_${i}`;
+                card.className = 'page-card';
+                card.dataset.pageNum = i;
 
                 const canvas = document.createElement('canvas');
-                canvas.id = `pdfCanvas_${i}`;
-                canvas.className = 'pdf-canvas-card';
+                canvas.id = `pageCanvas_${i}`;
+                canvas.className = 'pdf-canvas';
                 
                 const baseWidth = Math.min(window.innerWidth - 48, 850) * (currentScale / 1.25);
                 canvas.width = baseWidth;
@@ -476,21 +465,21 @@
                 canvas.style.width = `${baseWidth}px`;
 
                 const badge = document.createElement('div');
-                badge.className = 'page-badge-indicator';
+                badge.className = 'page-badge';
                 badge.textContent = `Page ${i} of ${totalPages}`;
 
-                wrapper.appendChild(canvas);
-                wrapper.appendChild(badge);
-                container.appendChild(wrapper);
+                card.appendChild(canvas);
+                card.appendChild(badge);
+                container.appendChild(card);
             }
         }
 
-        // Render Page Canvas with Lazy Intersection Observer
+        // Lazy Scroll Observer
         let observer = null;
         function setupScrollObserver() {
             if (observer) observer.disconnect();
 
-            const scrollContainer = document.getElementById('viewerScrollContainer');
+            const scrollContainer = document.getElementById('viewportScrollArea');
             observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     const pageNum = parseInt(entry.target.dataset.pageNum, 10);
@@ -499,22 +488,22 @@
                             renderPage(pageNum);
                         }
                         currentPageNum = pageNum;
-                        document.getElementById('pageNumInput').value = currentPageNum;
+                        document.getElementById('pageNumberInput').value = currentPageNum;
                         recordProgress(currentPageNum);
                     }
                 });
             }, {
                 root: scrollContainer,
-                rootMargin: '250px 0px',
+                rootMargin: '300px 0px',
                 threshold: 0.1
             });
 
-            document.querySelectorAll('.pdf-page-wrapper').forEach(el => observer.observe(el));
+            document.querySelectorAll('.page-card').forEach(el => observer.observe(el));
         }
 
         async function renderPage(pageNum) {
             if (!pdfDoc || pageNum < 1 || pageNum > totalPages) return;
-            const canvas = document.getElementById(`pdfCanvas_${pageNum}`);
+            const canvas = document.getElementById(`pageCanvas_${pageNum}`);
             if (!canvas) return;
 
             try {
@@ -553,10 +542,10 @@
             const num = parseInt(pageNum, 10);
             if (num >= 1 && num <= totalPages) {
                 currentPageNum = num;
-                document.getElementById('pageNumInput').value = currentPageNum;
-                const targetWrapper = document.getElementById(`pageWrapper_${currentPageNum}`);
-                if (targetWrapper) {
-                    targetWrapper.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+                document.getElementById('pageNumberInput').value = currentPageNum;
+                const targetCard = document.getElementById(`pageCard_${currentPageNum}`);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
                     renderPage(currentPageNum);
                 }
                 recordProgress(currentPageNum);
@@ -566,14 +555,14 @@
 
         function adjustZoom(delta) {
             currentScale = Math.max(0.75, Math.min(2.5, currentScale + delta));
-            document.getElementById('zoomLevelText').textContent = `${Math.round(currentScale * 80)}%`;
+            document.getElementById('zoomDisplayText').textContent = `${Math.round(currentScale * 80)}%`;
             reRenderAllPages();
         }
 
         function fitWidth() {
             const viewportWidth = window.innerWidth - 60;
             currentScale = Math.max(0.85, Math.min(2.2, viewportWidth / 850));
-            document.getElementById('zoomLevelText').textContent = `Fit`;
+            document.getElementById('zoomDisplayText').textContent = `Fit`;
             reRenderAllPages();
         }
 
@@ -584,19 +573,15 @@
             jumpToPage(currentPageNum, false);
         }
 
-        // --- READING PROGRESS & COMPLETION TRACKING ---
+        // Reading Tracking
         function fetchCompletionStatus() {
             fetch(`/api/reading_progress?book_id={{ book.id }}`)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success) {
-                        isBookCompleted = data.is_completed;
-                        percentCompleted = data.percent_completed || 0.0;
-                        activeReadingSeconds = data.reading_seconds || 0;
-                        if (isBookCompleted) {
-                            const certBtn = document.getElementById('certBtn');
-                            if (certBtn) certBtn.style.display = 'inline-flex';
-                        }
+                    if (data.success && data.is_completed) {
+                        isCompleted = true;
+                        const certBtn = document.getElementById('certBtn');
+                        if (certBtn) certBtn.style.display = 'inline-flex';
                     }
                 })
                 .catch(() => {});
@@ -616,7 +601,7 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success && data.is_completed) {
-                    isBookCompleted = true;
+                    isCompleted = true;
                     const certBtn = document.getElementById('certBtn');
                     if (certBtn) certBtn.style.display = 'inline-flex';
                 }
@@ -624,7 +609,7 @@
             .catch(() => {});
         }
 
-        // Sync heartbeat every 15 seconds
+        // Heartbeat
         let heartbeatTimer = setInterval(() => {
             if (document.visibilityState === 'visible') {
                 activeReadingSeconds += 15;
@@ -632,7 +617,6 @@
             }
         }, 15000);
 
-        // Local Storage Resume Position
         function recordProgress(page) {
             try {
                 localStorage.setItem(`pustakverse_resume_{{ book.id }}`, JSON.stringify({
@@ -645,7 +629,7 @@
             } catch(e) {}
         }
 
-        // --- THEMES ---
+        // Themes
         const themes = ['theme-dark', 'theme-sepia', 'theme-light'];
         let currentThemeIdx = 0;
         function cycleTheme() {
@@ -653,10 +637,10 @@
             currentThemeIdx = (currentThemeIdx + 1) % themes.length;
             document.body.classList.add(themes[currentThemeIdx]);
             const icons = ['🌙', '📜', '☀️'];
-            document.getElementById('themeIcon').textContent = icons[currentThemeIdx];
+            document.getElementById('themeEmoji').textContent = icons[currentThemeIdx];
         }
 
-        // --- FULLSCREEN ---
+        // Fullscreen
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
@@ -665,7 +649,7 @@
             }
         }
 
-        // KEYBOARD SHORTCUTS
+        // Shortcuts
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.key === 'ArrowRight' || e.key === 'PageDown') { changePage(1); }
@@ -673,7 +657,6 @@
             if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
         });
 
-        // Initialize on Load
         window.addEventListener('DOMContentLoaded', () => {
             loadPdfDocument();
         });
