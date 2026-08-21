@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- PDF.JS CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     
     <style>
         :root {
@@ -345,7 +345,7 @@
         <!-- LOADING SPINNER -->
         <div id="loadingIndicator" class="loading-box">
             <div class="spinner-ring"></div>
-            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Opening Book...</div>
+            <div style="margin-top: 14px; font-weight: 600; font-size: 1rem; color: #f8fafc;" id="loadingStatusText">Connecting to PustakVerse Cloud...</div>
             <div style="width: 240px; height: 6px; background: #334155; border-radius: 999px; margin: 12px auto 0; overflow: hidden;">
                 <div id="loadingBar" style="width: 25%; height: 100%; background: linear-gradient(90deg, #ea580c, #10b981); transition: width 0.25s ease;"></div>
             </div>
@@ -368,8 +368,14 @@
     </div>
 
     <script>
-        // PDF.JS CONFIGURATION
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        // GLOBAL ERROR HANDLER
+        window.addEventListener('error', function(e) {
+            console.error("Reader Script Error:", e.message, e.filename, e.lineno);
+            const statusEl = document.getElementById('loadingStatusText');
+            if (statusEl && statusEl.textContent.includes('Connecting')) {
+                statusEl.textContent = "Loading Engine: " + (e.message || 'Initializing...');
+            }
+        });
 
         let pdfDoc = null;
         let currentPageNum = 1;
@@ -379,6 +385,11 @@
         let activeReadingSeconds = 0;
         const renderedPages = new Set();
         const pdfUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
+
+        // Helper to get PDF.js instance safely
+        function getPdfLib() {
+            return window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
+        }
 
         // Load PDF Document via Progressive Stream Reader
         async function loadPdfDocument() {
@@ -427,9 +438,17 @@
                     offset += chunk.length;
                 }
 
-                const loadingTask = pdfjsLib.getDocument({
+                // Initialize PDF.js
+                const pdfjs = getPdfLib();
+                if (!pdfjs) throw new Error("PDF.js rendering engine could not be initialized from CDN.");
+
+                if (pdfjs.GlobalWorkerOptions) {
+                    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+                }
+
+                const loadingTask = pdfjs.getDocument({
                     data: allBytes,
-                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
                     cMapPacked: true
                 });
 
@@ -677,7 +696,7 @@
             if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
         });
 
-        // Auto-run immediately regardless of document readiness
+        // Initialize immediately
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', loadPdfDocument);
         } else {

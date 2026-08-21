@@ -194,11 +194,12 @@ def apply_security_and_performance(response):
     if 'Content-Security-Policy' not in response.headers:
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://checkout.razorpay.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
-            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://checkout.razorpay.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com data:; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' https://api.razorpay.com https://cdn.jsdelivr.net https://lumberjack-cx.razorpay.com; "
+            "connect-src 'self' https://api.razorpay.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://lumberjack-cx.razorpay.com; "
+            "worker-src 'self' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
             "frame-src 'self' https://api.razorpay.com https://drive.google.com https://docs.google.com https://*.google.com https://*.googleusercontent.com blob: data:; "
             "object-src 'self' blob: data: https:; "
             "embed-src 'self' blob: data: https:; "
