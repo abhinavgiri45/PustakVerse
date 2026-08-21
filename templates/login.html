@@ -146,7 +146,13 @@
                         <input type="password" name="password" id="reader_password" required placeholder="Enter your password">
                         <span class="toggle-password" onclick="togglePassword('reader_password', this)">👁️</span>
                     </div>
-                    <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -8px; margin-bottom: 20px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #4a5568; cursor: pointer; user-select: none; margin-bottom: 0;">
+                            <input type="checkbox" name="remember_me" id="reader_remember_me" value="1" checked style="width: 16px; height: 16px; accent-color: var(--primary-orange); cursor: pointer;">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="{{ url_for('forgot_password') }}" class="forgot-link" style="margin: 0;">Forgot Password?</a>
+                    </div>
                     <button type="submit" class="btn-submit orange">Sign In to Library</button>
                 </form>
 
@@ -175,7 +181,13 @@
                         <input type="password" name="password" id="official_password" required placeholder="Enter your password">
                         <span class="toggle-password" onclick="togglePassword('official_password', this)">👁️</span>
                     </div>
-                    <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot Password?</a>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -8px; margin-bottom: 20px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #4a5568; cursor: pointer; user-select: none; margin-bottom: 0;">
+                            <input type="checkbox" name="remember_me" id="official_remember_me" value="1" checked style="width: 16px; height: 16px; accent-color: var(--primary-orange); cursor: pointer;">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="{{ url_for('forgot_password') }}" class="forgot-link" style="margin: 0;">Forgot Password?</a>
+                    </div>
                     <button type="submit" class="btn-submit dark">Secure Sign In</button>
                 </form>
             </div>
@@ -517,5 +529,63 @@
             text.style.color = '#22c55e';
         }
     }
+
+    // --- REMEMBER ME BROWSER CACHE RESTORATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const savedReaderUser = localStorage.getItem('pv_remember_reader_user');
+            const readerRemState = localStorage.getItem('pv_remember_reader_check');
+            const readerInput = document.querySelector('#reader input[name="username"]');
+            const readerCheck = document.getElementById('reader_remember_me');
+
+            if (savedReaderUser && readerInput) {
+                readerInput.value = savedReaderUser;
+            }
+            if (readerCheck && readerRemState !== null) {
+                readerCheck.checked = readerRemState === 'true';
+            }
+
+            const savedOfficialUser = localStorage.getItem('pv_remember_official_user');
+            const officialRemState = localStorage.getItem('pv_remember_official_check');
+            const officialInput = document.querySelector('#official input[name="username"]');
+            const officialCheck = document.getElementById('official_remember_me');
+
+            if (savedOfficialUser && officialInput) {
+                officialInput.value = savedOfficialUser;
+            }
+            if (officialCheck && officialRemState !== null) {
+                officialCheck.checked = officialRemState === 'true';
+            }
+        } catch(e) {}
+    });
+
+    // Save remember me choice into browser cache on login submission
+    document.querySelectorAll('form[action="/login"]').forEach(form => {
+        form.addEventListener('submit', function() {
+            try {
+                const portal = this.querySelector('input[name="login_portal"]')?.value;
+                const userInput = this.querySelector('input[name="username"]')?.value;
+                const remChecked = this.querySelector('input[name="remember_me"]')?.checked;
+
+                if (portal === 'reader') {
+                    if (remChecked && userInput) {
+                        localStorage.setItem('pv_remember_reader_user', userInput);
+                        localStorage.setItem('pv_remember_reader_check', 'true');
+                    } else {
+                        localStorage.removeItem('pv_remember_reader_user');
+                        localStorage.setItem('pv_remember_reader_check', 'false');
+                    }
+                } else if (portal === 'author_official') {
+                    if (remChecked && userInput) {
+                        localStorage.setItem('pv_remember_official_user', userInput);
+                        localStorage.setItem('pv_remember_official_check', 'true');
+                    } else {
+                        localStorage.removeItem('pv_remember_official_user');
+                        localStorage.setItem('pv_remember_official_check', 'false');
+                    }
+                }
+            } catch(e) {}
+        });
+    });
 </script>
 {% endblock %}

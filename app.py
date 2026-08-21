@@ -94,7 +94,7 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY') or secrets.token_hex(32)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     MAX_CONTENT_LENGTH=30 * 1024 * 1024  # 30 MB max upload limit
 )
 
@@ -3159,10 +3159,12 @@ def login():
                             flash("Readers must log in using the 'Reader Login' tab.", "error")
                             return render_template('login.html', active_tab='official')
 
+                        remember_me = bool(request.form.get('remember_me'))
                         if user['role'] in ['official', 'developer'] or user.get('two_factor_enabled'):
                             otp = str(random.randint(100000, 999999))
                             session['login_2fa_otp'] = otp
                             session['pending_2fa_user'] = {'id': user['id'], 'username': user['username'], 'role': user['role'], 'is_verified': user['is_verified'], 'email': user['email']}
+                            session['remember_me'] = remember_me
                             
                             logging.info("🔑 [TWO-STEP VERIFICATION CODE] %s (%s) -> %s", user['username'], user['email'], otp)
                             sent = send_2fa_email(user['email'], otp)
@@ -3172,6 +3174,7 @@ def login():
                                 flash(f"A 6-digit verification code has been dispatched to {user['email']}. Please check your inbox and spam folder.", "info")
                             return render_template('login.html', show_2fa_form=True, email=user['email'])
 
+                        session.permanent = remember_me
                         session['user_id'] = user['id']
                         session['username'] = user['username']
                         session['role'] = user['role']
@@ -3210,6 +3213,7 @@ def login():
             user_input = request.form.get('otp', '').replace(' ', '').strip()
             pending_user = session.get('pending_2fa_user')
             correct_otp = session.get('login_2fa_otp')
+            remember_me = session.pop('remember_me', True)
             
             if not pending_user:
                 flash("Session expired. Please log in again.", "error")
@@ -3239,6 +3243,7 @@ def login():
                         except: pass
 
             if is_valid:
+                session.permanent = remember_me
                 session['user_id'] = pending_user['id']
                 session['username'] = pending_user['username']
                 session['role'] = pending_user['role']
@@ -3434,7 +3439,11 @@ def google_set_password():
 @app.route('/logout')
 def logout(): 
     session.clear()
-    return redirect(url_for('index'))
+    session.permanent = False
+    flash("You have been signed out.", "info")
+    resp = redirect(url_for('index'))
+    resp.delete_cookie(app.config.get('SESSION_COOKIE_NAME', 'session'))
+    return resp
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
