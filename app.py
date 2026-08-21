@@ -3842,7 +3842,7 @@ def official_toggle_quarantine(book_id):
         if db:
             try: db.close()
             except: pass
-    return redirect(url_for('dashboard'))
+    return redirect(request.referrer or url_for('management_self_published_books'))
 
 @app.route('/official/toggle_featured/<int:book_id>', methods=['POST'])
 def official_toggle_featured(book_id):
@@ -3873,7 +3873,7 @@ def official_toggle_featured(book_id):
         if db:
             try: db.close()
             except: pass
-    return redirect(url_for('dashboard'))
+    return redirect(request.referrer or url_for('management_self_published_books'))
 
 @app.route('/official/delete_review/<int:review_id>', methods=['POST'])
 def official_delete_review(review_id):
@@ -6398,3 +6398,231 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
+
+
+# ======================================================================
+# SELF-PUBLISHED BOOK MANAGEMENT SYSTEM (DEVELOPER & OFFICIALS)
+# ======================================================================
+
+@app.route('/management/self_published_books')
+@app.route('/official/self_published_books')
+def management_self_published_books():
+    if 'user_id' not in session or session.get('role') not in ['developer', 'official']:
+        flash("Unauthorized access to Self-Published Book Management.", "error")
+        return redirect(url_for('login'))
+
+    search_query = request.args.get('search', '').strip()
+    catalog_filter = request.args.get('catalog', 'all').strip()
+    type_filter = request.args.get('type', 'all').strip() # all, free, paid
+    status_filter = request.args.get('status', 'all').strip() # all, active, quarantined, featured
+    sort_filter = request.args.get('sort', 'newest').strip() # newest, oldest, price_desc, price_asc, title
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+
+        # 1. Fetch all available catalogs for filter dropdown
+        cursor.execute("SELECT id, name FROM catalogs ORDER BY name ASC")
+        catalogs = cursor.fetchall()
+
+        # 2. Build Base Query for Self-Published Books
+        where_clauses = ["books.catalog != 'Archives'"] # Archives are curated platform classics, self-published are user/author works
+        params = []
+
+        if search_query:
+            where_clauses.append("(books.title LIKE %s OR users.username LIKE %s OR books.description LIKE %s)")
+            params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
+
+        if catalog_filter and catalog_filter != 'all':
+            where_clauses.append("books.catalog = %s")
+            params.append(catalog_filter)
+
+        if type_filter == 'free':
+            where_clauses.append("books.is_paid = FALSE")
+        elif type_filter == 'paid':
+            where_clauses.append("books.is_paid = TRUE")
+
+        if status_filter == 'active':
+            where_clauses.append("(books.is_quarantined IS NULL OR books.is_quarantined = FALSE)")
+        elif status_filter == 'quarantined':
+            where_clauses.append("books.is_quarantined = TRUE")
+        elif status_filter == 'featured':
+            where_clauses.append("books.is_featured = TRUE")
+
+        where_sql = " WHERE " + " AND ".join(where_clauses)
+
+        # Sort order
+        order_sql = " ORDER BY books.created_at DESC"
+        if sort_filter == 'oldest':
+            order_sql = " ORDER BY books.created_at ASC"
+        elif sort_filter == 'price_desc':
+            order_sql = " ORDER BY books.price_paise DESC, books.created_at DESC"
+        elif sort_filter == 'price_asc':
+            order_sql = " ORDER BY books.price_paise ASC, books.created_at DESC"
+        elif sort_filter == 'title':
+            order_sql = " ORDER BY books.title ASC"
+
+        query = f"""
+            SELECT 
+                books.id, books.title, books.catalog, books.cover_image, books.pdf_file,
+                books.is_paid, books.price_paise, books.preview_pages, books.description,
+                books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_verified,
+                books.rp_verify_message, books.created_at,
+                users.id as author_id, users.username as author_name, users.email as author_email, users.role as author_role,
+                (SELECT COUNT(*) FROM purchases WHERE purchases.book_id = books.id AND purchases.status = 'paid') as sales_count
+            FROM books
+            JOIN users ON books.author_id = users.id
+            {where_sql}
+            {order_sql}
+        """
+        cursor.execute(query, tuple(params))
+        books = clean_book_data(cursor.fetchall())
+
+        # 3. Aggregate Platform-Wide Self-Published Metrics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_books,
+                COUNT(DISTINCT author_id) as total_authors,
+                SUM(is_paid = TRUE) as paid_books,
+                SUM(is_paid = FALSE) as free_books,
+                SUM(COALESCE(is_quarantined, FALSE) = TRUE) as quarantined_books,
+                SUM(COALESCE(is_featured, FALSE) = TRUE) as featured_books,
+                SUM(COALESCE(is_quarantined, FALSE) = FALSE) as active_books
+            FROM books 
+            WHERE catalog != 'Archives'
+        """)
+        stats_row = cursor.fetchone() or {}
+
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_sales,
+                COALESCE(SUM(purchases.amount_paise), 0) as total_revenue_paise
+            FROM purchases
+            JOIN books ON purchases.book_id = books.id
+            WHERE purchases.status = 'paid' AND books.catalog != 'Archives'
+        """)
+        sales_stat = cursor.fetchone() or {}
+
+        stats = {
+            'total_books': stats_row.get('total_books', 0),
+            'total_authors': stats_row.get('total_authors', 0),
+            'paid_books': stats_row.get('paid_books', 0),
+            'free_books': stats_row.get('free_books', 0),
+            'quarantined_books': stats_row.get('quarantined_books', 0),
+            'featured_books': stats_row.get('featured_books', 0),
+            'active_books': stats_row.get('active_books', 0),
+            'total_sales': sales_stat.get('total_sales', 0),
+            'total_revenue_inr': round(sales_stat.get('total_revenue_paise', 0) / 100, 2)
+        }
+
+        filters = {
+            'search': search_query,
+            'catalog': catalog_filter,
+            'type': type_filter,
+            'status': status_filter,
+            'sort': sort_filter
+        }
+
+        return render_template(
+            'manage_self_published_books.html',
+            books=books,
+            stats=stats,
+            catalogs=catalogs,
+            filters=filters
+        )
+    except Exception as e:
+        logging.error(f"Error loading self-published management: {e}")
+        flash("Failed to load self-published books management.", "error")
+        return redirect(url_for('dashboard'))
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+@app.route('/management/self_published_books/export_csv')
+def management_export_self_published_csv():
+    if 'user_id' not in session or session.get('role') not in ['developer', 'official']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('login'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                books.id, books.title, books.catalog, books.is_paid, books.price_paise,
+                books.is_quarantined, books.is_featured, books.created_at,
+                users.username as author_username, users.email as author_email
+            FROM books
+            JOIN users ON books.author_id = users.id
+            WHERE books.catalog != 'Archives'
+            ORDER BY books.created_at DESC
+        """)
+        rows = cursor.fetchall()
+
+        import csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Book ID', 'Title', 'Category', 'Pricing', 'Price (INR)', 'Quarantined', 'Featured', 'Author Username', 'Author Email', 'Created At'])
+
+        for r in rows:
+            writer.writerow([
+                r['id'],
+                r['title'],
+                r['catalog'],
+                'Paid' if r['is_paid'] else 'Free',
+                f"{(r['price_paise'] or 0)/100:.2f}",
+                'Yes' if r['is_quarantined'] else 'No',
+                'Yes' if r['is_featured'] else 'No',
+                r['author_username'],
+                r['author_email'],
+                r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r.get('created_at') else ''
+            ])
+
+        output.seek(0)
+        resp = Response(output.getvalue(), mimetype='text/csv')
+        resp.headers['Content-Disposition'] = f'attachment; filename="pustakverse_self_published_catalog_{datetime.now().strftime("%Y%m%d")}.csv"'
+        return resp
+    except Exception as e:
+        logging.error(f"Error exporting self-published CSV: {e}")
+        flash("Failed to generate CSV export.", "error")
+        return redirect(url_for('management_self_published_books'))
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+@app.route('/api/self_published_books/quick_update/<int:book_id>', methods=['POST'])
+def api_self_published_quick_update(book_id):
+    if 'user_id' not in session or session.get('role') not in ['developer', 'official']:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    db = None
+    try:
+        data = request.get_json() if request.is_json else request.form
+        title = data.get('title', '').strip()
+        catalog = data.get('catalog', '').strip()
+        description = data.get('description', '').strip()
+
+        if not title:
+            return jsonify({'success': False, 'error': 'Title cannot be empty'}), 400
+
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("UPDATE books SET title = %s, catalog = %s, description = %s WHERE id = %s", (title, catalog, description, book_id))
+        db.commit()
+        invalidate_books_cache()
+
+        log_official_activity(session['user_id'], f"Quick updated self-published book #{book_id}: '{title}'")
+        return jsonify({'success': True, 'message': 'Book details updated successfully.'})
+    except Exception as e:
+        logging.error(f"Error updating book #{book_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass

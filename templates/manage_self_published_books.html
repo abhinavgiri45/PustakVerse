@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Published Book Management · PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ea580c;
+            --primary-dark: #c2410c;
+            --nav-bg: #0f172a;
+            --card-bg: #ffffff;
+            --bg-canvas: #f8fafc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-line: #e2e8f0;
+            --success-green: #10b981;
+            --danger-red: #ef4444;
+            --warning-amber: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Topbar */
+        .navbar {
+            background: var(--nav-bg);
+            color: white;
+            padding: 12px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar a { color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
+        .navbar a:hover { color: var(--primary-orange); }
+        .nav-links { display: flex; align-items: center; gap: 18px; }
+
+        .btn-pill {
+            padding: 7px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .btn-pill-dark { background: #1e293b; color: #f8fafc; border-color: #334155; }
+        .btn-pill-dark:hover { background: #334155; color: white; }
+        .btn-pill-orange { background: var(--primary-orange); color: white; }
+        .btn-pill-orange:hover { background: var(--primary-dark); }
+        .btn-pill-green { background: #059669; color: white; }
+        .btn-pill-green:hover { background: #047857; }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px 20px 60px;
+            flex: 1;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--nav-bg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge-role {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #ffedd5;
+            color: var(--primary-dark);
+            border: 1px solid #fed7aa;
+        }
+
+        /* Metric Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .metric-card {
+            background: white;
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .metric-title { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .metric-val { font-size: 1.7rem; font-weight: 800; color: var(--nav-bg); }
+        .metric-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+        /* Filter Panel */
+        .filter-panel {
+            background: white;
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        }
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 260px;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border-line);
+            border-radius: 8px;
+            font-size: 0.92rem;
+            outline: none;
+            background: #f8fafc;
+        }
+        .search-input:focus { border-color: var(--primary-orange); background: white; }
+        .filter-select {
+            padding: 10px 12px;
+            border: 1.5px solid var(--border-line);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            background: #f8fafc;
+            color: var(--text-dark);
+            outline: none;
+            min-width: 150px;
+        }
+        .filter-select:focus { border-color: var(--primary-orange); }
+
+        /* Table Card */
+        .table-card {
+            background: white;
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th {
+            background: #f1f5f9;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-line);
+            white-space: nowrap;
+        }
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+        tr:hover td { background-color: #fafbfc; }
+
+        /* Book Info Cells */
+        .book-cell {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 280px;
+        }
+        .book-thumb {
+            width: 44px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border-line);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+            background: #e2e8f0;
+        }
+        .book-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .book-title-text {
+            font-weight: 700;
+            color: var(--nav-bg);
+            font-size: 0.95rem;
+            line-height: 1.3;
+        }
+        .book-meta-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .badge-live { background: #dcfce7; color: #166534; }
+        .badge-quarantine { background: #fee2e2; color: #991b1b; }
+        .badge-featured { background: #fef08a; color: #854d0e; }
+        .badge-paid { background: #e0e7ff; color: #3730a3; }
+        .badge-free { background: #f1f5f9; color: #475569; }
+
+        /* Action Buttons */
+        .action-btns {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn-act {
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+        }
+        .btn-act-read { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }
+        .btn-act-read:hover { background: #e2e8f0; color: #0f172a; }
+        .btn-act-edit { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .btn-act-edit:hover { background: #dbeafe; }
+        .btn-act-quarantine { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
+        .btn-act-quarantine:hover { background: #ffe4e6; }
+        .btn-act-unquarantine { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+        .btn-act-unquarantine:hover { background: #dcfce7; }
+        .btn-act-feature { background: #fefce8; color: #ca8a04; border-color: #fef08a; }
+        .btn-act-feature:hover { background: #fef9c3; }
+        .btn-act-del { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+        .btn-act-del:hover { background: #fee2e2; }
+
+        /* Edit Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 14px;
+            max-width: 540px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--border-line);
+            padding-bottom: 12px;
+        }
+        .modal-head h3 { font-size: 1.2rem; font-weight: 800; color: var(--nav-bg); }
+        .modal-close { background: transparent; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-dark); margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border-line);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            background: #f8fafc;
+            font-family: inherit;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary-orange); background: white; }
+
+        /* Toast Alert */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 2000;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar { padding: 12px 16px; flex-direction: column; gap: 12px; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .filter-row { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <nav class="navbar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="{{ url_for('dashboard') }}" style="display: flex; align-items: center; gap: 8px;">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" style="height: 38px; width: auto; object-fit: contain;">
+            </a>
+            <span style="font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em;">PustakVerse Administration</span>
+        </div>
+
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+            <a href="{{ url_for('index') }}">Global Library</a>
+            <a href="{{ url_for('management_export_self_published_csv') }}" class="btn-pill btn-pill-dark" title="Export CSV list of all self-published books">
+                📥 Export CSV
+            </a>
+            <a href="{{ url_for('logout') }}" class="btn-pill btn-pill-dark">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+            <div>
+                <h1>
+                    <span>📖</span> Self-Published Book Management Hub
+                    <span class="badge-role">{{ session.role }} Level</span>
+                </h1>
+                <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 4px;">
+                    Comprehensive oversight, curation, content moderation, and monetization controls for all author-submitted works.
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="{{ url_for('management_export_self_published_csv') }}" class="btn-pill btn-pill-green">
+                    <span>📊</span> Download Full Catalog Report
+                </a>
+            </div>
+        </div>
+
+        <!-- METRICS SUMMARY BANNER -->
+        <div class="metrics-grid">
+            <div class="metric-card" style="border-left: 4px solid var(--primary-orange);">
+                <span class="metric-title">Total Self-Published</span>
+                <span class="metric-val">{{ stats.total_books }}</span>
+                <span class="metric-sub">{{ stats.total_authors }} Active Publishing Authors</span>
+            </div>
+
+            <div class="metric-card" style="border-left: 4px solid #10b981;">
+                <span class="metric-title">Live & Active</span>
+                <span class="metric-val">{{ stats.active_books }}</span>
+                <span class="metric-sub">{{ stats.free_books }} Free · {{ stats.paid_books }} Paid</span>
+            </div>
+
+            <div class="metric-card" style="border-left: 4px solid #ef4444;">
+                <span class="metric-title">Quarantined / Hidden</span>
+                <span class="metric-val">{{ stats.quarantined_books }}</span>
+                <span class="metric-sub">Soft-quarantined from global discovery</span>
+            </div>
+
+            <div class="metric-card" style="border-left: 4px solid #eab308;">
+                <span class="metric-title">Staff Picks / Featured</span>
+                <span class="metric-val">{{ stats.featured_books }}</span>
+                <span class="metric-sub">Promoted on homepage showcase</span>
+            </div>
+
+            <div class="metric-card" style="border-left: 4px solid #6366f1;">
+                <span class="metric-title">Author Sales Volume</span>
+                <span class="metric-val">₹{{ "%.2f"|format(stats.total_revenue_inr) }}</span>
+                <span class="metric-sub">{{ stats.total_sales }} Verified Reader Orders</span>
+            </div>
+        </div>
+
+        <!-- SEARCH & ADVANCED FILTER BAR -->
+        <div class="filter-panel">
+            <div class="filter-row">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by book title, author username, or description…" value="{{ filters.search }}" onkeyup="handleSearchInput(event)">
+                
+                <select id="catalogFilter" class="filter-select" onchange="applyFilters()">
+                    <option value="all">All Categories</option>
+                    {% for cat in catalogs %}
+                        <option value="{{ cat.name }}" {% if filters.catalog == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <select id="typeFilter" class="filter-select" onchange="applyFilters()">
+                    <option value="all" {% if filters.type == 'all' %}selected{% endif %}>All Pricing</option>
+                    <option value="free" {% if filters.type == 'free' %}selected{% endif %}>Free Books Only</option>
+                    <option value="paid" {% if filters.type == 'paid' %}selected{% endif %}>Paid Books Only</option>
+                </select>
+
+                <select id="statusFilter" class="filter-select" onchange="applyFilters()">
+                    <option value="all" {% if filters.status == 'all' %}selected{% endif %}>All Statuses</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active / Live Only</option>
+                    <option value="quarantined" {% if filters.status == 'quarantined' %}selected{% endif %}>Quarantined Only</option>
+                    <option value="featured" {% if filters.status == 'featured' %}selected{% endif %}>Staff Picks Only</option>
+                </select>
+
+                <select id="sortFilter" class="filter-select" onchange="applyFilters()">
+                    <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                    <option value="price_desc" {% if filters.sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                    <option value="price_asc" {% if filters.sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="title" {% if filters.sort == 'title' %}selected{% endif %}>Title (A-Z)</option>
+                </select>
+
+                <button type="button" class="btn-pill btn-pill-orange" onclick="applyFilters()">
+                    <span>🔍</span> Filter
+                </button>
+                <button type="button" class="btn-pill btn-pill-dark" onclick="resetFilters()">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- BOOKS TABLE CARD -->
+        <div class="table-card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Book & Author Details</th>
+                            <th>Category</th>
+                            <th>Pricing & Revenue</th>
+                            <th>Status & Badges</th>
+                            <th>Created</th>
+                            <th style="text-align: right;">Administrative Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if books %}
+                            {% for book in books %}
+                            <tr id="bookRow_{{ book.id }}">
+                                <td>
+                                    <div class="book-cell">
+                                        <a href="{{ url_for('read_book', book_id=book.id) }}" target="_blank" title="Preview in Reader">
+                                            <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" alt="Cover" class="book-thumb">
+                                        </a>
+                                        <div class="book-details">
+                                            <a href="{{ url_for('read_book', book_id=book.id) }}" target="_blank" class="book-title-text" style="text-decoration: none;">
+                                                {{ book.title }}
+                                            </a>
+                                            <div class="book-meta-sub">
+                                                <span>👤 <strong>{{ book.author_name }}</strong> ({{ book.author_role }})</span>
+                                                <span>•</span>
+                                                <span>ID: #{{ book.id }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span style="font-weight: 700; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">
+                                        {{ book.catalog }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if book.is_paid %}
+                                        <div style="font-weight: 800; color: #166534; font-size: 0.95rem;">
+                                            ₹{{ "%.2f"|format(book.price_paise/100) }}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                                            {% if book.rp_verified %}
+                                                <span class="badge badge-live">✓ Razorpay Valid</span>
+                                            {% else %}
+                                                <span class="badge badge-quarantine">⚠ Unverified Key</span>
+                                            {% endif %}
+                                            {% if book.sales_count %}
+                                                <span style="margin-left: 4px; font-weight: 700; color: #1e293b;">{{ book.sales_count }} sales</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="badge badge-free">Free Open-Access</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                                        {% if book.is_quarantined %}
+                                            <span class="badge badge-quarantine">🔒 Quarantined</span>
+                                        {% else %}
+                                            <span class="badge badge-live">🟢 Live Public</span>
+                                        {% endif %}
+
+                                        {% if book.is_featured %}
+                                            <span class="badge badge-featured">⭐ Staff Pick</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td style="font-size: 0.82rem; color: #64748b; white-space: nowrap;">
+                                    {{ book.created_at.strftime('%d %b %Y') if book.created_at else '—' }}
+                                </td>
+
+                                <td>
+                                    <div class="action-btns" style="justify-content: flex-end;">
+                                        <!-- Quick Read -->
+                                        <a href="{{ url_for('read_book', book_id=book.id) }}" target="_blank" class="btn-act btn-act-read" title="Open in PustakVerse Reader">
+                                            👁️ Preview
+                                        </a>
+
+                                        <!-- Edit Modal Trigger -->
+                                        <button type="button" class="btn-act btn-act-edit" 
+                                                data-id="{{ book.id }}"
+                                                data-title="{{ book.title | escape }}"
+                                                data-catalog="{{ book.catalog }}"
+                                                data-ispaid="{{ 'true' if book.is_paid else 'false' }}"
+                                                data-price="{{ book.price_paise }}"
+                                                data-preview="{{ book.preview_pages }}"
+                                                data-desc="{{ book.description or '' | escape }}"
+                                                onclick="openEditModal(this)"
+                                                title="Quick Edit Details">
+                                            ✏️ Edit
+                                        </button>
+
+                                        <!-- Quarantine Toggle -->
+                                        <form action="{{ url_for('official_toggle_quarantine', book_id=book.id) }}" method="POST" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-act {{ 'btn-act-unquarantine' if book.is_quarantined else 'btn-act-quarantine' }}" title="Toggle visibility in Global Library">
+                                                {{ '🔓 Restore' if book.is_quarantined else '🔒 Quarantine' }}
+                                            </button>
+                                        </form>
+
+                                        <!-- Staff Pick Toggle -->
+                                        <form action="{{ url_for('official_toggle_featured', book_id=book.id) }}" method="POST" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-act btn-act-feature" title="Toggle Staff Pick badge">
+                                                {{ '⭐ Unfeature' if book.is_featured else '⭐ Feature' }}
+                                            </button>
+                                        </form>
+
+                                        <!-- Sales / Analytics (if paid) -->
+                                        {% if book.is_paid %}
+                                        <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-act btn-act-read" title="View Sales History">
+                                            💰 Sales
+                                        </a>
+                                        {% endif %}
+
+                                        <!-- Deletion -->
+                                        {% if session.role == 'developer' %}
+                                            <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Force delete \'{{ book.title | escape }}\' permanently?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reason" value="Administrative deletion by Developer.">
+                                                <button type="submit" class="btn-act btn-act-del" title="Delete Book Permanently">
+                                                    🗑️ Delete
+                                                </button>
+                                            </form>
+                                        {% elif session.role == 'official' %}
+                                            <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" onsubmit="return promptForDeletionReason(this);">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reason" id="delReason_{{ book.id }}" value="">
+                                                <button type="submit" class="btn-act btn-act-del" title="Submit deletion request to Developer">
+                                                    🗑️ Req. Delete
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                    <div style="font-size: 2.5rem; margin-bottom: 10px;">📭</div>
+                                    <h3 style="font-size: 1.1rem; color: var(--nav-bg); margin-bottom: 6px;">No Self-Published Books Found</h3>
+                                    <p style="font-size: 0.85rem;">Try adjusting your search terms or filter criteria.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- QUICK EDIT MODAL -->
+    <div class="modal-backdrop" id="editModalBackdrop">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3>✏️ Quick Edit Self-Published Book</h3>
+                <button type="button" class="modal-close" onclick="closeEditModal()">✕</button>
+            </div>
+
+            <form id="quickEditForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="editBookId" name="book_id" value="">
+
+                <div class="form-group">
+                    <label>Book Title</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Category / Catalog</label>
+                    <select id="editCatalog" name="catalog" required>
+                        {% for cat in catalogs %}
+                            <option value="{{ cat.name }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Price in INR (₹) — Set 0 for Free</label>
+                    <input type="number" id="editPrice" name="price_inr" min="0" step="1" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label>Free Preview Pages (For Paid Books, 1 to 10)</label>
+                    <input type="number" id="editPreview" name="preview_pages" min="1" max="10" value="5">
+                </div>
+
+                <div class="form-group">
+                    <label>Synopsis / Description</label>
+                    <textarea id="editDesc" name="description" rows="4"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn-pill btn-pill-dark" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn-pill btn-pill-orange">💾 Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast" id="toastBox">
+        <span id="toastMsg">Action completed</span>
+    </div>
+
+    <script>
+        function handleSearchInput(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.trim();
+            const catalog = document.getElementById('catalogFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const sort = document.getElementById('sortFilter').value;
+
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+            if (catalog && catalog !== 'all') params.set('catalog', catalog);
+            if (type && type !== 'all') params.set('type', type);
+            if (status && status !== 'all') params.set('status', status);
+            if (sort && sort !== 'newest') params.set('sort', sort);
+
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        }
+
+        function resetFilters() {
+            window.location.href = window.location.pathname;
+        }
+
+        function openEditModal(btn) {
+            const id = btn.dataset.id;
+            const title = btn.dataset.title;
+            const catalog = btn.dataset.catalog;
+            const ispaid = btn.dataset.ispaid === 'true';
+            const pricePaise = parseInt(btn.dataset.price || '0', 10);
+            const preview = btn.dataset.preview || '5';
+            const desc = btn.dataset.desc;
+
+            document.getElementById('editBookId').value = id;
+            document.getElementById('editTitle').value = title;
+            document.getElementById('editCatalog').value = catalog;
+            document.getElementById('editPrice').value = ispaid ? Math.round(pricePaise / 100) : 0;
+            document.getElementById('editPreview').value = preview;
+            document.getElementById('editDesc').value = desc;
+
+            document.getElementById('quickEditForm').action = `/edit_book/${id}`;
+            document.getElementById('editModalBackdrop').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModalBackdrop').style.display = 'none';
+        }
+
+        function promptForDeletionReason(form) {
+            const reason = prompt('Please enter a reason for the Developer to review deletion:');
+            if (!reason || !reason.trim()) return false;
+            const input = form.querySelector('input[name="reason"]');
+            if (input) input.value = reason.trim();
+            return true;
+        }
+
+        window.onclick = function(e) {
+            const backdrop = document.getElementById('editModalBackdrop');
+            if (e.target === backdrop) {
+                closeEditModal();
+            }
+        };
+    </script>
+</body>
+</html>

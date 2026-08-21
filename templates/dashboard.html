@@ -256,6 +256,9 @@
             <a href="/">Global Library</a> 
             <a href="{{ url_for('my_library') }}">My Library</a>
             <a href="{{ url_for('payment_history') }}">Payment History</a>
+            {% if session.role in ['developer', 'official'] %}
+            <a href="{{ url_for('management_self_published_books') }}" style="color: #fb923c; font-weight: 700;">📖 Manage Books</a>
+            {% endif %}
             <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
                 <span id="themeIcon">🌙</span>
                 <span id="themeText">Dark Mode</span>
@@ -266,9 +269,16 @@
         </div>
     </nav>
 
-    <div class="dashboard-header">
-        <h1>Welcome, {{ session.username }}</h1>
-        <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
+    <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1>Welcome, {{ session.username }}</h1>
+            <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
+        </div>
+        {% if session.role in ['developer', 'official'] %}
+            <a href="{{ url_for('management_self_published_books') }}" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
+                <span>📖</span> Self-Published Book Management Hub →
+            </a>
+        {% endif %}
     </div>
 
     <div class="container">
