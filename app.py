@@ -2844,11 +2844,13 @@ def index():
     
     # 1. Try fast in-memory cache
     cached_books = fast_cache.get('books_index')
-    if cached_books is not None:
-        return render_template('index.html', books=cached_books, show_telegram_popup=show_telegram_popup)
+    cached_stats = fast_cache.get('platform_stats')
+    if cached_books is not None and cached_stats is not None:
+        return render_template('index.html', books=cached_books, stats=cached_stats, show_telegram_popup=show_telegram_popup)
 
     db = None
     books = []
+    stats = {'total_books': 0, 'total_readers': 0, 'total_authors': 0}
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
@@ -2862,13 +2864,41 @@ def index():
         """)
         books = clean_book_data(cursor.fetchall())
         fast_cache.set('books_index', books, ttl=45)
+
+        # Query 100% authentic live platform metrics from the database
+        try:
+            cursor.execute("SELECT COUNT(*) AS cnt FROM books WHERE is_quarantined = FALSE")
+            row_b = cursor.fetchone()
+            stats['total_books'] = row_b['cnt'] if row_b else len(books)
+        except Exception:
+            stats['total_books'] = len(books)
+
+        try:
+            cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE role = 'reader'")
+            row_r = cursor.fetchone()
+            stats['total_readers'] = row_r['cnt'] if row_r else 0
+        except Exception:
+            stats['total_readers'] = 0
+
+        try:
+            cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE role = 'author'")
+            row_a = cursor.fetchone()
+            stats['total_authors'] = row_a['cnt'] if row_a else 0
+        except Exception:
+            stats['total_authors'] = 0
+
+        fast_cache.set('platform_stats', stats, ttl=60)
     except Exception: 
         flash("Database connection timeout. Retrying...", "error")
     finally:
         if db:
             try: db.close()
             except: pass
-    return render_template('index.html', books=books, show_telegram_popup=show_telegram_popup)
+
+    # If cached books was used earlier, also retrieve or compute accurate stats
+    cached_stats = fast_cache.get('platform_stats') or stats
+
+    return render_template('index.html', books=books, stats=cached_stats, show_telegram_popup=show_telegram_popup)
 
 @app.route('/intro')
 def intro():
@@ -8129,7 +8159,8 @@ def author_reply_review(review_id):
 # ======================================================================
 @app.route('/tools')
 def tools_hub():
-    return render_template('tools.html')
+    user_role = session.get('role', 'guest')
+    return render_template('tools.html', user_role=user_role)
 
 
 

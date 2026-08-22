@@ -313,20 +313,20 @@
 
 
     
-    <!-- LIVE PLATFORM METRICS SHOWCASE -->
+    <!-- LIVE AUTHENTIC PLATFORM METRICS SHOWCASE -->
     <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 18px 20px;">
         <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: center;">
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 1,450+</div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 {{ stats.total_books if stats and stats.total_books is defined else (books|length) }}</div>
                 <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Books & Manuscripts</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 52,000+</div>
-                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Active Readers</div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 {{ stats.total_readers if stats and stats.total_readers is defined else 0 }}</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Registered Readers</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">💰 100%</div>
-                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Direct Author Settlement</div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">✍️ {{ stats.total_authors if stats and stats.total_authors is defined else 0 }}</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Published Authors</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
                 <div style="font-size: 1.4rem; font-weight: 900; color: #8b5cf6;">🤖 Free AI Tutor</div>
