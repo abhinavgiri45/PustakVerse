@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Tools & Literary Utilities Suite · PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ea580c;
+            --nav-bg: #0f172a;
+            --bg-canvas: #f8fafc;
+            --border-line: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg-canvas); 
+            color: #0f172a; 
+            padding-bottom: 60px;
+            min-height: 100vh;
+        }
+
+        /* Sleek Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 2px solid #f1f5f9; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
+
+        /* Navbar */
+        .navbar {
+            background: var(--nav-bg);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--primary-orange);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .navbar-brand img { height: 44px; width: auto; object-fit: contain; }
+        .nav-links { display: flex; gap: 12px; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; transition: 0.2s; }
+        .nav-links a:hover { background: rgba(255,255,255,0.15); }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 48px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-line);
+        }
+        .hero h1 { font-size: 2.3rem; font-weight: 900; margin-bottom: 8px; }
+        .hero p { color: #94a3b8; font-size: 1.05rem; max-width: 650px; margin: 0 auto; }
+
+        /* Tool Tabs */
+        .tools-nav {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 20px;
+            background: white;
+            border-bottom: 1px solid var(--border-line);
+            flex-wrap: wrap;
+            position: sticky;
+            top: 75px;
+            z-index: 900;
+        }
+        .tool-tab-btn {
+            padding: 9px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tool-tab-btn.active, .tool-tab-btn:hover {
+            background: var(--primary-orange);
+            color: white;
+            border-color: var(--primary-orange);
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 30px auto 0;
+            padding: 0 20px;
+        }
+
+        .tool-panel { display: none; }
+        .tool-panel.active { display: block; }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 22px;
+        }
+
+        .tool-card {
+            background: white;
+            border: 1px solid var(--border-line);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .tool-card h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tool-card p { font-size: 0.85rem; color: #64748b; margin-bottom: 16px; }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+        }
+
+        .btn-tool {
+            background: var(--nav-bg);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn-tool:hover { background: var(--primary-orange); }
+
+        .result-box {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/"><img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="Logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="{{ url_for('my_library') }}">📚 Library</a>
+            <a href="{{ url_for('dashboard') }}">👤 Dashboard</a>
+            <a href="{{ url_for('contact') }}">🏛️ Contact</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>🛠️ PustakVerse Power Tools Suite</h1>
+        <p>Comprehensive utility workshop for readers, authors, educators, and administrators.</p>
+    </div>
+
+    <div class="tools-nav">
+        <button type="button" onclick="switchToolTab('readers', this)" class="tool-tab-btn active">📖 Reader & Student Tools</button>
+        <button type="button" onclick="switchToolTab('authors', this)" class="tool-tab-btn">✍️ Author & Publisher Tools</button>
+        <button type="button" onclick="switchToolTab('system', this)" class="tool-tab-btn">⚡ Diagnostics & System Tools</button>
+    </div>
+
+    <div class="container">
+
+        <!-- ====================================================================== -->
+        <!-- TAB 1: READERS & STUDENTS SUITE                                       -->
+        <!-- ====================================================================== -->
+        <div id="tab-readers" class="tool-panel active">
+            <div class="card-grid">
+
+                <!-- TOOL 1: RSVP SPEED READING TRAINER -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>⚡</span> RSVP Speed Reading Trainer</h3>
+                        <p>Train your brain to read up to 1000 words per minute using Rapid Serial Visual Presentation.</p>
+                        <textarea id="rsvpInput" rows="3" placeholder="Paste any text or paragraph here to practice speed reading...">PustakVerse is an innovative digital library empowering readers and independent authors worldwide with zero platform commission and instant direct settlements.</textarea>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <select id="rsvpSpeed" style="flex: 1; margin: 0;">
+                                <option value="250">250 WPM (Normal)</option>
+                                <option value="400" selected>400 WPM (Fast)</option>
+                                <option value="600">600 WPM (Pro Reader)</option>
+                                <option value="800">800 WPM (Speed Master)</option>
+                            </select>
+                            <button type="button" onclick="startRSVP()" class="btn-tool" style="width: auto; padding: 0 20px; background: #ea580c;">▶ Play</button>
+                        </div>
+                        <div id="rsvpDisplay" style="height: 70px; background: #0f172a; color: #f8fafc; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.05em;">
+                            READY
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOOL 2: POMODORO STUDY & FOCUS TIMER WITH AMBIENT AUDIO -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>⏱️</span> Pomodoro Focus & Study Timer</h3>
+                        <p>Boost your reading comprehension with 25-minute deep focus intervals and ambient soundscapes.</p>
+                        <div style="text-align: center; margin: 15px 0;">
+                            <div id="pomoTime" style="font-size: 3rem; font-weight: 900; color: #ea580c; font-family: monospace;">25:00</div>
+                            <span id="pomoStatus" style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Deep Study Interval</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <button type="button" onclick="startPomodoro()" class="btn-tool" style="background: #16a34a;">Start Focus</button>
+                            <button type="button" onclick="pausePomodoro()" class="btn-tool" style="background: #eab308;">Pause</button>
+                            <button type="button" onclick="resetPomodoro()" class="btn-tool" style="background: #64748b;">Reset</button>
+                        </div>
+                        <select id="pomoSound" onchange="toggleAmbientAudio(this.value)" style="margin: 0;">
+                            <option value="none">🔇 Sound: Off</option>
+                            <option value="whitenoise">🌊 Ambient White Noise</option>
+                            <option value="rain">🌧️ Library Rain Soundscape</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TOOL 3: ACADEMIC CITATION & BIBLIOGRAPHY GENERATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>🔖</span> Universal Citation Generator</h3>
+                        <p>Generate perfectly formatted academic bibliography citations in APA, MLA, Chicago, or Harvard.</p>
+                        <input type="text" id="citeTitle" placeholder="Book Title (e.g. Clean Architecture)">
+                        <input type="text" id="citeAuthor" placeholder="Author Name (e.g. Robert C. Martin)">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="citeYear" placeholder="Year (2024)" style="width: 50%;">
+                            <select id="citeStyle" style="width: 50%;">
+                                <option value="apa">APA 7th</option>
+                                <option value="mla">MLA 9th</option>
+                                <option value="chicago">Chicago 17th</option>
+                                <option value="harvard">Harvard</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="generateCitation()" class="btn-tool">Generate Citation</button>
+                        <div id="citeOutput" class="result-box" style="display: none; font-style: italic;"></div>
+                    </div>
+                </div>
+
+                <!-- TOOL 4: LEXILE & READING TIME CALCULATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>📊</span> Lexile & Reading Time Analyzer</h3>
+                        <p>Calculates reading ease score, estimated completion time, and word complexity for any excerpt.</p>
+                        <textarea id="lexileText" rows="3" placeholder="Paste book text here to analyze readability..."></textarea>
+                        <button type="button" onclick="analyzeLexile()" class="btn-tool">Analyze Readability</button>
+                        <div id="lexileResult" class="result-box" style="display: none;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ====================================================================== -->
+        <!-- TAB 2: AUTHORS & PUBLISHERS SUITE                                     -->
+        <!-- ====================================================================== -->
+        <div id="tab-authors" class="tool-panel">
+            <div class="card-grid">
+
+                <!-- TOOL 1: ROYALTY & PRICING PROFIT SIMULATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>💰</span> Royalty & Bank Payout Simulator</h3>
+                        <p>Simulate net bank deposits at 0% platform commission with standard 2% + 18% GST gateway fee.</p>
+                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Retail Price per Copy (₹ INR):</label>
+                        <input type="number" id="simPrice" value="299" min="1" oninput="calculateSimulator()">
+                        <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Expected Sales Volume (Copies):</label>
+                        <input type="number" id="simCopies" value="100" min="1" oninput="calculateSimulator()">
+                        <div class="result-box" id="simOutput" style="background: #f0fdf4; border-color: #86efac;">
+                            <div style="font-size: 0.8rem; color: #166534;">Gross Reader Payments: <strong id="simGross">₹29,900.00</strong></div>
+                            <div style="font-size: 0.8rem; color: #991b1b;">Gateway Fee (2.36%): <strong id="simFee">-₹705.64</strong></div>
+                            <div style="font-size: 1.1rem; font-weight: 900; color: #15803d; margin-top: 4px;">Net Bank Payout: <span id="simNet">₹29,194.36</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOOL 2: DIGITAL ISBN-13 BARCODE GENERATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>🏷️</span> Digital ISBN-13 Generator</h3>
+                        <p>Validate and generate official standard ISBN-13 check-digits for physical and ebook publishing.</p>
+                        <input type="text" id="isbnPrefix" value="978-93" placeholder="Country / Publisher Prefix (e.g. 978-93)">
+                        <input type="text" id="isbnBookCode" placeholder="6-digit Title Code (e.g. 849201)">
+                        <button type="button" onclick="generateISBN()" class="btn-tool">Calculate Valid ISBN-13</button>
+                        <div id="isbnOutput" class="result-box" style="display: none; font-family: monospace; font-size: 1.1rem; font-weight: 800; text-align: center; color: #ea580c;"></div>
+                    </div>
+                </div>
+
+                <!-- TOOL 3: COPYRIGHT & CREATIVE COMMONS LICENSE FORMATTER -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>📜</span> Copyright & Open Access Formatter</h3>
+                        <p>Generate standard front-matter copyright pages for your manuscripts.</p>
+                        <input type="text" id="crAuthor" placeholder="Author Legal Name">
+                        <input type="text" id="crBook" placeholder="Book Title">
+                        <select id="crLicense">
+                            <option value="all_rights">All Rights Reserved (Standard Commercial)</option>
+                            <option value="cc_by">Creative Commons Attribution (CC BY 4.0)</option>
+                            <option value="cc_by_nc">Creative Commons Non-Commercial (CC BY-NC 4.0)</option>
+                        </select>
+                        <button type="button" onclick="generateCopyright()" class="btn-tool">Generate Legal Notice</button>
+                        <div id="crOutput" class="result-box" style="display: none; font-size: 0.8rem; font-family: monospace; white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ====================================================================== -->
+        <!-- TAB 3: DIAGNOSTICS & SYSTEM SUITE                                     -->
+        <!-- ====================================================================== -->
+        <div id="tab-system" class="tool-panel">
+            <div class="card-grid">
+
+                <!-- TOOL 1: PLATFORM TELEMETRY & RUNTIME HEALTH -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>🖥️</span> Platform Telemetry & Runtime</h3>
+                        <p>Real-time server runtime status and client environment diagnostics.</p>
+                        <div class="result-box">
+                            <div><strong>Python Framework:</strong> Flask 3.0+ / WSGI</div>
+                            <div><strong>Database Engine:</strong> MySQL 8.0 / Connector Pool</div>
+                            <div><strong>Payment Gateway:</strong> Razorpay v1.3.0 Standard Direct</div>
+                            <div><strong>Client Browser:</strong> <span id="clientEnv"></span></div>
+                            <div><strong>Screen Resolution:</strong> <span id="screenRes"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOOL 2: SOCIAL OPENGRAPH META SIMULATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>🌐</span> OpenGraph & Twitter Card Preview</h3>
+                        <p>Test how your book links appear when shared on WhatsApp, Telegram, and Social Networks.</p>
+                        <input type="text" id="ogTitle" placeholder="Book Title" value="PustakVerse Digital Library">
+                        <input type="text" id="ogDesc" placeholder="Description Blurb" value="Discover and read thousands of books directly from verified creators.">
+                        <div class="result-box" style="background: #f1f5f9; border-radius: 10px;">
+                            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;" id="ogTitlePrev">PustakVerse Digital Library</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;" id="ogDescPrev">Discover and read thousands of books directly from verified creators.</div>
+                            <div style="font-size: 0.72rem; color: #ea580c; font-weight: 700; margin-top: 4px;">pustakverse.com</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Tab Switching
+        function switchToolTab(tabId, btn) {
+            document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tool-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // RSVP Speed Reader
+        let rsvpInterval = null;
+        function startRSVP() {
+            if (rsvpInterval) clearInterval(rsvpInterval);
+            const text = document.getElementById('rsvpInput').value.trim();
+            const speed = parseInt(document.getElementById('rsvpSpeed').value, 10);
+            const words = text.split(/\s+/);
+            let idx = 0;
+            const display = document.getElementById('rsvpDisplay');
+            const ms = (60 / speed) * 1000;
+
+            rsvpInterval = setInterval(() => {
+                if (idx < words.length) {
+                    display.textContent = words[idx++];
+                } else {
+                    clearInterval(rsvpInterval);
+                    display.textContent = "✓ COMPLETE";
+                }
+            }, ms);
+        }
+
+        // Pomodoro Timer
+        let pomoSeconds = 1500;
+        let pomoInterval = null;
+        let audioCtx = null;
+        let noiseNode = null;
+
+        function startPomodoro() {
+            if (pomoInterval) return;
+            pomoInterval = setInterval(() => {
+                if (pomoSeconds > 0) {
+                    pomoSeconds--;
+                    updatePomoDisplay();
+                } else {
+                    clearInterval(pomoInterval);
+                    pomoInterval = null;
+                    alert("⏰ Pomodoro Focus session complete! Take a 5-minute break.");
+                }
+            }, 1000);
+        }
+        function pausePomodoro() {
+            if (pomoInterval) { clearInterval(pomoInterval); pomoInterval = null; }
+        }
+        function resetPomodoro() {
+            pausePomodoro();
+            pomoSeconds = 1500;
+            updatePomoDisplay();
+        }
+        function updatePomoDisplay() {
+            const m = String(Math.floor(pomoSeconds / 60)).padStart(2, '0');
+            const s = String(pomoSeconds % 60).padStart(2, '0');
+            document.getElementById('pomoTime').textContent = `${m}:${s}`;
+        }
+        function toggleAmbientAudio(type) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (type === 'none' && noiseNode) {
+                try { noiseNode.stop(); noiseNode = null; } catch(e) {}
+                return;
+            }
+            if (type === 'whitenoise' || type === 'rain') {
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = buffer;
+                whiteNoise.loop = true;
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.05;
+                whiteNoise.connect(gain);
+                gain.connect(audioCtx.destination);
+                whiteNoise.start(0);
+                noiseNode = whiteNoise;
+            }
+        }
+
+        // Citations
+        function generateCitation() {
+            const title = document.getElementById('citeTitle').value.trim() || 'Untitled Book';
+            const author = document.getElementById('citeAuthor').value.trim() || 'Author, A.';
+            const year = document.getElementById('citeYear').value.trim() || '2024';
+            const style = document.getElementById('citeStyle').value;
+            const out = document.getElementById('citeOutput');
+
+            let cite = '';
+            if (style === 'apa') cite = `${author} (${year}). ${title}. PustakVerse Publishing.`;
+            else if (style === 'mla') cite = `${author}. ${title}. PustakVerse, ${year}.`;
+            else if (style === 'chicago') cite = `${author}. ${year}. ${title}. PustakVerse.`;
+            else cite = `${author}, ${year}. ${title}. PustakVerse.`;
+
+            out.textContent = cite;
+            out.style.display = 'block';
+        }
+
+        // Readability / Lexile
+        function analyzeLexile() {
+            const text = document.getElementById('lexileText').value.trim();
+            if (!text) return;
+            const words = text.split(/\s+/).length;
+            const sentences = text.split(/[.!?]+/).length || 1;
+            const mins = Math.max(1, Math.round(words / 220));
+            const out = document.getElementById('lexileResult');
+            out.innerHTML = `<strong>Word Count:</strong> ${words} words<br><strong>Est. Reading Time:</strong> ~${mins} min(s)<br><strong>Avg. Sentence Length:</strong> ${(words/sentences).toFixed(1)} words`;
+            out.style.display = 'block';
+        }
+
+        // Author Simulator
+        function calculateSimulator() {
+            const price = parseFloat(document.getElementById('simPrice').value || '0');
+            const copies = parseInt(document.getElementById('simCopies').value || '0', 10);
+            const gross = price * copies;
+            const fee = gross * 0.0236;
+            const net = gross - fee;
+            document.getElementById('simGross').textContent = `₹${gross.toFixed(2)}`;
+            document.getElementById('simFee').textContent = `-₹${fee.toFixed(2)}`;
+            document.getElementById('simNet').textContent = `₹${net.toFixed(2)}`;
+        }
+
+        // ISBN Generator
+        function generateISBN() {
+            const prefix = document.getElementById('isbnPrefix').value.replace(/[^0-9]/g, '') || '97893';
+            const code = document.getElementById('isbnBookCode').value.replace(/[^0-9]/g, '') || '123456';
+            const raw12 = (prefix + code).padEnd(12, '0').slice(0, 12);
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                sum += parseInt(raw12[i], 10) * (i % 2 === 0 ? 1 : 3);
+            }
+            const check = (10 - (sum % 10)) % 10;
+            const full = `${raw12.slice(0,3)}-${raw12.slice(3,5)}-${raw12.slice(5,11)}-${raw12.slice(11,12)}${check}`;
+            const out = document.getElementById('isbnOutput');
+            out.textContent = `ISBN-13: ${full}`;
+            out.style.display = 'block';
+        }
+
+        // Copyright Notice
+        function generateCopyright() {
+            const author = document.getElementById('crAuthor').value.trim() || 'Author Name';
+            const book = document.getElementById('crBook').value.trim() || 'Book Title';
+            const lic = document.getElementById('crLicense').value;
+            const year = new Date().getFullYear();
+            let text = `Copyright © ${year} by ${author}.\nAll rights reserved.\nPublished digitally via PustakVerse.`;
+            if (lic === 'cc_by') text = `Copyright © ${year} by ${author}.\nLicensed under Creative Commons Attribution 4.0 International (CC BY 4.0).`;
+            const out = document.getElementById('crOutput');
+            out.textContent = text;
+            out.style.display = 'block';
+        }
+
+        // Client Env
+        document.getElementById('clientEnv').textContent = navigator.userAgent.slice(0, 60) + '...';
+        document.getElementById('screenRes').textContent = `${window.screen.width} x ${window.screen.height} px`;
+    </script>
+</body>
+</html>

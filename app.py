@@ -8070,3 +8070,12 @@ def author_reply_review(review_id):
             except: pass
 
     return redirect(url_for('view_book', book_id=book_id) if book_id else url_for('dashboard'))
+
+
+
+# ======================================================================
+# PUSTAKVERSE POWER TOOLS & LITERARY UTILITIES SUITE
+# ======================================================================
+@app.route('/tools')
+def tools_hub():
+    return render_template('tools.html')

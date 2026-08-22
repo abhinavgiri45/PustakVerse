@@ -190,6 +190,7 @@
             </a>
         </div>
         <div class="navbar-links">
+            <a href="{{ url_for('tools_hub') }}">🛠️ Tools</a>
             <a href="{{ url_for('contact') }}">Contact</a>
             {% if session.user_id %}
                 <a href="{{ url_for('my_library') }}">My Library</a>
