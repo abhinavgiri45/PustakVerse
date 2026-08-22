@@ -1289,214 +1289,261 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
     }
 
 
-def get_active_ai_models():
-    """Retrieves clean, non-duplicated active AI model configurations."""
+# ==============================================================================
+# GRANTHMIND AI AUTOMATED KEY DETECTION & REAL-TIME MODEL SYNC ENGINE
+# ==============================================================================
+
+_ai_keys_db_cache = {}
+
+def get_provider_api_key(provider_name):
+    """
+    Multi-source API key resolver:
+    1. OS Environment Variables (e.g. GEMINI_API_KEY, OPENAI_API_KEY, GROQ_API_KEY)
+    2. In-Memory Fast Cache
+    3. Database (ai_api_keys table or site_settings)
+    """
+    p = (provider_name or '').lower().strip()
+    
+    # 1. Environment Variable Mappings
+    env_keys_map = {
+        'gemini': ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GEMINI_API_KEY', 'AI_STUDIO_API_KEY', 'GEMINI_KEY'],
+        'openai': ['OPENAI_API_KEY', 'CHATGPT_API_KEY', 'OPENAI_KEY'],
+        'anthropic': ['ANTHROPIC_API_KEY', 'CLAUDE_API_KEY', 'ANTHROPIC_KEY'],
+        'groq': ['GROQ_API_KEY', 'GROQ_KEY'],
+        'deepseek': ['DEEPSEEK_API_KEY', 'DEEPSEEK_KEY'],
+        'openrouter': ['OPENROUTER_API_KEY', 'OPENROUTER_KEY'],
+        'mistral': ['MISTRAL_API_KEY', 'MISTRAL_KEY'],
+        'huggingface': ['HUGGINGFACE_API_KEY', 'HF_TOKEN', 'HUGGINGFACE_KEY'],
+        'cohere': ['COHERE_API_KEY', 'COHERE_KEY'],
+        'github': ['GITHUB_TOKEN', 'GITHUB_API_KEY']
+    }
+    
+    for k in env_keys_map.get(p, [f"{p.upper()}_API_KEY"]):
+        val = (os.environ.get(k) or '').strip().strip("'\"")
+        if val:
+            return val
+
+    # 2. In-Memory Cache
+    if p in _ai_keys_db_cache:
+        return _ai_keys_db_cache[p]
+
+    # 3. Database Table Lookup
     db = None
-    custom_models = []
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM ai_models WHERE is_active = 1 ORDER BY is_default DESC, id ASC")
-        rows = cursor.fetchall()
-        if rows:
-            custom_models = rows
+        cursor.execute("SELECT api_key FROM ai_api_keys WHERE provider = %s AND is_active = 1", (p,))
+        row = cursor.fetchone()
+        if row and row.get('api_key'):
+            key_val = row['api_key'].strip()
+            _ai_keys_db_cache[p] = key_val
+            return key_val
     except Exception: pass
     finally:
         if db:
             try: db.close()
             except: pass
 
-    # If database provides custom models, use them directly with zero duplicate colourful rows
-    if custom_models:
-        seen = set()
-        cleaned = []
-        for m in custom_models:
-            mid = str(m.get('model_id') or m.get('id') or '').lower()
-            if mid and mid not in seen:
-                seen.add(mid)
-                cleaned.append(m)
-        if cleaned:
-            return cleaned
+    # 4. Fallback: Check site_settings table / cache
+    cached_settings = fast_cache.get('site_settings') or global_cache.get('settings')
+    if cached_settings:
+        key_field = f"{p}_api_key"
+        if cached_settings.get(key_field):
+            return str(cached_settings.get(key_field)).strip().strip("'\"")
 
-    # Default Free Lifetime GranthMind AI Engines
-    return [
-        {'id': 'gemini-2.0-flash', 'display_name': '✨ GranthMind Pro (Gemini 2.0 Flash · Free Lifetime)', 'provider_type': 'gemini', 'model_id': 'gemini-2.0-flash', 'is_default': 1},
-        {'id': 'deepseek-r1', 'display_name': '🧠 GranthMind DeepThink (DeepSeek R1 · Free Lifetime)', 'provider_type': 'deepseek', 'model_id': 'deepseek-r1', 'is_default': 0},
-        {'id': 'groq-llama-3-3', 'display_name': '⚡ GranthMind Turbo (Groq LLaMA 3.3 70B · Free Lifetime)', 'provider_type': 'groq', 'model_id': 'meta-llama-3', 'is_default': 0},
-        {'id': 'gpt-4o-mini', 'display_name': '👁️ GranthMind Vision & Scholar (GPT-4o Mini · Free Lifetime)', 'provider_type': 'openai', 'model_id': 'chatgpt-4o', 'is_default': 0},
-        {'id': 'qwen-coder-32b', 'display_name': '💻 GranthMind Code & Logic (Qwen 2.5 Coder · Free Lifetime)', 'provider_type': 'qwen', 'model_id': 'qwen-coder', 'is_default': 0},
-        {'id': 'claude-3-5-sonnet', 'display_name': '💡 GranthMind Logic (Claude 3.5 Sonnet · Free Lifetime)', 'provider_type': 'anthropic', 'model_id': 'claude-3-5-sonnet', 'is_default': 0},
-        {'id': 'mistral-large', 'display_name': '🌐 GranthMind Mistral (Mistral Large · Free Lifetime)', 'provider_type': 'mistral', 'model_id': 'mistral-large', 'is_default': 0},
-    ]
-
-
-def get_gemini_api_key():
-    for k in ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GEMINI_API_KEY', 'GEMINI_KEY', 'AI_STUDIO_API_KEY', 'GEMINI_API', 'GOOGLE_AI_KEY', 'GEMINI_TOKEN']:
-        val = (os.environ.get(k) or '').strip().strip("'\"")
-        if val:
-            return val
-    cached = fast_cache.get('site_settings') or global_cache.get('settings')
-    if cached and cached.get('gemini_api_key'):
-        return str(cached.get('gemini_api_key')).strip().strip("'\"")
     return ''
 
 
-def call_gemini_api(prompt, attachment_path='', timeout=10):
+def get_active_ai_models():
     """
-    Direct high-speed Google Gemini API caller using HTTPS REST with multi-model fallback.
+    Dynamically auto-syncs and returns active AI models.
+    When a developer adds ANY API key (Gemini, OpenAI, Groq, DeepSeek, Anthropic, OpenRouter, Mistral, HF),
+    that model is automatically synced with a live indicator and prioritized.
     """
-    api_key = get_gemini_api_key()
+    models = [
+        {
+            'id': 'gemini-2.0-flash',
+            'provider': 'gemini',
+            'base_name': 'GranthMind Pro (Gemini 2.0 Flash)',
+            'model_id': 'gemini-2.0-flash',
+            'desc': 'Ultra-Fast Multimodal & Reasoning',
+            'is_default': 1
+        },
+        {
+            'id': 'deepseek-r1',
+            'provider': 'deepseek',
+            'base_name': 'GranthMind DeepThink (DeepSeek R1)',
+            'model_id': 'deepseek-r1',
+            'desc': 'Deep Mathematical Reasoning & Logic',
+            'is_default': 0
+        },
+        {
+            'id': 'groq-llama-3-3',
+            'provider': 'groq',
+            'base_name': 'GranthMind Turbo (Groq LLaMA 3.3 70B)',
+            'model_id': 'llama-3.3-70b-versatile',
+            'desc': '500+ Tokens/Sec High Speed LPU',
+            'is_default': 0
+        },
+        {
+            'id': 'gpt-4o-mini',
+            'provider': 'openai',
+            'base_name': 'GranthMind Vision & Scholar (GPT-4o Mini)',
+            'model_id': 'gpt-4o-mini',
+            'desc': 'OpenAI Multimodal & Knowledge Synthesis',
+            'is_default': 0
+        },
+        {
+            'id': 'qwen-coder-32b',
+            'provider': 'huggingface',
+            'base_name': 'GranthMind Code & Logic (Qwen 2.5 Coder)',
+            'model_id': 'qwen-coder',
+            'desc': 'Full-Stack Software & Algorithm Design',
+            'is_default': 0
+        },
+        {
+            'id': 'claude-3-5-sonnet',
+            'provider': 'anthropic',
+            'base_name': 'GranthMind Logic (Claude 3.5 Sonnet)',
+            'model_id': 'claude-3-5-sonnet',
+            'desc': 'Advanced Reasoning & Literary Nuance',
+            'is_default': 0
+        },
+        {
+            'id': 'mistral-large',
+            'provider': 'mistral',
+            'base_name': 'GranthMind Mistral (Mistral Large)',
+            'model_id': 'mistral-large',
+            'desc': 'Multilingual Reasoning & Architecture',
+            'is_default': 0
+        }
+    ]
+
+    synced_models = []
+    has_live_default = False
+
+    for m in models:
+        provider = m['provider']
+        key = get_provider_api_key(provider)
+        
+        # Also check openrouter for deepseek / llama / qwen
+        if not key and provider in ['deepseek', 'mistral']:
+            if get_provider_api_key('openrouter'):
+                key = get_provider_api_key('openrouter')
+
+        if key:
+            # LIVE DEVELOPER KEY SYNCED
+            display_name = f"🟢 {m['base_name']} · Live Connected"
+            is_live = True
+        else:
+            # ZERO-KEY FREE LIFETIME FALLBACK
+            display_name = f"✨ {m['base_name']} · Free Lifetime"
+            is_live = False
+
+        synced_models.append({
+            'id': m['id'],
+            'display_name': display_name,
+            'provider_type': provider,
+            'model_id': m['model_id'],
+            'is_live_key': is_live,
+            'is_default': m['is_default']
+        })
+
+    return synced_models
+
+
+def call_provider_live_api(provider, model_id, prompt, attachment_path='', timeout=10):
+    """
+    Executes real-time inference against the synced official API provider.
+    """
+    p = (provider or '').lower()
+    api_key = get_provider_api_key(p)
     if not api_key:
         return ''
 
-    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash']
-    parts = []
-    if attachment_path and os.path.exists(attachment_path):
-        ext = os.path.splitext(attachment_path)[1].lower()
-        mime_map = {
-            '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-            '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp',
-            '.pdf': 'application/pdf'
-        }
-        mime = mime_map.get(ext, 'application/octet-stream')
-        try:
-            with open(attachment_path, 'rb') as f:
-                b64_data = base64.b64encode(f.read()).decode('utf-8')
-            parts.append({"inline_data": {"mime_type": mime, "data": b64_data}})
-        except Exception: pass
+    # 1. Google Gemini Live API
+    if p == 'gemini':
+        return call_gemini_api(prompt, attachment_path=attachment_path, timeout=timeout)
 
-    parts.append({"text": prompt})
-    payload = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {"temperature": 0.25, "topP": 0.95, "maxOutputTokens": 3000}
-    }
-
-    for model in models_to_try:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-            headers = {"Content-Type": "application/json"}
-            resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
-            if resp.status_code == 200:
-                res_data = resp.json()
-                candidates = res_data.get('candidates', [])
-                if candidates:
-                    parts_out = candidates[0].get('content', {}).get('parts', [])
-                    if parts_out and 'text' in parts_out[0]:
-                        return parts_out[0]['text'].strip()
-        except Exception:
-            continue
-    return ''
-
-
-def generate_free_ai_response(prompt, selected_model_id='gemini-2.0-flash', timeout=8):
-    """
-    Unified Multi-Provider Free Lifetime Gateway with cascading fallbacks:
-    1. Groq Free LPU Gateway (LLaMA 3.3 70B, LLaMA 3.1 8B, Mixtral)
-    2. OpenRouter Free Lifetime Gateway (DeepSeek R1:free, LLaMA 3.3:free, Qwen Coder:free)
-    3. GitHub Models Free Gateway (GPT-4o Mini, Phi 3.5)
-    4. Hugging Face Serverless Free Gateway (Qwen 2.5 72B, LLaMA 3)
-    5. Cohere Free Gateway (Command R+)
-    """
-    model_key = (selected_model_id or 'gemini-2.0-flash').lower()
-
-    # 1. Groq Cloud LPU Free Tier (Ultra-Fast 500 tokens/sec)
-    groq_key = (os.environ.get('GROQ_API_KEY') or os.environ.get('GROQ_KEY') or '').strip().strip("'\"")
-    if groq_key:
-        groq_models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it']
-        for g_model in groq_models:
-            try:
-                r = requests.post(
-                    'https://api.groq.com/openai/v1/chat/completions',
-                    headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
-                    json={'model': g_model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                    timeout=timeout
-                )
-                if r.status_code == 200:
-                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-                    if ans and len(ans) > 20:
-                        return ans
-            except Exception: pass
-
-    # 2. OpenRouter Free Lifetime Gateway (:free models)
-    openrouter_key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('OPENROUTER_KEY') or '').strip().strip("'\"")
-    if openrouter_key:
-        # Route model based on user selection
-        free_models = [
-            'deepseek/deepseek-r1:free',
-            'meta-llama/llama-3.3-70b-instruct:free',
-            'qwen/qwen-2.5-coder-32b-instruct:free',
-            'google/gemma-2-9b-it:free',
-            'mistralai/mistral-7b-instruct:free'
-        ]
-        if 'deepseek' in model_key:
-            free_models.insert(0, 'deepseek/deepseek-r1:free')
-        elif 'code' in model_key or 'qwen' in model_key:
-            free_models.insert(0, 'qwen/qwen-2.5-coder-32b-instruct:free')
-
-        for or_model in free_models:
-            try:
-                r = requests.post(
-                    'https://openrouter.ai/api/v1/chat/completions',
-                    headers={'Authorization': f'Bearer {openrouter_key}', 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pustakverse.onrender.com', 'X-Title': 'PustakVerse GranthMind AI'},
-                    json={'model': or_model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                    timeout=timeout
-                )
-                if r.status_code == 200:
-                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-                    if ans and len(ans) > 20:
-                        return ans
-            except Exception: pass
-
-    # 3. GitHub Models Free Gateway (if GITHUB_TOKEN or GITHUB_API_KEY)
-    github_token = (os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_API_KEY') or '').strip().strip("'\"")
-    if github_token:
-        gh_models = ['gpt-4o-mini', 'Phi-3.5-mini-instruct', 'Mistral-large-2407']
-        for gh_m in gh_models:
-            try:
-                r = requests.post(
-                    'https://models.inference.ai.azure.com/chat/completions',
-                    headers={'Authorization': f'Bearer {github_token}', 'Content-Type': 'application/json'},
-                    json={'model': gh_m, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                    timeout=timeout
-                )
-                if r.status_code == 200:
-                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-                    if ans and len(ans) > 20:
-                        return ans
-            except Exception: pass
-
-    # 4. Hugging Face Serverless Free Inference
-    hf_token = (os.environ.get('HUGGINGFACE_API_KEY') or os.environ.get('HF_TOKEN') or '').strip().strip("'\"")
-    if hf_token:
-        hf_models = ['Qwen/Qwen2.5-72B-Instruct', 'meta-llama/Llama-3.1-8B-Instruct']
-        for hf_m in hf_models:
-            try:
-                r = requests.post(
-                    f'https://api-inference.huggingface.co/models/{hf_m}/v1/chat/completions',
-                    headers={'Authorization': f'Bearer {hf_token}', 'Content-Type': 'application/json'},
-                    json={'model': hf_m, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                    timeout=timeout
-                )
-                if r.status_code == 200:
-                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-                    if ans and len(ans) > 20:
-                        return ans
-            except Exception: pass
-
-    # 5. Cohere Free Tier Gateway
-    cohere_key = (os.environ.get('COHERE_API_KEY') or '').strip().strip("'\"")
-    if cohere_key:
+    # 2. OpenAI Official API (GPT-4o / GPT-4o Mini)
+    if p == 'openai':
         try:
             r = requests.post(
-                'https://api.cohere.com/v2/chat',
-                headers={'Authorization': f'Bearer {cohere_key}', 'Content-Type': 'application/json'},
-                json={'model': 'command-r-plus-08-2024', 'messages': [{'role': 'user', 'content': prompt}]},
+                'https://api.openai.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={'model': model_id if model_id.startswith('gpt') else 'gpt-4o-mini', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
                 timeout=timeout
             )
             if r.status_code == 200:
-                msg = r.json().get('message', {}).get('content', [{}])[0].get('text', '').strip()
-                if msg and len(msg) > 20:
-                    return msg
+                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        except Exception: pass
+
+    # 3. Groq Official LPU Cloud API
+    if p == 'groq':
+        try:
+            r = requests.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={'model': 'llama-3.3-70b-versatile', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                timeout=timeout
+            )
+            if r.status_code == 200:
+                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        except Exception: pass
+
+    # 4. Anthropic Claude Official API
+    if p == 'anthropic':
+        try:
+            r = requests.post(
+                'https://api.anthropic.com/v1/messages',
+                headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json'},
+                json={'model': 'claude-3-5-sonnet-20241022', 'max_tokens': 3500, 'messages': [{'role': 'user', 'content': prompt}]},
+                timeout=timeout
+            )
+            if r.status_code == 200:
+                content_blocks = r.json().get('content', [])
+                if content_blocks and 'text' in content_blocks[0]:
+                    return content_blocks[0]['text'].strip()
+        except Exception: pass
+
+    # 5. DeepSeek Official API
+    if p == 'deepseek':
+        try:
+            r = requests.post(
+                'https://api.deepseek.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={'model': 'deepseek-reasoner' if 'r1' in model_id.lower() else 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                timeout=timeout
+            )
+            if r.status_code == 200:
+                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        except Exception: pass
+
+    # 6. OpenRouter Official API
+    if p == 'openrouter' or get_provider_api_key('openrouter'):
+        or_key = api_key if p == 'openrouter' else get_provider_api_key('openrouter')
+        try:
+            r = requests.post(
+                'https://openrouter.ai/api/v1/chat/completions',
+                headers={'Authorization': f'Bearer {or_key}', 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pustakverse.onrender.com', 'X-Title': 'PustakVerse GranthMind'},
+                json={'model': model_id if '/' in model_id else 'deepseek/deepseek-r1:free', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                timeout=timeout
+            )
+            if r.status_code == 200:
+                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        except Exception: pass
+
+    # 7. Mistral Official API
+    if p == 'mistral':
+        try:
+            r = requests.post(
+                'https://api.mistral.ai/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={'model': 'mistral-large-latest', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                timeout=timeout
+            )
+            if r.status_code == 200:
+                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
         except Exception: pass
 
     return ''
@@ -1633,15 +1680,30 @@ def build_ai_free_response(question, book_title='', book_description='', screens
             return False
         return True
 
-    # 1. Primary Engine: High-Speed Gemini 2.0 Gateway
-    gemini_resp = call_gemini_api(prompt, attachment_path=attachment_path)
-    if _is_clean_ai_answer(gemini_resp):
-        return gemini_resp
+    # 1. Direct Target Model Live Execution (if developer added its API key)
+    sel_mid = (selected_model_id or 'gemini-2.0-flash').lower()
+    
+    # Model ID to Provider Mapping
+    provider_map = {
+        'gemini-2.0-flash': 'gemini',
+        'deepseek-r1': 'deepseek',
+        'groq-llama-3-3': 'groq',
+        'gpt-4o-mini': 'openai',
+        'claude-3-5-sonnet': 'anthropic',
+        'mistral-large': 'mistral',
+        'qwen-coder-32b': 'huggingface'
+    }
+    target_provider = provider_map.get(sel_mid, 'gemini')
+    target_resp = call_provider_live_api(target_provider, sel_mid, prompt, attachment_path=attachment_path)
+    if _is_clean_ai_answer(target_resp):
+        return target_resp
 
-    # 2. Secondary Engine: Free AI Providers Gateway
-    free_answer = generate_free_ai_response(prompt)
-    if _is_clean_ai_answer(free_answer):
-        return free_answer
+    # 2. Multi-Provider Synced Gateway Fallback
+    for prov in ['gemini', 'groq', 'deepseek', 'openai', 'anthropic', 'openrouter', 'mistral', 'huggingface', 'cohere']:
+        if prov != target_provider:
+            prov_resp = call_provider_live_api(prov, sel_mid, prompt, attachment_path=attachment_path)
+            if _is_clean_ai_answer(prov_resp):
+                return prov_resp
 
     # 3. Dynamic High-IQ Conversational & Academic AI Engine
     fallback = build_ai_learning_response(
@@ -6202,6 +6264,54 @@ def edit_book(book_id):
         if db:
             try: db.close()
             except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/admin/sync_ai_keys', methods=['POST'])
+def admin_sync_ai_keys():
+    """
+    Developer Dashboard Route: Automatically syncs and activates AI models when developer adds any API key.
+    """
+    if session.get('role') != 'developer':
+        return jsonify({'status': 'error', 'message': 'Developer privileges required.'}), 403
+
+    provider = request.form.get('provider', '').lower().strip()
+    api_key = request.form.get('api_key', '').strip()
+
+    if not provider or not api_key:
+        flash("Provider and API Key are required for auto-sync.", "error")
+        return redirect(url_for('dashboard'))
+
+    # Update in-memory cache
+    _ai_keys_db_cache[provider] = api_key
+    os.environ[f"{provider.upper()}_API_KEY"] = api_key
+
+    # Save to database
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ai_api_keys (
+                provider VARCHAR(50) PRIMARY KEY,
+                api_key TEXT NOT NULL,
+                is_active TINYINT DEFAULT 1,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO ai_api_keys (provider, api_key, is_active)
+            VALUES (%s, %s, 1)
+            ON DUPLICATE KEY UPDATE api_key = VALUES(api_key), is_active = 1
+        """, (provider, api_key))
+        db.commit()
+        flash(f"🟢 Successfully synced and activated {provider.upper()} model in GranthMind AI!", "success")
+    except Exception as e:
+        flash(f"Database error while saving key: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
     return redirect(url_for('dashboard'))
 
 @app.route('/update_front_page', methods=['POST'])
