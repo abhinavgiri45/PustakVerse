@@ -39,6 +39,29 @@
     </script>
 </head>
 <body>
+    <!-- GLOBAL BROADCAST TICKER BANNER -->
+    {% if active_broadcast and active_broadcast.message %}
+    <div id="globalBroadcastTickerBar" style="
+        {% if active_broadcast.banner_type == 'success' %}background: linear-gradient(135deg, #15803d, #166534); color: white;
+        {% elif active_broadcast.banner_type == 'warning' %}background: linear-gradient(135deg, #ea580c, #c2410c); color: white;
+        {% elif active_broadcast.banner_type == 'danger' %}background: linear-gradient(135deg, #dc2626, #991b1b); color: white;
+        {% elif active_broadcast.banner_type == 'purple' %}background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white;
+        {% else %}background: linear-gradient(135deg, #0284c7, #0369a1); color: white;{% endif %}
+        padding: 9px 16px; font-size: 0.86rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; gap: 10px; z-index: 10000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); letter-spacing: 0.01em;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center;">
+            <span style="font-size: 1rem;">📢</span>
+            <span>{{ active_broadcast.message }}</span>
+        </div>
+        {% if session.role in ['official', 'developer'] or is_absolute_power %}
+        <form action="{{ url_for('executive_clear_global_announcement') }}" method="POST" style="margin: 0; display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" title="Remove broadcast ticker across all pages" style="background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 800; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                <span>🗑️</span> Remove Ticker
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
     <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
 
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>

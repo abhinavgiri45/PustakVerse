@@ -8713,6 +8713,7 @@ def executive_global_announcement():
             VALUES (%s, %s, TRUE)
         """, (message, banner_type))
         db.commit()
+        fast_cache.clear_all()
         log_official_activity(session['user_id'], f"Broadcasted global platform alert: '{message[:50]}...'")
         flash("Global alert ticker broadcasted across all platform pages!", "success")
     except Exception as e:
@@ -8727,6 +8728,38 @@ def executive_global_announcement():
 
 
 # POWER 5: SECURITY BAN HAMMER / IP BLACKLIST (Founder, CEO, CTO, Legal Counsel)
+
+
+# POWER 4B: DISMISS / REMOVE ACTIVE GLOBAL BROADCAST TICKER (Founder, CEO, CTO, COO)
+@app.route('/executive/powers/clear_global_announcement', methods=['POST'])
+def executive_clear_global_announcement():
+    role = session.get('role')
+    is_absolute = session.get('is_absolute_power')
+    post_tier = session.get('post_tier')
+
+    if role != 'developer' and not is_absolute and post_tier not in ['operations', 'product', 'content', 'executive']:
+        flash('Unauthorized. Executive clearance required.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("UPDATE global_announcements SET active = FALSE WHERE active = TRUE")
+        db.commit()
+        fast_cache.clear_all()
+        log_official_activity(session['user_id'], "Cleared and dismissed active global broadcast ticker.")
+        flash("Active global broadcast ticker has been cleared from all pages.", "success")
+    except Exception as e:
+        logging.error(f"Error clearing global announcement: {e}")
+        flash("Could not clear broadcast ticker.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
 @app.route('/executive/powers/ban_target', methods=['POST'])
 def executive_ban_target():
     role = session.get('role')

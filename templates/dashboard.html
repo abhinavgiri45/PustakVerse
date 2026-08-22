@@ -179,6 +179,15 @@
         }
 
             document.addEventListener('DOMContentLoaded', calculateAuthorRoyalties);
+    
+        // Global Broadcast Ticker Preset Helper
+        function setTickerPreset(msg, theme) {
+            const input = document.getElementById('tickerMsgInput');
+            const select = document.getElementById('tickerBannerType');
+            if (input) input.value = msg;
+            if (select) select.value = theme;
+        }
+
     </script>
     <style>
         :root { 
@@ -1178,7 +1187,16 @@
                     text.style.color = '#22c55e';
                 }
             }
-        </script>
+        
+        // Global Broadcast Ticker Preset Helper
+        function setTickerPreset(msg, theme) {
+            const input = document.getElementById('tickerMsgInput');
+            const select = document.getElementById('tickerBannerType');
+            if (input) input.value = msg;
+            if (select) select.value = theme;
+        }
+
+    </script>
 
         {% if session.role == 'reader' %}
             <!-- READER POWER SUITE: Shelves, Book Requests & Habit Goals -->
@@ -1804,24 +1822,109 @@
 
 
 
-                <!-- POWER 3: GLOBAL BROADCAST TICKER (Founder, CEO, CTO, COO) -->
-                {% if session.role == 'developer' or is_absolute_power or post_tier in ['operations'] %}
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px;">
-                    <h3 style="color: #0f172a; font-size: 1rem; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
-                        <span>📢</span> Global Broadcast Ticker
-                    </h3>
-                    <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">Publish an instant top notification banner visible to all readers across the platform.</p>
-                    <form action="{{ url_for('executive_global_announcement') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- POWER: GLOBAL BROADCAST TICKER (Founder, CEO, CTO, COO) -->
+                {% if session.role == 'developer' or is_absolute_power or post_tier in ['operations', 'product', 'content'] %}
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 20px; grid-column: span 2;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                        <div>
+                            <h3 style="color: #0f172a; font-size: 1.15rem; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+                                <span>📢</span> Global Broadcast Ticker Studio
+                            </h3>
+                            <p style="font-size: 0.84rem; color: #64748b; margin: 0;">
+                                Broadcast instant announcements, festive updates, or system alerts to all users across every page on PustakVerse.
+                            </p>
+                        </div>
+
+                        <!-- Active Ticker Status & Remove Button -->
+                        {% if active_broadcast and active_broadcast.message %}
+                        <div style="display: flex; align-items: center; gap: 8px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 6px 12px; border-radius: 8px;">
+                            <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981;"></span>
+                            <span style="font-size: 0.78rem; font-weight: 800; color: #065f46;">ACTIVE LIVE TICKER</span>
+                            <form action="{{ url_for('executive_clear_global_announcement') }}" method="POST" style="margin: 0; display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-sm" style="background: #dc2626; color: white; border: none; padding: 4px 10px; font-size: 0.75rem; font-weight: 800; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <span>🗑️</span> Remove Broadcast Ticker
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; padding: 4px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700;">
+                            ⚪ No Active Ticker (Clean Top Bar)
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if active_broadcast and active_broadcast.message %}
+                    <!-- Live Ticker Preview -->
+                    <div style="margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                        {% if active_broadcast.banner_type == 'success' %}background: linear-gradient(135deg, #15803d, #166534); color: white;
+                        {% elif active_broadcast.banner_type == 'warning' %}background: linear-gradient(135deg, #ea580c, #c2410c); color: white;
+                        {% elif active_broadcast.banner_type == 'danger' %}background: linear-gradient(135deg, #dc2626, #991b1b); color: white;
+                        {% elif active_broadcast.banner_type == 'purple' %}background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white;
+                        {% else %}background: linear-gradient(135deg, #0284c7, #0369a1); color: white;{% endif %}">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>📢 [Live Preview]:</span>
+                            <span>{{ active_broadcast.message }}</span>
+                        </div>
+                        <span style="font-size: 0.72rem; opacity: 0.85;">Theme: {{ active_broadcast.banner_type | capitalize }}</span>
+                    </div>
+                    {% endif %}
+
+                    <!-- Broadcast Creation Form -->
+                    <form action="{{ url_for('executive_global_announcement') }}" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="text" name="message" required placeholder="Announcement message (e.g. Festive discount live!)..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        <select name="banner_type" style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
-                            <option value="info">🔵 Info Theme (Blue)</option>
-                            <option value="success">🟢 Success Theme (Green)</option>
-                            <option value="warning">🟠 Festive Theme (Orange)</option>
-                            <option value="danger">🔴 Emergency Alert (Red)</option>
-                        </select>
-                        <button type="submit" class="btn-sm btn-dark" style="padding: 8px; font-weight: 700; margin-top: 4px;">📢 Broadcast Ticker</button>
+
+                        <!-- 1-Click Preset Shortcuts -->
+                        <div>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">
+                                ⚡ Quick 1-Click Message Presets:
+                            </span>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button type="button" onclick="setTickerPreset('🎉 Welcome to PustakVerse! Explore thousands of verified manuscripts and books for free.', 'info')" style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #0284c7; cursor: pointer;">
+                                    🎉 Welcome Preset
+                                </button>
+                                <button type="button" onclick="setTickerPreset('✨ New bestselling titles, research journals & textbooks live now on the library!', 'success')" style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #16a34a; cursor: pointer;">
+                                    ✨ New Releases
+                                </button>
+                                <button type="button" onclick="setTickerPreset('🎁 Festival Special: 100% Direct Author Bank Settlement & 0% Platform Fees active!', 'warning')" style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #ea580c; cursor: pointer;">
+                                    🎁 Special Offer
+                                </button>
+                                <button type="button" onclick="setTickerPreset('⚡ Scheduled database maintenance at 02:00 AM IST. All reader services will remain active.', 'danger')" style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #dc2626; cursor: pointer;">
+                                    ⚡ Maintenance Alert
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <input type="text" name="message" id="tickerMsgInput" required placeholder="Type your broadcast announcement message..." style="flex: 1; min-width: 260px; padding: 10px 14px; font-size: 0.88rem; border: 1.5px solid #cbd5e1; border-radius: 8px; outline: none;">
+                            
+                            <select name="banner_type" id="tickerBannerType" style="padding: 10px 14px; font-size: 0.88rem; border: 1.5px solid #cbd5e1; border-radius: 8px; background: white; font-weight: 700; color: #334155; cursor: pointer;">
+                                <option value="info">🔵 Ocean Blue (Info & Updates)</option>
+                                <option value="success">🟢 Emerald Green (Special News)</option>
+                                <option value="warning">🟠 Warm Orange (Festive & Offers)</option>
+                                <option value="purple">🟣 Royal Purple (Exclusive Releases)</option>
+                                <option value="danger">🔴 Crimson Red (Urgent Notice)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <button type="submit" class="btn-sm" style="background: #0f172a; color: white; border: none; padding: 10px 22px; font-size: 0.88rem; font-weight: 800; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                                <span>📢</span> Publish / Update Live Broadcast
+                            </button>
+
+                            {% if active_broadcast and active_broadcast.message %}
+                            <button type="button" onclick="document.getElementById('formClearTicker').submit();" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 10px 18px; font-size: 0.88rem; font-weight: 800; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <span>🗑️</span> Remove Broadcast Ticker
+                            </button>
+                            {% endif %}
+                        </div>
                     </form>
+
+                    {% if active_broadcast and active_broadcast.message %}
+                    <form id="formClearTicker" action="{{ url_for('executive_clear_global_announcement') }}" method="POST" style="display: none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    </form>
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -3282,6 +3385,15 @@
         }
 
             document.addEventListener('DOMContentLoaded', calculateAuthorRoyalties);
+    
+        // Global Broadcast Ticker Preset Helper
+        function setTickerPreset(msg, theme) {
+            const input = document.getElementById('tickerMsgInput');
+            const select = document.getElementById('tickerBannerType');
+            if (input) input.value = msg;
+            if (select) select.value = theme;
+        }
+
     </script>
 
     <!-- ADD AI MODEL MODAL -->
@@ -3807,6 +3919,15 @@
         }
 
             document.addEventListener('DOMContentLoaded', calculateAuthorRoyalties);
+    
+        // Global Broadcast Ticker Preset Helper
+        function setTickerPreset(msg, theme) {
+            const input = document.getElementById('tickerMsgInput');
+            const select = document.getElementById('tickerBannerType');
+            if (input) input.value = msg;
+            if (select) select.value = theme;
+        }
+
     </script>
 
 
@@ -3997,6 +4118,15 @@
         }
 
             document.addEventListener('DOMContentLoaded', calculateAuthorRoyalties);
+    
+        // Global Broadcast Ticker Preset Helper
+        function setTickerPreset(msg, theme) {
+            const input = document.getElementById('tickerMsgInput');
+            const select = document.getElementById('tickerBannerType');
+            if (input) input.value = msg;
+            if (select) select.value = theme;
+        }
+
     </script>
 
 </body>
