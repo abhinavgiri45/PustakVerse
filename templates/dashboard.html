@@ -26,8 +26,38 @@
 
         function toggleUploadSBIN(val) {
             const box = document.getElementById('upload_custom_sbin_box');
-            if (box) {
-                box.style.display = (val === 'yes') ? 'block' : 'none';
+            const labelAuto = document.getElementById('label_sbin_auto');
+            const labelCustom = document.getElementById('label_sbin_custom');
+            const radioNo = document.getElementById('radio_sbin_no');
+            const radioYes = document.getElementById('radio_sbin_yes');
+
+            if (val === 'yes') {
+                if (radioYes) radioYes.checked = true;
+                if (box) box.style.display = 'block';
+                if (labelCustom) {
+                    labelCustom.style.background = '#f0fdf4';
+                    labelCustom.style.borderColor = '#16a34a';
+                }
+                if (labelAuto) {
+                    labelAuto.style.background = '#ffffff';
+                    labelAuto.style.borderColor = '#cbd5e1';
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.focus();
+                    if (input.value) verifyInputSBIN(input.value, 'upload_sbin_status');
+                }
+            } else {
+                if (radioNo) radioNo.checked = true;
+                if (box) box.style.display = 'none';
+                if (labelAuto) {
+                    labelAuto.style.background = '#fff7ed';
+                    labelAuto.style.borderColor = '#ea580c';
+                }
+                if (labelCustom) {
+                    labelCustom.style.background = '#ffffff';
+                    labelCustom.style.borderColor = '#cbd5e1';
+                }
             }
         }
 
@@ -1148,188 +1178,7 @@
                     text.style.color = '#22c55e';
                 }
             }
-
-            
-        // Direct Author Bank Settlement & Live Royalty Calculator
-        function calculateAuthorRoyalties() {
-            const input = document.getElementById('calcPriceInput');
-            if (!input) return;
-            const price = parseFloat(input.value) || 0;
-            const feeEl = document.getElementById('calcFeeDisplay');
-            const netEl = document.getElementById('calcNetDisplay');
-            const est50El = document.getElementById('est50');
-            const est100El = document.getElementById('est100');
-            const est500El = document.getElementById('est500');
-            const est1000El = document.getElementById('est1000');
-
-            if (price <= 0) {
-                if (feeEl) feeEl.textContent = '-₹0.00';
-                if (netEl) netEl.textContent = '₹0.00';
-                if (est50El) est50El.textContent = '₹0';
-                if (est100El) est100El.textContent = '₹0';
-                if (est500El) est500El.textContent = '₹0';
-                if (est1000El) est1000El.textContent = '₹0';
-                return;
-            }
-
-            // Razorpay standard direct settlement fee: 2% + 18% GST = 2.36%
-            const fee = price * 0.0236;
-            const net = Math.max(0, price - fee);
-
-            if (feeEl) feeEl.textContent = `-₹${fee.toFixed(2)}`;
-            if (netEl) netEl.textContent = `₹${net.toFixed(2)}`;
-            if (est50El) est50El.textContent = `₹${Math.round(net * 50).toLocaleString('en-IN')}`;
-            if (est100El) est100El.textContent = `₹${Math.round(net * 100).toLocaleString('en-IN')}`;
-            if (est500El) est500El.textContent = `₹${Math.round(net * 500).toLocaleString('en-IN')}`;
-            if (est1000El) est1000El.textContent = `₹${Math.round(net * 1000).toLocaleString('en-IN')}`;
-        }
-
-            function calcAuthorRoyalty(val) {
-                const box = document.getElementById('royaltyCalcBox');
-                const p = parseFloat(val);
-                if (!box) return;
-                if (isNaN(p) || p <= 0) {
-                    box.style.display = 'none';
-                    return;
-                }
-                box.style.display = 'block';
-                document.getElementById('royaltyPerSale').textContent = '₹' + p.toFixed(2);
-                document.getElementById('royalty25').textContent = '₹' + (p * 25).toLocaleString('en-IN');
-                document.getElementById('royalty100').textContent = '₹' + (p * 100).toLocaleString('en-IN');
-                document.getElementById('royalty500').textContent = '₹' + (p * 500).toLocaleString('en-IN');
-            }
-        
-        // =====================================================================
-        // AUTHOR DASHBOARD SBIN MINTING & VERIFICATION ENGINE
-        // =====================================================================
-        let lastMintedSBIN = '';
-
-        function toggleUploadSBIN(val) {
-            const box = document.getElementById('upload_custom_sbin_box');
-            if (box) {
-                box.style.display = (val === 'yes') ? 'block' : 'none';
-            }
-        }
-
-        async function verifyInputSBIN(code, statusDivId) {
-            const statusDiv = document.getElementById(statusDivId);
-            if (!statusDiv) return;
-            const val = (code || '').trim();
-            if (!val) {
-                statusDiv.innerHTML = '';
-                return;
-            }
-            try {
-                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(val)}`);
-                const data = await res.json();
-                if (data.valid) {
-                    if (data.registered_on_pustakverse && data.book) {
-                        statusDiv.style.color = '#dc2626';
-                        statusDiv.innerHTML = `⚠️ Conflict: Already assigned to "${data.book.title}" by ${data.book.author}.`;
-                    } else {
-                        statusDiv.style.color = '#16a34a';
-                        statusDiv.innerHTML = `✓ Valid Unique ${data.format || 'SBIN-13'} (EAN-13 Checksum Verified)`;
-                    }
-                } else {
-                    statusDiv.style.color = '#dc2626';
-                    statusDiv.innerHTML = `❌ Invalid: ${data.message || 'Incorrect checksum'}`;
-                }
-            } catch (e) {
-                statusDiv.style.color = '#64748b';
-                statusDiv.innerHTML = 'Checking...';
-            }
-        }
-
-        async function generateAndSetSBIN(inputId, statusDivId) {
-            const input = document.getElementById(inputId);
-            const statusDiv = document.getElementById(statusDivId);
-            if (statusDiv) {
-                statusDiv.style.color = '#0284c7';
-                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
-            }
-            try {
-                const res = await fetch('/api/generate_sbin');
-                const data = await res.json();
-                if (data.status === 'success' && data.sbin) {
-                    if (input) input.value = data.sbin;
-                    if (statusDiv) {
-                        statusDiv.style.color = '#16a34a';
-                        statusDiv.innerHTML = `✓ Generated Genuine Unique SBIN: ${data.sbin}`;
-                    }
-                }
-            } catch (e) {
-                if (statusDiv) {
-                    statusDiv.style.color = '#dc2626';
-                    statusDiv.innerHTML = 'Failed to generate SBIN. Please try again.';
-                }
-            }
-        }
-
-        async function mintAuthorDashboardSBIN() {
-            const box = document.getElementById('authorMintedSbinBox');
-            const codeEl = document.getElementById('authorMintedSbinCode');
-            if (codeEl) codeEl.textContent = 'Generating...';
-            if (box) box.style.display = 'block';
-            try {
-                const res = await fetch('/api/generate_sbin');
-                const data = await res.json();
-                if (data.status === 'success' && data.sbin) {
-                    lastMintedSBIN = data.sbin;
-                    if (codeEl) codeEl.textContent = data.sbin;
-                    // Reset copy button
-                    document.getElementById('copySbinIcon').textContent = '📋';
-                    document.getElementById('copySbinText').textContent = 'Copy SBIN';
-                }
-            } catch (e) {
-                if (codeEl) codeEl.textContent = 'Error generating SBIN';
-            }
-        }
-
-        function copyMintedSBIN() {
-            if (!lastMintedSBIN) {
-                const codeEl = document.getElementById('authorMintedSbinCode');
-                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
-            }
-            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
-                navigator.clipboard.writeText(lastMintedSBIN).then(() => {
-                    document.getElementById('copySbinIcon').textContent = '✓';
-                    document.getElementById('copySbinText').textContent = 'Copied!';
-                    setTimeout(() => {
-                        document.getElementById('copySbinIcon').textContent = '📋';
-                        document.getElementById('copySbinText').textContent = 'Copy SBIN';
-                    }, 2500);
-                });
-            }
-        }
-
-        function applyMintedSBINToForm() {
-            if (!lastMintedSBIN) {
-                const codeEl = document.getElementById('authorMintedSbinCode');
-                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
-            }
-            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
-                // Check "I already have an ISBN / SBIN"
-                const radios = document.getElementsByName('has_sbin');
-                for (let r of radios) {
-                    if (r.value === 'yes') {
-                        r.checked = true;
-                        toggleUploadSBIN('yes');
-                        break;
-                    }
-                }
-                const input = document.getElementById('upload_sbin_input');
-                if (input) {
-                    input.value = lastMintedSBIN;
-                    verifyInputSBIN(lastMintedSBIN, 'upload_sbin_status');
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    input.style.border = '2px solid #ea580c';
-                    setTimeout(() => { input.style.border = '1px solid #cbd5e1'; }, 2000);
-                }
-            }
-        }
-
-            document.addEventListener('DOMContentLoaded', calculateAuthorRoyalties);
-    </script>
+        </script>
 
         {% if session.role == 'reader' %}
             <!-- READER POWER SUITE: Shelves, Book Requests & Habit Goals -->
@@ -1621,30 +1470,51 @@
                         </div>
 
                 <!-- SMART ISBN / SBIN ALLOCATION SECTOR -->
-                <div class="form-group" style="margin-bottom: 18px; padding: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px;">
-                    <label style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                        <span>🏷️</span> Standard Book Identifier (ISBN / SBIN)
+                <div class="form-group" style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;">
+                    <label style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.1rem;">🏷️</span> Standard Book Identifier (ISBN / SBIN)
                     </label>
-                    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: #334155; cursor: pointer;">
-                            <input type="radio" name="has_sbin" value="no" checked onchange="toggleUploadSBIN(this.value)">
-                            <span><strong>I do not have an ISBN/SBIN</strong> — Generate a 100% unique, globally compliant digital SBIN for free upon publishing</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: #334155; cursor: pointer;">
-                            <input type="radio" name="has_sbin" value="yes" onchange="toggleUploadSBIN(this.value)">
-                            <span><strong>I already have an ISBN / SBIN</strong> — Enter existing 10 or 13-digit standard identifier</span>
-                        </label>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px;">
+                        <!-- Option 1: Auto-generate Free SBIN -->
+                        <div id="label_sbin_auto" onclick="toggleUploadSBIN('no')" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #fff7ed; border: 1.5px solid #ea580c; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <input type="radio" name="has_sbin" value="no" id="radio_sbin_no" checked onchange="toggleUploadSBIN(this.value)" style="margin-top: 3px; cursor: pointer; accent-color: #ea580c;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 800; font-size: 0.88rem; color: #9a3412;">
+                                    ✨ I do not have an ISBN/SBIN (Auto-Mint Free Digital SBIN)
+                                </div>
+                                <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px; line-height: 1.4;">
+                                    PustakVerse will automatically generate an authentic, 100% unique 13-digit digital SBIN (EAN-13 format with parity checksum) and bind it to your book for free upon publishing.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Option 2: Enter Existing ISBN / SBIN -->
+                        <div id="label_sbin_custom" onclick="toggleUploadSBIN('yes')" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <input type="radio" name="has_sbin" value="yes" id="radio_sbin_yes" onchange="toggleUploadSBIN(this.value)" style="margin-top: 3px; cursor: pointer; accent-color: #ea580c;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">
+                                    📋 I already have an ISBN / SBIN (Enter Existing Identifier)
+                                </div>
+                                <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px; line-height: 1.4;">
+                                    Enter your officially registered 10 or 13-digit standard publication identifier (e.g. 978-93-849-201-4 or 978-0743273565).
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Custom SBIN Input Container -->
-                    <div id="upload_custom_sbin_box" style="display: none; margin-top: 8px;">
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="Enter ISBN-13 (e.g. 978-93-849-201-4) or ISBN-10" oninput="verifyInputSBIN(this.value, 'upload_sbin_status')" style="flex: 1; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 0.85rem; margin: 0;">
-                            <button type="button" onclick="generateAndSetSBIN('upload_sbin_input', 'upload_sbin_status')" style="background: #ea580c; color: white; border: none; padding: 0 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap;">
-                                ✨ Generate Free
+                    <div id="upload_custom_sbin_box" style="display: none; margin-top: 12px; padding: 14px; background: #ffffff; border: 1.5px solid #86efac; border-radius: 8px;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #166534; display: block; margin-bottom: 6px;">
+                            Enter Standard ISBN-10, ISBN-13, or Digital SBIN:
+                        </label>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="e.g. 978-93-849-201-4" oninput="verifyInputSBIN(this.value, 'upload_sbin_status')" style="flex: 1; min-width: 200px; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin: 0; outline: none;">
+                            <button type="button" onclick="generateAndSetSBIN('upload_sbin_input', 'upload_sbin_status')" style="background: #ea580c; color: white; border: none; padding: 0 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; white-space: nowrap; height: 42px;">
+                                ✨ Mint New SBIN
                             </button>
                         </div>
-                        <div id="upload_sbin_status" style="font-size: 0.78rem; font-weight: 700; margin-top: 6px;"></div>
+                        <div id="upload_sbin_status" style="font-size: 0.82rem; font-weight: 700; margin-top: 8px;"></div>
                     </div>
                 </div>
 
@@ -3292,8 +3162,38 @@
 
         function toggleUploadSBIN(val) {
             const box = document.getElementById('upload_custom_sbin_box');
-            if (box) {
-                box.style.display = (val === 'yes') ? 'block' : 'none';
+            const labelAuto = document.getElementById('label_sbin_auto');
+            const labelCustom = document.getElementById('label_sbin_custom');
+            const radioNo = document.getElementById('radio_sbin_no');
+            const radioYes = document.getElementById('radio_sbin_yes');
+
+            if (val === 'yes') {
+                if (radioYes) radioYes.checked = true;
+                if (box) box.style.display = 'block';
+                if (labelCustom) {
+                    labelCustom.style.background = '#f0fdf4';
+                    labelCustom.style.borderColor = '#16a34a';
+                }
+                if (labelAuto) {
+                    labelAuto.style.background = '#ffffff';
+                    labelAuto.style.borderColor = '#cbd5e1';
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.focus();
+                    if (input.value) verifyInputSBIN(input.value, 'upload_sbin_status');
+                }
+            } else {
+                if (radioNo) radioNo.checked = true;
+                if (box) box.style.display = 'none';
+                if (labelAuto) {
+                    labelAuto.style.background = '#fff7ed';
+                    labelAuto.style.borderColor = '#ea580c';
+                }
+                if (labelCustom) {
+                    labelCustom.style.background = '#ffffff';
+                    labelCustom.style.borderColor = '#cbd5e1';
+                }
             }
         }
 
@@ -3787,8 +3687,38 @@
 
         function toggleUploadSBIN(val) {
             const box = document.getElementById('upload_custom_sbin_box');
-            if (box) {
-                box.style.display = (val === 'yes') ? 'block' : 'none';
+            const labelAuto = document.getElementById('label_sbin_auto');
+            const labelCustom = document.getElementById('label_sbin_custom');
+            const radioNo = document.getElementById('radio_sbin_no');
+            const radioYes = document.getElementById('radio_sbin_yes');
+
+            if (val === 'yes') {
+                if (radioYes) radioYes.checked = true;
+                if (box) box.style.display = 'block';
+                if (labelCustom) {
+                    labelCustom.style.background = '#f0fdf4';
+                    labelCustom.style.borderColor = '#16a34a';
+                }
+                if (labelAuto) {
+                    labelAuto.style.background = '#ffffff';
+                    labelAuto.style.borderColor = '#cbd5e1';
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.focus();
+                    if (input.value) verifyInputSBIN(input.value, 'upload_sbin_status');
+                }
+            } else {
+                if (radioNo) radioNo.checked = true;
+                if (box) box.style.display = 'none';
+                if (labelAuto) {
+                    labelAuto.style.background = '#fff7ed';
+                    labelAuto.style.borderColor = '#ea580c';
+                }
+                if (labelCustom) {
+                    labelCustom.style.background = '#ffffff';
+                    labelCustom.style.borderColor = '#cbd5e1';
+                }
             }
         }
 
@@ -3968,8 +3898,38 @@
 
         function toggleUploadSBIN(val) {
             const box = document.getElementById('upload_custom_sbin_box');
-            if (box) {
-                box.style.display = (val === 'yes') ? 'block' : 'none';
+            const labelAuto = document.getElementById('label_sbin_auto');
+            const labelCustom = document.getElementById('label_sbin_custom');
+            const radioNo = document.getElementById('radio_sbin_no');
+            const radioYes = document.getElementById('radio_sbin_yes');
+
+            if (val === 'yes') {
+                if (radioYes) radioYes.checked = true;
+                if (box) box.style.display = 'block';
+                if (labelCustom) {
+                    labelCustom.style.background = '#f0fdf4';
+                    labelCustom.style.borderColor = '#16a34a';
+                }
+                if (labelAuto) {
+                    labelAuto.style.background = '#ffffff';
+                    labelAuto.style.borderColor = '#cbd5e1';
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.focus();
+                    if (input.value) verifyInputSBIN(input.value, 'upload_sbin_status');
+                }
+            } else {
+                if (radioNo) radioNo.checked = true;
+                if (box) box.style.display = 'none';
+                if (labelAuto) {
+                    labelAuto.style.background = '#fff7ed';
+                    labelAuto.style.borderColor = '#ea580c';
+                }
+                if (labelCustom) {
+                    labelCustom.style.background = '#ffffff';
+                    labelCustom.style.borderColor = '#cbd5e1';
+                }
             }
         }
 
