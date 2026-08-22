@@ -2040,8 +2040,17 @@ def get_db_pool():
                     _db_pool = None
     return _db_pool
 
-def get_db_connection(retries=2, delay=0.3):
+_last_db_fail_time = 0
+_db_fail_cooldown = 10.0 # 10-second fast-fail circuit breaker if DB unreachable
+
+def get_db_connection(retries=1, delay=0.1):
+    global _last_db_fail_time
     last_exception = None
+
+    # Circuit breaker: if DB failed recently, fail fast without waiting 10 seconds
+    now = time.time()
+    if now - _last_db_fail_time < _db_fail_cooldown:
+        raise mysql.connector.errors.DatabaseError("DB connection in circuit-breaker cooldown.")
     
     # Fast path: Fetch connection from high-speed connection pool
     pool = get_db_pool()
@@ -2072,27 +2081,27 @@ def get_db_connection(retries=2, delay=0.3):
         except Exception:
             pass
 
-    effective_timeout = 1 if (app and app.config.get('TESTING')) else 4
-    effective_retries = 1 if (app and app.config.get('TESTING')) else retries
+    effective_timeout = 2 if (app and app.config.get('TESTING')) else 3
 
-    for attempt in range(effective_retries):
-        try:
-            conn = mysql.connector.connect(
-                host=db_host, 
-                port=db_port, 
-                user=db_user, 
-                password=db_pass, 
-                database=db_name, 
-                ssl_verify_cert=False, 
-                ssl_verify_identity=False, 
-                connection_timeout=effective_timeout
-            )
-            if conn.is_connected(): 
-                return conn
-        except Exception as err:
-            last_exception = err
-            time.sleep(delay)
-    raise last_exception
+    try:
+        conn = mysql.connector.connect(
+            host=db_host, 
+            port=db_port, 
+            user=db_user, 
+            password=db_pass, 
+            database=db_name, 
+            ssl_verify_cert=False, 
+            ssl_verify_identity=False, 
+            connection_timeout=effective_timeout
+        )
+        if conn.is_connected(): 
+            _last_db_fail_time = 0 # Reset circuit breaker on success
+            return conn
+    except Exception as err:
+        last_exception = err
+        _last_db_fail_time = time.time() # Trip circuit breaker
+
+    raise last_exception or mysql.connector.errors.DatabaseError("Unable to establish DB connection")
 
 def ensure_payment_schema():
     db = None
