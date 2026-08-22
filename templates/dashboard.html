@@ -1490,7 +1490,125 @@
         {% endif %}
 
         {% if session.role in ['official', 'developer'] %}
-                        <!-- OFFICIAL: PENDING AUTHOR USERNAME CHANGE REQUESTS -->
+                        
+        <!-- ====================================================================== -->
+        <!-- EXPANDED EXECUTIVE & OFFICIAL POWERS HUB                               -->
+        <!-- ====================================================================== -->
+        {% if session.role in ['developer', 'official'] %}
+        <div class="panel" style="border-left: 5px solid #10b981; grid-column: span 2; margin-top: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                <div>
+                    <h2 style="color: #059669; display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <span>⚡</span> Executive & Official Command Powers
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0;">
+                        Administrative tools and executive actions available based on your post authority.
+                    </p>
+                </div>
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.78rem; font-weight: 800; padding: 4px 12px; border-radius: 20px;">
+                    Active Clearance: {{ official_designation or 'Official Moderator' }}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                
+                <!-- POWER 1: GIFT BOOK LICENSE (Founder, CEO, CTO, Community Director) -->
+                {% if session.role == 'developer' or is_absolute_power or post_tier in ['community', 'operations'] %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="color: #0f172a; font-size: 1rem; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>🎁</span> Grant Gift Book License
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">Grant free lifetime access to any paid book for contest winners, students, or reviewers.</p>
+                    <form action="{{ url_for('executive_grant_license') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="text" name="username_or_email" required placeholder="Reader Username or Email..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <select name="book_id" required style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+                            <option value="">-- Select Target Book --</option>
+                            {% for b in my_books %}
+                            <option value="{{ b.id }}">{{ b.title }} (₹{{ "%.2f"|format(b.price_paise/100) if b.is_paid else 'Free' }})</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="reason" placeholder="Reason (e.g. Contest Winner, Scholarship)..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <button type="submit" class="btn-sm btn-green" style="padding: 8px; font-weight: 700; margin-top: 4px;">🎁 Grant License</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- POWER 2: AWARD CUSTOM BADGES & ACCOLADES (Founder, CEO, CTO, CPO, CCO) -->
+                {% if session.role == 'developer' or is_absolute_power or post_tier in ['product', 'content', 'operations'] %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="color: #0f172a; font-size: 1rem; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>🏷️</span> Award Custom Badge
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">Award exclusive accolades (BestSeller, Award Winner, Scholarly Pick) to standout books.</p>
+                    <form action="{{ url_for('executive_grant_badge') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="book_id" required style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+                            <option value="">-- Select Book to Honor --</option>
+                            {% for b in my_books %}
+                            <option value="{{ b.id }}">{{ b.title }} (by {{ b.author_name }})</option>
+                            {% endfor %}
+                        </select>
+                        <select name="badge_label" required style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+                            <option value="⭐ PustakVerse BestSeller">⭐ PustakVerse BestSeller</option>
+                            <option value="🏆 Award Winning Creator">🏆 Award Winning Creator</option>
+                            <option value="🌟 Scholarly Masterpiece">🌟 Scholarly Masterpiece</option>
+                            <option value="🔥 Trending Sensation">🔥 Trending Sensation</option>
+                            <option value="💎 Editor's Gold Selection">💎 Editor's Gold Selection</option>
+                        </select>
+                        <button type="submit" class="btn-sm btn-orange" style="padding: 8px; font-weight: 700; margin-top: 4px;">🏆 Conforce Accolade</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- POWER 3: GLOBAL BROADCAST TICKER (Founder, CEO, CTO, COO) -->
+                {% if session.role == 'developer' or is_absolute_power or post_tier in ['operations'] %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                    <h3 style="color: #0f172a; font-size: 1rem; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>📢</span> Global Broadcast Ticker
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">Publish an instant top notification banner visible to all readers across the platform.</p>
+                    <form action="{{ url_for('executive_global_announcement') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="text" name="message" required placeholder="Announcement message (e.g. Festive discount live!)..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <select name="banner_type" style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+                            <option value="info">🔵 Info Theme (Blue)</option>
+                            <option value="success">🟢 Success Theme (Green)</option>
+                            <option value="warning">🟠 Festive Theme (Orange)</option>
+                            <option value="danger">🔴 Emergency Alert (Red)</option>
+                        </select>
+                        <button type="submit" class="btn-sm btn-dark" style="padding: 8px; font-weight: 700; margin-top: 4px;">📢 Broadcast Ticker</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- POWER 4: SECURITY BAN HAMMER (Founder, CEO, CTO, Legal Counsel) -->
+                {% if session.role == 'developer' or is_absolute_power or post_tier in ['legal'] %}
+                <div style="background: #fff5f5; border: 1px solid #fecaca; border-radius: 12px; padding: 18px;">
+                    <h3 style="color: #991b1b; font-size: 1rem; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>🔨</span> Security Ban Hammer
+                    </h3>
+                    <p style="font-size: 0.8rem; color: #7f1d1d; margin: 0 0 12px 0;">Blacklist malicious IP addresses, fraudulent emails, or violating accounts.</p>
+                    <form action="{{ url_for('executive_ban_target') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="target_type" style="padding: 8px; font-size: 0.82rem; border: 1px solid #fca5a5; border-radius: 6px; background: white;">
+                            <option value="user_id">Target User ID</option>
+                            <option value="email">Target Email Address</option>
+                            <option value="ip">Target IP Address</option>
+                        </select>
+                        <input type="text" name="target_value" required placeholder="Enter User ID, Email, or IP..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #fca5a5; border-radius: 6px;">
+                        <input type="text" name="reason" placeholder="Reason for ban..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #fca5a5; border-radius: 6px;">
+                        <button type="submit" class="btn-sm btn-red" style="padding: 8px; font-weight: 700; margin-top: 4px;">🔨 Execute Ban</button>
+                    </form>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
+
+        <!-- OFFICIAL: PENDING AUTHOR USERNAME CHANGE REQUESTS -->
             <div class="panel" style="border-left: 5px solid #3b82f6;">
                 <h2 style="color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
                     <span>✍️</span> Pending Author Username Change Requests

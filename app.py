@@ -2315,6 +2315,48 @@ def ensure_payment_schema():
                 cursor.execute("ALTER TABLE users ADD COLUMN official_designation VARCHAR(100) DEFAULT 'Official Moderator'")
         except Exception: pass
 
+        
+        # ---> ADDITIONAL EXECUTIVE & OFFICIAL POWER EXTENSIONS <---
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS book_custom_badges (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                book_id INT NOT NULL,
+                badge_label VARCHAR(100) NOT NULL,
+                badge_color VARCHAR(50) DEFAULT 'gold',
+                granted_by INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+                FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_granted_licenses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                book_id INT NOT NULL,
+                reason VARCHAR(255) DEFAULT 'Community Contest Winner / Scholarship Access',
+                granted_by INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_book_grant (user_id, book_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+                FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS security_ban_list (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                target_type ENUM('ip', 'user_id', 'email') NOT NULL,
+                target_value VARCHAR(255) NOT NULL UNIQUE,
+                reason TEXT NOT NULL,
+                banned_by INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (banned_by) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
         # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
         # 1. Reader: Personal Notes & Highlights
         cursor.execute("CREATE TABLE IF NOT EXISTS user_notes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, note_text TEXT NOT NULL, page_number INT DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
@@ -7394,6 +7436,231 @@ def developer_assign_official_post(official_id):
     except Exception as e:
         logging.error(f"Error assigning official post: {e}")
         flash("Could not update official post.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+
+# ======================================================================
+# EXPANDED EXECUTIVE & OFFICIAL POWERS SYSTEM
+# ======================================================================
+
+# POWER 1: GIFT BOOK / GRANT COMPLIMENTARY ACCESS (Founder, CEO, CTO, Community Director)
+@app.route('/executive/powers/grant_license', methods=['POST'])
+def executive_grant_license():
+    role = session.get('role')
+    is_absolute = session.get('is_absolute_power')
+    post_tier = session.get('post_tier')
+    
+    if role != 'developer' and not is_absolute and post_tier not in ['community', 'operations']:
+        flash('Unauthorized. Requires Founder, CEO, CTO, or Community Director clearance.', 'error')
+        return redirect(url_for('dashboard'))
+
+    username_or_email = request.form.get('username_or_email', '').strip()
+    book_id = request.form.get('book_id')
+    reason = request.form.get('reason', 'Community Contest / Scholarship Access').strip()
+
+    if not username_or_email or not book_id:
+        flash('Please provide both User identifier and Book.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, email FROM users WHERE username = %s OR email = %s", (username_or_email, username_or_email))
+        target_user = cursor.fetchone()
+        if not target_user:
+            flash(f"User '{username_or_email}' not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("SELECT id, title FROM books WHERE id = %s", (book_id,))
+        target_book = cursor.fetchone()
+        if not target_book:
+            flash("Book not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        # Add to personal_library and user_granted_licenses
+        cursor.execute("INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)", (target_user['id'], target_book['id']))
+        cursor.execute("""
+            INSERT INTO user_granted_licenses (user_id, book_id, reason, granted_by)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE reason = VALUES(reason)
+        """, (target_user['id'], target_book['id'], reason, session['user_id']))
+        db.commit()
+
+        log_official_activity(session['user_id'], f"Granted complimentary license for '{target_book['title']}' to {target_user['username']} ({reason})")
+        flash(f"Successfully granted free lifetime license for '{target_book['title']}' to {target_user['username']}!", "success")
+    except Exception as e:
+        logging.error(f"Error granting book license: {e}")
+        flash(f"Could not grant license: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+# POWER 2: GRANT EXCLUSIVE BADGES TO BOOKS (Founder, CEO, CTO, CPO, CCO)
+@app.route('/executive/powers/grant_badge', methods=['POST'])
+def executive_grant_badge():
+    role = session.get('role')
+    is_absolute = session.get('is_absolute_power')
+    post_tier = session.get('post_tier')
+
+    if role != 'developer' and not is_absolute and post_tier not in ['product', 'content', 'operations']:
+        flash('Unauthorized. Requires Executive, Product, or Editorial clearance.', 'error')
+        return redirect(url_for('dashboard'))
+
+    book_id = request.form.get('book_id')
+    badge_label = request.form.get('badge_label', '⭐ Staff Masterpiece').strip()
+    badge_color = request.form.get('badge_color', 'gold').strip()
+
+    if not book_id or not badge_label:
+        flash('Please select a book and badge label.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, title FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            flash("Book not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("""
+            INSERT INTO book_custom_badges (book_id, badge_label, badge_color, granted_by)
+            VALUES (%s, %s, %s, %s)
+        """, (book_id, badge_label, badge_color, session['user_id']))
+        db.commit()
+
+        log_official_activity(session['user_id'], f"Conferred badge '{badge_label}' onto book #{book_id} ({book['title']})")
+        flash(f"Conferred badge '{badge_label}' onto '{book['title']}'!", "success")
+    except Exception as e:
+        logging.error(f"Error granting badge: {e}")
+        flash("Could not award badge.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+# POWER 3: REMOVE BADGE
+@app.route('/executive/powers/remove_badge/<int:badge_id>', methods=['POST'])
+def executive_remove_badge(badge_id):
+    if session.get('role') not in ['developer', 'official']:
+        flash('Unauthorized.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("DELETE FROM book_custom_badges WHERE id = %s", (badge_id,))
+        db.commit()
+        log_official_activity(session['user_id'], f"Removed custom badge #{badge_id}")
+        flash("Badge removed.", "success")
+    except Exception as e:
+        logging.error(f"Error deleting badge: {e}")
+        flash("Could not remove badge.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+# POWER 4: GLOBAL TOP BANNER TICKER BROADCASTER (Founder, CEO, CTO, COO)
+@app.route('/executive/powers/global_announcement', methods=['POST'])
+def executive_global_announcement():
+    role = session.get('role')
+    is_absolute = session.get('is_absolute_power')
+    post_tier = session.get('post_tier')
+
+    if role != 'developer' and not is_absolute and post_tier not in ['operations']:
+        flash('Unauthorized. Executive clearance required.', 'error')
+        return redirect(url_for('dashboard'))
+
+    message = request.form.get('message', '').strip()
+    banner_type = request.form.get('banner_type', 'info').strip()
+
+    if not message:
+        flash('Announcement message cannot be empty.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("UPDATE global_announcements SET active = FALSE WHERE active = TRUE")
+        cursor.execute("""
+            INSERT INTO global_announcements (message, banner_type, active)
+            VALUES (%s, %s, TRUE)
+        """, (message, banner_type))
+        db.commit()
+        log_official_activity(session['user_id'], f"Broadcasted global platform alert: '{message[:50]}...'")
+        flash("Global alert ticker broadcasted across all platform pages!", "success")
+    except Exception as e:
+        logging.error(f"Error publishing global announcement: {e}")
+        flash("Could not broadcast announcement.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+# POWER 5: SECURITY BAN HAMMER / IP BLACKLIST (Founder, CEO, CTO, Legal Counsel)
+@app.route('/executive/powers/ban_target', methods=['POST'])
+def executive_ban_target():
+    role = session.get('role')
+    is_absolute = session.get('is_absolute_power')
+    post_tier = session.get('post_tier')
+
+    if role != 'developer' and not is_absolute and post_tier not in ['legal']:
+        flash('Unauthorized. Legal Counsel or Executive clearance required.', 'error')
+        return redirect(url_for('dashboard'))
+
+    target_type = request.form.get('target_type', 'user_id')
+    target_value = request.form.get('target_value', '').strip()
+    reason = request.form.get('reason', 'Violation of PustakVerse Community Guidelines').strip()
+
+    if not target_value:
+        flash('Please specify target IP, Email, or User ID.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO security_ban_list (target_type, target_value, reason, banned_by)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE reason = VALUES(reason)
+        """, (target_type, target_value, reason, session['user_id']))
+
+        if target_type == 'user_id':
+            cursor.execute("UPDATE users SET locked_until = '2099-12-31 23:59:59' WHERE id = %s", (target_value,))
+        elif target_type == 'email':
+            cursor.execute("UPDATE users SET locked_until = '2099-12-31 23:59:59' WHERE email = %s", (target_value,))
+
+        db.commit()
+        log_official_activity(session['user_id'], f"Executed Security Ban on {target_type}: {target_value} (Reason: {reason})")
+        flash(f"Security Ban executed against {target_type}: {target_value}!", "success")
+    except Exception as e:
+        logging.error(f"Error banning target: {e}")
+        flash("Could not execute ban.", "error")
     finally:
         if db:
             try: db.close()
