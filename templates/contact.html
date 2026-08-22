@@ -191,16 +191,17 @@
         /* Channels Grid */
         .channels-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
             margin-bottom: 60px;
+            align-items: stretch;
         }
 
         .channel-card {
             background: var(--card-bg);
             border: 1px solid var(--border-line);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 18px;
+            padding: 22px 20px;
             display: flex;
             align-items: flex-start;
             gap: 16px;
@@ -208,6 +209,7 @@
             color: inherit;
             box-shadow: 0 4px 15px rgba(0,0,0,0.04);
             transition: all 0.2s ease;
+            min-height: 145px;
         }
         .channel-card:hover {
             transform: translateY(-3px);
@@ -473,18 +475,15 @@
             <!-- FOUNDER SUPPORT CARD -->
             <div class="channel-card" style="cursor: pointer;" onclick="openMailOptions('abhinavgiri370@gmail.com', 'Founder Support & Direct Desk', 'PustakVerse Direct Inquiry & Founder Support')">
                 <div class="channel-icon-wrap" style="color: #ea580c; background: #fff7ed;">✉️</div>
-                <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
                         <span class="channel-title">Founder Support & Direct Desk</span>
-                        <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; font-weight: 800;">👑 Founder</span>
+                        <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; font-weight: 800; white-space: nowrap;">👑 Founder</span>
                     </div>
-                    <span class="channel-sub" style="color: #475569; font-weight: 600;">abhinavgiri370@gmail.com</span>
-                    <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                    <span class="channel-sub" style="color: #475569; font-weight: 600; word-break: break-all;">abhinavgiri370@gmail.com</span>
+                    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;" onclick="event.stopPropagation()">
                         <a href="https://mail.google.com/mail/?view=cm&fs=1&to=abhinavgiri370@gmail.com&su=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" target="_blank" rel="noopener noreferrer" class="mail-mini-btn" style="background: #ea580c; color: white;">
-                            📨 Gmail
-                        </a>
-                        <a href="mailto:abhinavgiri370@gmail.com?subject=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
-                            💻 Mail App
+                            📨 Click here to send mail via Gmail
                         </a>
                         <button type="button" onclick="copyEmailText('abhinavgiri370@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
                             📋 Copy
@@ -493,21 +492,18 @@
                 </div>
             </div>
 
-            <!-- OFFICIAL HELPDESK CARD -->
-            <div class="channel-card" style="cursor: pointer;" onclick="openMailOptions('noreply.pustakverse@gmail.com', 'Official Support & Helpdesk', 'PustakVerse Helpdesk Support Request')">
+            <!-- GENERAL SUPPORT & HELPDESK CARD -->
+            <div class="channel-card" style="cursor: pointer;" onclick="openMailOptions('noreply.pustakverse@gmail.com', 'General Support & Helpdesk', 'PustakVerse Helpdesk Support Request')">
                 <div class="channel-icon-wrap" style="color: #0284c7; background: #f0f9ff;">🎧</div>
-                <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="channel-title">Official Support & Helpdesk</span>
-                        <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 800;">Official Desk</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                        <span class="channel-title">General Support & Helpdesk</span>
+                        <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 800; white-space: nowrap;">Support Desk</span>
                     </div>
-                    <span class="channel-sub" style="color: #475569; font-weight: 600;">noreply.pustakverse@gmail.com</span>
-                    <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                    <span class="channel-sub" style="color: #475569; font-weight: 600; word-break: break-all;">noreply.pustakverse@gmail.com</span>
+                    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;" onclick="event.stopPropagation()">
                         <a href="https://mail.google.com/mail/?view=cm&fs=1&to=noreply.pustakverse@gmail.com&su=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" target="_blank" rel="noopener noreferrer" class="mail-mini-btn" style="background: #0284c7; color: white;">
-                            📨 Gmail
-                        </a>
-                        <a href="mailto:noreply.pustakverse@gmail.com?subject=PustakVerse%20Helpdesk%20Support%20Request" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
-                            💻 Mail App
+                            📨 Click here to send mail via Gmail
                         </a>
                         <button type="button" onclick="copyEmailText('noreply.pustakverse@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
                             📋 Copy
@@ -661,11 +657,8 @@
             <p id="modalRecipientEmail" style="font-family: monospace; font-size: 0.92rem; color: #ea580c; font-weight: 700; margin-bottom: 20px; word-break: break-all;"></p>
             
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
-                <a id="modalGmailLink" href="#" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #ea580c; color: white; text-decoration: none; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
-                    <span>📨</span> Open in Gmail (Web Browser)
-                </a>
-                <a id="modalMailtoLink" href="#" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #f8fafc; color: #1e293b; border: 1.5px solid #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.92rem;">
-                    <span>💻</span> Open in Default Mail App (Outlook / Mail)
+                <a id="modalGmailLink" href="#" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 16px; border-radius: 12px; background: #ea580c; color: white; text-decoration: none; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);">
+                    <span>📨</span> Click here to send mail via Gmail
                 </a>
                 <button type="button" id="modalCopyBtn" onclick="copyModalEmail()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
                     <span>📋</span> Copy Email Address to Clipboard
