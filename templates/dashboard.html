@@ -254,11 +254,15 @@
         }
 
         .table-scroll-container {
-            max-height: 400px;
+            max-height: 420px;
             overflow-y: auto;
             overflow-x: auto;
-            border: 1px solid #edf2f7;
-            border-radius: 6px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #f1f5f9;
+            -webkit-overflow-scrolling: touch;
+            background: #ffffff;
         }
         
         .table-scroll-container::-webkit-scrollbar { 
@@ -267,17 +271,25 @@
         }
         
         .table-scroll-container::-webkit-scrollbar-track { 
-            background: #f8fafc; 
-            border-radius: 4px; 
+            background: #f1f5f9; 
+            border-radius: 8px; 
         }
         
         .table-scroll-container::-webkit-scrollbar-thumb { 
-            background: #cbd5e1; 
-            border-radius: 4px; 
+            background: #94a3b8; 
+            border-radius: 8px; 
+            border: 2px solid #f1f5f9;
         }
         
         .table-scroll-container::-webkit-scrollbar-thumb:hover { 
-            background: #94a3b8; 
+            background: #64748b; 
+        }
+        
+        .table-scroll-container table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f8fafc;
         }
 
         table { 
@@ -671,17 +683,17 @@
                 </div>
 
                 {% if leadership_team %}
-                    <div class="table-scroll-container">
-                        <table>
+                    <div class="table-scroll-container" style="max-height: 380px; overflow-x: auto; overflow-y: auto; box-shadow: inset 0 0 4px rgba(0,0,0,0.02);">
+                        <table style="min-width: 960px; width: 100%;">
                             <thead>
                                 <tr style="background: #f8fafc;">
-                                    <th>Avatar</th>
-                                    <th>Executive Name & Role</th>
-                                    <th>Email ID</th>
-                                    <th>Contact No</th>
-                                    <th>Location / Address</th>
-                                    <th>Order</th>
-                                    <th style="text-align: right;">Actions</th>
+                                    <th style="width: 70px;">Avatar</th>
+                                    <th style="min-width: 220px;">Executive Name & Role</th>
+                                    <th style="min-width: 180px;">Email ID</th>
+                                    <th style="min-width: 120px;">Contact No</th>
+                                    <th style="min-width: 200px;">Location / Address</th>
+                                    <th style="width: 80px;">Order</th>
+                                    <th style="text-align: right; min-width: 150px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -765,15 +777,15 @@
                     </div>
                 </div>
 
-                <div class="table-scroll-container">
-                    <table>
+                <div class="table-scroll-container" style="max-height: 380px; overflow-x: auto; overflow-y: auto; box-shadow: inset 0 0 4px rgba(0,0,0,0.02);">
+                    <table style="min-width: 900px; width: 100%;">
                         <thead>
                             <tr style="background: #f8fafc;">
-                                <th>Official Username</th>
-                                <th>Official Email</th>
-                                <th>Assigned Post / Title</th>
-                                <th>System Power Level</th>
-                                <th style="text-align: right;">Assign New Post</th>
+                                <th style="min-width: 180px;">Official Username</th>
+                                <th style="min-width: 200px;">Official Email</th>
+                                <th style="min-width: 180px;">Assigned Post / Title</th>
+                                <th style="min-width: 160px;">System Power Level</th>
+                                <th style="text-align: right; min-width: 260px;">Assign New Post</th>
                             </tr>
                         </thead>
                         <tbody>
