@@ -1097,33 +1097,49 @@ _DEFAULT_PROVIDER_ORDER = ['groq', 'openrouter', 'huggingface']
 def get_active_ai_models():
     """Retrieves all active AI model configurations from database with fallback defaults."""
     db = None
+    custom_models = []
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM ai_models WHERE is_active = 1 ORDER BY is_default DESC, id ASC")
         rows = cursor.fetchall()
         if rows:
-            return rows
+            custom_models = rows
     except Exception: pass
     finally:
         if db:
             try: db.close()
             except: pass
-    return [
-        {
-            'id': 1,
-            'display_name': 'GranthMind Pro (Gemini 2.0 Flash)',
-            'provider_type': 'gemini',
-            'model_id': 'gemini-2.0-flash',
-            'api_key': '',
-            'base_url': 'https://generativelanguage.googleapis.com',
-            'temperature': 0.25,
-            'max_tokens': 2500,
-            'is_default': 1,
-            'is_active': 1
-        }
+
+    # Built-in High Performance Engines
+    builtin_models = [
+        {'id': 'gemini-2.0-flash', 'display_name': '✨ Gemini 2.0 Flash (Fast & Smart)', 'provider_type': 'gemini', 'model_id': 'gemini-2.0-flash', 'is_default': 1},
+        {'id': 'chatgpt-4o', 'display_name': '🟢 ChatGPT-4o (Deep Reasoning)', 'provider_type': 'openai', 'model_id': 'chatgpt-4o', 'is_default': 0},
+        {'id': 'claude-3-5-sonnet', 'display_name': '🟠 Claude 3.5 Sonnet (Nuance & Writing)', 'provider_type': 'anthropic', 'model_id': 'claude-3-5-sonnet', 'is_default': 0},
+        {'id': 'deepseek-r1', 'display_name': '🔵 DeepSeek R1 (Math & Logic)', 'provider_type': 'deepseek', 'model_id': 'deepseek-r1', 'is_default': 0},
+        {'id': 'mistral-large', 'display_name': '🟡 Mistral Large (Code & Systems)', 'provider_type': 'mistral', 'model_id': 'mistral-large', 'is_default': 0},
+        {'id': 'meta-llama-3', 'display_name': '🔷 Meta Llama 3.3 (Open Research)', 'provider_type': 'groq', 'model_id': 'meta-llama-3', 'is_default': 0},
     ]
 
+    # Merge custom developer/founder added models with built-in models
+    seen_ids = set()
+    merged = []
+
+    # First add custom models configured by founder/developer
+    for cm in custom_models:
+        mid = str(cm.get('model_id') or cm.get('id')).lower()
+        if mid not in seen_ids:
+            seen_ids.add(mid)
+            merged.append(cm)
+
+    # Then append any built-ins not already overridden
+    for bm in builtin_models:
+        mid = bm['model_id'].lower()
+        if mid not in seen_ids:
+            seen_ids.add(mid)
+            merged.append(bm)
+
+    return merged
 
 def call_configured_ai_model(model_config, prompt, attachment_path='', chat_history=None):
     """

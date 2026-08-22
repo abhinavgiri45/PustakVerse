@@ -558,14 +558,29 @@
       </div>
       {% endif %}
 
-      <select id="modelSelector" class="model-selector" title="Select AI Engine">
-        <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash (Fast &amp; Smart)</option>
-        <option value="chatgpt-4o">🟢 ChatGPT-4o (Deep Reasoning)</option>
-        <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet (Nuance &amp; Writing)</option>
-        <option value="deepseek-r1">🔵 DeepSeek R1 (Math &amp; Logic)</option>
-        <option value="mistral-large">🟡 Mistral Large (Code &amp; Systems)</option>
-        <option value="meta-llama-3">🔷 Meta Llama 3.3 (Open Research)</option>
-      </select>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <select id="modelSelector" class="model-selector" title="Select AI Engine">
+          {% if available_models and available_models|length > 0 %}
+            {% for m in available_models %}
+              <option value="{{ m.model_id }}" {% if m.is_default or loop.first %}selected{% endif %}>
+                {{ m.display_name }}
+              </option>
+            {% endfor %}
+          {% else %}
+            <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash (Fast &amp; Smart)</option>
+            <option value="chatgpt-4o">🟢 ChatGPT-4o (Deep Reasoning)</option>
+            <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet (Nuance &amp; Writing)</option>
+            <option value="deepseek-r1">🔵 DeepSeek R1 (Math &amp; Logic)</option>
+            <option value="mistral-large">🟡 Mistral Large (Code &amp; Systems)</option>
+            <option value="meta-llama-3">🔷 Meta Llama 3.3 (Open Research)</option>
+          {% endif %}
+        </select>
+
+        <!-- LIVE SYNC AI MODELS BUTTON (FOR DEVELOPER/FOUNDER & REAL-TIME SYNC) -->
+        <button type="button" onclick="syncLiveAiModels(true)" id="syncModelsBtn" class="btn-action-icon" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #c084fc;" title="Sync latest AI models from Founder/Developer hub">
+          🔄
+        </button>
+      </div>
 
       <a href="/" class="btn-nav-back">🏠 PustakVerse</a>
     </div>
@@ -761,6 +776,7 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
         renderHistorySidebar();
+      syncLiveAiModels(false);
       } catch (e) {}
     }
 
@@ -803,6 +819,7 @@
         setGranthMode(s.mode || 'study', document.querySelector(`.mode-tab-btn[onclick*="${s.mode || 'study'}"]`));
         renderMessages(s.messages || []);
         renderHistorySidebar();
+      syncLiveAiModels(false);
       }
     }
 
@@ -859,7 +876,46 @@
     }
 
     // Mode Selector
-    function setGranthMode(mode, btn) {
+    
+    // Dynamic Live AI Models Sync from Database / Founder Hub
+    function syncLiveAiModels(showToast = false) {
+      const btn = document.getElementById('syncModelsBtn');
+      if (btn) btn.style.transform = 'rotate(360deg)';
+
+      fetch('/api/ai_models')
+        .then(r => r.json())
+        .then(data => {
+          if (btn) setTimeout(() => { btn.style.transform = 'none'; }, 500);
+          if (data.success && data.models && data.models.length > 0) {
+            const selector = document.getElementById('modelSelector');
+            const currentSelected = selector.value;
+            selector.innerHTML = '';
+
+            data.models.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m.model_id;
+              opt.textContent = m.display_name;
+              if (m.model_id === currentSelected || m.is_default) {
+                opt.selected = true;
+              }
+              selector.appendChild(opt);
+            });
+
+            if (showToast) {
+              const toast = document.createElement('div');
+              toast.style.cssText = 'position: fixed; top: 75px; right: 20px; background: #1e1b4b; border: 1.5px solid #8b5cf6; color: white; padding: 10px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.4); animation: fadeInMsg 0.2s;';
+              toast.innerHTML = `✓ Synced ${data.models.length} AI Models from Developer Hub!`;
+              document.body.appendChild(toast);
+              setTimeout(() => { toast.remove(); }, 2500);
+            }
+          }
+        })
+        .catch(err => {
+          if (btn) setTimeout(() => { btn.style.transform = 'none'; }, 500);
+        });
+    }
+
+function setGranthMode(mode, btn) {
       activeMode = mode;
       document.getElementById('currentMode').value = mode;
       document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1076,6 +1132,7 @@
         createNewSession();
       }
       renderHistorySidebar();
+      syncLiveAiModels(false);
     });
   </script>
 </body>
