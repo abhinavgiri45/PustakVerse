@@ -93,7 +93,7 @@ try:
 except ImportError:
     mysql = None
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
+from flask import Response, Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -4769,6 +4769,7 @@ def payment_history():
             except: pass
     return render_template('payment_history.html', payments=payments)
 
+
 @app.route('/book_sales/<int:book_id>')
 def book_sales(book_id):
     if session.get('role') not in ['author', 'developer', 'official']: 
@@ -4777,25 +4778,186 @@ def book_sales(book_id):
     db = None
     sales = []
     book = None
+    daily_sales = {}
+    
+    # Date filtering
+    filter_range = request.args.get('range', 'all')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT title, author_id, price_paise FROM books WHERE id = %s", (book_id,))
+        cursor.execute("SELECT id, title, author_id, price_paise, created_at FROM books WHERE id = %s", (book_id,))
         book = cursor.fetchone()
         
         if not book or (book['author_id'] != session['user_id'] and session['role'] not in ['developer', 'official']): 
             flash("Unauthorized access to book sales.", "error")
             return redirect(url_for('dashboard'))
             
-        cursor.execute("SELECT p.razorpay_order_id, p.amount_paise, p.fee_paise, p.author_earning_paise, p.status, p.paid_at, u.username as buyer_name, u.email as buyer_email FROM purchases p JOIN users u ON p.user_id = u.id WHERE p.book_id = %s AND p.status = 'paid' ORDER BY p.paid_at DESC", (book_id,))
+        query = """
+            SELECT p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, 
+                   p.author_earning_paise, p.status, p.paid_at, 
+                   u.username as buyer_name, u.email as buyer_email 
+            FROM purchases p 
+            JOIN users u ON p.user_id = u.id 
+            WHERE p.book_id = %s AND p.status = 'paid'
+        """
+        params = [book_id]
+
+        now = datetime.now()
+        if filter_range == '30d':
+            start_dt = now - timedelta(days=30)
+            query += " AND p.paid_at >= %s"
+            params.append(start_dt)
+        elif filter_range == '90d':
+            start_dt = now - timedelta(days=90)
+            query += " AND p.paid_at >= %s"
+            params.append(start_dt)
+        elif filter_range == 'year':
+            start_dt = datetime(now.year, 1, 1)
+            query += " AND p.paid_at >= %s"
+            params.append(start_dt)
+        elif filter_range == 'custom' and start_date_str and end_date_str:
+            try:
+                s_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
+                e_dt = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+                query += " AND p.paid_at >= %s AND p.paid_at < %s"
+                params.extend([s_dt, e_dt])
+            except Exception: pass
+
+        query += " ORDER BY p.paid_at DESC"
+        cursor.execute(query, tuple(params))
         sales = cursor.fetchall()
-    except Exception: 
+
+        # Build timeline aggregation for graph
+        for s in sales:
+            if s.get('paid_at'):
+                d_key = s['paid_at'].strftime('%Y-%m-%d')
+                earning = (s.get('author_earning_paise') or (book['price_paise'] - (s.get('fee_paise') or int(book['price_paise']*0.0236)))) / 100
+                if d_key not in daily_sales:
+                    daily_sales[d_key] = {'count': 0, 'revenue': 0.0}
+                daily_sales[d_key]['count'] += 1
+                daily_sales[d_key]['revenue'] += earning
+
+    except Exception as e: 
+        logging.error(f"Error loading sales: {e}")
         flash("Could not load sales history.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
-    return render_template('sales_history.html', sales=sales, book=book)
+
+    # Prepare sorted chart data
+    sorted_dates = sorted(daily_sales.keys())
+    chart_labels = [datetime.strptime(d, '%Y-%m-%d').strftime('%d %b') for d in sorted_dates]
+    chart_counts = [daily_sales[d]['count'] for d in sorted_dates]
+    chart_revenues = [round(daily_sales[d]['revenue'], 2) for d in sorted_dates]
+
+    total_units = len(sales)
+    gross_sales_inr = (total_units * (book['price_paise'] or 0)) / 100 if book else 0
+    total_net_earnings_inr = sum((s.get('author_earning_paise') or (book['price_paise'] - (s.get('fee_paise') or int(book['price_paise']*0.0236)))) / 100 for s in sales) if book else 0
+
+    return render_template('sales_history.html', 
+                           sales=sales, 
+                           book=book, 
+                           filter_range=filter_range,
+                           start_date=start_date_str or '',
+                           end_date=end_date_str or '',
+                           chart_labels=chart_labels,
+                           chart_counts=chart_counts,
+                           chart_revenues=chart_revenues,
+                           total_units=total_units,
+                           gross_sales_inr=gross_sales_inr,
+                           total_net_earnings_inr=total_net_earnings_inr)
+
+
+@app.route('/book_sales/<int:book_id>/export_csv')
+def export_book_sales_csv(book_id):
+    if session.get('role') not in ['author', 'developer', 'official']: 
+        flash("Unauthorized.", "error")
+        return redirect(url_for('login'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, title, author_id, price_paise, created_at FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        
+        if not book or (book['author_id'] != session['user_id'] and session['role'] not in ['developer', 'official']): 
+            flash("Unauthorized.", "error")
+            return redirect(url_for('dashboard'))
+
+        filter_range = request.args.get('range', 'all')
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+
+        query = """
+            SELECT p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, 
+                   p.author_earning_paise, p.status, p.paid_at, 
+                   u.username as buyer_name, u.email as buyer_email 
+            FROM purchases p 
+            JOIN users u ON p.user_id = u.id 
+            WHERE p.book_id = %s AND p.status = 'paid'
+        """
+        params = [book_id]
+        now = datetime.now()
+        if filter_range == '30d':
+            query += " AND p.paid_at >= %s"
+            params.append(now - timedelta(days=30))
+        elif filter_range == '90d':
+            query += " AND p.paid_at >= %s"
+            params.append(now - timedelta(days=90))
+        elif filter_range == 'year':
+            query += " AND p.paid_at >= %s"
+            params.append(datetime(now.year, 1, 1))
+        elif filter_range == 'custom' and start_date_str and end_date_str:
+            try:
+                s_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
+                e_dt = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+                query += " AND p.paid_at >= %s AND p.paid_at < %s"
+                params.extend([s_dt, e_dt])
+            except Exception: pass
+
+        query += " ORDER BY p.paid_at DESC"
+        cursor.execute(query, tuple(params))
+        sales = cursor.fetchall()
+
+        import csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Order ID', 'Payment ID', 'Date & Time (UTC)', 'Buyer Username', 'Buyer Email', 'Gross Price (INR)', 'Gateway Fee (INR)', 'Net Author Payout (INR)', 'Status'])
+
+        for s in sales:
+            fee_inr = (s.get('fee_paise') or int(book['price_paise'] * 0.0236)) / 100
+            net_inr = (s.get('author_earning_paise') or (book['price_paise'] - int(book['price_paise'] * 0.0236))) / 100
+            writer.writerow([
+                s['razorpay_order_id'],
+                s.get('razorpay_payment_id') or 'N/A',
+                s['paid_at'].strftime('%Y-%m-%d %H:%M:%S') if s.get('paid_at') else '',
+                s['buyer_name'],
+                s['buyer_email'],
+                f"{(book['price_paise']/100):.2f}",
+                f"{fee_inr:.2f}",
+                f"{net_inr:.2f}",
+                s['status'].upper()
+            ])
+
+        output.seek(0)
+        safe_title = re.sub(r'[^a-zA-Z0-9_-]', '_', book['title'])[:30]
+        resp = Response(output.getvalue(), mimetype='text/csv')
+        resp.headers['Content-Disposition'] = f'attachment; filename="sales_statement_{safe_title}_{datetime.now().strftime("%Y%m%d")}.csv"'
+        return resp
+    except Exception as e:
+        logging.error(f"Error exporting book sales CSV: {e}")
+        flash("Failed to generate CSV export.", "error")
+        return redirect(url_for('book_sales', book_id=book_id))
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 
 @app.route('/read_book/<int:book_id>')
 @app.route('/viewer/<int:book_id>')
