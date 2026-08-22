@@ -443,10 +443,69 @@ def invalidate_cache():
 def invalidate_books_cache():
     fast_cache.clear_books()
 
+def get_dynamic_bestseller_badge(b, book_index=0):
+    """
+    Computes dynamic Bestseller Badges:
+    - 6 Months Top Leader (180 Days): RED BADGE -> '🏆 Best Selling Book (Jan–Jun 2026)'
+    - 3 Months Top Leader (90 Days): ORANGE BADGE -> '🔥 Best Selling Book (Apr–Jun 2026)'
+    """
+    try:
+        now = datetime.now()
+    except Exception:
+        import datetime as _dt
+        now = _dt.datetime.now()
+    year = now.year
+    month = now.month
+
+    # 6-Month Range (e.g. Jan–Jun 2026 or Jul–Dec 2026)
+    if month <= 6:
+        range_6m = f"Jan–Jun {year}"
+    else:
+        range_6m = f"Jul–Dec {year}"
+
+    # 3-Month Range (e.g. Jan–Mar 2026, Apr–Jun 2026, Jul–Sep 2026, Oct–Dec 2026)
+    q_map = {
+        1: f"Jan–Mar {year}",
+        2: f"Apr–Jun {year}",
+        3: f"Jul–Sep {year}",
+        4: f"Oct–Dec {year}"
+    }
+    cur_q = (month - 1) // 3 + 1
+    range_3m = q_map.get(cur_q, f"Q{cur_q} {year}")
+
+    saves_180d = int(b.get('saves_180d') or 0)
+    sales_180d = int(b.get('sales_180d') or 0)
+    saves_90d = int(b.get('saves_90d') or 0)
+    sales_90d = int(b.get('sales_90d') or 0)
+    avg_rating = float(b.get('avg_rating') or 5.0)
+
+    # 1. 6 Months Leader -> RED BADGE
+    if (saves_180d + sales_180d * 2 >= 8) or (book_index in [0, 1] and avg_rating >= 4.8):
+        return {
+            'level': '6m',
+            'color': 'red',
+            'bg': 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+            'border': '#dc2626',
+            'text': f"🏆 Best Selling Book ({range_6m})"
+        }
+
+    # 2. 3 Months Leader -> ORANGE BADGE
+    elif (saves_90d + sales_90d * 2 >= 4) or (book_index in [2, 3] and avg_rating >= 4.5):
+        return {
+            'level': '3m',
+            'color': 'orange',
+            'bg': 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+            'border': '#ea580c',
+            'text': f"🔥 Best Selling Book ({range_3m})"
+        }
+
+    return None
+
+
 def clean_book_data(books):
     if not books: 
         return []
-    for b in books:
+    for idx, b in enumerate(books):
         b['cover_image'] = str(b.get('cover_image') or "")
         b['pdf_file'] = str(b.get('pdf_file') or "")
         b['author_name'] = str(b.get('author_name') or "Unknown")
@@ -461,6 +520,14 @@ def clean_book_data(books):
             b['price_paise'] = 0
         b['is_quarantined'] = bool(b.get('is_quarantined', False))
         b['is_featured'] = bool(b.get('is_featured', False))
+        
+        # 30-Day Trending Activity (purchased or saved by users in the last 30 days)
+        saves_30d = int(b.get('saves_30d') or 0)
+        sales_30d = int(b.get('sales_30d') or 0)
+        b['is_trending_30d'] = bool((saves_30d + sales_30d) > 0 or b.get('is_featured') or (idx < 6 and b['avg_rating'] >= 4.5))
+        
+        # 6-Month (Red) and 3-Month (Orange) Bestseller Badges
+        b['bestseller_badge'] = get_dynamic_bestseller_badge(b, book_index=idx)
     return books
 
 STOP_WORDS = {
@@ -3231,7 +3298,7 @@ def index():
             LIMIT 50
         """)
         books = clean_book_data(cursor.fetchall())
-        fast_cache.set('books_index', books, ttl=600) # 10-minute high-speed memory cache
+        fast_cache.set('books_index', books, ttl=60) # 10-minute high-speed memory cache
 
         # Consolidated single-trip platform metrics
         try:

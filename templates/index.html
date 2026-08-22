@@ -230,9 +230,7 @@
         <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
             🆓 100% Free
         </button>
-        <button type="button" onclick="applyQuickFilter('premium', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
-            💎 Premium
-        </button>
+
         <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
             ⭐ 4.5+ Rating
         </button>
@@ -286,9 +284,7 @@
                 <button type="button" onclick="selectModalCategory('free', '🆓 100% Free')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
                     🆓 100% Free
                 </button>
-                <button type="button" onclick="selectModalCategory('premium', '💎 Premium Originals')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
-                    💎 Premium
-                </button>
+
                 <button type="button" onclick="selectModalCategory('stars', '⭐ 4.5+ Rating')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
                     ⭐ 4.5+ Rating
                 </button>
@@ -408,7 +404,7 @@
 
         <div class="book-grid" id="bookGrid">
             {% for book in books %}
-            <div class="book-card" style="{% if loop.index > 10 %}display: none;{% endif %}" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}" data-is-paid="{{ 'true' if book.is_paid else 'false' }}" data-price="{{ ((book.price_paise|default(0))/100) if book.is_paid else 0 }}" data-rating="{{ '%.1f'|format(book.avg_rating|default(5.0)) }}">
+            <div class="book-card" style="{% if loop.index > 10 %}display: none;{% endif %}" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}" data-is-paid="{{ 'true' if book.is_paid else 'false' }}" data-price="{{ ((book.price_paise|default(0))/100) if book.is_paid else 0 }}" data-rating="{{ '%.1f'|format(book.avg_rating|default(5.0)) }}" data-trending="{{ 'true' if book.is_trending_30d else 'false' }}">
                 
                 {% set cover = book.cover_image %}
                 
@@ -429,6 +425,13 @@
                 </a>
 
                 <div class="book-info">
+                    {% if book.bestseller_badge %}
+                    <div style="margin-bottom: 8px;">
+                        <span style="background: {{ book.bestseller_badge.bg }}; color: #ffffff; border: 1px solid {{ book.bestseller_badge.border }}; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
+                            {{ book.bestseller_badge.text }}
+                        </span>
+                    </div>
+                    {% endif %}
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                         <div class="book-tag" onclick="filterByCategory('{{ book.catalog | escape }}')" style="cursor: pointer;" title="Click to filter by {{ book.catalog }}">{{ book.catalog }}</div>
                         {% if book.is_featured %}
@@ -740,10 +743,8 @@
 
                 if (type === 'free') {
                     matches = (!isPaid && price === 0);
-                } else if (type === 'premium') {
-                    matches = (isPaid && price > 0);
                 } else if (type === 'trending') {
-                    matches = (rating >= 4.0);
+                    matches = (card.getAttribute('data-trending') === 'true');
                 } else if (type === 'stars') {
                     matches = (rating >= 4.5);
                 } else if (isCategory) {
