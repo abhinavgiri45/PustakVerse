@@ -47,6 +47,41 @@
                 window.location.replace('/intro');
             }
         })();
+    
+        // Global Keyboard Shortcut Handler
+        document.addEventListener('keydown', function(e) {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                if (e.key === 'Escape') document.activeElement.blur();
+                return;
+            }
+            if (e.key === '/') {
+                e.preventDefault();
+                const search = document.getElementById('searchInput');
+                if (search) { search.focus(); search.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            } else if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                openCategoriesModal();
+            } else if (e.key === 'a' || e.key === 'A') {
+                window.location.href = "{{ url_for('ask_ai') }}";
+            } else if (e.key === 'r' || e.key === 'R') {
+                discoverRandomBook();
+            } else if (e.key === '?') {
+                e.preventDefault();
+                openShortcutsModal();
+            } else if (e.key === 'Escape') {
+                closeCategoriesModal();
+                closeShortcutsModal();
+            }
+        });
+        function openShortcutsModal() {
+            const m = document.getElementById('shortcutsModal');
+            if (m) m.style.display = 'flex';
+        }
+        function closeShortcutsModal() {
+            const m = document.getElementById('shortcutsModal');
+            if (m) m.style.display = 'none';
+        }
+
     </script>
     
     <style>
@@ -271,6 +306,30 @@
                 <button type="button" onclick="selectModalCategory('category:Archives', '🏛️ Archives')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
                     🏛️ Classic Archives
                 </button>
+            </div>
+        </div>
+    </div>
+
+
+    
+    <!-- LIVE PLATFORM METRICS SHOWCASE -->
+    <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 18px 20px;">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: center;">
+            <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
+                <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 1,450+</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Books & Manuscripts</div>
+            </div>
+            <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
+                <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 52,000+</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Active Readers</div>
+            </div>
+            <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
+                <div style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">💰 100%</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Direct Author Settlement</div>
+            </div>
+            <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
+                <div style="font-size: 1.4rem; font-weight: 900; color: #8b5cf6;">🤖 Free AI Tutor</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Instant Doubts Resolution</div>
             </div>
         </div>
     </div>
@@ -665,9 +724,79 @@
                 filterByCategory(catParam);
             }
         });
+    
+        // Global Keyboard Shortcut Handler
+        document.addEventListener('keydown', function(e) {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                if (e.key === 'Escape') document.activeElement.blur();
+                return;
+            }
+            if (e.key === '/') {
+                e.preventDefault();
+                const search = document.getElementById('searchInput');
+                if (search) { search.focus(); search.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            } else if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                openCategoriesModal();
+            } else if (e.key === 'a' || e.key === 'A') {
+                window.location.href = "{{ url_for('ask_ai') }}";
+            } else if (e.key === 'r' || e.key === 'R') {
+                discoverRandomBook();
+            } else if (e.key === '?') {
+                e.preventDefault();
+                openShortcutsModal();
+            } else if (e.key === 'Escape') {
+                closeCategoriesModal();
+                closeShortcutsModal();
+            }
+        });
+        function openShortcutsModal() {
+            const m = document.getElementById('shortcutsModal');
+            if (m) m.style.display = 'flex';
+        }
+        function closeShortcutsModal() {
+            const m = document.getElementById('shortcutsModal');
+            if (m) m.style.display = 'none';
+        }
+
     </script>
 
     
+
+
+    <!-- KEYBOARD SHORTCUTS MODAL (?) -->
+    <div id="shortcutsModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 999999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px);">
+        <div style="background: white; border-radius: 20px; width: 100%; max-width: 480px; padding: 26px; box-shadow: 0 25px 60px rgba(0,0,0,0.25); border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <span>⌨️</span> Keyboard Shortcuts
+                </h3>
+                <button type="button" onclick="closeShortcutsModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f8fafc;">
+                    <span style="color: #475569;">Focus Search</span>
+                    <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-weight: 700; font-family: monospace;">/</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f8fafc;">
+                    <span style="color: #475569;">Explore Categories</span>
+                    <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-weight: 700; font-family: monospace;">C</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f8fafc;">
+                    <span style="color: #475569;">Ask AI Tutor</span>
+                    <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-weight: 700; font-family: monospace;">A</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f8fafc;">
+                    <span style="color: #475569;">Random Book Discovery</span>
+                    <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-weight: 700; font-family: monospace;">R</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
+                    <span style="color: #475569;">Toggle Shortcuts Help</span>
+                    <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-weight: 700; font-family: monospace;">?</kbd>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>

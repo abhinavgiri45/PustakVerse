@@ -396,6 +396,20 @@
                     {% if book.is_paid %}
                         {% if can_read %}
                             <div style="color: #047857; font-weight: bold; margin-bottom: 10px;">✓ You own this premium book</div>
+                <!-- AUTHOR TIPPING & SUPPORT CARD -->
+                <div style="margin-top: 15px; padding: 14px 18px; background: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.6rem;">☕</span>
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.92rem; color: #92400e;">Love {{ book.author_name }}'s work?</div>
+                            <div style="font-size: 0.8rem; color: #b45309;">Support the creator directly with a voluntary token of appreciation.</div>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('buy_book', book_id=book.id) }}" class="btn-sm" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>☕ Tip ₹20</span>
+                    </a>
+                </div>
+
                             <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark">Read Full Book Now</a>
                         {% else %}
                             <div class="price" id="bookDisplayPrice">₹{{ "%.2f"|format(book.price_paise/100) }}</div>
