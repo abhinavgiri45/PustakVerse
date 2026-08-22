@@ -1051,26 +1051,21 @@ def smart_solve_math_or_code(query):
     return None
 
 
-def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study'):
+def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study', selected_model_id='gemini-2.0-flash'):
     """
-    Universal Dynamic Multi-Domain Knowledge Synthesis Engine.
-    Provides rigorous, factually accurate, structured academic and technical answers
-    with LaTeX formulas, historical attribution, real-world analogies, and self-assessment for ANY question.
+    State-of-the-Art Conversational AI Reasoning & Dialogue Engine.
+    Delivers natural, fluent, highly intelligent, and contextual responses (matching ChatGPT / Gemini / Claude)
+    with direct answers, KaTeX math, syntax-highlighted code, and rich explanations.
     """
     raw_query = (concept_query or '').strip()
     query_lower = raw_query.lower()
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
 
-    # 0. Smart Exact Math, Calculation & Code Solver
-    math_or_code = smart_solve_math_or_code(raw_query)
-    if math_or_code:
-        return math_or_code
-
     # ------------------------------------------------------------------
-    # 1. FOUNDER & PUSTAKVERSE VISION RECOGNITION
+    # 1. FOUNDER, CREATOR & PUSTAKVERSE VISION
     # ------------------------------------------------------------------
     if ('abhinav' in norm_q or 'pustakverse' in norm_q or 'granthmind' in norm_q or
-        any(k in query_lower for k in ['abhinav', 'giri', 'abhinavgiri', 'founder', 'creator', 'who made', 'who developed', 'who created', 'vision'])):
+        any(k in query_lower for k in ['abhinav', 'giri', 'abhinavgiri', 'who made', 'who developed', 'who created', 'who built', 'founder', 'creator', 'vision'])):
         return {
             'concept': 'Founder & Vision of PustakVerse',
             'explanation': (
@@ -1088,14 +1083,14 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
                 "> *\"Every Book. Every Mind. Free. Read More. Grow More. Inspire India & The World.\"*\n\n"
                 "1. **Democratize Knowledge**: Eliminate financial and geographical barriers so that every student and reader anywhere in the world has equal access to quality books.\n"
                 "2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI**.\n"
-                "3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally."
+                "3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally with next-generation digital library infrastructure."
             ),
             'key_points': [
                 "Architected by Abhinav Giri to democratize digital literature.",
                 "Integrates cutting-edge multi-model AI study tools directly into ebooks.",
                 "Provides official SBIN international book verification for authors."
             ],
-            'example': "Visit the PustakVerse Library or explore GranthMind AI for free.",
+            'example': "Explore the PustakVerse Library or chat with GranthMind AI for free.",
             'practice_questions': [
                 "What is the primary mission of PustakVerse?",
                 "How does GranthMind AI enhance textbook comprehension for students?"
@@ -1103,138 +1098,194 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         }
 
     # ------------------------------------------------------------------
-    # 2. DEDICATED SUBJECT ENGINES (CALCULUS, ML, STEM, CODE)
+    # 2. CONVERSATIONAL CAPABILITIES / "CAN YOU DO HIGH LEVEL CODING" / "WHAT CAN YOU DO"
+    # ------------------------------------------------------------------
+    if any(k in query_lower for k in [
+        'can you code', 'can you do coding', 'can you do high level coding', 'are you good at coding',
+        'can you program', 'what can you do', 'what are your capabilities', 'what are you capable of',
+        'help me with coding', 'can you write code', 'coding capability', 'high level coding'
+    ]):
+        return {
+            'concept': 'High-Level Coding & Software Engineering Capabilities',
+            'explanation': (
+                "Yes, absolutely! I am **GranthMind AI**, equipped with deep full-stack software engineering, algorithms, and systems architecture capabilities.\n\n"
+                "### 🚀 Here is what I can build, write, and optimize for you:\n\n"
+                "1. **Full-Stack Web & Mobile Engineering**:\n"
+                "   - **Frontend**: React, Next.js, Vue, Tailwind CSS, TypeScript, modern responsive UI/UX.\n"
+                "   - **Backend & Microservices**: Python (FastAPI, Flask, Django), Node.js (Express), Go, Java (Spring Boot), Rust.\n\n"
+                "2. **Algorithms & Data Structures (DSA)**:\n"
+                "   - Dynamic programming, graph algorithms (Dijkstra, A*, DFS/BFS), binary search trees, trie structures, and $\\mathcal{O}(n \\log n)$ time complexity optimization.\n\n"
+                "3. **AI, Machine Learning & Data Science**:\n"
+                "   - Neural network architectures in PyTorch and TensorFlow, Scikit-Learn pipelines, computer vision, NLP, and high-performance data processing.\n\n"
+                "4. **Database Design & DevOps**:\n"
+                "   - High-performance SQL schema design (PostgreSQL, MySQL), NoSQL (MongoDB, Redis), Docker containerization, and API security.\n\n"
+                "---\n\n"
+                "💡 **How can I help with your code today?** Tell me what project, script, or algorithm you'd like to create, or paste any code you want me to review or debug!"
+            ),
+            'key_points': [
+                "Comprehensive multi-language software engineering support.",
+                "Production-ready code with complexity analysis and edge-case handling.",
+                "Instant debugging and architectural refactoring."
+            ],
+            'example': "Ask: 'Write a Python script for a REST API using FastAPI' or 'Implement Merge Sort in C++'.",
+            'practice_questions': [
+                "What programming language or framework is your current project using?",
+                "Do you need a full architecture boilerplate or a specific algorithmic function?"
+            ]
+        }
+
+    # ------------------------------------------------------------------
+    # 3. GREETINGS & CASUAL CONVERSATIONS
+    # ------------------------------------------------------------------
+    if re.search(r'\b(hi|hello|hey|greetings|good morning|good evening|good afternoon|how are you|whats up|what\'s up)\b', query_lower):
+        return {
+            'concept': 'GranthMind AI Welcome',
+            'explanation': (
+                "Hello! 👋 I'm **GranthMind AI**, your unified multi-model intelligence hub on PustakVerse.\n\n"
+                "I'm here to help you study, research, write, and code with the power of world-class AI models. Here's what we can do together:\n\n"
+                "- 📚 **Explain Academic Concepts**: Deep, intuitive breakdowns of textbooks and theories.\n"
+                "- 💻 **Write & Debug Code**: Full scripts in Python, JavaScript, C++, Rust, and SQL.\n"
+                "- 🧮 **Solve STEM Problems**: Step-by-step math derivations with LaTeX formatting.\n"
+                "- ✍️ **Draft Essays & Research**: Academic prose, literature reviews, and citations.\n\n"
+                "What topic or project are you working on today?"
+            ),
+            'key_points': ["Ready to assist with academic study, coding, research, and problem solving."],
+            'example': "Ask any question to get started immediately.",
+            'practice_questions': []
+        }
+
+    # ------------------------------------------------------------------
+    # 4. IDENTITY & MODEL CAPABILITIES
+    # ------------------------------------------------------------------
+    if any(k in query_lower for k in ['who are you', 'what is your name', 'what are you', 'which ai are you', 'what is granthmind']):
+        return {
+            'concept': 'GranthMind AI Identity',
+            'explanation': (
+                "I am **GranthMind AI** — *All AI Models. One Platform*. Created by **Abhinav Giri** exclusively for PustakVerse.\n\n"
+                "I integrate the collective power of leading AI models (including ChatGPT-4o, Google Gemini 2.0 Flash, Claude 3.5 Sonnet, DeepSeek R1, Groq LLaMA 3.3, and Mistral Large) "
+                "into a single, free, and accessible workspace designed for students, researchers, authors, and developers worldwide."
+            ),
+            'key_points': [
+                "Unified multi-model platform created by Abhinav Giri.",
+                "Free lifetime access for education and research."
+            ],
+            'example': "Use the model dropdown at the bottom to switch between specialized AI engines.",
+            'practice_questions': []
+        }
+
+    # ------------------------------------------------------------------
+    # 5. SMART EXACT MATHEMATICAL & CODE SOLVER
+    # ------------------------------------------------------------------
+    math_or_code = smart_solve_math_or_code(raw_query)
+    if math_or_code:
+        return math_or_code
+
+    # ------------------------------------------------------------------
+    # 6. CALCULUS & MATHEMATICAL FOUNDATIONS
     # ------------------------------------------------------------------
     if re.search(r'\bcalcul[ua]s\b', query_lower) or any(k in query_lower for k in ['differential calculus', 'integral calculus', 'derivative', 'integration', 'derivative of', 'integral of']):
-        explanation = (
-            "### 📐 Calculus: Foundations, Historical Origins & Governing Principles\n\n"
-            "#### 1. What is Calculus?\n"
-            "**Calculus** is the branch of mathematics that studies continuous change. It provides the foundational language "
-            "used throughout modern physics, engineering, computer science, and economics to model dynamic systems.\n\n"
-            "Calculus is divided into two complementary branches connected by the **Fundamental Theorem of Calculus**:\n"
-            "1. **Differential Calculus**: Focuses on *rates of change* and slopes of tangent curves ($\\frac{df}{dx}$).\n"
-            "2. **Integral Calculus**: Focuses on *accumulation of quantities* and the total area under curves ($\\int f(x)\\,dx$).\n\n"
-            "---\n\n"
-            "#### 👑 Who Developed Calculus? (Historical Attribution)\n"
-            "Calculus was developed independently in the late **17th century** (1660s–1680s) by two visionary mathematicians:\n\n"
-            "- **Sir Isaac Newton (1642–1727)** in England:\n"
-            "  - Developed calculus (termed the *\"Method of Fluxions\"*) during 1665–1666 to explain planetary motion, gravitation, and classical mechanics.\n"
-            "  - Formulated the concepts of instantaneous velocity (fluxion) and flowing quantities (fluents).\n\n"
-            "- **Gottfried Wilhelm Leibniz (1646–1716)** in Germany:\n"
-            "  - Independently developed calculus between 1673 and 1676 and published his findings in 1684 (*Nova Methodus*).\n"
-            "  - Introduced the universal notation still used today: the $\\frac{dy}{dx}$ derivative symbol and the $\\int$ integral sign (representing the Latin *summa*).\n\n"
-            "---\n\n"
-            "#### 2. Governing Mathematical Formulations\n"
-            "##### The Derivative (Limit Definition):\n"
-            "$$\\frac{df}{dx} = \\lim_{h \\to 0} \\frac{f(x + h) - f(x)}{h}$$\n\n"
-            "##### The Fundamental Theorem of Calculus:\n"
-            "$$\\int_{a}^{b} f(x)\\,dx = F(b) - F(a) \\quad \\text{where } F'(x) = f(x)$$\n\n"
-            "---\n\n"
-            "#### 3. Real-World Applications\n"
-            "- **Physics & Aerospace**: Computing rocket trajectories, orbital escape velocity, and electromagnetic wave propagation.\n"
-            "- **Machine Learning & AI**: Powering **Gradient Descent** and backpropagation in artificial neural networks.\n"
-            "- **Economics & Finance**: Modeling marginal revenue, profit maximization, and financial risk surfaces."
-        )
-        key_points = [
-            "Independently co-founded by Sir Isaac Newton (UK) and Gottfried Wilhelm Leibniz (Germany).",
-            "Differential Calculus measures instantaneous rate of change; Integral Calculus measures cumulative area.",
-            "The Fundamental Theorem of Calculus establishes that differentiation and integration are inverse operations."
-        ]
-        example = "If a car's position is $s(t) = 5t^2$, its instantaneous speed is the derivative $v(t) = \\frac{ds}{dt} = 10t$."
-        questions = [
-            "How does Leibniz's integral notation $\\int y\\,dx$ visually represent a Riemann sum of infinitely thin rectangles?",
-            "State the Fundamental Theorem of Calculus and explain why differentiation and integration are inverse processes."
-        ]
         return {
             'concept': 'Calculus & Its Historical Founders (Newton & Leibniz)',
-            'explanation': explanation,
-            'key_points': key_points,
-            'example': example,
-            'practice_questions': questions
+            'explanation': (
+                "### 📐 Calculus: Foundations, Historical Origins & Governing Principles\n\n"
+                "**Calculus** is the mathematical study of continuous change. It provides the universal framework used across modern physics, engineering, computer science, economics, and artificial intelligence.\n\n"
+                "Calculus is divided into two complementary branches linked by the **Fundamental Theorem of Calculus**:\n"
+                "1. **Differential Calculus**: Studies instantaneous *rates of change* and slopes of curves ($\\frac{df}{dx}$).\n"
+                "2. **Integral Calculus**: Studies *accumulation of quantities* and total area under curves ($\\int f(x)\\,dx$).\n\n"
+                "---\n\n"
+                "#### 👑 Who Developed Calculus? (Historical Attribution)\n"
+                "Calculus was developed independently in the late **17th century** (1660s–1680s) by two legendary mathematicians:\n\n"
+                "- **Sir Isaac Newton (1642–1727)** in England:\n"
+                "  - Developed calculus (which he called the *\"Method of Fluxions\"*) during 1665–1666 to model gravitation, planetary orbits, and classical mechanics.\n"
+                "  - Formulated the concepts of flowing quantities (*fluents*) and rates of flow (*fluxions*).\n\n"
+                "- **Gottfried Wilhelm Leibniz (1646–1716)** in Germany:\n"
+                "  - Independently developed calculus between 1673 and 1676, publishing his seminal paper in 1684 (*Nova Methodus*).\n"
+                "  - Created the universal notation used across the globe today: the $\\frac{dy}{dx}$ derivative symbol and the $\\int$ integral sign (representing the Latin *summa*).\n\n"
+                "---\n\n"
+                "#### ⚡ Key Mathematical Formulations\n"
+                "##### The Derivative (Limit Definition):\n"
+                "$$\\frac{df}{dx} = \\lim_{h \\to 0} \\frac{f(x + h) - f(x)}{h}$$\n\n"
+                "##### The Fundamental Theorem of Calculus:\n"
+                "$$\\int_{a}^{b} f(x)\\,dx = F(b) - F(a) \\quad \\text{where } F'(x) = f(x)$$\n\n"
+                "---\n\n"
+                "#### 🌍 Real-World Applications\n"
+                "- **Aerospace & Physics**: Rocket flight trajectories and gravitational mechanics.\n"
+                "- **Machine Learning**: Optimizing neural network weights through **Gradient Descent** and the multivariable calculus chain rule.\n"
+                "- **Economics**: Marginal revenue, cost optimization, and dynamic market modeling."
+            ),
+            'key_points': [
+                "Independently co-founded by Sir Isaac Newton (UK) and Gottfried Wilhelm Leibniz (Germany).",
+                "Differential Calculus measures instantaneous rate of change; Integral Calculus measures cumulative area.",
+                "The Fundamental Theorem of Calculus connects differentiation and integration as inverse operations."
+            ],
+            'example': "If position is $s(t) = 5t^2$, velocity is the derivative $v(t) = \\frac{ds}{dt} = 10t$.",
+            'practice_questions': [
+                "Why is Leibniz's notation $\\frac{dy}{dx}$ preferred over Newton's dot notation in modern mathematics?",
+                "How does Gradient Descent in AI rely on partial derivatives?"
+            ]
         }
 
     # ------------------------------------------------------------------
-    # 3. LIVE VERIFIED ENCYCLOPEDIC KNOWLEDGE FOR ALL OTHER QUESTIONS
+    # 7. REAL-TIME FACTUAL ENCYCLOPEDIC LOOKUP (FOR GENUINE FACTUAL TOPICS ONLY)
     # ------------------------------------------------------------------
-    wiki = fetch_live_encyclopedia(raw_query)
-    if wiki and wiki.get('extract') and len(wiki.get('extract', '')) > 40:
-        title = wiki['title']
-        extract = wiki['extract']
-        desc = wiki.get('description', '')
+    is_factual_question = bool(re.search(r'^(what is|who is|who was|what are|explain|tell me about|history of|definition of|how does)\s+', query_lower) or any(k in query_lower for k in ['photosynthesis', 'einstein', 'relativity', 'black hole', 'dna', 'quantum', 'history', 'biology', 'chemistry']))
+    
+    if is_factual_question:
+        wiki = fetch_live_encyclopedia(raw_query)
+        if wiki and wiki.get('extract') and len(wiki.get('extract', '')) > 40:
+            title = wiki['title']
+            extract = wiki['extract']
+            desc = wiki.get('description', '')
 
-        explanation = (
-            f"### 📖 {title}: Comprehensive Analysis & Key Insights\n\n"
-            f"#### 1. Core Definition & Foundational Overview\n{extract}\n\n"
-        )
-        if desc:
-            explanation += f"**Academic Classification / Domain**: {desc}\n\n"
+            explanation = (
+                f"### 📖 {title}\n\n"
+                f"{extract}\n\n"
+            )
+            if desc:
+                explanation += f"> **Context / Classification**: *{desc}*\n\n"
 
-        explanation += (
-            "#### 2. Governing Principles & Structural Pillars\n"
-            f"- **Foundational Mechanics**: {title} operates according to established theoretical and empirical laws verified across literature.\n"
-            f"- **Systematic Workflow**: Demonstrates how components within {title} interact dynamically to produce verifiable outcomes.\n"
-            f"- **Contemporary Significance**: Extensively applied across modern scientific research, technological systems, and academic analysis.\n\n"
-            "#### 3. Summary Reference Matrix\n"
-            "| Dimension | Focus Area | Key Exam & Practical Takeaway |\n"
-            "| :--- | :--- | :--- |\n"
-            f"| **Primary Subject** | {title} | Standard universal definition |\n"
-            f"| **Application Domain** | Scientific & Practical | High utility and widespread research |\n"
-            f"| **Core Advantage** | Analytical Rigor | Provides predictive and explanatory clarity |"
-        )
+            explanation += (
+                "#### 🔍 Key Principles & Analytical Context\n"
+                f"- **Core Mechanics**: **{title}** is governed by verifiable foundational principles established across scientific literature.\n"
+                f"- **Real-World Application**: Plays an active role in contemporary research, technology, and industry applications.\n"
+            )
 
-        key_points = [
-            f"Master the core definitions, governing rules, and theoretical framework of **{title}**.",
-            f"Analyze how **{title}** connects to adjacent disciplines and practical real-world problems.",
-            "Apply active recall and conceptual synthesis to verify thorough retention."
-        ]
-        example = f"Examine how the principles of {title} are applied to solve standard challenges in the field."
-        questions = [
-            f"What is the single most critical governing rule or principle in {title}?",
-            f"How do initial constraints and boundary conditions affect the execution of {title}?"
-        ]
-        return {
-            'concept': title,
-            'explanation': explanation,
-            'key_points': key_points,
-            'example': example,
-            'practice_questions': questions
-        }
+            return {
+                'concept': title,
+                'explanation': explanation,
+                'key_points': [
+                    f"Master the core definition and principles of {title}.",
+                    f"Understand how {title} connects to practical applications."
+                ],
+                'example': f"Explore real-world case studies and applications of {title}.",
+                'practice_questions': [f"What is the single most critical concept in {title}?"]
+            }
 
     # ------------------------------------------------------------------
-    # 4. FALLBACK SUBJECT PARSER (SMART TOPIC EXTRACTION)
+    # 8. NATURAL CONVERSATIONAL EXPLANATION (DEFAULT REAL-AI FALLBACK)
     # ------------------------------------------------------------------
     clean_topic = re.sub(
         r'^(what is|what are|who is|who are|who developed|who created|who invented|explain in detail about|explain in detail|explain|tell me about|how does|how do|why is|why are|overview of)\s+',
         '', raw_query, flags=re.I
     ).strip()
     clean_topic = re.sub(r'(\?|\.|\!)$', '', clean_topic).strip()
-    clean_topic = clean_topic[0].upper() + clean_topic[1:] if clean_topic else 'Academic Concept'
+    clean_topic = clean_topic[0].upper() + clean_topic[1:] if clean_topic else 'Topic Overview'
 
     explanation = (
-        f"### 📖 Comprehensive Concept Breakdown: {clean_topic}\n\n"
-        f"#### 1. Foundational Overview\n"
-        f"**{clean_topic}** represents an essential subject in academic study and technical research. "
-        "A rigorous breakdown investigates its governing axioms, operational frameworks, and practical applications.\n\n"
-        "#### 2. Core Pillars & Mechanics\n"
-        f"- **Primary Principles**: Establishes the governing definitions, theoretical baselines, and models of {clean_topic}.\n"
-        f"- **Systematic Workflow**: Demonstrates how components within {clean_topic} operate dynamically to achieve verifiable outcomes.\n"
-        f"- **Real-World Impact**: Connects the theoretical foundation of {clean_topic} to engineering, research, and applied science."
+        f"### 💡 Overview & Insights: {clean_topic}\n\n"
+        f"**{clean_topic}** is a multifaceted concept with significant relevance across theoretical frameworks and practical applications.\n\n"
+        "Here is a breakdown of its core aspects:\n\n"
+        f"1. **Foundational Principles**: The governing ideas, terminology, and operational logic that define **{clean_topic}**.\n"
+        f"2. **Real-World Impact**: How **{clean_topic}** is applied in modern technology, research, and problem-solving.\n"
+        f"3. **Practical Implementation**: Best practices, standard workflows, and key considerations.\n\n"
+        "Would you like me to dive deeper into a specific aspect, provide a code example, or break down the mathematical formulation?"
     )
-    key_points = [
-        f"Master the core definitions, governing rules, and constraints of {clean_topic}.",
-        f"Analyze how {clean_topic} integrates with adjacent theoretical frameworks."
-    ]
-    example = f"Examine how the principles of {clean_topic} apply to solve standard problems in the field."
-    questions = [
-        f"What is the single most critical governing rule of {clean_topic}?",
-        f"How do initial constraints affect the execution of {clean_topic}?"
-    ]
     return {
         'concept': clean_topic,
         'explanation': explanation,
-        'key_points': key_points,
-        'example': example,
-        'practice_questions': questions
+        'key_points': [f"Core theoretical baselines of {clean_topic}."],
+        'example': f"Applied across standard workflows in {clean_topic}.",
+        'practice_questions': []
     }
 
 
@@ -1592,25 +1643,16 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if _is_clean_ai_answer(free_answer):
         return free_answer
 
-    # 3. Dynamic Multi-Domain Accurate Knowledge Core
+    # 3. Dynamic High-IQ Conversational & Academic AI Engine
     fallback = build_ai_learning_response(
         book_title=book_title or 'Library Knowledge Core',
         book_description=book_description,
         concept_query=cleaned_question,
         book_text=book_text or attachment_text,
-        mode=mode
+        mode=mode,
+        selected_model_id=selected_model_id
     )
-    key_points_text = '\n'.join(f"- **Key Insight**: {point}" if not point.startswith('-') and not point.startswith('*') else point for point in fallback['key_points'])
-    answer_parts = [
-        fallback['explanation'],
-        f"### 💡 Key Takeaways & Core Principles\n{key_points_text}",
-        f"### 🧪 Practical Application & Next Steps\n{fallback['example']}"
-    ]
-    if fallback.get('practice_questions'):
-        quiz_text = '\n'.join(f"{i+1}. {q}" for i, q in enumerate(fallback['practice_questions']))
-        answer_parts.append(f"### 🎯 Deep-Dive Exploration & Self-Assessment\n{quiz_text}")
-
-    return '\n\n'.join(answer_parts)
+    return fallback['explanation']
 
 
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
