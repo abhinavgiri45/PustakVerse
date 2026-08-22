@@ -11,7 +11,7 @@
   <!-- Fonts & Libraries -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
@@ -19,7 +19,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
-  <!-- OPEN GRAPH / SOCIAL LINK PREVIEWS -->
+  <!-- OPEN GRAPH / SOCIAL PREVIEWS -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="GranthMind AI · PustakVerse">
   <meta property="og:url" content="https://pustakverse.onrender.com/granthmind">
@@ -34,33 +34,64 @@
 
   <style>
     :root {
-      --bg-dark: #090d16;
-      --bg-surface: #0f172a;
-      --bg-card: #1e293b;
-      --border-color: #334155;
+      --bg-dark: #080c14;
+      --bg-surface: #0e1626;
+      --bg-card: #151f32;
+      --bg-code: #0b0f19;
+      --border-color: #223048;
+      --border-light: rgba(255, 255, 255, 0.08);
       --accent-purple: #8b5cf6;
       --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #3b82f6 50%, #06b6d4 100%);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --text-sub: #64748b;
+      --mode-color: #8b5cf6;
+      --mode-bg: rgba(139, 92, 246, 0.12);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
+    /* Universal Dark Clean Scrollbars - No White Bars Anywhere */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(255, 255, 255, 0.16) transparent !important;
+    }
+
+    html, body {
       background-color: var(--bg-dark);
       color: var(--text-main);
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+      overflow: hidden !important;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px !important;
+      height: 5px !important;
+      background: transparent !important;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent !important;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.16) !important;
+      border-radius: 99px !important;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 92, 246, 0.5) !important;
     }
 
     /* Top Brand Navigation */
     .topbar {
-      height: 64px;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(12px);
+      height: 60px;
+      background: rgba(14, 22, 38, 0.95);
+      backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
@@ -78,8 +109,8 @@
     }
 
     .brand-logo {
-      height: 42px;
-      width: 42px;
+      height: 38px;
+      width: 38px;
       border-radius: 10px;
       object-fit: cover;
       box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
@@ -87,16 +118,17 @@
     }
 
     .brand-title {
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       font-weight: 900;
       background: var(--accent-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -0.02em;
+      line-height: 1.2;
     }
 
     .brand-tagline {
-      font-size: 0.66rem;
+      font-size: 0.62rem;
       color: var(--text-muted);
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -106,16 +138,16 @@
     .top-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .guest-counter-badge {
       background: rgba(234, 88, 12, 0.15);
       color: #fb923c;
       border: 1px solid rgba(251, 146, 60, 0.4);
-      padding: 5px 12px;
+      padding: 4px 10px;
       border-radius: 20px;
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       font-weight: 800;
       display: flex;
       align-items: center;
@@ -126,20 +158,22 @@
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       color: #f1f5f9;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 700;
-      padding: 7px 12px;
+      padding: 6px 12px;
       border-radius: 20px;
       outline: none;
       cursor: pointer;
+      transition: border-color 0.2s;
     }
+    .model-selector:hover { border-color: var(--accent-purple); }
 
     .btn-nav-back {
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 20px;
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.1);
@@ -147,16 +181,17 @@
     }
     .btn-nav-back:hover { background: rgba(255,255,255,0.15); color: white; }
 
-    /* Main Workspace */
+    /* Main Workspace Layout (Zero Double Scrollbars) */
     .workspace {
       display: grid;
-      grid-template-columns: 280px 1fr;
+      grid-template-columns: 270px 1fr;
       flex: 1;
-      height: calc(100vh - 64px);
-      overflow: hidden;
+      height: calc(100vh - 60px);
+      overflow: hidden !important;
+      position: relative;
     }
 
-    /* Sidebar with 15-Day Auto-Expiring History (0 DB storage) */
+    /* Sidebar */
     .sidebar {
       background: var(--bg-surface);
       border-right: 1px solid var(--border-color);
@@ -165,6 +200,8 @@
       flex-direction: column;
       gap: 12px;
       overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
     }
 
     .btn-new-chat {
@@ -172,8 +209,8 @@
       color: white;
       border: none;
       border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 0.9rem;
+      padding: 11px 16px;
+      font-size: 0.88rem;
       font-weight: 800;
       cursor: pointer;
       display: flex;
@@ -186,12 +223,12 @@
     .btn-new-chat:hover { transform: translateY(-1px); }
 
     .sidebar-section-title {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 800;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      margin-top: 6px;
+      margin-top: 4px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -202,8 +239,8 @@
       flex-direction: column;
       gap: 6px;
       overflow-y: auto;
+      overflow-x: hidden;
       flex: 1;
-      max-height: calc(100vh - 350px);
     }
 
     .history-item {
@@ -211,7 +248,7 @@
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: 8px;
       padding: 8px 10px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #cbd5e1;
       cursor: pointer;
       display: flex;
@@ -232,11 +269,11 @@
       flex: 1;
     }
 
-    /* Modes Bar */
+    /* Modes Navigation Bar */
     .modes-bar {
       background: #0b1120;
       border-bottom: 1px solid var(--border-color);
-      padding: 10px 20px;
+      padding: 8px 20px;
       display: flex;
       gap: 8px;
       overflow-x: auto;
@@ -246,12 +283,12 @@
     .modes-bar::-webkit-scrollbar { display: none; }
 
     .mode-tab-btn {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #cbd5e1;
-      padding: 7px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #94a3b8;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       font-weight: 800;
       cursor: pointer;
       display: flex;
@@ -260,50 +297,121 @@
       white-space: nowrap;
       transition: all 0.2s;
     }
-    .mode-tab-btn.active, .mode-tab-btn:hover {
-      background: var(--accent-gradient);
-      color: white;
-      border-color: transparent;
-      box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+    .mode-tab-btn:hover {
+      background: rgba(255,255,255,0.08);
+      color: #e2e8f0;
+    }
+    .mode-tab-btn.active {
+      background: var(--mode-bg);
+      color: #fff;
+      border-color: var(--mode-color);
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
     }
 
-    /* Chat Messages Container */
+    /* Active Category Intelligence Hub */
+    .active-category-hub {
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+      font-size: 0.76rem;
+    }
+    .active-category-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .category-badge-pill {
+      background: var(--mode-bg);
+      border: 1px solid var(--mode-color);
+      color: var(--text-main);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 0.72rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .category-desc-text {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+    .category-quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .category-quick-actions::-webkit-scrollbar { display: none; }
+    .quick-chip-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .quick-chip-btn:hover {
+      background: var(--mode-bg);
+      border-color: var(--mode-color);
+      color: white;
+    }
+
+    /* Chat Area */
     .chat-area {
       display: flex;
       flex-direction: column;
       height: 100%;
       background: var(--bg-dark);
-      overflow: hidden;
+      overflow: hidden !important;
+      min-width: 0;
     }
 
     .messages-scroll {
       flex: 1;
-      overflow-y: auto;
-      padding: 24px 20px;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 20px;
       max-width: 900px;
       width: 100%;
       margin: 0 auto;
+      min-width: 0;
     }
 
     .msg-card {
       display: flex;
-      gap: 14px;
+      gap: 12px;
       align-items: flex-start;
-      animation: fadeInMsg 0.25s ease-out;
+      animation: fadeInMsg 0.2s ease-out;
+      min-width: 0;
+      max-width: 100%;
     }
-    @keyframes fadeInMsg { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInMsg { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
     .msg-avatar {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1rem;
       flex-shrink: 0;
     }
     .msg-user .msg-avatar { background: #334155; color: white; }
@@ -318,19 +426,23 @@
       border: 1px solid var(--border-color);
       border-radius: 16px;
       padding: 16px 18px;
-      font-size: 0.94rem;
+      font-size: 0.92rem;
       line-height: 1.65;
       color: #f1f5f9;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      min-width: 0;
+      max-width: 100%;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
-    .msg-user .msg-body { background: #1e1b4b; border-color: #4338ca; }
+    .msg-user .msg-body { background: #181d33; border-color: #3b4268; }
 
     .msg-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: var(--text-muted);
     }
@@ -339,58 +451,94 @@
     .msg-content p { margin-bottom: 10px; }
     .msg-content p:last-child { margin-bottom: 0; }
     .msg-content ul, .msg-content ol { margin-left: 20px; margin-bottom: 10px; }
-    .msg-content code {
-      background: #090d16;
+    
+    /* Code Blocks Inside Messages */
+    .msg-content code:not(pre code) {
+      background: rgba(0, 0, 0, 0.4);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.86rem;
+      font-size: 0.84rem;
       color: #38bdf8;
+      border: 1px solid rgba(255,255,255,0.06);
     }
-    .msg-content pre {
-      background: #090d16;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 12px;
-      overflow-x: auto;
+
+    .code-block-wrapper {
+      position: relative;
       margin: 12px 0;
+      background: #0b0f19;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
     }
-    .msg-content pre code { background: none; padding: 0; color: inherit; }
+    .code-header {
+      background: #111827;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn-copy-code {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #cbd5e1;
+      padding: 2px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-family: inherit;
+    }
+    .btn-copy-code:hover { background: rgba(255,255,255,0.18); color: white; }
+
+    .msg-content pre {
+      background: transparent;
+      padding: 12px 14px;
+      overflow-x: auto !important;
+      margin: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+    .msg-content pre code { background: none; padding: 0; border: none; }
 
     /* Welcome Hero Banner */
     .welcome-hero {
       text-align: center;
-      margin: 40px auto;
-      max-width: 650px;
-      padding: 20px;
+      margin: 30px auto;
+      max-width: 680px;
+      padding: 10px;
     }
     .welcome-logo {
-      width: 90px;
-      height: 90px;
-      border-radius: 22px;
-      margin-bottom: 16px;
+      width: 78px;
+      height: 78px;
+      border-radius: 20px;
+      margin-bottom: 12px;
       box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
       border: 2px solid rgba(139, 92, 246, 0.6);
     }
     .welcome-title {
-      font-size: 1.8rem;
+      font-size: 1.65rem;
       font-weight: 900;
       background: var(--accent-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .welcome-sub {
       color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.5;
-      margin-bottom: 24px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      margin-bottom: 22px;
     }
 
     .prompts-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 10px;
       text-align: left;
     }
     .prompt-card {
@@ -402,18 +550,18 @@
       transition: all 0.2s;
     }
     .prompt-card:hover {
-      border-color: var(--accent-purple);
-      background: #1e1b4b;
+      border-color: var(--mode-color);
+      background: #181d33;
       transform: translateY(-2px);
     }
-    .prompt-card-title { font-weight: 800; font-size: 0.85rem; color: white; display: flex; align-items: center; gap: 6px; }
-    .prompt-card-desc { font-size: 0.76rem; color: var(--text-muted); margin-top: 2px; }
+    .prompt-card-title { font-weight: 800; font-size: 0.82rem; color: white; display: flex; align-items: center; gap: 6px; }
+    .prompt-card-desc { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; }
 
     /* Input Dock Area */
     .input-dock {
       background: var(--bg-surface);
       border-top: 1px solid var(--border-color);
-      padding: 16px 20px 20px;
+      padding: 14px 20px 16px;
       flex-shrink: 0;
     }
     .input-container {
@@ -425,39 +573,39 @@
     .input-box-wrapper {
       background: var(--bg-card);
       border: 1.5px solid var(--border-color);
-      border-radius: 18px;
-      padding: 8px 14px;
+      border-radius: 16px;
+      padding: 8px 12px;
       display: flex;
       align-items: center;
       gap: 10px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
       transition: border-color 0.2s;
     }
-    .input-box-wrapper:focus-within { border-color: var(--accent-purple); }
+    .input-box-wrapper:focus-within { border-color: var(--mode-color); }
 
     .chat-textarea {
       flex: 1;
       background: transparent;
       border: none;
       color: white;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-family: inherit;
       resize: none;
       min-height: 24px;
-      max-height: 160px;
-      padding: 6px 0;
+      max-height: 140px;
+      padding: 4px 0;
       outline: none;
       line-height: 1.5;
     }
     .chat-textarea::placeholder { color: #64748b; }
 
-    /* Google 4-Color Mic Button */
+    /* Google 4-Color Mic */
     .google-mic-btn {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 50%;
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -465,10 +613,7 @@
       transition: all 0.2s;
       flex-shrink: 0;
     }
-    .google-mic-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: scale(1.08);
-    }
+    .google-mic-btn:hover { background: rgba(255, 255, 255, 0.18); transform: scale(1.06); }
     .google-mic-btn.listening {
       animation: pulseMic 1.2s infinite;
       border-color: #ef4444;
@@ -476,7 +621,7 @@
     }
     @keyframes pulseMic {
       0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
@@ -484,9 +629,9 @@
       background: var(--accent-gradient);
       color: white;
       border: none;
-      border-radius: 12px;
-      width: 38px;
-      height: 38px;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -502,12 +647,12 @@
       justify-content: space-between;
       align-items: center;
       max-width: 900px;
-      margin: 8px auto 0;
-      font-size: 0.72rem;
+      margin: 6px auto 0;
+      font-size: 0.7rem;
       color: #64748b;
     }
 
-    /* Auth Prompt Modal (For Guests after 4 chats) */
+    /* Auth Required Modal */
     .auth-modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -522,13 +667,13 @@
     .auth-modal-box {
       background: var(--bg-surface);
       border: 1.5px solid var(--accent-purple);
-      border-radius: 24px;
-      max-width: 460px;
+      border-radius: 20px;
+      max-width: 440px;
       width: 100%;
-      padding: 32px 24px;
+      padding: 28px 22px;
       text-align: center;
       box-shadow: 0 20px 50px rgba(124, 58, 237, 0.3);
-      animation: popIn 0.25s ease-out;
+      animation: popIn 0.2s ease-out;
     }
     @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
@@ -536,6 +681,7 @@
       .workspace { grid-template-columns: 1fr; }
       .sidebar { display: none; }
       .prompts-grid { grid-template-columns: 1fr; }
+      .active-category-hub { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -582,7 +728,7 @@
   <!-- WORKSPACE -->
   <div class="workspace">
 
-    <!-- SIDEBAR WITH 15-DAY AUTO-EXPIRING CLIENT HISTORY (0 DB STORAGE) -->
+    <!-- SIDEBAR -->
     <aside class="sidebar">
       <button type="button" onclick="createNewSession()" class="btn-new-chat">
         <span>✨</span> New GranthMind Session
@@ -600,7 +746,7 @@
         <button type="button" onclick="clearCurrentSession()" style="background: none; border: none; color: #ef4444; font-size: 0.72rem; cursor: pointer; font-weight: 700;">Clear</button>
       </div>
 
-      <!-- History List from LocalStorage (Auto-Expires after 15 days) -->
+      <!-- History List -->
       <div class="history-list" id="historyListContainer">
         <div style="font-size: 0.75rem; color: #64748b; text-align: center; padding: 12px 0;" id="emptyHistoryMsg">No recent sessions</div>
       </div>
@@ -616,7 +762,7 @@
       </div>
 
       <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.7rem; color: #64748b; text-align: center;">
-        🔒 Chats stored securely in browser · Auto-cleaned after 15 days
+        🔒 Chats stored in browser · Auto-cleaned after 15 days
       </div>
     </aside>
 
@@ -625,52 +771,48 @@
 
       <!-- MODES BAR -->
       <div class="modes-bar">
-        <button type="button" class="mode-tab-btn active" onclick="setGranthMode('study', this)">
-          <span>📖</span> STUDY (Concept &amp; Exams)
-        </button>
-        <button type="button" class="mode-tab-btn" onclick="setGranthMode('research', this)">
-          <span>🔍</span> RESEARCH (Citations &amp; Depth)
-        </button>
-        <button type="button" class="mode-tab-btn" onclick="setGranthMode('write', this)">
-          <span>✍️</span> WRITE (Essays &amp; Prose)
-        </button>
-        <button type="button" class="mode-tab-btn" onclick="setGranthMode('code', this)">
+        <button type="button" class="mode-tab-btn" id="tab_code" onclick="setGranthMode('code', this)">
           <span>&lt;/&gt;</span> CODE (Python, SQL &amp; Debug)
         </button>
-        <button type="button" class="mode-tab-btn" onclick="setGranthMode('create', this)">
+        <button type="button" class="mode-tab-btn active" id="tab_study" onclick="setGranthMode('study', this)">
+          <span>📖</span> STUDY (Concept &amp; Exams)
+        </button>
+        <button type="button" class="mode-tab-btn" id="tab_research" onclick="setGranthMode('research', this)">
+          <span>🔍</span> RESEARCH (Citations &amp; Depth)
+        </button>
+        <button type="button" class="mode-tab-btn" id="tab_write" onclick="setGranthMode('write', this)">
+          <span>✍️</span> WRITE (Essays &amp; Prose)
+        </button>
+        <button type="button" class="mode-tab-btn" id="tab_create" onclick="setGranthMode('create', this)">
           <span>💡</span> CREATE (Ideas &amp; Outlines)
         </button>
-        <button type="button" class="mode-tab-btn" onclick="setGranthMode('solve', this)">
+        <button type="button" class="mode-tab-btn" id="tab_solve" onclick="setGranthMode('solve', this)">
           <span>🧩</span> SOLVE (Math &amp; Physics Steps)
         </button>
       </div>
 
-      <!-- MESSAGES SCROLL -->
+      <!-- ACTIVE CATEGORY CONTEXT & QUICK ACTIONS BAR -->
+      <div class="active-category-hub" id="activeCategoryHub">
+        <div class="active-category-left">
+          <span class="category-badge-pill" id="catBadge">📖 STUDY WORKSPACE</span>
+          <span class="category-desc-text" id="catDesc">Exam concepts, intuitive breakdowns &amp; summaries</span>
+        </div>
+        <div class="category-quick-actions" id="catQuickActions">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- MESSAGES SCROLL (SINGLE CONTAINER WITH ZERO DOUBLE SCROLLBARS) -->
       <div class="messages-scroll" id="messagesContainer">
 
         <!-- WELCOME HERO STATE -->
         <div class="welcome-hero" id="welcomeHero">
           <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind AI" class="welcome-logo" onerror="this.src='/static/PustakVerse.png'">
-          <h1 class="welcome-title">GranthMind AI</h1>
-          <p class="welcome-sub">All AI Models. One Platform. Your universal study, research, coding, and problem-solving intelligence.</p>
+          <h1 class="welcome-title" id="welcomeHeroTitle">GranthMind AI</h1>
+          <p class="welcome-sub" id="welcomeHeroSub">All AI Models. One Platform. Select a specialized category mode above to begin your workflow.</p>
 
-          <div class="prompts-grid">
-            <div class="prompt-card" onclick="sendQuickPrompt('Explain this concept in simple terms with a real-world analogy.')">
-              <div class="prompt-card-title"><span>📖</span> Simple Concept Explainer</div>
-              <div class="prompt-card-desc">Break down any complex topic simply.</div>
-            </div>
-            <div class="prompt-card" onclick="sendQuickPrompt('Generate a 5-question practice quiz with detailed answers and hints.')">
-              <div class="prompt-card-title"><span>📝</span> Practice Exam &amp; Quiz</div>
-              <div class="prompt-card-desc">Test your understanding with solutions.</div>
-            </div>
-            <div class="prompt-card" onclick="sendQuickPrompt('Write a clean, optimized Python script with step-by-step logic comments.')">
-              <div class="prompt-card-title"><span>&lt;/&gt;</span> Code Generator &amp; Debugger</div>
-              <div class="prompt-card-desc">Generate robust code with explanations.</div>
-            </div>
-            <div class="prompt-card" onclick="sendQuickPrompt('Solve this problem step-by-step with mathematical proof and formulas.')">
-              <div class="prompt-card-title"><span>🧩</span> Step-by-Step Solver</div>
-              <div class="prompt-card-desc">Detailed mathematical &amp; logical steps.</div>
-            </div>
+          <div class="prompts-grid" id="welcomePromptsGrid">
+            <!-- Populated dynamically based on category mode -->
           </div>
         </div>
 
@@ -719,44 +861,210 @@
 
   </div>
 
-  <!-- AUTH REQUIRED POPUP MODAL (After 4 Guest Messages) -->
+  <!-- AUTH REQUIRED POPUP MODAL -->
   <div id="authPromptModal" class="auth-modal-overlay" onclick="closeAuthModal(event)">
     <div class="auth-modal-box" onclick="event.stopPropagation()">
       <div style="font-size: 2.8rem; margin-bottom: 12px;">🎉</div>
-      <h2 style="font-size: 1.45rem; font-weight: 900; color: white; margin-bottom: 8px;">Enjoying GranthMind AI?</h2>
-      <p style="color: #94a3b8; font-size: 0.92rem; line-height: 1.5; margin-bottom: 24px;">
+      <h2 style="font-size: 1.4rem; font-weight: 900; color: white; margin-bottom: 8px;">Enjoying GranthMind AI?</h2>
+      <p style="color: #94a3b8; font-size: 0.9rem; line-height: 1.5; margin-bottom: 22px;">
         You've used all 4 of your free guest messages! Sign in or create a free account to unlock <strong>Unlimited Lifetime Conversations</strong> across all AI models.
       </p>
 
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <a href="{{ url_for('login') }}" style="background: var(--accent-gradient); color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <a href="{{ url_for('login') }}" style="background: var(--accent-gradient); color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);">
           🚀 Sign In to Continue
         </a>
-        <a href="{{ url_for('register') }}" style="background: rgba(255,255,255,0.06); color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; border: 1px solid var(--border-color);">
+        <a href="{{ url_for('register') }}" style="background: rgba(255,255,255,0.06); color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.92rem; border: 1px solid var(--border-color);">
           ✨ Create a Free Account
         </a>
       </div>
 
-      <button type="button" onclick="document.getElementById('authPromptModal').style.display='none'" style="margin-top: 18px; background: none; border: none; color: #64748b; font-size: 0.82rem; cursor: pointer; font-weight: 700;">
+      <button type="button" onclick="document.getElementById('authPromptModal').style.display='none'" style="margin-top: 16px; background: none; border: none; color: #64748b; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
         Close for now
       </button>
     </div>
   </div>
 
-  <!-- CLIENT-SIDE 15-DAY HISTORY SCRIPT (ZERO DATABASE STORAGE) -->
+  <!-- SCRIPT LOGIC -->
   <script>
-    const STORAGE_KEY = 'granthmind_sessions_v2';
+    const STORAGE_KEY = 'granthmind_sessions_v3';
     const FIFTEEN_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
     let currentSessionId = null;
     let activeMode = 'study';
 
-    // 1. Initialize & Prune Sessions Older than 15 Days
+    const categoryConfigs = {
+      'code': {
+        name: '</> CODE INTELLIGENCE',
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.12)',
+        desc: 'Python scripts, games, SQL queries, algorithms & debugging',
+        placeholder: 'Ask to write code, make a Python game, build an API, or debug errors...',
+        heroTitle: 'GranthMind </> Code Workspace',
+        heroSub: 'Production-ready software architecture, full game engines, SQL optimization & algorithms.',
+        chips: [
+          { text: '🎮 Make a Basic Game in Python', prompt: 'Make a complete, playable terminal or Pygame game using Python with score tracking and clean loop.' },
+          { text: '🐍 Python REST API', prompt: 'Write a complete production REST API in Python with SQLite and input validation.' },
+          { text: '🗄️ SQL Schema & Query', prompt: 'Design an optimized relational database schema with indexes, foreign keys, and complex analytical queries.' },
+          { text: '⚡ Algorithm & Big-O', prompt: 'Implement an optimal Binary Search Tree with insert, search, and time complexity analysis.' }
+        ],
+        prompts: [
+          { title: '🎮 Build a Complete Python Game', desc: 'Generate playable game code with modular state & controls.', prompt: 'Make a complete, playable terminal or Pygame game using Python with score tracking and clean loop.' },
+          { title: '🐍 Python Script & REST API', desc: 'Clean, production-grade Python backend architecture.', prompt: 'Write a complete production REST API in Python with SQLite and input validation.' },
+          { title: '🗄️ SQL Database & Index Optimizer', desc: 'Relational table schemas with indexing strategies.', prompt: 'Design an optimized relational database schema with indexes, foreign keys, and complex analytical queries.' },
+          { title: '🐞 Code Debugger & Explainer', desc: 'Find bugs, analyze Big-O complexity & memory profile.', prompt: 'Analyze and optimize this code for speed and memory efficiency.' }
+        ]
+      },
+      'study': {
+        name: '📖 STUDY COMPANION',
+        color: '#8b5cf6',
+        bg: 'rgba(139, 92, 246, 0.12)',
+        desc: 'Concept breakdowns, exam preparation & high-yield summaries',
+        placeholder: 'Ask any concept question, exam doubt, or request a summary...',
+        heroTitle: 'GranthMind Study Companion',
+        heroSub: 'Master any concept with simple analogies, structured flashcards, and active recall practice.',
+        chips: [
+          { text: '🧠 Explain Simply', prompt: 'Explain this concept in simple terms with a real-world analogy.' },
+          { text: '📝 Practice Quiz (5 Qs)', prompt: 'Generate a 5-question multiple choice practice quiz with detailed answers and hints.' },
+          { text: '⚡ 3-Minute Summary', prompt: 'Provide a concise high-yield summary of the core principles.' },
+          { text: '📑 Revision Cheat Sheet', prompt: 'Create an exam revision cheat sheet table for this topic.' }
+        ],
+        prompts: [
+          { title: '📖 Simple Concept Explainer', desc: 'Break down complex topics with real-world analogies.', prompt: 'Explain this concept in simple terms with a real-world analogy.' },
+          { title: '📝 Practice Exam & Quiz', desc: 'Test understanding with 5 questions & detailed answers.', prompt: 'Generate a 5-question practice quiz with detailed answers and hints.' },
+          { title: '⚡ 3-Minute Revision Sheet', desc: 'Condensed table of axioms, formulas & exam tips.', prompt: 'Create an exam revision cheat sheet table for this topic.' },
+          { title: '🗺️ Visual Concept Mindmap', desc: 'Mermaid.js flowchart of theoretical pillars.', prompt: 'Generate a visual concept mind map using Mermaid.js.' }
+        ]
+      },
+      'research': {
+        name: '🔍 RESEARCH & ACADEMIC LAB',
+        color: '#0ea5e9',
+        bg: 'rgba(14, 165, 233, 0.12)',
+        desc: 'Literature synthesis, APA/MLA citations & empirical evidence',
+        placeholder: 'Enter research topic, request literature synthesis or citations...',
+        heroTitle: 'GranthMind Research Lab',
+        heroSub: 'Rigorous peer-reviewed synthesis, empirical comparative tables, and formal citations.',
+        chips: [
+          { text: '📚 APA/MLA Citations', prompt: 'Provide formal APA and MLA citations and literature review for this topic.' },
+          { text: '📊 Comparative Evidence Table', prompt: 'Build a structured comparative evidence table contrasting primary theories.' },
+          { text: '🔬 Methodological Synthesis', prompt: 'Analyze the prevailing empirical methodologies and limitations in this field.' }
+        ],
+        prompts: [
+          { title: '🔍 Academic Literature Synthesis', desc: 'Synthesize findings across major peer-reviewed paradigms.', prompt: 'Provide formal APA and MLA citations and literature review for this topic.' },
+          { title: '📊 Comparative Evidence Table', desc: 'Structured matrix comparing axioms, evidence & limits.', prompt: 'Build a structured comparative evidence table contrasting primary theories.' },
+          { title: '📚 Source Citation Builder', desc: 'Generate complete APA 7th, MLA 9th & BibTeX citations.', prompt: 'Generate formal APA, MLA, and BibTeX citations for this topic.' },
+          { title: '🔬 Methodological Analysis', desc: 'Identify research gaps, sample biases & variables.', prompt: 'Analyze the prevailing empirical methodologies and limitations in this field.' }
+        ]
+      },
+      'write': {
+        name: '✍️ WRITING & PROSE STUDIO',
+        color: '#f43f5e',
+        bg: 'rgba(244, 63, 94, 0.12)',
+        desc: 'Compelling essays, story narratives & literary prose refinement',
+        placeholder: 'Ask to draft essays, refine prose, polish dialogue or review text...',
+        heroTitle: 'GranthMind Prose & Essay Studio',
+        heroSub: 'Craft evocative narratives, refine tone and rhythm, and draft literary essays.',
+        chips: [
+          { text: '📑 Essay Structure', prompt: 'Draft a compelling essay outline with thesis statement and evidence.' },
+          { text: '✨ Polish Prose Rhythm', prompt: 'Refine and elevate this prose with varied sentence cadence and sensory texture.' },
+          { text: '🎭 Adjust Tone (Formal)', prompt: 'Rewrite this text in an authoritative, academic, and persuasive formal tone.' }
+        ],
+        prompts: [
+          { title: '✍️ Essay & Article Drafting', desc: 'Structured introduction, thesis, arguments & conclusion.', prompt: 'Draft a compelling essay outline with thesis statement and evidence.' },
+          { title: '✨ Prose Polisher & Stylist', desc: 'Eliminate fluff, tighten rhythm & enrich vocabulary.', prompt: 'Refine and elevate this prose with varied sentence cadence and sensory texture.' },
+          { title: '🎭 Tone & Voice Transformer', desc: 'Convert to formal academic, persuasive, or creative.', prompt: 'Rewrite this text in an authoritative, academic, and persuasive formal tone.' },
+          { title: '📖 Narrative Story Crafter', desc: 'Build immersive dialogue, setting & character arcs.', prompt: 'Write an immersive scene with vivid sensory imagery and dynamic dialogue.' }
+        ]
+      },
+      'create': {
+        name: '💡 CREATIVE BRAINSTORMING',
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        desc: 'Novel ideation, worldbuilding, character arcs & outlines',
+        placeholder: 'Brainstorm innovative concepts, book outlines, or creative ideas...',
+        heroTitle: 'GranthMind Creative Studio',
+        heroSub: 'Generate unconventional premises, build dynamic worlds, and outline plot architectures.',
+        chips: [
+          { text: '🌟 10 Novel Ideas', prompt: 'Generate 10 unconventional, high-concept creative ideas for this topic.' },
+          { text: '🗺️ Plot Architecture', prompt: 'Outline a 3-act story structure with inciting incidents and plot twists.' },
+          { text: '🪐 Worldbuilding Rules', prompt: 'Establish 5 governing physical and societal rules for a unique fictional world.' }
+        ],
+        prompts: [
+          { title: '💡 10 Novel High-Concept Angles', desc: 'Unconventional premises that invert standard tropes.', prompt: 'Generate 10 unconventional, high-concept creative ideas for this topic.' },
+          { title: '🗺️ 3-Act Plot Architecture', desc: 'Pacing, midpoint reversal & climactic payoff blueprint.', prompt: 'Outline a 3-act story structure with inciting incidents and plot twists.' },
+          { title: '🪐 Worldbuilding Framework', desc: 'Magic/tech systems, societal hierarchy & factions.', prompt: 'Establish 5 governing physical and societal rules for a unique fictional world.' },
+          { title: '🎭 Complex Character Profiles', desc: 'Flaws, internal contradictions & compelling arcs.', prompt: 'Create 2 contrasting character profiles with deep stakes and motives.' }
+        ]
+      },
+      'solve': {
+        name: '🧩 STEM & MATH SOLVER',
+        color: '#3b82f6',
+        bg: 'rgba(59, 130, 246, 0.12)',
+        desc: 'Step-by-step mathematical proofs, physics & logic equations',
+        placeholder: 'Enter mathematical equation, physics problem or logic puzzle...',
+        heroTitle: 'GranthMind STEM & Math Solver',
+        heroSub: 'Rigorous step-by-step mathematical derivations with LaTeX formulas and boxed solutions.',
+        chips: [
+          { text: '📐 Step-by-Step Proof', prompt: 'Solve this problem with rigorous step-by-step mathematical proof and formulas.' },
+          { text: '🧮 Formula Derivation', prompt: 'Derive the governing equation from foundational principles.' },
+          { text: '🔍 Boundary Value Check', prompt: 'Check the boundary constraints and asymptotic limits of this equation.' }
+        ],
+        prompts: [
+          { title: '🧩 Step-by-Step Math Solution', desc: 'Derivation, intermediate algebra & boxed final result.', prompt: 'Solve this problem with rigorous step-by-step mathematical proof and formulas.' },
+          { title: '⚛️ Physics Mechanics & Laws', desc: 'Free-body diagrams, conservation laws & vector math.', prompt: 'Solve this physics problem step-by-step with conservation laws and units.' },
+          { title: '📊 Calculus & Linear Algebra', desc: 'Integration, matrix transformations & eigenvalues.', prompt: 'Evaluate this calculus/algebra problem with full derivation steps.' },
+          { title: '🔍 Logic & Algorithmic Puzzles', desc: 'Formal boolean proofs & combinatorial solutions.', prompt: 'Solve this logic puzzle with formal deduction and truth steps.' }
+        ]
+      }
+    };
+
+    function setGranthMode(mode, btn) {
+      activeMode = mode;
+      document.getElementById('currentMode').value = mode;
+      document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      else {
+        const tabEl = document.getElementById('tab_' + mode);
+        if (tabEl) tabEl.classList.add('active');
+      }
+
+      const cfg = categoryConfigs[mode] || categoryConfigs['study'];
+      
+      // Update Root CSS Variables for category accent
+      document.documentElement.style.setProperty('--mode-color', cfg.color);
+      document.documentElement.style.setProperty('--mode-bg', cfg.bg);
+
+      // Update Active Category Hub Bar
+      document.getElementById('catBadge').textContent = cfg.name;
+      document.getElementById('catBadge').style.borderColor = cfg.color;
+      document.getElementById('catBadge').style.background = cfg.bg;
+      document.getElementById('catDesc').textContent = cfg.desc;
+
+      // Update Input Placeholder
+      document.getElementById('promptInput').placeholder = cfg.placeholder;
+
+      // Update Quick Action Chips in Category Hub
+      const chipsContainer = document.getElementById('catQuickActions');
+      chipsContainer.innerHTML = cfg.chips.map(c => `
+        <button type="button" class="quick-chip-btn" onclick="sendQuickPrompt('${escapeHtml(c.prompt)}')">${c.text}</button>
+      `).join('');
+
+      // Update Welcome Hero if shown
+      document.getElementById('welcomeHeroTitle').textContent = cfg.heroTitle;
+      document.getElementById('welcomeHeroSub').textContent = cfg.heroSub;
+      const promptsGrid = document.getElementById('welcomePromptsGrid');
+      promptsGrid.innerHTML = cfg.prompts.map(p => `
+        <div class="prompt-card" onclick="sendQuickPrompt('${escapeHtml(p.prompt)}')">
+          <div class="prompt-card-title">${p.title}</div>
+          <div class="prompt-card-desc">${p.desc}</div>
+        </div>
+      `).join('');
+    }
+
     function getSessions() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         let list = raw ? JSON.parse(raw) : [];
         const now = Date.now();
-        // Prune older than 15 days automatically
         list = list.filter(s => (now - s.createdAt) < FIFTEEN_DAYS_MS);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
         return list;
@@ -769,7 +1077,6 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
         renderHistorySidebar();
-      syncLiveAiModels(false);
       } catch (e) {}
     }
 
@@ -797,7 +1104,7 @@
 
       container.innerHTML = sessions.map(s => `
         <div class="history-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadSession('${s.id}')">
-          <span style="font-size: 0.85rem;">💬</span>
+          <span style="font-size: 0.82rem;">💬</span>
           <span class="history-title" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</span>
           <button type="button" onclick="deleteSession('${s.id}', event)" style="background:none; border:none; color:#64748b; font-size:0.8rem; cursor:pointer;" title="Delete">&times;</button>
         </div>
@@ -809,10 +1116,9 @@
       const sessions = getSessions();
       const s = sessions.find(x => x.id === id);
       if (s) {
-        setGranthMode(s.mode || 'study', document.querySelector(`.mode-tab-btn[onclick*="${s.mode || 'study'}"]`));
+        setGranthMode(s.mode || 'study');
         renderMessages(s.messages || []);
         renderHistorySidebar();
-      syncLiveAiModels(false);
       }
     }
 
@@ -854,75 +1160,52 @@
           <div class="msg-avatar">${msg.role === 'user' ? '👤' : '🧠'}</div>
           <div class="msg-body">
             <div class="msg-meta">
-              <span>${msg.role === 'user' ? 'You' : 'GranthMind AI'}</span>
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span>${msg.role === 'user' ? 'You' : 'GranthMind AI'}</span>
+                ${msg.model ? `<span style="font-size: 0.68rem; background: rgba(255,255,255,0.06); color: #cbd5e1; padding: 1px 6px; border-radius: 6px;">${escapeHtml(msg.model)}</span>` : ''}
+              </span>
               <span>${msg.time || ''}</span>
             </div>
-            ${msg.image ? `<img src="${msg.image}" style="max-width: 300px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);">` : ''}
+            ${msg.image ? `<img src="${msg.image}" style="max-width: 280px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);">` : ''}
             <div class="msg-content markdown-body">${marked.parse(msg.text)}</div>
           </div>
         `;
         container.appendChild(bubble);
+        formatCodeBlocks(bubble);
         renderKatexMath(bubble);
       });
       hljs.highlightAll();
       container.scrollTop = container.scrollHeight;
     }
 
-    // Mode Selector
-    
-    // Dynamic Live AI Models Sync from Database / Founder Hub
-    function syncLiveAiModels(showToast = false) {
-      const btn = document.getElementById('syncModelsBtn');
-      if (btn) btn.style.transform = 'rotate(360deg)';
+    function formatCodeBlocks(container) {
+      container.querySelectorAll('pre code').forEach((codeBlock) => {
+        const pre = codeBlock.parentNode;
+        if (pre.parentNode.classList.contains('code-block-wrapper')) return;
 
-      fetch('/api/ai_models')
-        .then(r => r.json())
-        .then(data => {
-          if (btn) setTimeout(() => { btn.style.transform = 'none'; }, 500);
-          if (data.success && data.models && data.models.length > 0) {
-            const selector = document.getElementById('modelSelector');
-            const currentSelected = selector.value;
-            selector.innerHTML = '';
+        const lang = (codeBlock.className.match(/language-(\w+)/) || [, 'code'])[1];
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        
+        const header = document.createElement('div');
+        header.className = 'code-header';
+        header.innerHTML = `
+          <span>${lang.toUpperCase()}</span>
+          <button type="button" class="btn-copy-code" onclick="copySnippet(this)">📋 Copy Code</button>
+        `;
 
-            data.models.forEach(m => {
-              const opt = document.createElement('option');
-              opt.value = m.model_id;
-              opt.textContent = m.display_name;
-              if (m.model_id === currentSelected || m.is_default) {
-                opt.selected = true;
-              }
-              selector.appendChild(opt);
-            });
-
-            if (showToast) {
-              const toast = document.createElement('div');
-              toast.style.cssText = 'position: fixed; top: 75px; right: 20px; background: #1e1b4b; border: 1.5px solid #8b5cf6; color: white; padding: 10px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.4); animation: fadeInMsg 0.2s;';
-              toast.innerHTML = `✓ Synced ${data.models.length} AI Models from Developer Hub!`;
-              document.body.appendChild(toast);
-              setTimeout(() => { toast.remove(); }, 2500);
-            }
-          }
-        })
-        .catch(err => {
-          if (btn) setTimeout(() => { btn.style.transform = 'none'; }, 500);
-        });
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(header);
+        wrapper.appendChild(pre);
+      });
     }
 
-function setGranthMode(mode, btn) {
-      activeMode = mode;
-      document.getElementById('currentMode').value = mode;
-      document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
-
-      const placeholders = {
-        'study': 'Ask any concept question, exam doubt, or request a summary...',
-        'research': 'Enter academic topic, request formal citations or literature analysis...',
-        'write': 'Ask to draft essays, refine prose, create stories or polish tone...',
-        'code': 'Paste code to debug, ask for algorithm implementations or SQL queries...',
-        'create': 'Brainstorm creative concepts, outlines, or curriculum ideas...',
-        'solve': 'Enter mathematical equation, physics problem or logic puzzle...'
-      };
-      document.getElementById('promptInput').placeholder = placeholders[mode] || placeholders['study'];
+    function copySnippet(btn) {
+      const code = btn.closest('.code-block-wrapper').querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy Code'; }, 1800);
+      });
     }
 
     function handleKeyInput(e) {
@@ -959,6 +1242,7 @@ function setGranthMode(mode, btn) {
 
       const container = document.getElementById('messagesContainer');
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const selectedModelName = document.getElementById('modelSelector').options[document.getElementById('modelSelector').selectedIndex].text.split('(')[0].trim();
 
       // Append User Bubble
       const userBubble = document.createElement('div');
@@ -973,8 +1257,6 @@ function setGranthMode(mode, btn) {
       container.appendChild(userBubble);
       container.scrollTop = container.scrollHeight;
 
-      const selectedModelName = document.getElementById('modelSelector').options[document.getElementById('modelSelector').selectedIndex].text;
-
       // Append Assistant Thinking Bubble
       const assistantBubble = document.createElement('div');
       assistantBubble.className = 'msg-card msg-assistant';
@@ -984,12 +1266,12 @@ function setGranthMode(mode, btn) {
           <div class="msg-meta">
             <span style="display: flex; align-items: center; gap: 6px;">
               <span>GranthMind AI</span>
-              <span style="font-size: 0.7rem; background: rgba(139, 92, 246, 0.2); color: #c084fc; padding: 1px 7px; border-radius: 8px; font-weight: 800;">${selectedModelName.split('(')[0].trim()}</span>
+              <span style="font-size: 0.68rem; background: var(--mode-bg); color: var(--text-main); border: 1px solid var(--mode-color); padding: 1px 7px; border-radius: 8px; font-weight: 800;">${escapeHtml(selectedModelName)}</span>
             </span>
             <span style="color: #c084fc;">● Thinking...</span>
           </div>
           <div class="msg-content">
-            <span style="color: #94a3b8; font-style: italic;">Synthesizing response with ${selectedModelName.split('(')[0].trim()}...</span>
+            <span style="color: #94a3b8; font-style: italic;">Synthesizing expert response with ${escapeHtml(selectedModelName)}...</span>
           </div>
         </div>
       `;
@@ -1044,6 +1326,7 @@ function setGranthMode(mode, btn) {
 
         if (body.success && body.answer) {
           msgEl.innerHTML = marked.parse(body.answer);
+          formatCodeBlocks(assistantBubble);
           renderKatexMath(msgEl);
           hljs.highlightAll();
 
@@ -1054,7 +1337,7 @@ function setGranthMode(mode, btn) {
           }
 
           // Save assistant message to current session
-          currentSession.messages.push({ role: 'assistant', text: body.answer, time: body.timestamp || timeStr });
+          currentSession.messages.push({ role: 'assistant', text: body.answer, model: selectedModelName, time: body.timestamp || timeStr });
           saveSessions(sessions);
         } else {
           msgEl.innerHTML = `<span style="color: #f87171;">⚠️ ${body.error || 'Could not generate response.'}</span>`;
@@ -1118,6 +1401,7 @@ function setGranthMode(mode, btn) {
 
     // Initialize Sessions on Load
     document.addEventListener('DOMContentLoaded', () => {
+      setGranthMode('code');
       const sessions = getSessions();
       if (sessions.length > 0) {
         loadSession(sessions[0].id);
@@ -1125,7 +1409,6 @@ function setGranthMode(mode, btn) {
         createNewSession();
       }
       renderHistorySidebar();
-      syncLiveAiModels(false);
     });
   </script>
 </body>
