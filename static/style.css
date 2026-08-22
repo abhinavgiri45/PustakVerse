@@ -470,144 +470,307 @@ nav { background: rgba(15,23,42,.94); position: sticky; top: 0; backdrop-filter:
 
 
 
+
 /* ==========================================================================
-   MOBILE-FIRST APP EXPERIENCE & MODERN RESPONSIVE UI
+   PUSTAKVERSE UNIVERSAL MOBILE APP-GRADE RESPONSIVENESS (< 768px & < 480px)
    ========================================================================== */
 
 /* Universal Touch & Smoothness */
 * {
     -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
 }
 
-
-
-/* Horizontal Swipeable Category Carousel on Mobile */
-.filter-nav-scroll {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: 12px 16px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-}
-.filter-nav-scroll::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
+/* Prevent auto-zooming on input focus on iOS Safari */
+input, textarea, select {
+    font-size: 16px !important;
 }
 
-.dark-theme .filter-nav-scroll {
-    background: #1e293b;
-    border-bottom-color: #334155;
-}
-
-.sepia-theme .filter-nav-scroll {
-    background: #fdf6e2;
-    border-bottom-color: #e5d8b8;
-}
-
-/* Mobile Screens (Phones < 768px) */
 @media (max-width: 768px) {
-    
+    /* Base Body padding for bottom bar */
+    body {
+        padding-bottom: 74px !important;
+    }
 
-    /* Add bottom padding to body so content is not obscured by bottom nav */
-    
+    /* Modern Mobile Header Navbar */
+    nav, .navbar {
+        padding: 10px 14px !important;
+        height: 60px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1000 !important;
+        background: #1e293b !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+    }
 
-    /* Modern 2-Column Mobile Book Catalog Grid */
+    .nav-brand, .navbar-brand {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+
+    .logo-img, .navbar-brand img {
+        height: 38px !important;
+        max-width: 140px !important;
+    }
+
+    /* Hide desktop nav links on mobile (accessible via bottom dock & drawer) */
+    .nav-links, .navbar-links {
+        display: none !important;
+    }
+
+    .nav-search {
+        display: none !important; /* Replaced by hero search & bottom search */
+    }
+
+    /* Hero Section Responsive */
+    .hero, .hero-section {
+        padding: 34px 16px 26px !important;
+        text-align: center !important;
+    }
+
+    .hero h1, .hero-section h1 {
+        font-size: 1.95rem !important;
+        line-height: 1.18 !important;
+        letter-spacing: -0.5px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .hero-subtitle, .hero-section p {
+        font-size: 0.9rem !important;
+        line-height: 1.45 !important;
+        color: #94a3b8 !important;
+        margin-bottom: 18px !important;
+    }
+
+    .search-container, .search-wrap {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 12px 0 0 !important;
+        padding: 4px 12px !important;
+        border-radius: 28px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.12) !important;
+    }
+
+    .search-container input, .search-bar {
+        font-size: 0.95rem !important;
+        padding: 10px 6px !important;
+    }
+
+    /* Filter & Category Carousel */
+    .filter-nav, .filter-nav-scroll {
+        display: flex !important;
+        gap: 8px !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        padding: 10px 14px !important;
+        scrollbar-width: none !important;
+        -webkit-overflow-scrolling: touch !important;
+        justify-content: flex-start !important;
+    }
+    .filter-nav::-webkit-scrollbar, .filter-nav-scroll::-webkit-scrollbar { display: none !important; }
+
+    .filter-nav a, .filter-nav-scroll a {
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        font-size: 0.8rem !important;
+        min-height: 36px !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Container & Layout */
+    .container {
+        padding: 16px 12px !important;
+        max-width: 100% !important;
+    }
+
+    /* Sleek 2-Column Mobile Book Catalog Grid */
     .book-grid {
+        display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 12px !important;
-        margin-top: 14px !important;
+        margin-top: 10px !important;
     }
 
     .book-card {
-        padding: 10px !important;
+        padding: 8px !important;
         border-radius: 14px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
     }
 
-    .book-card > img, .book-cover {
-        height: 180px !important;
-        border-radius: 8px !important;
+    .book-cover, .book-card > img {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 2 / 3 !important;
+        border-radius: 10px !important;
         object-fit: cover !important;
     }
 
-    .book-card h3, .book-title {
-        font-size: 0.92rem !important;
-        margin: 8px 0 4px !important;
-        line-height: 1.25 !important;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .book-author {
-        font-size: 0.78rem !important;
-        margin-bottom: 8px !important;
+    .book-info {
+        padding: 8px 4px 4px !important;
     }
 
     .book-tag {
-        font-size: 0.7rem !important;
+        font-size: 0.68rem !important;
+        margin-bottom: 3px !important;
+    }
+
+    .book-title, .book-card h3 {
+        font-size: 0.88rem !important;
+        line-height: 1.25 !important;
+        margin: 0 0 3px 0 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+    }
+
+    .book-author {
+        font-size: 0.76rem !important;
+        margin-bottom: 8px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 
     .book-actions {
         flex-direction: column !important;
-        gap: 6px !important;
+        gap: 5px !important;
+        margin-top: auto !important;
     }
 
-    .btn, .read-book, .btn-read {
-        padding: 8px 10px !important;
-        min-height: 38px !important;
+    .btn, .btn-read, .btn-save, .btn-premium {
+        padding: 8px 0 !important;
         font-size: 0.82rem !important;
+        min-height: 38px !important;
         border-radius: 8px !important;
     }
 
-    /* Hero Banner on Mobile */
-    .hero, .hero-section {
-        padding: 36px 16px 28px !important;
+    /* GranthMind AI Floating Badge adjustment on mobile */
+    .floating-granthmind-btn {
+        display: none !important; /* Replaced by bottom navigation center AI tab */
     }
 
-    .hero h1, .hero-section h1 {
-        font-size: 1.85rem !important;
-        letter-spacing: -0.5px !important;
-        line-height: 1.15 !important;
+    /* Universal Mobile Bottom Navigation Bar */
+    .mobile-bottom-nav {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 62px !important;
+        background: #0f172a !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-around !important;
+        z-index: 9999 !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.4) !important;
     }
 
-    .hero-subtitle, .hero-section p {
-        font-size: 0.92rem !important;
-        line-height: 1.45 !important;
+    .mob-nav-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-decoration: none !important;
+        color: #94a3b8 !important;
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+        gap: 3px !important;
+        padding: 4px 8px !important;
+        transition: color 0.15s !important;
+        flex: 1 !important;
     }
 
-    .search-container, .search-wrap {
-        margin: 18px auto 0 !important;
-        padding: 4px 12px !important;
-        border-radius: 24px !important;
+    .mob-nav-item.active, .mob-nav-item:hover {
+        color: #f8fafc !important;
     }
 
-    .search-container input, .search-bar {
-        padding: 10px 8px !important;
-        font-size: 0.92rem !important;
+    .mob-nav-item-icon {
+        font-size: 1.25rem !important;
+        line-height: 1 !important;
     }
 
-    /* Container padding */
-    .container {
-        padding: 16px 12px !important;
+    .mob-nav-ai-pill {
+        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+        color: white !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        font-size: 0.72rem !important;
+        font-weight: 800 !important;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4) !important;
+        transform: translateY(-8px) !important;
+        border: 2px solid #0f172a !important;
     }
 
-    /* Dashboard grids on mobile */
-    .grid-2 {
+    /* Modals & Popups on Mobile */
+    .popup-box, .auth-modal-box {
+        width: 92% !important;
+        max-width: 92% !important;
+        padding: 24px 18px !important;
+        border-radius: 18px !important;
+    }
+
+    .popup-box h2 {
+        font-size: 1.4rem !important;
+    }
+
+    /* Forms, Login & Register on Mobile */
+    .auth-card, .login-box, .register-box, .checkout-card {
+        width: 100% !important;
+        padding: 22px 16px !important;
+        margin: 16px auto !important;
+        border-radius: 16px !important;
+    }
+
+    /* GranthMind AI Chat on Mobile */
+    .workspace {
         grid-template-columns: 1fr !important;
     }
-
-    .stat-grid, .system-metrics-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important;
+    .sidebar {
+        display: none !important;
     }
-
-    /* Table Scroll containers */
-    .table-scroll-container {
-        border-radius: 8px !important;
-        -webkit-overflow-scrolling: touch !important;
+    .prompts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+    .prompt-chip {
+        padding: 12px 14px !important;
+    }
+    .input-box-wrapper {
+        padding: 6px 10px !important;
+        gap: 6px !important;
+        border-radius: 14px !important;
+    }
+    .gemini-model-pill {
+        max-width: 110px !important;
+        font-size: 0.72rem !important;
+        padding: 4px 18px 4px 6px !important;
+    }
+    .btn-action-icon {
+        font-size: 1rem !important;
+        padding: 2px !important;
+    }
+    .google-mic-btn {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    .btn-send-chat {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    .msg-card {
+        padding: 10px 12px !important;
+        border-radius: 14px !important;
+    }
+    .msg-content {
+        font-size: 0.88rem !important;
+        line-height: 1.45 !important;
     }
 }

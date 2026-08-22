@@ -881,5 +881,40 @@
         <span>GranthMind AI</span>
     </a>
 
+
+    <!-- MOBILE APP-GRADE BOTTOM NAVIGATION DOCK -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <a href="{{ url_for('index') }}" class="mob-nav-item">
+            <span class="mob-nav-item-icon">🏠</span>
+            <span>Library</span>
+        </a>
+        <a href="{{ url_for('index') }}?explore=categories" class="mob-nav-item">
+            <span class="mob-nav-item-icon">📚</span>
+            <span>Catalogs</span>
+        </a>
+        <a href="{{ url_for('ask_ai') }}" class="mob-nav-item">
+            <span class="mob-nav-ai-pill">✨ GranthMind</span>
+        </a>
+        {% if session.username %}
+            <a href="{{ url_for('my_library') }}" class="mob-nav-item">
+                <span class="mob-nav-item-icon">📖</span>
+                <span>My Books</span>
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="mob-nav-item">
+                <span class="mob-nav-item-icon">👤</span>
+                <span>Profile</span>
+            </a>
+        {% else %}
+            <a href="{{ url_for('contact') }}" class="mob-nav-item">
+                <span class="mob-nav-item-icon">💬</span>
+                <span>Contact</span>
+            </a>
+            <a href="{{ url_for('login') }}" class="mob-nav-item">
+                <span class="mob-nav-item-icon">🔑</span>
+                <span>Sign In</span>
+            </a>
+        {% endif %}
+    </nav>
+
 </body>
 </html>
