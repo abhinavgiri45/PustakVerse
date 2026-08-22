@@ -362,11 +362,11 @@
     }
 
     let otpInterval;
-    let timeLeft = 300;
+    let timeLeft = 900; // 15 Minutes OTP Expiry
 
     function startOtpTimer() {
         clearInterval(otpInterval);
-        timeLeft = 300; 
+        timeLeft = 900; 
         const resendBtn = document.getElementById('btnResendOtp');
         resendBtn.disabled = true;
         resendBtn.style.opacity = '0.5';
@@ -375,14 +375,16 @@
             timeLeft--;
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
-            document.getElementById('otpTimerDisplay').textContent = `Time remaining: 0${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            const minStr = minutes < 10 ? '0' + minutes : minutes;
+            const secStr = seconds < 10 ? '0' + seconds : seconds;
+            document.getElementById('otpTimerDisplay').textContent = `Time remaining: ${minStr}:${secStr}`;
             
-            if (timeLeft <= 240) {
+            if (timeLeft <= 840) { // Allow resend after 60 seconds
                 resendBtn.disabled = false;
                 resendBtn.style.opacity = '1';
                 resendBtn.textContent = "Resend Code";
             } else {
-                resendBtn.textContent = `Resend Code (wait ${timeLeft - 240}s)`;
+                resendBtn.textContent = `Resend Code (wait ${timeLeft - 840}s)`;
             }
 
             if (timeLeft <= 0) {

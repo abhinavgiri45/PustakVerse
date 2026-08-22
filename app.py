@@ -1925,10 +1925,10 @@ def send_registration_otp(to_email, otp):
         f"<div style='text-align: center; padding: 10px 0;'>"
         f"<p style='font-size: 16px; color: #334155; margin-bottom: 18px;'>Welcome to PustakVerse! Use the verification code below to verify your email and activate your account:</p>"
         f"<div style='display: inline-block; background: #f8fafc; border: 2px dashed #f97316; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #ea580c; font-family: monospace;'>{otp}</div>"
-        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>. If you did not request this, please ignore this email.</p>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>15 minutes</strong>. If you did not request this, please ignore this email.</p>"
         f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Account Verification", content), plain_text=f"Your PustakVerse verification code is: {otp}. Valid for 5 minutes.")
+    return send_email_wrapper(to_email, subject, generate_html_email("Account Verification", content), plain_text=f"Your PustakVerse verification code is: {otp}. Valid for 15 minutes.")
 
 def send_otp_email(to_email, otp):
     logging.info("🔑 [PASSWORD RESET OTP] Recipient: %s | OTP: %s", to_email, otp)
@@ -1937,10 +1937,10 @@ def send_otp_email(to_email, otp):
         f"<div style='text-align: center; padding: 10px 0;'>"
         f"<p style='font-size: 16px; color: #334155; margin-bottom: 18px;'>We received a request to reset your PustakVerse account password. Use this code to proceed:</p>"
         f"<div style='display: inline-block; background: #f8fafc; border: 2px dashed #6c5ce7; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #5843be; font-family: monospace;'>{otp}</div>"
-        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>. Never share this code with anyone.</p>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>15 minutes</strong>. Never share this code with anyone.</p>"
         f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Password Reset", content), plain_text=f"Your PustakVerse password reset code is: {otp}. Valid for 5 minutes.")
+    return send_email_wrapper(to_email, subject, generate_html_email("Password Reset", content), plain_text=f"Your PustakVerse password reset code is: {otp}. Valid for 15 minutes.")
 
 def send_account_deletion_otp(to_email, otp):
     logging.info("🔑 [ACCOUNT DELETION OTP] Recipient: %s | OTP: %s", to_email, otp)
@@ -1950,10 +1950,10 @@ def send_account_deletion_otp(to_email, otp):
         f"<p style='font-size: 16px; color: #e53e3e; margin-bottom: 14px; font-weight: bold;'>Warning: Permanent Account Deletion</p>"
         f"<p style='color: #475569;'>Use this code to confirm deletion of your PustakVerse account and saved library:</p>"
         f"<div style='display: inline-block; background: #fff5f5; border: 2px dashed #e53e3e; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #c53030; font-family: monospace;'>{otp}</div>"
-        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>.</p>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>15 minutes</strong>.</p>"
         f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Account Deletion", content), plain_text=f"Your PustakVerse account deletion code is: {otp}. Valid for 5 minutes.")
+    return send_email_wrapper(to_email, subject, generate_html_email("Account Deletion", content), plain_text=f"Your PustakVerse account deletion code is: {otp}. Valid for 15 minutes.")
 
 def send_2fa_email(to_email, otp):
     logging.info("🔑 [LOGIN 2FA OTP] Recipient: %s | OTP: %s", to_email, otp)
@@ -1962,10 +1962,10 @@ def send_2fa_email(to_email, otp):
         f"<div style='text-align: center; padding: 10px 0;'>"
         f"<p style='font-size: 16px; color: #334155; margin-bottom: 18px;'>A sign-in attempt was initiated for your account. Enter this 2-Step Verification code to authorize login:</p>"
         f"<div style='display: inline-block; background: #f8fafc; border: 2px dashed #00b894; border-radius: 12px; padding: 14px 32px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #008768; font-family: monospace;'>{otp}</div>"
-        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>5 minutes</strong>.</p>"
+        f"<p style='font-size: 13px; color: #64748b; margin-top: 18px;'>⏱️ This code will expire in <strong>15 minutes</strong>.</p>"
         f"</div>"
     )
-    return send_email_wrapper(to_email, subject, generate_html_email("Security Verification", content), plain_text=f"Your PustakVerse login verification code is: {otp}. Valid for 5 minutes.")
+    return send_email_wrapper(to_email, subject, generate_html_email("Security Verification", content), plain_text=f"Your PustakVerse login verification code is: {otp}. Valid for 15 minutes.")
 
 def send_welcome_reader(to_email, username): 
     return send_email_wrapper(to_email, 'Welcome to PustakVerse!', generate_html_email("Welcome to the Library", f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to PustakVerse! Dive into our extensive Global Library today.</p>"))
@@ -2848,7 +2848,7 @@ def api_search_books():
 @app.route('/')
 def index():
     session['pustakverse_intro_seen'] = True
-    show_telegram_popup = session.pop('show_telegram_popup', False)
+    show_telegram_popup = False
     
     # 1. High-Speed Tier-1 In-Memory Cache (Instant Response)
     cached_books = fast_cache.get('books_index')
@@ -3395,7 +3395,7 @@ def register():
 
         otp = str(random.randint(100000, 999999))
         session['reg_otp'] = otp
-        session['reg_otp_expiry'] = time.time() + 300 # 5 Minute Expiration limit
+        session['reg_otp_expiry'] = time.time() + 900 # 5 Minute Expiration limit
         session['last_otp_sent'] = time.time()
         session['reg_data'] = {
             'username': username, 'email': email, 'password_hash': generate_password_hash(password),
@@ -3424,7 +3424,7 @@ def register():
             
         otp = str(random.randint(100000, 999999))
         session['reg_otp'] = otp
-        session['reg_otp_expiry'] = time.time() + 300
+        session['reg_otp_expiry'] = time.time() + 900
         session['last_otp_sent'] = time.time()
         
         logging.info("🔑 [REGISTRATION CODE RESENT] User: %s | Email: %s | OTP: %s", reg_data.get('username'), reg_data.get('email'), otp)
@@ -3487,7 +3487,7 @@ def register():
                 session['role'] = reg_data['role']
                 session['is_verified'] = is_verified
                 session['pustakverse_intro_seen'] = True
-                session['show_telegram_popup'] = True
+                session['show_telegram_popup'] = False
                 
                 flash(f"Welcome to PustakVerse, {reg_data['username']}! Explore the Global Library below.", "success")
                 return jsonify({
@@ -3573,7 +3573,7 @@ def login():
                         session['username'] = user['username']
                         session['role'] = user['role']
                         session['is_verified'] = user['is_verified']
-                        session['show_telegram_popup'] = True
+                        session['show_telegram_popup'] = False
                         
                         flash(f"Welcome back, {user['username']}!", "success")
                         return redirect(url_for('index'))
@@ -3646,7 +3646,7 @@ def login():
                 session.pop('login_2fa_otp', None)
                 session.pop('pending_2fa_user', None)
                 session['pustakverse_intro_seen'] = True
-                session['show_telegram_popup'] = True
+                session['show_telegram_popup'] = False
                 
                 flash(f"Welcome back, {pending_user['username']}!", "success")
                 return redirect(url_for('index'))
@@ -3728,7 +3728,7 @@ def google_authorize():
         session['username'] = user['username']
         session['role'] = user['role']
         session['is_verified'] = user['is_verified']
-        session['show_telegram_popup'] = True
+        session['show_telegram_popup'] = False
         
         flash(f"Welcome back, {user['username']}!", "success")
         return redirect(url_for('index'))
@@ -3814,7 +3814,7 @@ def google_set_password():
             session['username'] = new_user['username']
             session['role'] = new_user['role']
             session['is_verified'] = new_user['is_verified']
-            session['show_telegram_popup'] = True
+            session['show_telegram_popup'] = False
 
             flash(f"Welcome to PustakVerse, {username}! Your password has been set and your account is active.", "success")
             return redirect(url_for('index'))
@@ -3867,7 +3867,7 @@ def forgot_password():
                 otp = str(random.randint(100000, 999999))
                 session['reset_otp'] = otp
                 session['reset_email'] = email
-                session['reset_otp_expiry'] = time.time() + 300 # 5 minutes
+                session['reset_otp_expiry'] = time.time() + 900 # 5 minutes
                 session['last_reset_sent'] = time.time()
                 
                 logging.info("🔑 [PASSWORD RESET OTP] User: %s | Email: %s | OTP: %s", user['username'], email, otp)
@@ -3899,7 +3899,7 @@ def forgot_password():
                 
             otp = str(random.randint(100000, 999999))
             session['reset_otp'] = otp
-            session['reset_otp_expiry'] = time.time() + 300
+            session['reset_otp_expiry'] = time.time() + 900
             session['last_reset_sent'] = time.time()
             
             logging.info("🔑 [PASSWORD RESET OTP RESENT] Email: %s | OTP: %s", email, otp)

@@ -505,25 +505,45 @@
     .prompts-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
+      gap: 14px;
       text-align: left;
       width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
     }
-    .prompt-card {
+    .prompt-chip {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 14px 16px;
+      border-radius: 16px;
+      padding: 16px 20px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: left;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
-    .prompt-card:hover {
-      border-color: var(--mode-color);
-      background: #181d33;
+    .prompt-chip:hover {
+      background: #182236;
+      border-color: var(--accent-purple);
       transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
     }
-    .prompt-card-title { font-weight: 800; font-size: 0.84rem; color: white; display: flex; align-items: center; gap: 6px; }
-    .prompt-card-desc { font-size: 0.76rem; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+    .prompt-chip-icon {
+      font-size: 1.5rem;
+      margin-bottom: 2px;
+    }
+    .prompt-chip-title {
+      font-weight: 800;
+      font-size: 0.94rem;
+      color: white;
+    }
+    .prompt-chip-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
 
     /* Input Dock Area (Full Workplace Integration) */
     .input-dock {
@@ -648,11 +668,96 @@
     }
     @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+    /* CHATGPT-GRADE EXPANSIVE MOBILE STYLING */
     @media (max-width: 768px) {
-      .workspace { grid-template-columns: 1fr !important; }
-      .sidebar { display: none !important; }
-      .prompts-grid { grid-template-columns: 1fr; }
-      
+      .workspace { flex-direction: column !important; }
+      .topbar {
+        padding: 0 12px !important;
+        height: 54px !important;
+      }
+      .brand-group { gap: 8px !important; }
+      .brand-logo { width: 32px !important; height: 32px !important; }
+      .brand-title { font-size: 1.05rem !important; }
+      .brand-tagline { display: none !important; }
+      .btn-nav-back {
+        padding: 5px 10px !important;
+        font-size: 0.76rem !important;
+        border-radius: 8px !important;
+      }
+      .guest-badge { display: none !important; }
+
+      /* Hero Mobile Polish */
+      .welcome-hero {
+        padding: 20px 10px 30px !important;
+      }
+      .welcome-logo {
+        width: 64px !important;
+        height: 64px !important;
+        margin-bottom: 12px !important;
+      }
+      .welcome-title {
+        font-size: 1.6rem !important;
+      }
+      .welcome-sub {
+        font-size: 0.82rem !important;
+        margin-bottom: 20px !important;
+      }
+      .prompts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .prompt-chip {
+        padding: 12px 14px !important;
+        border-radius: 14px !important;
+      }
+
+      /* Full Width ChatGPT-Style Input Dock */
+      .input-dock {
+        padding: 8px 12px 12px !important;
+      }
+      .input-box-wrapper {
+        border-radius: 24px !important;
+        padding: 8px 10px 8px 14px !important;
+        gap: 8px !important;
+        min-height: 48px !important;
+      }
+      .model-pill-wrapper {
+        display: none !important; /* Move model selector to top row or compact chip */
+      }
+      .mobile-model-chip-row {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        padding: 0 4px;
+      }
+      .chat-textarea {
+        font-size: 0.95rem !important;
+        line-height: 1.4 !important;
+      }
+      .messages-scroll {
+        padding: 12px !important;
+        gap: 14px !important;
+      }
+      .msg-card {
+        gap: 8px !important;
+      }
+      .msg-avatar {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.85rem !important;
+      }
+      .msg-body {
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+        font-size: 0.92rem !important;
+      }
+    }
+    
+    .mobile-model-chip-row {
+      display: none;
     }
       /* Gemini-Style Integrated Model Selector Pill in Search Bar */
     .model-pill-wrapper {
