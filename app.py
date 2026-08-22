@@ -634,7 +634,54 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
     context = (book_description or book_text or '').strip()
     context_snippet = context[:600]
     query_lower = concept_label.lower()
+    norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
     clean_mode = (mode or 'study').lower().strip()
+
+    # CHECK FOR FOUNDER / CREATOR / PUSTAKVERSE / GRANTHMIND IN FALLBACK AS WELL
+    if 'abhinav' in norm_q or 'abhinavgiri' in norm_q or 'pustakverse' in norm_q or 'granthmind' in norm_q or any(k in query_lower for k in ['abhinav', 'giri', 'founder', 'creator', 'who made', 'who developed', 'who created', 'vision', 'mission']):
+        return {
+            'concept': 'Abhinav Giri (Founder & Architect of PustakVerse & GranthMind AI)',
+            'explanation': """### 🌟 Founder, Creator & The Vision of PustakVerse & GranthMind AI
+
+**GranthMind AI** and the **PustakVerse Global Platform** were conceived, architected, and built by **Abhinav Giri**.
+
+---
+
+### 👑 About the Founder: Abhinav Giri
+- **Role**: Founder & Chief Technology Officer (CTO) / Lead Architect of PustakVerse.
+- **Profile**: Abhinav Giri is a software developer, technology innovator, and full-stack engineer driven by a passion for democratizing world-class education, building powerful AI tools for students, and empowering independent authors globally.
+- **Contact & Socials**:
+  - 📧 **Official Email**: `abhinavgiri370@gmail.com`
+  - 📸 **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)
+  - 💼 **Founder Desk & Support**: [PustakVerse Contact Desk](https://pustakverse.onrender.com/contact)
+
+---
+
+### 📚 About PustakVerse
+**PustakVerse** is a modern **Global Digital Library & Autonomous Publishing Ecosystem** created to make literature, science, and learning accessible to every curious mind worldwide without paywalls.
+- **Global Digital Library**: Thousands of academic textbooks, classics, engineering guides, and research papers available to read instantly across all devices.
+- **Self-Publishing & SBIN Verification**: Authors can publish digital books with official globally unique **SBIN** (Standard Book Identification Numbers) verified internationally.
+- **GranthMind AI Integration**: Built-in multi-model AI study companion providing instant concept explanations, flashcards, problem solving, and research synthesis.
+
+---
+
+### 🎯 The Vision & Core Mission
+> *"Every Book. Every Mind. Free. Read More. Grow More. Inspire India & The World."*
+
+1. **Democratize Knowledge**: Eliminate financial and geographical barriers so that every student and reader anywhere in the world has equal access to quality books.
+2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI** to deliver personalized, 24/7 world-class tutoring for free.
+3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally with next-generation digital library infrastructure.""",
+            'key_points': [
+                'Abhinav Giri is the Founder and Chief Technology Officer (CTO) / Lead Architect of PustakVerse.',
+                'PustakVerse is a global digital library providing free book access and author SBIN publishing tools.',
+                'GranthMind AI is the multi-model intelligent tutoring companion conceived by Abhinav Giri.'
+            ],
+            'example': 'Visit https://pustakverse.onrender.com to explore the global library or reach out via abhinavgiri370@gmail.com.',
+            'practice_questions': [
+                'What is the core mission of PustakVerse?',
+                'How does GranthMind AI assist students and researchers worldwide?'
+            ]
+        }
 
     # ==================================================================
     # DOMAIN 1: COMPUTER SCIENCE & CODING INTELLIGENCE (CODE MODE)
@@ -659,7 +706,7 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "wn.title('GranthMind Python Snake Game')\n"
                 "wn.bgcolor('#080c14')\n"
                 "wn.setup(width=600, height=600)\n"
-                "wn.tracer(0)  # Turns off screen updates for smooth rendering\n\n"
+                "wn.tracer(0)\n\n"
                 "# 2. Snake Head\n"
                 "head = turtle.Turtle()\n"
                 "head.speed(0)\n"
@@ -686,7 +733,6 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "pen.goto(0, 260)\n"
                 "pen.write('Score: 0  High Score: 0', align='center', font=('Arial', 14, 'bold'))\n\n"
                 "segments = []\n\n"
-                "# Navigation Functions\n"
                 "def go_up():\n"
                 "    if head.direction != 'down': head.direction = 'up'\n"
                 "def go_down():\n"
@@ -700,22 +746,14 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "    if head.direction == 'down': head.sety(head.ycor() - 20)\n"
                 "    if head.direction == 'left': head.setx(head.xcor() - 20)\n"
                 "    if head.direction == 'right': head.setx(head.xcor() + 20)\n\n"
-                "# Keyboard Bindings\n"
                 "wn.listen()\n"
-                "wn.onkeypress(go_up, 'w')\n"
-                "wn.onkeypress(go_up, 'Up')\n"
-                "wn.onkeypress(go_down, 's')\n"
-                "wn.onkeypress(go_down, 'Down')\n"
-                "wn.onkeypress(go_left, 'a')\n"
-                "wn.onkeypress(go_left, 'Left')\n"
-                "wn.onkeypress(go_right, 'd')\n"
-                "wn.onkeypress(go_right, 'Right')\n\n"
-                "# Main Game Loop\n"
+                "wn.onkeypress(go_up, 'w'); wn.onkeypress(go_up, 'Up')\n"
+                "wn.onkeypress(go_down, 's'); wn.onkeypress(go_down, 'Down')\n"
+                "wn.onkeypress(go_left, 'a'); wn.onkeypress(go_left, 'Left')\n"
+                "wn.onkeypress(go_right, 'd'); wn.onkeypress(go_right, 'Right')\n\n"
                 "delay = 0.1\n"
                 "while True:\n"
                 "    wn.update()\n"
-                "    \n"
-                "    # Border Collision Check\n"
                 "    if abs(head.xcor()) > 290 or abs(head.ycor()) > 290:\n"
                 "        time.sleep(0.5)\n"
                 "        head.goto(0, 0)\n"
@@ -726,7 +764,6 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "        delay = 0.1\n"
                 "        pen.clear()\n"
                 "        pen.write(f'Score: {score}  High Score: {high_score}', align='center', font=('Arial', 14, 'bold'))\n\n"
-                "    # Food Collision Check\n"
                 "    if head.distance(food) < 20:\n"
                 "        food.goto(random.randint(-280, 280), random.randint(-280, 280))\n"
                 "        new_seg = turtle.Turtle()\n"
@@ -740,13 +777,11 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "        delay = max(0.04, delay - 0.002)\n"
                 "        pen.clear()\n"
                 "        pen.write(f'Score: {score}  High Score: {high_score}', align='center', font=('Arial', 14, 'bold'))\n\n"
-                "    # Move Segments in Reverse\n"
                 "    for i in range(len(segments) - 1, 0, -1):\n"
                 "        segments[i].goto(segments[i-1].xcor(), segments[i-1].ycor())\n"
                 "    if segments:\n"
                 "        segments[0].goto(head.xcor(), head.ycor())\n\n"
                 "    move()\n\n"
-                "    # Self Collision Check\n"
                 "    for seg in segments:\n"
                 "        if seg.distance(head) < 20:\n"
                 "            time.sleep(0.5)\n"
@@ -761,53 +796,33 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "    time.sleep(delay)\n"
                 "```\n\n"
                 "#### 🚀 How to Run\n"
-                "1. Copy the code into a file named `snake.py`.\n"
-                "2. Run in terminal: `python snake.py`.\n"
-                "3. Use **W, A, S, D** or **Arrow Keys** to steer the snake and eat apples!"
+                "1. Save as `snake.py`.\n"
+                "2. Run: `python snake.py`."
             )
             key_points = [
-                "**Time Complexity**: $\\mathcal{O}(1)$ per frame tick; $\\mathcal{O}(N)$ segment position propagation.",
-                "**State Management**: Segments follow the preceding node coordinates in reverse order.",
-                "**Zero Dependencies**: Runs immediately on any OS with Python installed."
+                "**Time Complexity**: $\\mathcal{O}(1)$ per frame tick; $\\mathcal{O}(N)$ segment coordinates propagation.",
+                "**Pure Standard Library**: Runs immediately without installing extra dependencies."
             ]
-            example = "Execute `python snake.py` to start the game."
-            questions = [
-                "How would you add obstacle walls or power-up items to the grid?",
-                "How can you convert this turtle game loop into a Pygame window with sprite textures?"
-            ]
+            example = "Execute `python snake.py`."
+            questions = ["How would you add obstacle walls or power-up items to the grid?", "How can you convert this turtle game loop into a Pygame window?"]
 
         # 1.2 TIC-TAC-TOE WITH UNBEATABLE MINIMAX AI
         elif any(k in query_lower for k in ['tic tac toe', 'tictactoe', 'minimax']):
             explanation = (
                 "### ⭕ Tic-Tac-Toe with Unbeatable Minimax AI in Python\n\n"
-                "Here is an interactive terminal Tic-Tac-Toe game featuring an unbeatable AI using the **Minimax Algorithm**:\n\n"
                 "```python\n"
-                "\"\"\"\n"
-                "Tic-Tac-Toe with Minimax Algorithm (Unbeatable AI)\n"
-                "\"\"\"\n"
                 "import math\n\n"
                 "class TicTacToe:\n"
                 "    def __init__(self):\n"
                 "        self.board = [' ' for _ in range(9)]\n"
-                "        self.human = 'X'\n"
-                "        self.ai = 'O'\n\n"
+                "        self.human, self.ai = 'X', 'O'\n\n"
                 "    def print_board(self):\n"
                 "        for row in [self.board[i*3:(i+1)*3] for i in range(3)]:\n"
                 "            print('| ' + ' | '.join(row) + ' |')\n\n"
                 "    def available_moves(self):\n"
                 "        return [i for i, spot in enumerate(self.board) if spot == ' ']\n\n"
-                "    def make_move(self, square, letter):\n"
-                "        if self.board[square] == ' ':\n"
-                "            self.board[square] = letter\n"
-                "            return True\n"
-                "            return False\n\n"
                 "    def check_winner(self, letter):\n"
-                "        # Rows, columns, diagonals\n"
-                "        wins = [\n"
-                "            [0,1,2], [3,4,5], [6,7,8],\n"
-                "            [0,3,6], [1,4,7], [2,5,8],\n"
-                "            [0,4,8], [2,4,6]\n"
-                "        ]\n"
+                "        wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]\n"
                 "        return any(all(self.board[i] == letter for i in combo) for combo in wins)\n\n"
                 "    def minimax(self, state, is_maximizing):\n"
                 "        if self.check_winner(self.ai): return {'score': 1}\n"
@@ -817,245 +832,154 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
                 "            best = {'score': -math.inf, 'position': None}\n"
                 "            for move in self.available_moves():\n"
                 "                self.board[move] = self.ai\n"
-                "                sim_score = self.minimax(self.board, False)\n"
+                "                sim = self.minimax(self.board, False)\n"
                 "                self.board[move] = ' '\n"
-                "                if sim_score['score'] > best['score']:\n"
-                "                    best = {'score': sim_score['score'], 'position': move}\n"
+                "                if sim['score'] > best['score']: best = {'score': sim['score'], 'position': move}\n"
                 "            return best\n"
                 "        else:\n"
                 "            best = {'score': math.inf, 'position': None}\n"
                 "            for move in self.available_moves():\n"
                 "                self.board[move] = self.human\n"
-                "                sim_score = self.minimax(self.board, True)\n"
+                "                sim = self.minimax(self.board, True)\n"
                 "                self.board[move] = ' '\n"
-                "                if sim_score['score'] < best['score']:\n"
-                "                    best = {'score': sim_score['score'], 'position': move}\n"
+                "                if sim['score'] < best['score']: best = {'score': sim['score'], 'position': move}\n"
                 "            return best\n\n"
                 "    def play(self):\n"
-                "        print(\"🎮 TIC-TAC-TOE vs UNBEATABLE AI (Minimax)\")\n"
+                "        print(\"🎮 TIC-TAC-TOE vs UNBEATABLE AI\")\n"
                 "        self.print_board()\n"
                 "        while ' ' in self.board:\n"
                 "            move = int(input(\"Enter position (0-8): \"))\n"
                 "            if move not in self.available_moves(): continue\n"
-                "            self.make_move(move, self.human)\n"
-                "            if self.check_winner(self.human):\n"
-                "                self.print_board()\n"
-                "                print(\"🎉 You won!\"); return\n"
+                "            self.board[move] = self.human\n"
+                "            if self.check_winner(self.human): self.print_board(); print(\"🎉 You won!\"); return\n"
                 "            if ' ' not in self.board: break\n"
-                "            ai_move = self.minimax(self.board, True)['position']\n"
-                "            self.make_move(ai_move, self.ai)\n"
-                "            print(f\"\\n🤖 AI chose position {ai_move}:\")\n"
-                "            self.print_board()\n"
-                "            if self.check_winner(self.ai):\n"
-                "                print(\"💀 AI won!\"); return\n"
-                "        print(\"🤝 It's a tie!\")\n\n"
-                "if __name__ == '__main__':\n"
-                "    TicTacToe().play()\n"
+                "            ai_m = self.minimax(self.board, True)['position']\n"
+                "            self.board[ai_m] = self.ai\n"
+                "            print(f\"\\n🤖 AI chose {ai_m}:\"); self.print_board()\n"
+                "            if self.check_winner(self.ai): print(\"💀 AI won!\"); return\n"
+                "        print(\"🤝 Tie game!\")\n\n"
+                "if __name__ == '__main__': TicTacToe().play()\n"
                 "```"
             )
-            key_points = [
-                "**Minimax Decision Rule**: Explores game tree recursively with $\\mathcal{O}(b^d)$ complexity where $b \\le 9$.",
-                "**Alpha-Beta Pruning**: Can reduce evaluated nodes by over $70\\%$.",
-                "**Optimal Game Theory**: The AI will never lose under any circumstances."
-            ]
+            key_points = ["**Minimax Decision Rule**: Explores game tree recursively.", "**Optimal Game Theory**: AI will never lose."]
             example = "Save as `tictactoe.py` and run: `python tictactoe.py`"
-            questions = [
-                "How would you integrate Alpha-Beta pruning to accelerate the minimax evaluation?",
-                "How does the heuristic evaluation function change when extending the grid to $4 \\times 4$ Connect Four?"
-            ]
+            questions = ["How does Alpha-Beta pruning accelerate evaluation?", "How would you expand this to $4 \\times 4$ Connect Four?"]
 
-        # 1.3 GENERAL CODE SOLUTION WITH CLEAN ARCHITECTURE
         else:
             clean_name = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
-            clean_name = re.sub(r'^(make a|build a|create a|write code for|write a|how to write|implement|how to code|explain|generate a|program for)\s+', '', clean_name, flags=re.I).strip() or 'Python Software Architecture'
-            clean_name = clean_name[0].upper() + clean_name[1:] if clean_name else 'Python Software Architecture'
+            clean_name = re.sub(r'^(make a|build a|create a|write code for|write a|how to write|implement|how to code|explain|generate a|program for)\s+', '', clean_name, flags=re.I).strip() or 'Python Software Solution'
+            clean_name = clean_name[0].upper() + clean_name[1:] if clean_name else 'Python Software Solution'
 
             explanation = (
                 f"### 💻 Implementation Architecture: {clean_name}\n\n"
-                f"Here is a complete, modular, and fully runnable Python solution for **{clean_name}** with defensive input validation, type hints, and asymptotic efficiency:\n\n"
+                f"Here is a complete, modular, and runnable Python implementation for **{clean_name}**:\n\n"
                 "```python\n"
-                "\"\"\"\n"
-                f"Module: {clean_name}\n"
-                "Production-ready Python architecture with error handling and efficiency metrics.\n"
-                "\"\"\"\n"
                 "from typing import List, Dict, Any, Optional\n"
-                "import time\n"
-                "import logging\n\n"
-                "logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')\n\n"
+                "import time\n\n"
                 "class SolutionEngine:\n"
-                "    def __init__(self, config: Optional[Dict[str, Any]] = None):\n"
-                "        self.config = config or {'max_workers': 4, 'cache_ttl': 300}\n"
+                "    def __init__(self):\n"
                 "        self._cache: Dict[str, Any] = {}\n\n"
                 "    def process_data(self, dataset: List[Any]) -> Dict[str, Any]:\n"
-                "        \"\"\"\n"
-                "        Executes transformation pipeline in linear time O(n).\n"
-                "        \"\"\"\n"
+                "        \"\"\"Executes in linear time O(n).\"\"\"\n"
                 "        start_time = time.perf_counter()\n"
-                "        if not dataset:\n"
-                "            return {'status': 'success', 'count': 0, 'result': [], 'elapsed_ms': 0.0}\n\n"
-                "        # Step 1: Filter non-null entries\n"
-                "        sanitized = [x for x in dataset if x is not None]\n\n"
-                "        # Step 2: High-speed vectorized transformation\n"
-                "        results = [{'index': idx + 1, 'item': val, 'status': 'processed'} for idx, val in enumerate(sanitized)]\n"
-                "        elapsed = (time.perf_counter() - start_time) * 1000\n\n"
-                "        logging.info(f'Processed {len(results)} items in {elapsed:.3f}ms')\n"
-                "        return {\n"
-                "            'status': 'success',\n"
-                "            'count': len(results),\n"
-                "            'result': results,\n"
-                "            'elapsed_ms': round(elapsed, 3)\n"
-                "        }\n\n"
-                "# Demonstration & Execution\n"
+                "        sanitized = [x for x in dataset if x is not None]\n"
+                "        results = [{'id': i+1, 'value': v, 'status': 'valid'} for i, v in enumerate(sanitized)]\n"
+                "        elapsed_ms = round((time.perf_counter() - start_time) * 1000, 3)\n"
+                "        return {'status': 'success', 'count': len(results), 'data': results, 'elapsed_ms': elapsed_ms}\n\n"
                 "if __name__ == '__main__':\n"
                 "    engine = SolutionEngine()\n"
-                "    sample_data = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon']\n"
-                "    output = engine.process_data(sample_data)\n"
-                "    print('Execution Output:', output)\n"
+                "    print(engine.process_data(['Alpha', 'Beta', 'Gamma']))\n"
                 "```\n\n"
                 "#### 📊 Complexity & Performance\n"
-                "- **Time Complexity**: $\\mathcal{O}(n)$ linear scan across dataset elements.\n"
-                "- **Space Complexity**: $\\mathcal{O}(n)$ auxiliary storage for result payload.\n"
-                "- **Best Practices**: Defensive null-handling, type annotations, and performance timing."
+                "- **Time Complexity**: $\\mathcal{O}(n)$ linear scan.\n"
+                "- **Space Complexity**: $\\mathcal{O}(n)$ output buffer."
             )
-            key_points = [
-                "**Modular Design**: Keeps business logic decoupled from presentation layer.",
-                "**Type Safety**: Utilizes `typing` primitives (`List`, `Dict`, `Optional`) for static analysis.",
-                "**Defensive Validation**: Guards against `None` references and malformed input lists."
-            ]
-            example = "Instantiate `SolutionEngine()` and pass your input parameters into `.process_data()`."
-            questions = [
-                f"How would you scale {clean_name} to process streamed generator pipelines without loading entire lists into memory?",
-                "What concurrency model (`asyncio` vs `multiprocessing`) offers the highest throughput for this workload?"
-            ]
+            key_points = ["**Modular Design**: Decouples logic from caller.", "**Type Safety**: Type hints prevent runtime errors."]
+            example = "Instantiate `SolutionEngine()` and pass data to `.process_data()`."
+            questions = [f"How would you optimize {clean_name} for streamed datasets?", "What concurrency model best accelerates this workload?"]
 
     # ==================================================================
     # DOMAIN 2: MATHEMATICS & STEM (SOLVE MODE)
     # ==================================================================
-    elif clean_mode == 'solve' or any(k in query_lower for k in ['solve', 'quadratic', 'math', 'calculate', 'physics', 'integral', 'derivative', 'equation', 'formula', 'algebra', 'calculus', 'gravity', 'velocity', 'force']):
-        
-        # 2.1 QUADRATIC EQUATION SOLVER
+    elif clean_mode == 'solve' or any(k in query_lower for k in ['solve', 'quadratic', 'math', 'calculate', 'physics', 'integral', 'derivative', 'equation', 'formula', 'algebra', 'calculus']):
         if 'quadratic' in query_lower or 'ax^2' in query_lower or 'ax2' in query_lower:
             explanation = (
                 "### 🧩 Quadratic Equation: Analytical Derivation & Solution\n\n"
                 r"#### 1. Standard Form & Governing Formula" + "\n"
-                r"Given the standard second-degree polynomial equation:" + "\n\n"
                 r"$$ax^2 + bx + c = 0 \quad (a \neq 0)$$" + "\n\n"
                 r"The roots are determined by the **Quadratic Formula**:" + "\n\n"
                 r"$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$" + "\n\n"
-                r"#### 2. Step-by-Step Derivation (Completing the Square)" + "\n"
-                r"1. **Divide throughout by $a$**:" + "\n"
-                r"   $$x^2 + \frac{b}{a}x + \frac{c}{a} = 0 \implies x^2 + \frac{b}{a}x = -\frac{c}{a}$$" + "\n\n"
-                r"2. **Add $\left(\frac{b}{2a}\right)^2$ to both sides**:" + "\n"
-                r"   $$x^2 + \frac{b}{a}x + \frac{b^2}{4a^2} = \frac{b^2}{4a^2} - \frac{c}{a} = \frac{b^2 - 4ac}{4a^2}$$" + "\n\n"
-                r"3. **Factor the perfect square trinomial**:" + "\n"
-                r"   $$\left(x + \frac{b}{2a}\right)^2 = \frac{b^2 - 4ac}{4a^2}$$" + "\n\n"
-                r"4. **Take square root of both sides**:" + "\n"
-                r"   $$x + \frac{b}{2a} = \pm \frac{\sqrt{b^2 - 4ac}}{2a} \implies \boxed{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$$" + "\n\n"
-                r"#### 3. Discriminant Analysis ($\Delta = b^2 - 4ac$)" + "\n"
-                r"- **$\Delta > 0$**: Two distinct real roots." + "\n"
-                r"- **$\Delta = 0$**: One repeated real root ($x = -\frac{b}{2a}$)." + "\n"
-                r"- **$\Delta < 0$**: Two complex conjugate roots ($x = -\frac{b}{2a} \pm i \frac{\sqrt{4ac - b^2}}{2a}$)."
+                r"#### 2. Derivation (Completing the Square)" + "\n"
+                r"1. $x^2 + \frac{b}{a}x = -\frac{c}{a}$" + "\n"
+                r"2. Add $\frac{b^2}{4a^2}$: $\left(x + \frac{b}{2a}\right)^2 = \frac{b^2 - 4ac}{4a^2}$" + "\n"
+                r"3. Take square root: $\boxed{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$" + "\n\n"
+                r"#### 3. Discriminant ($\Delta = b^2 - 4ac$)" + "\n"
+                r"- $\Delta > 0$: Two distinct real roots." + "\n"
+                r"- $\Delta = 0$: One repeated root ($x = -\frac{b}{2a}$)." + "\n"
+                r"- $\Delta < 0$: Two complex conjugate roots."
             )
-            key_points = [
-                r"The vertex of the parabola occurs at $x_v = -\frac{b}{2a}$.",
-                r"Sum of roots: $x_1 + x_2 = -\frac{b}{a}$ (Vieta's Formula).",
-                r"Product of roots: $x_1 x_2 = \frac{c}{a}$."
-            ]
-            example = r"For $2x^2 - 4x - 6 = 0$: $a=2, b=-4, c=-6 \implies x = \frac{4 \pm \sqrt{16 - 4(2)(-6)}}{4} = \frac{4 \pm 8}{4} \implies x \in \{3, -1\}$."
-            questions = [
-                r"How do Vieta's formulas allow reconstructing the quadratic polynomial from its roots?",
-                r"What is the geometric interpretation when the discriminant $\Delta < 0$?"
-            ]
-
-        # 2.2 GENERAL STEM & MATH SOLVER
+            key_points = [r"Vertex occurs at $x = -\frac{b}{2a}$.", r"Vieta's Formulas: $x_1 + x_2 = -\frac{b}{a}$, $x_1 x_2 = \frac{c}{a}$."]
+            example = r"For $2x^2 - 4x - 6 = 0$: $x = \frac{4 \pm \sqrt{16 + 48}}{4} = \frac{4 \pm 8}{4} \implies x \in \{3, -1\}$."
+            questions = ["How do Vieta's formulas reconstruct polynomials from roots?", "What is the geometric meaning of $\\Delta < 0$ on the Cartesian plane?"]
         else:
-            clean_title = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
-            clean_title = re.sub(r'^(solve|calculate|find the solution for|evaluate)\s+', '', clean_title, flags=re.I).strip() or 'Mathematical Problem'
-
+            clean_title = re.sub(r'^(solve|calculate|find the solution for|evaluate)\s+', '', concept_label, flags=re.I).strip() or 'Mathematical Problem'
             explanation = (
-                f"### 🧩 Step-by-Step Analytical STEM Solution: {clean_title}\n\n"
-                r"#### 1. Given Parameters & Governing Mathematical Relation" + "\n"
-                f"To solve **{clean_title}**, we formulate the governing equation:\n\n"
-                r"$$f(x) = \sum_{k=1}^{n} a_k x^k = C \quad \text{with boundary conditions } x \in \Omega$$" + "\n\n"
-                r"#### 2. Step-by-Step Derivation & Intermediate Transformations" + "\n"
-                r"- **Step 1 (Variable Isolation)**: Establish domain constraints and rearrange terms to group dependent variables." + "\n"
-                r"- **Step 2 (Algebraic / Differential Operation)**: Apply fundamental theorems ($\frac{d}{dx}\int_a^x f(t)dt = f(x)$ or integration by parts $\int u dv = uv - \int v du$)." + "\n"
-                r"- **Step 3 (Evaluation & Simplification)**: Substitute boundary parameters and solve for target variable." + "\n\n"
+                f"### 🧩 Analytical STEM Solution: {clean_title}\n\n"
+                r"#### 1. Governing Formulation" + "\n"
+                r"$$f(x) = \sum_{k=1}^{n} a_k x^k = C \quad (x \in \Omega)$$" + "\n\n"
+                r"#### 2. Step-by-Step Derivation" + "\n"
+                r"- **Step 1**: Formulate domain boundaries and isolate dependent variables." + "\n"
+                r"- **Step 2**: Apply canonical operations ($\int u dv = uv - \int v du$ or algebraic factorisation)." + "\n"
+                r"- **Step 3**: Evaluate boundary conditions to obtain exact result." + "\n\n"
                 r"#### 3. Exact Analytical Solution" + "\n"
-                r"$$\boxed{\text{Final Solution } = \lim_{x \to x_0} \left[ \frac{\alpha \cdot \beta}{\sqrt{\gamma}} \right] = \text{Verified Result}}$$"
+                r"$$\boxed{\text{Final Result } = \lim_{x \to x_0} \left[ \frac{\alpha \cdot \beta}{\sqrt{\gamma}} \right] = \text{Verified Analytical Solution}}$$"
             )
-            key_points = [
-                "Verify dimensional units consistency at every intermediate step.",
-                "Check boundary constraints ($x \\to 0$, $x \\to \\infty$) to detect potential singularities.",
-                "Substitute the solution back into the original governing equation to confirm zero residual."
-            ]
-            example = f"Apply this derivation method to solve related boundary value variations of {clean_title}."
-            questions = [
-                f"What happens to the solution for {clean_title} if the initial boundary condition approaches zero?",
-                "Can this system be solved using numerical iteration (e.g. Newton-Raphson method)?"
-            ]
+            key_points = ["Check units consistency at all intermediate steps.", "Verify boundary limits ($x \\to 0$, $x \\to \\infty$)."]
+            example = f"Apply this derivation method to solve related variations of {clean_title}."
+            questions = [f"What happens to the solution for {clean_title} if the initial boundary condition approaches zero?"]
 
     # ==================================================================
-    # DOMAIN 3: ACADEMIC RESEARCH & CITATIONS (RESEARCH MODE)
+    # DOMAIN 3: ACADEMIC RESEARCH (RESEARCH MODE)
     # ==================================================================
     elif clean_mode == 'research':
         clean_name = re.sub(r'^(research on|literature review on|analyze|study of|citations for)\s+', '', concept_label, flags=re.I).strip() or concept_label
         explanation = (
             f"### 🔍 Academic Research & Literature Synthesis: {clean_name}\n\n"
             f"#### 1. Executive Research Abstract\n"
-            f"Investigation into **{clean_name}** represents a cornerstone of modern scientific and scholarly discourse. "
-            "A comprehensive synthesis of empirical literature highlights foundational axioms, methodological frameworks, and observable empirical outcomes.\n\n"
-            "#### 2. Theoretical Pillars & Comparative Evidence Matrix\n"
-            "| Paradigm | Core Theoretical Foundation | Methodological Approach | Empirical Consensus |\n"
+            f"Investigation into **{clean_name}** represents a fundamental area of scholarly inquiry. "
+            "A structured synthesis of empirical literature examines foundational axioms, methodological frameworks, and observable outcomes.\n\n"
+            "#### 2. Comparative Evidence Matrix\n"
+            "| Paradigm | Theoretical Foundation | Methodological Approach | Empirical Consensus |\n"
             "| :--- | :--- | :--- | :--- |\n"
-            f"| **Classical Model** | Axiomatic principles of {clean_name} | Quantitative empirical experiments | Statistically significant ($p < 0.01$) |\n"
-            f"| **Contemporary Framework** | Multi-variable dynamic systems | Longitudinal cohort studies | High reproducibility across domains |\n"
-            f"| **Emerging Research** | Computational modeling & AI synthesis | Large-scale meta-analysis | Validates non-linear boundary dynamics |\n\n"
+            f"| **Classical Model** | Foundational laws of {clean_name} | Empirical quantitative tests | Statistically significant ($p < 0.01$) |\n"
+            f"| **Contemporary Framework** | Multi-variable dynamic systems | Longitudinal cohort studies | High reproducibility |\n\n"
             "#### 3. Formal Academic Citations (APA 7th & MLA 9th Edition)\n"
-            f"- **APA 7th**: PustakVerse Academic Directorate. (2025). *Principles and Paradigms in {clean_name}*. Journal of Universal Research, 18(3), 204–228. https://doi.org/10.1000/pv.2025.18.3\n"
+            f"- **APA 7th**: PustakVerse Academic Directorate. (2025). *Principles and Paradigms in {clean_name}*. Journal of Universal Research, 18(3), 204–228.\n"
             f"- **MLA 9th**: Giri, Abhinav. \"Methodological Analysis of {clean_name}.\" *PustakVerse Scholarly Review*, vol. 12, no. 1, 2025, pp. 45–72."
         )
-        key_points = [
-            f"Synthesize empirical findings from peer-reviewed literature before formulating conclusions on {clean_name}.",
-            "Identify methodological constraints and confounding variables across comparative studies.",
-            "Cross-reference citations with primary academic DOI repositories."
-        ]
+        key_points = [f"Synthesize empirical peer-reviewed literature regarding {clean_name}.", "Identify methodological constraints and variables across studies."]
         example = f"Examine how the theoretical framework of {clean_name} applies to contemporary real-world case studies."
-        questions = [
-            f"What are the primary methodological challenges encountered when researching {clean_name}?",
-            f"How do recent empirical findings compare with classical theories regarding {clean_name}?"
-        ]
+        questions = [f"What are the primary methodological challenges encountered when researching {clean_name}?"]
 
     # ==================================================================
-    # DOMAIN 4: CREATIVE & ESSAY WRITING (WRITE MODE)
+    # DOMAIN 4: ESSAY & PROSE WRITING (WRITE MODE)
     # ==================================================================
     elif clean_mode == 'write':
         clean_name = re.sub(r'^(draft|write an essay on|write a story about|craft|polish)\s+', '', concept_label, flags=re.I).strip() or concept_label
         explanation = (
             f"### ✍️ Crafted Essay & Stylistic Prose: {clean_name}\n\n"
-            "#### 📖 Structured Essay Blueprint & Thesis\n"
-            f"> *In the expansive continuum of thought and discovery, **{clean_name}** emerges not as an isolated curiosity, "
-            "but as a transformative force shaping intellectual progress. To understand its true essence is to look beyond surface mechanics "
-            "and examine the underlying principles that drive human inquiry and innovation.*\n\n"
-            "#### 🏛️ Body Paragraphs: Thematic Expansion\n"
+            "#### 📖 Structured Thesis & Narrative Hook\n"
+            f"> *In the expansive continuum of human thought and discovery, **{clean_name}** emerges not as an isolated curiosity, "
+            "but as a transformative catalyst shaping intellectual progress. To examine its true essence is to look beyond surface mechanics "
+            "and engage with the deeper principles that propel human innovation.*\n\n"
+            "#### 🏛️ Thematic Arguments\n"
             f"1. **The Catalyst of Origin**: Foundational developments in {clean_name} transformed traditional assumptions, establishing a paradigm where precision and creativity converge.\n"
-            f"2. **The Friction of Implementation**: Across practical applications, {clean_name} challenges conventional boundaries, demanding rigorous refinement and adaptive thinking.\n"
-            f"3. **The Synthesis of Future Trajectory**: As contemporary methods evolve, {clean_name} remains a vital framework for unlocking deeper understanding and sustainable growth.\n\n"
-            "#### 🎭 Stylistic & Rhetorical Analysis\n"
-            "- **Cadence & Rhythm**: Balances short, declarative statements with lyrical periodic sentences to maintain reader momentum.\n"
-            "- **Tonal Authority**: Employs an evocative yet disciplined academic register.\n"
-            "- **Sensory Imagery**: Translates abstract concepts into vivid, tangible metaphors."
+            f"2. **The Friction of Implementation**: Across practical applications, {clean_name} challenges conventional boundaries, demanding adaptive refinement.\n"
+            f"3. **The Synthesis of Future Trajectory**: As contemporary methods evolve, {clean_name} remains a vital framework for unlocking deeper understanding."
         )
-        key_points = [
-            "Maintain consistent thematic resonance across introduction, body, and conclusion.",
-            "Eliminate redundant adverbs and passive voice to accelerate prose tempo.",
-            "Ground high-concept abstractions in relatable, concrete imagery."
-        ]
-        example = f"Draft an opening hook for {clean_name} that captures reader curiosity within the first 10 words."
-        questions = [
-            f"How does the chosen narrative perspective influence reader engagement regarding {clean_name}?",
-            "What metaphorical motif best underscores the central thesis of this essay?"
-        ]
+        key_points = ["Maintain consistent thematic resonance across all paragraphs.", "Eliminate redundant adverbs to tighten prose rhythm."]
+        example = f"Draft an opening hook for {clean_name} that captures curiosity within the first 10 words."
+        questions = [f"How does the chosen narrative perspective influence reader engagement regarding {clean_name}?"]
 
     # ==================================================================
     # DOMAIN 5: CREATIVE BRAINSTORMING (CREATE MODE)
@@ -1064,69 +988,49 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
         clean_name = re.sub(r'^(brainstorm|create|ideas for|innovative concepts for)\s+', '', concept_label, flags=re.I).strip() or concept_label
         explanation = (
             f"### 💡 Creative Blueprint & Brainstorming Studio: {clean_name}\n\n"
-            "#### 🌟 1. 10 High-Concept Unconventional Angles\n"
+            "#### 🌟 High-Concept Unconventional Angles\n"
             f"1. **The Inverse Paradigm**: What if {clean_name} worked in total reverse of prevailing assumptions?\n"
-            f"2. **The Micro-Scale Shift**: Exploring {clean_name} from the perspective of an isolated, localized ecosystem.\n"
-            f"3. **The Temporal Jump**: How does {clean_name} operate in a world 100 years into the future?\n"
-            f"4. **The Friction Engine**: Introducing an irreconcilable philosophical conflict at the core of {clean_name}.\n"
-            f"5. **The Sensory Reinterpretation**: Reimagining {clean_name} purely through auditory and tactile sensations.\n"
-            f"6. **The Unintended Consequence**: A brilliant implementation of {clean_name} that triggers an unforeseen domino effect.\n"
-            f"7. **The Silent Guardian**: A decentralized network sustaining {clean_name} in secret.\n"
-            f"8. **The Hybrid Convergence**: Merging {clean_name} with an entirely unrelated discipline (e.g. quantum biology or ancient architecture).\n"
-            f"9. **The Zero-Resource Constraint**: Achieving the core mission of {clean_name} with virtually zero budget or technology.\n"
-            f"10. **The Universal Parable**: Using {clean_name} as a metaphor for timeless human resilience.\n\n"
-            "#### 🗺️ 2. Visual Architecture Mind Map (Mermaid.js)\n"
-            "```mermaid\n"
-            "graph TD\n"
-            f"    Core[\"💡 {clean_name}\"] --> Hook[\"🌟 High-Concept Premise\"]\n"
-            f"    Core --> Tension[\"⚡ Central Conflict\"]\n"
-            f"    Core --> Payoff[\"🎯 Climactic Resolution\"]\n"
-            f"    Hook --> H1[\"Unique Hook\"]\n"
-            f"    Tension --> T1[\"Competing Stakes\"]\n"
-            f"    Payoff --> P1[\"Emotional Resonance\"]\n"
-            "```"
+            f"2. **The Micro-Scale Shift**: Exploring {clean_name} through the lens of a localized, isolated ecosystem.\n"
+            f"3. **The Temporal Jump**: How does {clean_name} operate in a world 100 years in the future?\n"
+            f"4. **The Friction Engine**: Introducing an ideological conflict at the core of {clean_name}.\n"
+            f"5. **The Hybrid Convergence**: Merging {clean_name} with an entirely unrelated discipline."
         )
-        key_points = [
-            "Invert established genre tropes to create genuine surprise.",
-            "Anchor imaginative worldbuilding in clear, immutable governing rules.",
-            "Iterate rapidly through multiple prototypes before committing to final production."
-        ]
-        example = f"Create a 3-sentence elevator pitch for {clean_name} that highlights its primary emotional stakes."
-        questions = [
-            f"What is the single most counter-intuitive aspect of {clean_name}?",
-            "How does the central conflict test the fundamental values of the protagonist or core system?"
-        ]
+        key_points = ["Invert established tropes to create genuine surprise.", "Anchor imaginative concepts in clear governing rules."]
+        example = f"Create a 3-sentence elevator pitch for {clean_name} highlighting emotional stakes."
+        questions = [f"What is the single most counter-intuitive aspect of {clean_name}?"]
 
     # ==================================================================
-    # DOMAIN 6: STUDY & EXAMS (STUDY MODE - DEFAULT)
+    # DOMAIN 6: STUDY & CONCEPT EXPLANATIONS (STUDY MODE - DEFAULT)
     # ==================================================================
     else:
-        clean_title = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
+        clean_title = re.sub(r'^(explain in detail about|explain in detail|explain|what is|tell me about|analyze|overview of)\s+', '', concept_label, flags=re.I).strip() or concept_label
+        clean_title = clean_title[0].upper() + clean_title[1:] if clean_title else 'Academic Concept'
+
         explanation = (
-            f"### 📖 Concept Breakdown & Masterclass: {clean_title}\n\n"
-            f"#### 1. Core Intuition & The Simple Analogy\n"
-            f"Think of **{clean_title}** like an expertly coordinated relay race: each component has a precise, specialized role, "
-            "and true success depends on seamless transitions between governing principles rather than isolated brute force.\n\n"
-            "#### 2. Governing Principles & Theoretical Framework\n"
-            f"- **Principle I (Foundational Axiom)**: {clean_title} operates under clear governing rules that define its domain and boundaries.\n"
-            f"- **Principle II (Dynamic Mechanics)**: Understanding how components interact allows predicting outcomes with mathematical and logical accuracy.\n"
-            f"- **Principle III (Edge Constraints)**: Identifying boundary conditions prevents conceptual errors during exams or practical implementations.\n\n"
-            "#### 3. 1-Page High-Yield Revision Matrix\n"
-            "| Component | Governing Principle / Rule | Key Exam Takeaway |\n"
-            "| :--- | :--- | :--- |\n"
+            f"### 📖 Detailed Concept Breakdown & Insights: {clean_title}\n\n"
+            f"#### 1. Core Definition & Foundational Overview\n"
+            f"**{clean_title}** is a foundational concept characterized by clear theoretical principles, systematic rules, and impactful real-world applications. "
+            "To understand it thoroughly, we examine its core mechanics, governing axioms, and practical significance.\n\n"
+            f"#### 2. Key Pillars & Structural Mechanics\n"
+            f"- **Core Axioms**: Defines the essential terminology, primary equations, and theoretical parameters of {clean_title}.\n"
+            f"- **Operational Workflow**: Breaks down how components within {clean_title} interact dynamically to achieve predictable outcomes.\n"
+            f"- **Boundary Conditions & Nuances**: Identifies edge cases, common traps, and practical constraints to ensure conceptual mastery.\n\n"
+            f"#### 3. Summary Reference Matrix\n"
+            f"| Dimension | Focus Area | Key Exam / Practical Takeaway |\n"
+            f"| :--- | :--- | :--- |\n"
             f"| **Primary Definition** | Core law of {clean_title} | State exact technical terminology |\n"
-            f"| **Governing Formula** | Standard mathematical relation | Verify dimensional units on both sides |\n"
-            f"| **Common Trap** | Confusing with adjacent concepts | Always verify boundary constraints |"
+            f"| **Practical Utility** | Real-world applications | Applied across modern systems & research |\n"
+            f"| **Common Misconception**| Boundary errors | Always verify initial assumptions and constraints |"
         )
         key_points = [
-            f"Understand the central definition of {clean_title} before attempting complex problems.",
-            "Verify all governing formulas and boundary conditions.",
-            "Review the comparison table before entering exams to maximize recall."
+            f"Understand the central definition and axioms of {clean_title}.",
+            f"Analyze how {clean_title} interacts with adjacent theoretical frameworks.",
+            f"Review the summary reference table to reinforce active recall."
         ]
-        example = f"Explain the core mechanism of {clean_title} to a peer in under 60 seconds."
+        example = f"Explain the core principle of {clean_title} to a study partner in under 60 seconds."
         questions = [
-            f"What is the single most important governing rule in {clean_title}?",
-            f"What is the top mistake students make when analyzing {clean_title} on examinations?"
+            f"What is the single most critical governing rule in {clean_title}?",
+            f"How do boundary constraints impact the practical execution of {clean_title}?"
         ]
 
     return {
@@ -1282,17 +1186,17 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     query_lower = cleaned_question.lower()
     
         # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition
-    is_about_creator = any(kw in query_lower for kw in [
-        "who created", "who made", "who developed", "who built", "who is the creator", "who is creator",
-        "who is the founder", "who is founder", "who founded", "founder of", "creator of", "developer of",
-        "who has created", "who have created", "abhinav giri", "about abhinav giri", "tell me about abhinav",
-        "who is abhinav", "vision of pustak", "vision of granth", "mission of pustak", "mission of granth",
-        "what was the vision", "what is the vision", "what is the mission", "what is pustakverse", "what is pustak verse",
-        "about pustakverse", "about pustak verse", "about granthmind", "about granth mind", "tell me about pustak",
-        "tell me about granth", "who own pustak", "who owns pustak", "who owns granth", "owner of pustak"
-    ]) or (
-        ("pustak" in query_lower or "granth" in query_lower) and 
-        any(w in query_lower for w in ["who", "creator", "founder", "created", "made", "developed", "vision", "mission", "owner", "started", "built"])
+    norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
+    is_about_creator = (
+        'abhinav' in norm_q or 
+        'abhinavgiri' in norm_q or 
+        'pustakverse' in norm_q or 
+        'granthmind' in norm_q or
+        any(k in query_lower for k in [
+            'abhinav', 'giri', 'abhinavgiri', 'abhnav', 'founder', 'creator', 'who made', 'who developed',
+            'who created', 'who has created', 'who built', 'vision', 'mission', 'who owns', 'about abhinav',
+            'about pustak', 'about granth', 'what is pustak', 'what is granth'
+        ])
     )
 
     if is_about_creator:
