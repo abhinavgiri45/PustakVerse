@@ -443,15 +443,25 @@ def invalidate_cache():
 def invalidate_books_cache():
     fast_cache.clear_books()
 
+# Persistent Bestseller Badges Store:
+# - Once awarded, the date/period (e.g. "Jul–Dec 2026") remains permanently locked on that book.
+# - If a book loses its position before time (i.e. falls to Rank 3+), its badge is immediately revoked/removed.
+PERSISTENT_BESTSELLER_REGISTRY = {}
+
 def get_dynamic_bestseller_badge(b, book_index=0):
     """
-    Computes dynamic Bestseller Badges strictly for the TOP 2 books only:
-    - Rank 1 (Top Leader for 6 Months): RED BADGE -> '🏆 Best Selling Book (Jul–Dec 2026)'
-    - Rank 2 (Top Leader for 3 Months): ORANGE BADGE -> '🔥 Best Selling Book (Jul–Sep 2026)'
-    - All other books (Rank 3+): No badge.
+    Computes and manages dynamic Bestseller Badges strictly for the TOP 2 books only:
+    - Rank 1 (Top Leader for 6 Months): Permanent locked period RED BADGE -> '🏆 Best Selling Book (Jul–Dec 2026)'
+    - Rank 2 (Top Leader for 3 Months): Permanent locked period ORANGE BADGE -> '🔥 Best Selling Book (Jul–Sep 2026)'
+    - If a book drops out of the Top 2 (Rank 3+), its badge is immediately revoked.
+    - If a book remains in its qualifying position, its period date is permanently preserved.
     """
-    # STRICT INVARIANT: ONLY the TOP 2 books overall receive a bestseller badge
+    book_id = str(b.get('id') or b.get('title') or '')
+
+    # STRICT INVARIANT: If the book is NOT in the top 2 positions, remove badge immediately
     if book_index not in [0, 1]:
+        if book_id in PERSISTENT_BESTSELLER_REGISTRY:
+            PERSISTENT_BESTSELLER_REGISTRY.pop(book_id, None)
         return None
 
     try:
@@ -464,9 +474,9 @@ def get_dynamic_bestseller_badge(b, book_index=0):
 
     # 6-Month Range (e.g. Jan–Jun 2026 or Jul–Dec 2026)
     if month <= 6:
-        range_6m = f"Jan–Jun {year}"
+        cur_range_6m = f"Jan–Jun {year}"
     else:
-        range_6m = f"Jul–Dec {year}"
+        cur_range_6m = f"Jul–Dec {year}"
 
     # 3-Month Range (e.g. Jan–Mar 2026, Apr–Jun 2026, Jul–Sep 2026, Oct–Dec 2026)
     q_map = {
@@ -476,26 +486,64 @@ def get_dynamic_bestseller_badge(b, book_index=0):
         4: f"Oct–Dec {year}"
     }
     cur_q = (month - 1) // 3 + 1
-    range_3m = q_map.get(cur_q, f"Q{cur_q} {year}")
+    cur_range_3m = q_map.get(cur_q, f"Q{cur_q} {year}")
 
     # Top 1 Leader -> RED BADGE (6-Month Leader)
     if book_index == 0:
+        existing = PERSISTENT_BESTSELLER_REGISTRY.get(book_id)
+        if existing and existing.get('level') == '6m' and existing.get('period'):
+            period = existing['period']
+        elif b.get('bestseller_badge_period') and b.get('bestseller_badge_level') == '6m':
+            period = b['bestseller_badge_period']
+            PERSISTENT_BESTSELLER_REGISTRY[book_id] = {
+                'level': '6m',
+                'period': period,
+                'awarded_at': b.get('bestseller_badge_awarded_at') or now.strftime('%Y-%m-%d')
+            }
+        else:
+            period = cur_range_6m
+            PERSISTENT_BESTSELLER_REGISTRY[book_id] = {
+                'level': '6m',
+                'period': period,
+                'awarded_at': now.strftime('%Y-%m-%d')
+            }
+
         return {
             'level': '6m',
             'color': 'red',
             'bg': 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
             'border': '#dc2626',
-            'text': f"🏆 Best Selling Book ({range_6m})"
+            'period': period,
+            'text': f"🏆 Best Selling Book ({period})"
         }
 
     # Top 2 Leader -> ORANGE BADGE (3-Month Leader)
     if book_index == 1:
+        existing = PERSISTENT_BESTSELLER_REGISTRY.get(book_id)
+        if existing and existing.get('level') == '3m' and existing.get('period'):
+            period = existing['period']
+        elif b.get('bestseller_badge_period') and b.get('bestseller_badge_level') == '3m':
+            period = b['bestseller_badge_period']
+            PERSISTENT_BESTSELLER_REGISTRY[book_id] = {
+                'level': '3m',
+                'period': period,
+                'awarded_at': b.get('bestseller_badge_awarded_at') or now.strftime('%Y-%m-%d')
+            }
+        else:
+            period = cur_range_3m
+            PERSISTENT_BESTSELLER_REGISTRY[book_id] = {
+                'level': '3m',
+                'period': period,
+                'awarded_at': now.strftime('%Y-%m-%d')
+            }
+
         return {
             'level': '3m',
             'color': 'orange',
             'bg': 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
             'border': '#ea580c',
-            'text': f"🔥 Best Selling Book ({range_3m})"
+            'period': period,
+            'text': f"🔥 Best Selling Book ({period})"
         }
 
     return None
