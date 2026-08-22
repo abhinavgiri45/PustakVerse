@@ -317,6 +317,30 @@
         {% endwith %}
 
         
+        
+        <!-- DAILY READING GOALS & HABIT TRACKER -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 16px; padding: 20px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 2.2rem; background: white; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(22,163,74,0.12); border: 1px solid #bbf7d0;">🎯</div>
+                <div>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.08em;">Daily Reading Habit</span>
+                    <h3 style="margin: 2px 0 0; color: #14532d; font-size: 1.25rem; font-weight: 800;">Target: 30 Minutes Daily</h3>
+                    <p style="margin: 2px 0 0; font-size: 0.82rem; color: #166534;">Consistent reading builds sharper focus and expands your knowledge horizon.</p>
+                </div>
+            </div>
+            <form action="{{ url_for('reader_update_goals') }}" method="POST" style="display: flex; align-items: center; gap: 8px; background: white; padding: 6px 10px; border-radius: 12px; border: 1px solid #86efac;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #15803d;">Goal:</span>
+                <select name="daily_minutes_goal" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; background: white; font-weight: 700;">
+                    <option value="15">15 Mins / Day</option>
+                    <option value="30" selected>30 Mins / Day</option>
+                    <option value="45">45 Mins / Day</option>
+                    <option value="60">1 Hour / Day</option>
+                </select>
+                <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">Save</button>
+            </form>
+        </div>
+
         <!-- READER SHELVES & LIBRARY FILTER -->
         <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; padding: 14px 18px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="libraryFilterPills">

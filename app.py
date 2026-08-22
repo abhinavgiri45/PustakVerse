@@ -2357,6 +2357,72 @@ def ensure_payment_schema():
             )
         """)
 
+        
+        # ---> MEGA FEATURE PACK: AUTHOR PROMOS, READER SHELVES, GOALS & REPLIES <---
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS author_coupons (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                author_id INT NOT NULL,
+                book_id INT NULL,
+                code VARCHAR(50) NOT NULL UNIQUE,
+                discount_percent INT NOT NULL DEFAULT 20,
+                max_uses INT DEFAULT 100,
+                times_used INT DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS reader_custom_shelves (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                shelf_name VARCHAR(100) NOT NULL,
+                shelf_icon VARCHAR(50) DEFAULT '📚',
+                description TEXT,
+                is_public BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS shelf_books (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                shelf_id INT NOT NULL,
+                book_id INT NOT NULL,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_shelf_book (shelf_id, book_id),
+                FOREIGN KEY (shelf_id) REFERENCES reader_custom_shelves(id) ON DELETE CASCADE,
+                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS reader_reading_goals (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL UNIQUE,
+                daily_minutes_goal INT DEFAULT 30,
+                monthly_books_goal INT DEFAULT 3,
+                total_minutes_read INT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS review_author_replies (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                review_id INT NOT NULL,
+                author_id INT NOT NULL,
+                reply_text TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+                FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
         # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
         # 1. Reader: Personal Notes & Highlights
         cursor.execute("CREATE TABLE IF NOT EXISTS user_notes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, note_text TEXT NOT NULL, page_number INT DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
@@ -7829,3 +7895,178 @@ def executive_ban_target():
             except: pass
 
     return redirect(url_for('dashboard'))
+
+
+
+# ======================================================================
+# MEGA FEATURE PACK: AUTHOR PROMO CODES & CAMPAIGNS
+# ======================================================================
+@app.route('/author/coupons/create', methods=['POST'])
+def author_create_coupon():
+    if session.get('role') not in ['author', 'developer', 'official']:
+        flash('Unauthorized.', 'error')
+        return redirect(url_for('login'))
+
+    code = request.form.get('code', '').strip().upper()
+    discount = request.form.get('discount_percent', '20')
+    max_uses = request.form.get('max_uses', '100')
+    book_id = request.form.get('book_id')
+
+    if not code:
+        flash('Please enter a valid coupon code (e.g. READ25).', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        b_id = int(book_id) if book_id and book_id.isdigit() else None
+        cursor.execute("""
+            INSERT INTO author_coupons (author_id, book_id, code, discount_percent, max_uses)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE discount_percent = VALUES(discount_percent), max_uses = VALUES(max_uses), is_active = TRUE
+        """, (session['user_id'], b_id, code, int(discount), int(max_uses)))
+        db.commit()
+        flash(f"Coupon code '{code}' ({discount}% OFF) created successfully!", "success")
+    except Exception as e:
+        logging.error(f"Error creating coupon: {e}")
+        flash("Could not create coupon code. Code might already exist.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/author/coupons/delete/<int:coupon_id>', methods=['POST'])
+def author_delete_coupon(coupon_id):
+    if session.get('role') not in ['author', 'developer', 'official']:
+        flash('Unauthorized.', 'error')
+        return redirect(url_for('login'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        if session.get('role') == 'developer':
+            cursor.execute("DELETE FROM author_coupons WHERE id = %s", (coupon_id,))
+        else:
+            cursor.execute("DELETE FROM author_coupons WHERE id = %s AND author_id = %s", (coupon_id, session['user_id']))
+        db.commit()
+        flash("Coupon deleted successfully.", "success")
+    except Exception as e:
+        logging.error(f"Error deleting coupon: {e}")
+        flash("Could not remove coupon.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+# ======================================================================
+# MEGA FEATURE PACK: READER CUSTOM SHELVES & GOALS
+# ======================================================================
+@app.route('/reader/shelves/create', methods=['POST'])
+def reader_create_shelf():
+    if 'user_id' not in session:
+        flash('Please login to create shelves.', 'error')
+        return redirect(url_for('login'))
+
+    shelf_name = request.form.get('shelf_name', '').strip()
+    shelf_icon = request.form.get('shelf_icon', '📚').strip()
+    description = request.form.get('description', '').strip()
+
+    if not shelf_name:
+        flash('Shelf name cannot be empty.', 'error')
+        return redirect(url_for('my_library'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO reader_custom_shelves (user_id, shelf_name, shelf_icon, description)
+            VALUES (%s, %s, %s, %s)
+        """, (session['user_id'], shelf_name, shelf_icon, description))
+        db.commit()
+        flash(f"Custom shelf '{shelf_icon} {shelf_name}' created!", "success")
+    except Exception as e:
+        logging.error(f"Error creating shelf: {e}")
+        flash("Could not create shelf.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('my_library'))
+
+
+@app.route('/reader/goals/update', methods=['POST'])
+def reader_update_goals():
+    if 'user_id' not in session:
+        flash('Please login.', 'error')
+        return redirect(url_for('login'))
+
+    daily_mins = request.form.get('daily_minutes_goal', '30')
+    monthly_books = request.form.get('monthly_books_goal', '3')
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO reader_reading_goals (user_id, daily_minutes_goal, monthly_books_goal)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE daily_minutes_goal = VALUES(daily_minutes_goal), monthly_books_goal = VALUES(monthly_books_goal)
+        """, (session['user_id'], int(daily_mins), int(monthly_books)))
+        db.commit()
+        flash(f"Daily reading goal updated to {daily_mins} mins/day!", "success")
+    except Exception as e:
+        logging.error(f"Error updating goals: {e}")
+        flash("Could not update goals.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('my_library'))
+
+
+# ======================================================================
+# MEGA FEATURE PACK: AUTHOR OFFICIAL REPLIES TO REVIEWS
+# ======================================================================
+@app.route('/author/reviews/reply/<int:review_id>', methods=['POST'])
+def author_reply_review(review_id):
+    if session.get('role') not in ['author', 'developer', 'official']:
+        flash('Unauthorized.', 'error')
+        return redirect(url_for('login'))
+
+    reply_text = request.form.get('reply_text', '').strip()
+    book_id = request.form.get('book_id')
+
+    if not reply_text:
+        flash('Reply text cannot be empty.', 'error')
+        return redirect(url_for('view_book', book_id=book_id) if book_id else url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO review_author_replies (review_id, author_id, reply_text)
+            VALUES (%s, %s, %s)
+        """, (review_id, session['user_id'], reply_text))
+        db.commit()
+        flash("Author reply posted successfully!", "success")
+    except Exception as e:
+        logging.error(f"Error posting author reply: {e}")
+        flash("Could not post reply.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('view_book', book_id=book_id) if book_id else url_for('dashboard'))
