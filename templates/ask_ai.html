@@ -558,29 +558,22 @@
       </div>
       {% endif %}
 
-      <div style="display: flex; align-items: center; gap: 6px;">
-        <select id="modelSelector" class="model-selector" title="Select AI Engine">
-          {% if available_models and available_models|length > 0 %}
-            {% for m in available_models %}
-              <option value="{{ m.model_id }}" {% if m.is_default or loop.first %}selected{% endif %}>
-                {{ m.display_name }}
-              </option>
-            {% endfor %}
-          {% else %}
-            <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash (Fast &amp; Smart)</option>
-            <option value="chatgpt-4o">🟢 ChatGPT-4o (Deep Reasoning)</option>
-            <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet (Nuance &amp; Writing)</option>
-            <option value="deepseek-r1">🔵 DeepSeek R1 (Math &amp; Logic)</option>
-            <option value="mistral-large">🟡 Mistral Large (Code &amp; Systems)</option>
-            <option value="meta-llama-3">🔷 Meta Llama 3.3 (Open Research)</option>
-          {% endif %}
-        </select>
-
-        <!-- LIVE SYNC AI MODELS BUTTON (FOR DEVELOPER/FOUNDER & REAL-TIME SYNC) -->
-        <button type="button" onclick="syncLiveAiModels(true)" id="syncModelsBtn" class="btn-action-icon" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #c084fc;" title="Sync latest AI models from Founder/Developer hub">
-          🔄
-        </button>
-      </div>
+      <select id="modelSelector" class="model-selector" title="Select AI Engine">
+        {% if available_models and available_models|length > 0 %}
+          {% for m in available_models %}
+            <option value="{{ m.model_id }}" {% if m.is_default or loop.first %}selected{% endif %}>
+              {{ m.display_name }}
+            </option>
+          {% endfor %}
+        {% else %}
+          <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash (Fast &amp; Smart)</option>
+          <option value="chatgpt-4o">🟢 ChatGPT-4o (Deep Reasoning)</option>
+          <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet (Nuance &amp; Writing)</option>
+          <option value="deepseek-r1">🔵 DeepSeek R1 (Math &amp; Logic)</option>
+          <option value="mistral-large">🟡 Mistral Large (Code &amp; Systems)</option>
+          <option value="meta-llama-3">🔷 Meta Llama 3.3 (Open Research)</option>
+        {% endif %}
+      </select>
 
       <a href="/" class="btn-nav-back">🏠 PustakVerse</a>
     </div>
