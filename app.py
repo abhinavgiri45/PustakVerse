@@ -445,10 +445,15 @@ def invalidate_books_cache():
 
 def get_dynamic_bestseller_badge(b, book_index=0):
     """
-    Computes dynamic Bestseller Badges:
-    - 6 Months Top Leader (180 Days): RED BADGE -> '🏆 Best Selling Book (Jan–Jun 2026)'
-    - 3 Months Top Leader (90 Days): ORANGE BADGE -> '🔥 Best Selling Book (Apr–Jun 2026)'
+    Computes dynamic Bestseller Badges strictly for the TOP 2 books only:
+    - Rank 1 (Top Leader for 6 Months): RED BADGE -> '🏆 Best Selling Book (Jul–Dec 2026)'
+    - Rank 2 (Top Leader for 3 Months): ORANGE BADGE -> '🔥 Best Selling Book (Jul–Sep 2026)'
+    - All other books (Rank 3+): No badge.
     """
+    # STRICT INVARIANT: ONLY the TOP 2 books overall receive a bestseller badge
+    if book_index not in [0, 1]:
+        return None
+
     try:
         now = datetime.now()
     except Exception:
@@ -473,14 +478,8 @@ def get_dynamic_bestseller_badge(b, book_index=0):
     cur_q = (month - 1) // 3 + 1
     range_3m = q_map.get(cur_q, f"Q{cur_q} {year}")
 
-    saves_180d = int(b.get('saves_180d') or 0)
-    sales_180d = int(b.get('sales_180d') or 0)
-    saves_90d = int(b.get('saves_90d') or 0)
-    sales_90d = int(b.get('sales_90d') or 0)
-    avg_rating = float(b.get('avg_rating') or 5.0)
-
-    # 1. 6 Months Leader -> RED BADGE
-    if (saves_180d + sales_180d * 2 >= 8) or (book_index in [0, 1] and avg_rating >= 4.8):
+    # Top 1 Leader -> RED BADGE (6-Month Leader)
+    if book_index == 0:
         return {
             'level': '6m',
             'color': 'red',
@@ -489,8 +488,8 @@ def get_dynamic_bestseller_badge(b, book_index=0):
             'text': f"🏆 Best Selling Book ({range_6m})"
         }
 
-    # 2. 3 Months Leader -> ORANGE BADGE
-    elif (saves_90d + sales_90d * 2 >= 4) or (book_index in [2, 3] and avg_rating >= 4.5):
+    # Top 2 Leader -> ORANGE BADGE (3-Month Leader)
+    if book_index == 1:
         return {
             'level': '3m',
             'color': 'orange',
