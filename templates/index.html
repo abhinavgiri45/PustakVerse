@@ -198,12 +198,10 @@
         
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
             <input type="search" id="searchInput" name="search" placeholder="Search for a book, author, or category... (Ctrl + K)" aria-label="Search for a book or author">
-            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice with Google Voice" aria-label="Search by Voice" style="background: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border: none; cursor: pointer;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="#4285F4"/>
-                    <path d="M11 18.92V22H13V18.92C16.95 18.42 20 15.06 20 11H18C18 14.31 15.31 17 12 17C8.69 17 6 14.31 6 11H4C4 15.06 7.05 18.42 11 18.92Z" fill="#34A853"/>
-                    <path d="M7.05 10.95L5.64 9.54C4.62 10.56 4 11.96 4 13.5H6C6 12.56 6.39 11.66 7.05 10.95Z" fill="#FBBC05"/>
-                    <path d="M18.36 9.54L16.95 10.95C17.61 11.66 18 12.56 18 13.5H20C20 11.96 19.38 10.56 18.36 9.54Z" fill="#EA4335"/>
+            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice (Gemini Voice Search)" aria-label="Search by Voice" style="background: white; color: #475569; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border: none; cursor: pointer; transition: all 0.2s ease;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
             </button>
         </form>

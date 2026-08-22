@@ -559,40 +559,46 @@
       line-height: 1.4;
     }
 
-    /* Input Dock Area (Full Workplace Integration) */
+    /* Input Dock Area (Gemini-Style Search & Prompt Dock) */
     .input-dock {
       background: var(--bg-surface);
       border-top: 1px solid var(--border-color);
-      padding: 12px clamp(16px, 2.5vw, 36px) 16px;
+      padding: 14px clamp(16px, 3vw, 40px) 18px;
       flex-shrink: 0;
       width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .input-container {
       width: 100%;
-      max-width: 100%;
-      margin: 0;
+      max-width: 840px; /* Gemini-exact centered search & prompt bar width */
+      margin: 0 auto;
       position: relative;
     }
 
     .input-box-wrapper {
       background: var(--bg-card);
       border: 1.5px solid var(--border-color);
-      border-radius: 16px;
-      padding: 8px 14px;
+      border-radius: 28px; /* Smooth Gemini pill curvature */
+      padding: 8px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      transition: border-color 0.2s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
     }
-    .input-box-wrapper:focus-within { border-color: var(--mode-color); }
+    .input-box-wrapper:focus-within { 
+      border-color: #8b5cf6; 
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2), 0 12px 35px rgba(0,0,0,0.45);
+    }
 
     .chat-textarea {
       flex: 1;
       background: transparent;
       border: none;
       color: white;
-      font-size: 0.94rem;
+      font-size: 0.96rem;
       font-family: inherit;
       resize: none;
       min-height: 26px;
@@ -603,30 +609,36 @@
     }
     .chat-textarea::placeholder { color: #64748b; }
 
-    /* Google 4-Color Mic */
-    .google-mic-btn {
+    /* Gemini Sleek Vector Microphone Button */
+    .gemini-mic-btn, .google-mic-btn {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #94a3b8;
       border-radius: 50%;
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       flex-shrink: 0;
     }
-    .google-mic-btn:hover { background: rgba(255, 255, 255, 0.18); transform: scale(1.06); }
-    .google-mic-btn.listening {
-      animation: pulseMic 1.2s infinite;
-      border-color: #ef4444;
-      background: rgba(239, 68, 68, 0.2);
+    .gemini-mic-btn:hover, .google-mic-btn:hover { 
+      background: rgba(255, 255, 255, 0.18); 
+      color: #f8fafc;
+      transform: scale(1.06); 
     }
-    @keyframes pulseMic {
-      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-      70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    .gemini-mic-btn.listening, .google-mic-btn.listening {
+      animation: pulseGeminiMic 1.2s infinite;
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.25);
+      color: #ef4444;
+    }
+    @keyframes pulseGeminiMic {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1.05); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); transform: scale(1.08); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1.05); }
     }
 
     .btn-send-chat {
@@ -960,13 +972,11 @@
 
               <textarea id="promptInput" class="chat-textarea" placeholder="Ask GranthMind anything... (Press Enter to Send, Shift+Enter for Newline)" rows="1" onkeydown="handleKeyInput(event)"></textarea>
 
-              <!-- GOOGLE 4-COLOR MICROPHONE BUTTON -->
-              <button type="button" class="google-mic-btn" id="micBtn" onclick="toggleVoiceInput()" title="Google Voice Search / Speak Question">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="#4285F4"/>
-                  <path d="M11 18.92V22H13V18.92C16.95 18.42 20 15.06 20 11H18C18 14.31 15.31 17 12 17C8.69 17 6 14.31 6 11H4C4 15.06 7.05 18.42 11 18.92Z" fill="#34A853"/>
-                  <path d="M7.05 10.95L5.64 9.54C4.62 10.56 4 11.96 4 13.5H6C6 12.56 6.39 11.66 7.05 10.95Z" fill="#FBBC05"/>
-                  <path d="M18.36 9.54L16.95 10.95C17.61 11.66 18 12.56 18 13.5H20C20 11.96 19.38 10.56 18.36 9.54Z" fill="#EA4335"/>
+              <!-- GEMINI-STYLE VECTOR MICROPHONE BUTTON -->
+              <button type="button" class="gemini-mic-btn" id="micBtn" onclick="toggleVoiceInput()" title="Gemini Voice / Speech-to-Text Search" aria-label="Use Microphone">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
               </button>
 
@@ -1479,27 +1489,94 @@
       return text.replace(/[&<>"']/g, m => map[m]);
     }
 
-    // Google Voice Search Mic
+    // Enhanced Gemini-Style Live Speech-to-Text Recognition
+    let globalSpeechRecognition = null;
+    let isVoiceListening = false;
+
     function toggleVoiceInput() {
-      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        alert("Google Voice Recognition is supported in Chrome, Edge, and Safari.");
+      const mic = document.getElementById('micBtn');
+      const promptInput = document.getElementById('promptInput');
+
+      if (isVoiceListening) {
+        if (globalSpeechRecognition) {
+          try { globalSpeechRecognition.stop(); } catch(e) {}
+        }
+        isVoiceListening = false;
+        if (mic) mic.classList.remove('listening');
         return;
       }
+
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        alert("Voice speech recognition is supported in modern browsers like Google Chrome, Microsoft Edge, and Safari.");
+        return;
+      }
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
+      globalSpeechRecognition = recognition;
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
-      const mic = document.getElementById('micBtn');
-      mic.classList.add('listening');
+
+      let initialPromptVal = promptInput ? promptInput.value.trim() : '';
+
+      recognition.onstart = function() {
+        isVoiceListening = true;
+        if (mic) mic.classList.add('listening');
+        if (promptInput) {
+          promptInput.setAttribute('data-orig-ph', promptInput.placeholder);
+          promptInput.placeholder = "Listening... Speak your question naturally 🎙️";
+        }
+      };
 
       recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        const promptInput = document.getElementById('promptInput');
-        promptInput.value = (promptInput.value ? promptInput.value + ' ' : '') + transcript;
-        mic.classList.remove('listening');
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (promptInput) {
+          const currentSpoken = finalTranscript || interimTranscript;
+          if (currentSpoken) {
+            promptInput.value = initialPromptVal ? (initialPromptVal + ' ' + currentSpoken) : currentSpoken;
+            // Auto resize
+            promptInput.style.height = 'auto';
+            promptInput.style.height = Math.min(promptInput.scrollHeight, 150) + 'px';
+          }
+        }
       };
-      recognition.onerror = function() { mic.classList.remove('listening'); };
-      recognition.onend = function() { mic.classList.remove('listening'); };
-      recognition.start();
+
+      recognition.onerror = function(event) {
+        console.warn("Speech recognition error:", event.error);
+        isVoiceListening = false;
+        if (mic) mic.classList.remove('listening');
+        if (promptInput) {
+          promptInput.placeholder = promptInput.getAttribute('data-orig-ph') || "Ask GranthMind anything...";
+        }
+      };
+
+      recognition.onend = function() {
+        isVoiceListening = false;
+        if (mic) mic.classList.remove('listening');
+        if (promptInput) {
+          promptInput.placeholder = promptInput.getAttribute('data-orig-ph') || "Ask GranthMind anything...";
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch (err) {
+        console.error("Could not start recognition:", err);
+        isVoiceListening = false;
+        if (mic) mic.classList.remove('listening');
+      }
     }
 
     function closeAuthModal(e) {
