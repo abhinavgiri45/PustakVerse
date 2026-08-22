@@ -488,9 +488,7 @@ input, textarea, select {
 
 @media (max-width: 768px) {
     /* Base Body padding for bottom bar */
-    body {
-        padding-bottom: 74px !important;
-    }
+    
 
     /* Modern Mobile Header Navbar */
     nav, .navbar {
@@ -654,59 +652,6 @@ input, textarea, select {
     /* GranthMind AI Floating Badge adjustment on mobile */
     .floating-granthmind-btn {
         display: none !important; /* Replaced by bottom navigation center AI tab */
-    }
-
-    /* Universal Mobile Bottom Navigation Bar */
-    .mobile-bottom-nav {
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        height: 62px !important;
-        background: #0f172a !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-around !important;
-        z-index: 9999 !important;
-        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.4) !important;
-    }
-
-    .mob-nav-item {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-decoration: none !important;
-        color: #94a3b8 !important;
-        font-size: 0.68rem !important;
-        font-weight: 700 !important;
-        gap: 3px !important;
-        padding: 4px 8px !important;
-        transition: color 0.15s !important;
-        flex: 1 !important;
-    }
-
-    .mob-nav-item.active, .mob-nav-item:hover {
-        color: #f8fafc !important;
-    }
-
-    .mob-nav-item-icon {
-        font-size: 1.25rem !important;
-        line-height: 1 !important;
-    }
-
-    .mob-nav-ai-pill {
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
-        color: white !important;
-        padding: 6px 14px !important;
-        border-radius: 20px !important;
-        font-size: 0.72rem !important;
-        font-weight: 800 !important;
-        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4) !important;
-        transform: translateY(-8px) !important;
-        border: 2px solid #0f172a !important;
     }
 
     /* Modals & Popups on Mobile */
