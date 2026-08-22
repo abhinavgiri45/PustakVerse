@@ -1293,10 +1293,14 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
                 }
 
     # ------------------------------------------------------------------
-    # 1. FOUNDER, CREATOR & PUSTAKVERSE VISION
+    # 1. FOUNDER, CREATOR & PUSTAKVERSE VISION (ONLY FOR EXPLICIT PUSTAKVERSE / GRANTHMIND QUERIES)
     # ------------------------------------------------------------------
-    if ('abhinav' in norm_q or 'pustakverse' in norm_q or 'granthmind' in norm_q or
-        any(k in query_lower for k in ['abhinav', 'giri', 'abhinavgiri', 'who made', 'who developed', 'who created', 'who built', 'founder', 'creator', 'vision'])):
+    is_about_pv_founder = (
+        any(k in norm_q for k in ['abhinavgiri', 'abhinav', 'giri']) or
+        (any(k in query_lower for k in ['pustakverse', 'granthmind']) and any(k in query_lower for k in ['founder', 'creator', 'who made', 'who built', 'who created', 'who developed', 'vision', 'author', 'developer', 'owner', 'about', 'who is'])) or
+        bool(re.search(r'\b(who made you|who created you|who built you|who developed you|who is your creator|who is your founder|who designed you)\b', query_lower))
+    )
+    if is_about_pv_founder:
         return {
             'concept': 'Founder & Vision of PustakVerse',
             'explanation': (
@@ -1908,18 +1912,12 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     if recall_direct:
         return recall_direct
     
-        # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition
+    # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition (Only for explicit PustakVerse/GranthMind/Abhinav Giri queries)
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
     is_about_creator = (
-        'abhinav' in norm_q or 
-        'abhinavgiri' in norm_q or 
-        'pustakverse' in norm_q or 
-        'granthmind' in norm_q or
-        any(k in query_lower for k in [
-            'abhinav', 'giri', 'abhinavgiri', 'abhnav', 'founder', 'creator', 'who made', 'who developed',
-            'who created', 'who has created', 'who built', 'vision', 'mission', 'who owns', 'about abhinav',
-            'about pustak', 'about granth', 'what is pustak', 'what is granth'
-        ])
+        any(k in norm_q for k in ['abhinavgiri', 'abhinav', 'giri']) or
+        (any(k in query_lower for k in ['pustakverse', 'granthmind']) and any(k in query_lower for k in ['founder', 'creator', 'who made', 'who developed', 'who created', 'who has created', 'who built', 'vision', 'mission', 'who owns', 'about abhinav', 'about pustak', 'about granth', 'what is pustak', 'what is granth', 'developer', 'owner', 'who is'])) or
+        bool(re.search(r'\b(who made you|who created you|who built you|who developed you|who is your creator|who is your founder|who designed you)\b', query_lower))
     )
 
     if is_about_creator:

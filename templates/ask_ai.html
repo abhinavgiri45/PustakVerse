@@ -1222,7 +1222,7 @@
               </button>
               <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
 
-              <textarea id="promptInput" class="chat-textarea" placeholder="Ask GranthMind anything... (Press Enter to Send, Shift+Enter for Newline)" rows="1" onkeydown="handleKeyInput(event)"></textarea>
+              <textarea id="promptInput" class="chat-textarea" placeholder="Ask anything..." rows="1" onkeydown="handleKeyInput(event)"></textarea>
 
               <!-- GEMINI-STYLE VECTOR MICROPHONE BUTTON -->
               <button type="button" class="gemini-mic-btn" id="micBtn" onclick="toggleVoiceInput()" title="Gemini Voice / Speech-to-Text Search" aria-label="Use Microphone">
@@ -1933,11 +1933,7 @@
     function updateMobilePlaceholder() {
       const promptInput = document.getElementById('promptInput');
       if (promptInput && !promptInput.value) {
-        if (window.innerWidth <= 640) {
-          promptInput.placeholder = "Ask anything...";
-        } else {
-          promptInput.placeholder = "Ask GranthMind anything... (Press Enter to Send, Shift+Enter for Newline)";
-        }
+        promptInput.placeholder = "Ask anything...";
       }
     }
     window.addEventListener('resize', updateMobilePlaceholder);
