@@ -218,8 +218,8 @@
             <button type="button" onclick="discoverRandomBook()" style="background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; padding: 8px 18px; font-size: 0.9rem; font-weight: 700; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.2s;">
                 🎲 Surprise Me (Random Book)
             </button>
-            <span style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600;">
-                🔥 <span id="heroStreakDisplay">1</span> Day Reading Streak
+            <span id="heroStreakContainer" style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">
+                📖 <span id="heroStreakDisplay">Open a Book to Start Streak</span>
             </span>
         </div>
     </div>
@@ -560,25 +560,44 @@
             window.location.href = "{{ url_for('random_book') }}";
         }
 
-        // Synchronize Daily Reading Streak
+        // Synchronize Daily Reading Streak (Only increments when a book is ACTUALLY read)
         function syncReadingStreak() {
-            const today = new Date().toISOString().slice(0, 10);
-            const lastDate = localStorage.getItem('pv_last_active_date');
-            let streak = parseInt(localStorage.getItem('pv_reading_streak') || '1', 10);
-
-            if (lastDate && lastDate !== today) {
-                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-                if (lastDate === yesterday) {
-                    streak += 1;
-                } else {
-                    streak = 1;
-                }
-            }
-            localStorage.setItem('pv_last_active_date', today);
-            localStorage.setItem('pv_reading_streak', streak.toString());
-
+            const lastReadStr = localStorage.getItem('pv_last_read_book');
+            const streakContainer = document.getElementById('heroStreakContainer');
             const displayEl = document.getElementById('heroStreakDisplay');
-            if (displayEl) displayEl.textContent = streak;
+            
+            if (!lastReadStr) {
+                if (displayEl) displayEl.textContent = 'Open a Book to Start Streak';
+                return;
+            }
+
+            try {
+                const readData = JSON.parse(lastReadStr);
+                const lastDate = readData.date || (readData.timestamp ? new Date(readData.timestamp).toISOString().slice(0, 10) : null);
+                const today = new Date().toISOString().slice(0, 10);
+                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+                
+                let streak = parseInt(localStorage.getItem('pv_actual_reading_streak') || '0', 10);
+
+                if (!lastDate) {
+                    streak = 0;
+                } else if (lastDate !== today && lastDate !== yesterday) {
+                    // Missed more than 1 day -> reset streak
+                    streak = 0;
+                    localStorage.setItem('pv_actual_reading_streak', '0');
+                }
+
+                if (streak > 0 && streakContainer) {
+                    streakContainer.innerHTML = `🔥 <strong style="margin: 0 4px;">${streak}</strong> Day Reading Streak`;
+                    streakContainer.style.background = 'rgba(234, 88, 12, 0.2)';
+                    streakContainer.style.borderColor = 'rgba(251, 146, 60, 0.5)';
+                    streakContainer.title = (lastDate === today) ? 'Great job! You read today!' : 'Read a book today to maintain your streak!';
+                } else if (streakContainer) {
+                    streakContainer.innerHTML = '📖 <span>Open a Book to Start Streak</span>';
+                }
+            } catch(e) {
+                if (displayEl) displayEl.textContent = 'Open a Book to Start Streak';
+            }
         }
         syncReadingStreak();
 

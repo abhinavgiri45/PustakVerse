@@ -316,6 +316,25 @@
             {% endif %}
         {% endwith %}
 
+        
+        <!-- READER SHELVES & LIBRARY FILTER -->
+        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; padding: 14px 18px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="libraryFilterPills">
+                <button type="button" onclick="filterLibraryShelf('all', this)" class="lib-shelf-btn active" style="padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: none; background: #ea580c; color: white; cursor: pointer; transition: all 0.2s;">
+                    📚 All Books ({{ books|length }})
+                </button>
+                <button type="button" onclick="filterLibraryShelf('paid', this)" class="lib-shelf-btn" style="padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s;">
+                    💎 Purchased / Premium
+                </button>
+                <button type="button" onclick="filterLibraryShelf('free', this)" class="lib-shelf-btn" style="padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s;">
+                    🆓 Saved Free Books
+                </button>
+            </div>
+            <button type="button" onclick="openReaderNotesModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: 1.5px solid #8b5cf6; background: #f5f3ff; color: #7c3aed; cursor: pointer;">
+                <span>📝</span> Personal Study Notes
+            </button>
+        </div>
+
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
             <input type="search" id="searchInput" name="search" placeholder="Search your library... (Ctrl + K)" aria-label="Search your library">
             <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
@@ -600,6 +619,109 @@
     </script>
 
     
+
+
+    <!-- READER NOTES & ANNOTATION JOURNAL MODAL -->
+    <div id="readerNotesModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 99999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px);">
+        <div style="background: white; border-radius: 20px; width: 100%; max-width: 620px; padding: 26px; box-shadow: 0 25px 60px rgba(0,0,0,0.25); border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <span>📝</span> Personal Reading Notes & Highlights
+                </h3>
+                <button type="button" onclick="closeReaderNotesModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 12px;">Save thoughts, memorable quotes, and study takeaways from your library books.</p>
+            <div style="margin-bottom: 12px;">
+                <select id="notesBookSelector" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; background: white;" onchange="loadBookNote()">
+                    <option value="general">📓 General Reading Journal</option>
+                    {% for b in books %}
+                    <option value="book_{{ b.id }}">{{ b.title }} (by {{ b.author_name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <textarea id="readerNotesText" rows="7" placeholder="Write your thoughts, key insights, or favorite quotes here..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem; font-family: inherit; box-sizing: border-box; resize: vertical; line-height: 1.5;"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px;">
+                <span id="notesSavedIndicator" style="font-size: 0.78rem; color: #16a34a; font-weight: 700;"></span>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="copyReaderNotes()" class="btn-sm btn-dark" style="padding: 7px 14px; font-size: 0.82rem; cursor: pointer;">📋 Copy Notes</button>
+                    <button type="button" onclick="saveReaderNote()" class="btn-sm btn-green" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">💾 Save Notes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Library Shelf Filtering
+        function filterLibraryShelf(type, btn) {
+            document.querySelectorAll('.lib-shelf-btn').forEach(b => {
+                b.style.background = '#f8fafc';
+                b.style.color = '#334155';
+                b.style.border = '1px solid #cbd5e1';
+            });
+            if (btn) {
+                btn.style.background = '#ea580c';
+                btn.style.color = 'white';
+                btn.style.border = 'none';
+            }
+
+            const cards = document.querySelectorAll('.book-card');
+            let count = 0;
+            cards.forEach(card => {
+                const isPaid = card.querySelector('.btn-green, [href*="invoice"]') !== null;
+                let show = true;
+                if (type === 'paid') {
+                    show = isPaid;
+                } else if (type === 'free') {
+                    show = !isPaid;
+                }
+                card.style.display = show ? 'flex' : 'none';
+                if (show) count++;
+            });
+        }
+
+        // Reader Notes Management
+        function openReaderNotesModal() {
+            const m = document.getElementById('readerNotesModal');
+            if (m) {
+                m.style.display = 'flex';
+                loadBookNote();
+            }
+        }
+        function closeReaderNotesModal() {
+            const m = document.getElementById('readerNotesModal');
+            if (m) m.style.display = 'none';
+        }
+        function loadBookNote() {
+            const bookKey = document.getElementById('notesBookSelector').value;
+            const textEl = document.getElementById('readerNotesText');
+            const saved = localStorage.getItem('pv_note_' + bookKey) || '';
+            if (textEl) textEl.value = saved;
+            const ind = document.getElementById('notesSavedIndicator');
+            if (ind) ind.textContent = saved ? '✓ Notes loaded' : '';
+        }
+        function saveReaderNote() {
+            const bookKey = document.getElementById('notesBookSelector').value;
+            const text = document.getElementById('readerNotesText').value;
+            localStorage.setItem('pv_note_' + bookKey, text);
+            const ind = document.getElementById('notesSavedIndicator');
+            if (ind) {
+                ind.textContent = '✓ Saved successfully!';
+                setTimeout(() => { ind.textContent = ''; }, 3000);
+            }
+        }
+        function copyReaderNotes() {
+            const text = document.getElementById('readerNotesText').value;
+            if (text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const ind = document.getElementById('notesSavedIndicator');
+                    if (ind) {
+                        ind.textContent = '📋 Copied to clipboard!';
+                        setTimeout(() => { ind.textContent = ''; }, 3000);
+                    }
+                });
+            }
+        }
+    </script>
 
 </body>
 </html>
