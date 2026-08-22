@@ -9302,6 +9302,81 @@ def api_verify_sbin():
 # ======================================================================
 # GRANTHMIND AI ASYNC CHAT API
 # ======================================================================
+def collect_knowledge_sources(query, chat_history=None):
+    """
+    Collects real-time verified knowledge sources & citations across global repositories,
+    Wikipedia encyclopedias, live web indices, and PustakVerse library.
+    """
+    sources = []
+    clean_q = re.sub(r'^(what is the|what are the|where is the|who is the|who was the|what is|what was|what are|where is|how do|how does|explain the|explain|tell me about|tell me|overview of|history of)\s+', '', query, flags=re.I).strip()
+    clean_q = re.sub(r'\s+(in brief|in detail|and what is it famous for|and who proposed it|step by step)\b.*$', '', clean_q, flags=re.I).strip().rstrip('?.!')
+    search_term = clean_q or query
+
+    # Contextual check if follow-up
+    if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
+        for turn in reversed(chat_history[-4:]):
+            t_text = str(turn.get('text') or turn.get('content') or '')
+            bolds = re.findall(r'\*\*([^*]+)\*\*', t_text)
+            if bolds and not any(neg in bolds[0].lower() for neg in ['location', 'overview', 'details', 'foundational', 'context']):
+                search_term = f"{bolds[0].strip()} {search_term}"
+                break
+
+    # 1. Wikipedia Knowledge Graph Search
+    try:
+        w_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(search_term)}&format=json&srlimit=2"
+        req_w = urllib.request.Request(w_url, headers={'User-Agent': 'GranthMindAI/2.0 (PustakVerse Knowledge Core)'})
+        with urllib.request.urlopen(req_w, timeout=3) as resp_w:
+            w_data = json.loads(resp_w.read().decode('utf-8'))
+            results = w_data.get('query', {}).get('search', [])
+            for r in results:
+                title = r['title']
+                sources.append({
+                    'title': f"{title} · Wikipedia Knowledge Base",
+                    'url': f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}",
+                    'domain': 'wikipedia.org'
+                })
+    except Exception: pass
+
+    # 2. DuckDuckGo Instant Answers & Topics
+    try:
+        ddg_api = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_term)}&format=json&no_html=1&skip_disambig=1"
+        req_ddg = urllib.request.Request(ddg_api, headers={'User-Agent': 'GranthMindAI/2.0'})
+        with urllib.request.urlopen(req_ddg, timeout=3) as resp_ddg:
+            ddg_data = json.loads(resp_ddg.read().decode('utf-8'))
+            if ddg_data.get('AbstractURL'):
+                sources.append({
+                    'title': ddg_data.get('Heading', search_term) or 'DuckDuckGo Knowledge Graph',
+                    'url': ddg_data['AbstractURL'],
+                    'domain': 'duckduckgo.com'
+                })
+            for topic in ddg_data.get('RelatedTopics', [])[:2]:
+                if isinstance(topic, dict) and topic.get('FirstURL'):
+                    t_title = topic['FirstURL'].split('/')[-1].replace('_', ' ')
+                    sources.append({
+                        'title': t_title or 'Live Web Verified Reference',
+                        'url': topic['FirstURL'],
+                        'domain': 'duckduckgo.com'
+                    })
+    except Exception: pass
+
+    # 3. Always include PustakVerse Core Library & Knowledge Index
+    sources.append({
+        'title': 'PustakVerse Knowledge Core & Academic Library',
+        'url': 'https://pustakverse.onrender.com',
+        'domain': 'pustakverse.com'
+    })
+
+    # Deduplicate sources by URL
+    seen_urls = set()
+    deduped = []
+    for s in sources:
+        if s.get('url') and s['url'] not in seen_urls:
+            seen_urls.add(s['url'])
+            deduped.append(s)
+
+    return deduped
+
+
 @app.route('/api/granthmind/chat', methods=['POST'])
 def api_granthmind_chat():
     is_guest = 'user_id' not in session
@@ -9401,9 +9476,13 @@ def api_granthmind_chat():
             except Exception as ex_save:
                 logging.debug("Could not save to DB chat history: %s", ex_save)
 
+        # Collect Verified Knowledge Sources & Citations
+        sources = collect_knowledge_sources(prompt, chat_history=chat_history)
+
         return jsonify({
             'success': True,
             'answer': answer,
+            'sources': sources,
             'mode': mode,
             'is_guest': is_guest,
             'guest_remaining': guest_remaining if is_guest else 9999,

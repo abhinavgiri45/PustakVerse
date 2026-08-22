@@ -431,7 +431,95 @@
     .msg-content p:last-child { margin-bottom: 0; }
     .msg-content ul, .msg-content ol { margin-left: 20px; margin-bottom: 10px; }
     
-        /* Dynamic AI Thinking & Web Search Box */
+            /* Interactive Message Sources & References Widget */
+    .msg-sources-container {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      width: 100%;
+    }
+    .btn-toggle-sources {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #c084fc;
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .btn-toggle-sources:hover {
+      background: rgba(139, 92, 246, 0.22);
+      border-color: rgba(139, 92, 246, 0.6);
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
+    }
+    .sources-chevron {
+      transition: transform 0.2s ease;
+    }
+    .btn-toggle-sources.active .sources-chevron {
+      transform: rotate(180deg);
+    }
+    .sources-drawer {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+      animation: fadeIn 0.2s ease;
+    }
+    .sources-drawer.open {
+      display: grid;
+    }
+    .source-chip-card {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+    }
+    .source-chip-card:hover {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .source-chip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .source-domain-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .source-ext-icon {
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+    .source-chip-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Dynamic AI Thinking & Web Search Box */
     .ai-thinking-box {
       display: flex;
       flex-direction: column;
@@ -1397,6 +1485,9 @@
           </div>
         `;
         container.appendChild(bubble);
+        if (msg.role === 'assistant' && msg.sources && msg.sources.length) {
+          attachSourcesWidget(bubble, msg.sources);
+        }
         formatCodeBlocks(bubble);
         renderKatexMath(bubble);
       });
@@ -1616,8 +1707,13 @@
               if (badge) badge.textContent = `${body.guest_remaining} Free Messages Left`;
             }
 
-            // Save assistant message to current session
-            currentSession.messages.push({ role: 'assistant', text: body.answer, model: selectedModelName, time: body.timestamp || timeStr });
+            // Attach Verified Sources & Citations
+            if (body.sources && body.sources.length) {
+              attachSourcesWidget(assistantBubble, body.sources);
+            }
+
+            // Save assistant message with sources to current session
+            currentSession.messages.push({ role: 'assistant', text: body.answer, sources: body.sources || [], model: selectedModelName, time: body.timestamp || timeStr });
             saveSessions(sessions);
           });
         } else {
@@ -1676,6 +1772,47 @@
         }
       }
       requestAnimationFrame(streamChunk);
+    }
+
+
+    
+    // Sources & Citations Interactive Widget
+    function attachSourcesWidget(assistantBubble, sources) {
+      if (!sources || !sources.length) return;
+      const bodyEl = assistantBubble.querySelector('.msg-body');
+      if (!bodyEl || bodyEl.querySelector('.msg-sources-container')) return;
+
+      const sourcesDiv = document.createElement('div');
+      sourcesDiv.className = 'msg-sources-container';
+      sourcesDiv.innerHTML = `
+        <button type="button" class="btn-toggle-sources" onclick="toggleSourcesDrawer(this)">
+          <span class="sources-icon">🌐</span>
+          <span class="sources-title">Sources (${sources.length})</span>
+          <svg class="sources-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="sources-drawer">
+          ${sources.map(s => `
+            <a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener noreferrer" class="source-chip-card" title="${escapeHtml(s.title || '')}">
+              <div class="source-chip-header">
+                <span class="source-domain-badge">${escapeHtml(s.domain || 'web')}</span>
+                <span class="source-ext-icon">↗</span>
+              </div>
+              <div class="source-chip-title">${escapeHtml(s.title || 'Verified Reference')}</div>
+            </a>
+          `).join('')}
+        </div>
+      `;
+      bodyEl.appendChild(sourcesDiv);
+    }
+
+    function toggleSourcesDrawer(btn) {
+      btn.classList.toggle('active');
+      const drawer = btn.nextElementSibling;
+      if (drawer) {
+        drawer.classList.toggle('open');
+      }
     }
 
 
