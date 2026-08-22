@@ -305,15 +305,23 @@
                     </div>
                 </div>
 
-                <!-- TOOL 2: DIGITAL ISBN-13 BARCODE GENERATOR -->
-                <div class="tool-card">
+                <!-- TOOL 2: OFFICIAL ISBN / SBIN GLOBAL VALIDITY & REGISTRY VERIFIER -->
+                <div class="tool-card" style="border: 2px solid #fdba74;">
                     <div>
-                        <h3><span>🏷️</span> Digital ISBN-13 Generator</h3>
-                        <p>Validate and generate official standard ISBN-13 check-digits for physical and ebook publishing.</p>
-                        <input type="text" id="isbnPrefix" value="978-93" placeholder="Country / Publisher Prefix (e.g. 978-93)">
-                        <input type="text" id="isbnBookCode" placeholder="6-digit Title Code (e.g. 849201)">
-                        <button type="button" onclick="generateISBN()" class="btn-tool">Calculate Valid ISBN-13</button>
-                        <div id="isbnOutput" class="result-box" style="display: none; font-family: monospace; font-size: 1.1rem; font-weight: 800; text-align: center; color: #ea580c;"></div>
+                        <h3><span>🔍</span> Global ISBN / SBIN Registry & Verifier</h3>
+                        <p>Check any 10 or 13-digit standard identifier for mathematical validity, check-digit parity, and PustakVerse library registration.</p>
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="text" id="verifySbinInput" placeholder="Enter ISBN / SBIN (e.g. 978-93-849-201-4)" style="margin: 0; font-family: monospace;">
+                            <button type="button" onclick="verifySbinHub()" class="btn-tool" style="width: auto; padding: 0 16px; background: #0284c7; white-space: nowrap;">
+                                🔍 Verify
+                            </button>
+                        </div>
+                        <div style="text-align: right; margin-bottom: 10px;">
+                            <button type="button" onclick="generateHubSBIN()" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
+                                ✨ Mint New 100% Unique Free Digital SBIN
+                            </button>
+                        </div>
+                        <div id="sbinVerifierOutput" class="result-box" style="display: none;"></div>
                     </div>
                 </div>
 

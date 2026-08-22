@@ -1269,16 +1269,32 @@
                             <textarea name="description" rows="4" placeholder="What is this book about?..." required></textarea>
                         </div>
 
-                <!-- ISBN / SBIN STANDARD BOOK IDENTIFIER -->
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="font-size: 0.85rem; font-weight: 700; color: #334155; margin: 0;">🏷️ ISBN / SBIN Number</label>
-                        <button type="button" onclick="generateFreeSBIN('upload_sbin_input')" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
-                            ✨ Generate Free Digital SBIN
-                        </button>
+                <!-- SMART ISBN / SBIN ALLOCATION SECTOR -->
+                <div class="form-group" style="margin-bottom: 18px; padding: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px;">
+                    <label style="font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>🏷️</span> Standard Book Identifier (ISBN / SBIN)
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: #334155; cursor: pointer;">
+                            <input type="radio" name="has_sbin" value="no" checked onchange="toggleUploadSBIN(this.value)">
+                            <span><strong>I do not have an ISBN/SBIN</strong> — Generate a 100% unique, globally compliant digital SBIN for free upon publishing</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: #334155; cursor: pointer;">
+                            <input type="radio" name="has_sbin" value="yes" onchange="toggleUploadSBIN(this.value)">
+                            <span><strong>I already have an ISBN / SBIN</strong> — Enter existing 10 or 13-digit standard identifier</span>
+                        </label>
                     </div>
-                    <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="e.g. 978-93-849-201-4 (Leave blank or click Generate Free)" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; font-family: monospace;">
-                    <small style="color: #64748b; font-size: 0.75rem;">If you don't have an ISBN, PustakVerse will generate a certified digital SBIN identifier for free.</small>
+
+                    <!-- Custom SBIN Input Container -->
+                    <div id="upload_custom_sbin_box" style="display: none; margin-top: 8px;">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="Enter ISBN-13 (e.g. 978-93-849-201-4) or ISBN-10" oninput="verifyInputSBIN(this.value, 'upload_sbin_status')" style="flex: 1; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 0.85rem; margin: 0;">
+                            <button type="button" onclick="generateAndSetSBIN('upload_sbin_input', 'upload_sbin_status')" style="background: #ea580c; color: white; border: none; padding: 0 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                                ✨ Generate Free
+                            </button>
+                        </div>
+                        <div id="upload_sbin_status" style="font-size: 0.78rem; font-weight: 700; margin-top: 6px;"></div>
+                    </div>
                 </div>
 
                         <!-- DRIVE-FIRST FILE & COVER INPUTS -->
@@ -2223,12 +2239,13 @@
 
                 <div class="form-group" style="margin-bottom: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="font-size: 0.85rem; font-weight: 700; color: #334155; margin: 0;">🏷️ ISBN / SBIN Number</label>
-                        <button type="button" onclick="generateFreeSBIN('edit_sbin_input')" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
-                            ✨ Generate Free SBIN
+                        <label style="font-size: 0.85rem; font-weight: 700; color: #334155; margin: 0;">🏷️ ISBN / SBIN Number (Unique)</label>
+                        <button type="button" onclick="generateAndSetSBIN('edit_sbin_input', 'edit_sbin_status')" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
+                            ✨ Generate Free Unique SBIN
                         </button>
                     </div>
-                    <input type="text" name="sbin_no" id="edit_sbin_input" placeholder="e.g. 978-93-849-201-4" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; font-family: monospace;">
+                    <input type="text" name="sbin_no" id="edit_sbin_input" placeholder="e.g. 978-93-849-201-4" oninput="verifyInputSBIN(this.value, 'edit_sbin_status')" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; font-family: monospace;">
+                    <div id="edit_sbin_status" style="font-size: 0.78rem; font-weight: 700; margin-top: 4px;"></div>
                 </div>
 
                 <!-- DRIVE-FIRST FILE & COVER EDIT INPUTS -->
