@@ -343,7 +343,48 @@
         .social-pill.li:hover { background: #0a66c2; border-color: #0a66c2; }
         .social-pill.gh:hover { background: #24292e; border-color: #24292e; }
         .social-pill.web:hover { background: var(--primary-orange); border-color: var(--primary-orange); }
-    </style>
+    
+        .mail-mini-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: opacity 0.15s;
+        }
+        .mail-mini-btn:hover { opacity: 0.85; }
+
+        /* Compose Modal */
+        .mail-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .mail-modal-box {
+            background: white;
+            border-radius: 18px;
+            max-width: 440px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            animation: popIn 0.2s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+</style>
 </head>
 <body>
 
@@ -376,21 +417,51 @@
         </div>
 
         <div class="channels-grid">
-            <a href="mailto:abhinavgiri370@gmail.com?subject=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" class="channel-card" title="Click to open your email client directly">
+            <!-- FOUNDER SUPPORT CARD -->
+            <div class="channel-card" style="cursor: pointer;" onclick="openMailOptions('abhinavgiri370@gmail.com', 'Founder Support & Direct Desk', 'PustakVerse Direct Inquiry & Founder Support')">
                 <div class="channel-icon-wrap" style="color: #ea580c; background: #fff7ed;">✉️</div>
-                <div>
-                    <span class="channel-title">Founder Support & Direct Desk</span>
-                    <span class="channel-sub">abhinavgiri370@gmail.com · Click to compose</span>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="channel-title">Founder Support & Direct Desk</span>
+                        <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; font-weight: 800;">👑 Founder</span>
+                    </div>
+                    <span class="channel-sub" style="color: #475569; font-weight: 600;">abhinavgiri370@gmail.com</span>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=abhinavgiri370@gmail.com&su=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" target="_blank" class="mail-mini-btn" style="background: #ea580c; color: white;">
+                            📨 Open in Gmail
+                        </a>
+                        <a href="mailto:abhinavgiri370@gmail.com?subject=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+                            💻 Mail App
+                        </a>
+                        <button type="button" onclick="copyEmailText('abhinavgiri370@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
+                            📋 Copy
+                        </button>
+                    </div>
                 </div>
-            </a>
+            </div>
 
-            <a href="mailto:noreply.pustakverse@gmail.com?subject=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" class="channel-card" title="Click to open your email client directly">
+            <!-- OFFICIAL HELPDESK CARD -->
+            <div class="channel-card" style="cursor: pointer;" onclick="openMailOptions('noreply.pustakverse@gmail.com', 'Official Support & Helpdesk', 'PustakVerse Helpdesk Support Request')">
                 <div class="channel-icon-wrap" style="color: #0284c7; background: #f0f9ff;">🎧</div>
-                <div>
-                    <span class="channel-title">Official Support & Helpdesk</span>
-                    <span class="channel-sub">noreply.pustakverse@gmail.com · Click to compose</span>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="channel-title">Official Support & Helpdesk</span>
+                        <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 800;">Official Desk</span>
+                    </div>
+                    <span class="channel-sub" style="color: #475569; font-weight: 600;">noreply.pustakverse@gmail.com</span>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=noreply.pustakverse@gmail.com&su=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" target="_blank" class="mail-mini-btn" style="background: #0284c7; color: white;">
+                            📨 Open in Gmail
+                        </a>
+                        <a href="mailto:noreply.pustakverse@gmail.com?subject=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+                            💻 Mail App
+                        </a>
+                        <button type="button" onclick="copyEmailText('noreply.pustakverse@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
+                            📋 Copy
+                        </button>
+                    </div>
                 </div>
-            </a>
+            </div>
 
             <a href="https://www.instagram.com/abhinavgiri45/" target="_blank" class="channel-card">
                 <div class="channel-icon-wrap" style="color: #e11d48; background: #fff1f2;">📸</div>
@@ -526,6 +597,82 @@
             {% endfor %}
         </div>
     </div>
+
+
+    <!-- EMAIL COMPOSE MODAL DIALOG -->
+    <div id="mailComposeModal" class="mail-modal-overlay" onclick="closeMailModal(event)">
+        <div class="mail-modal-box" onclick="event.stopPropagation()">
+            <div style="font-size: 2.2rem; margin-bottom: 8px;">📬</div>
+            <h3 id="modalRecipientTitle" style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Compose Message</h3>
+            <p id="modalRecipientEmail" style="font-family: monospace; font-size: 0.9rem; color: #ea580c; font-weight: 700; margin-bottom: 20px; word-break: break-all;"></p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+                <a id="modalGmailLink" href="#" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 10px; background: #ea580c; color: white; text-decoration: none; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+                    <span>📨</span> Open in Gmail (Web Browser)
+                </a>
+                <a id="modalMailtoLink" href="#" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 10px; background: #f8fafc; color: #1e293b; border: 1.5px solid #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.92rem;">
+                    <span>💻</span> Open in Default Mail App (Outlook / Mail)
+                </a>
+                <button type="button" id="modalCopyBtn" onclick="copyModalEmail()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 10px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
+                    <span>📋</span> Copy Email Address to Clipboard
+                </button>
+            </div>
+
+            <button type="button" onclick="document.getElementById('mailComposeModal').style.display='none'" style="background: none; border: none; color: #64748b; font-weight: 700; cursor: pointer; font-size: 0.85rem;">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="copyToast" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 10px 20px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        ✓ Email address copied to clipboard!
+    </div>
+
+    <script>
+        let currentModalEmail = '';
+
+        function openMailOptions(email, title, subject) {
+            currentModalEmail = email;
+            document.getElementById('modalRecipientTitle').textContent = title || 'Compose Message';
+            document.getElementById('modalRecipientEmail').textContent = email;
+
+            const encSub = encodeURIComponent(subject || 'PustakVerse Inquiry');
+            const encBody = encodeURIComponent('Hello,\n\nI am reaching out regarding PustakVerse...\n\nMy Name:\nMy Contact Info:');
+
+            document.getElementById('modalGmailLink').href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encSub}&body=${encBody}`;
+            document.getElementById('modalMailtoLink').href = `mailto:${encodeURIComponent(email)}?subject=${encSub}&body=${encBody}`;
+            
+            document.getElementById('mailComposeModal').style.display = 'flex';
+        }
+
+        function closeMailModal(e) {
+            if (e.target.id === 'mailComposeModal') {
+                document.getElementById('mailComposeModal').style.display = 'none';
+            }
+        }
+
+        function copyModalEmail() {
+            if (currentModalEmail) {
+                copyEmailText(currentModalEmail);
+                setTimeout(() => {
+                    document.getElementById('mailComposeModal').style.display = 'none';
+                }, 700);
+            }
+        }
+
+        function copyEmailText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('copyToast');
+                if (toast) {
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 2200);
+                }
+            }).catch(() => {
+                alert('Copied: ' + text);
+            });
+        }
+    </script>
 
 </body>
 </html>
