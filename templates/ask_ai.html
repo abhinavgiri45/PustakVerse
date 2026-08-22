@@ -924,15 +924,23 @@
       container.appendChild(userBubble);
       container.scrollTop = container.scrollHeight;
 
+      const selectedModelName = document.getElementById('modelSelector').options[document.getElementById('modelSelector').selectedIndex].text;
+
       // Append Assistant Thinking Bubble
       const assistantBubble = document.createElement('div');
       assistantBubble.className = 'msg-card msg-assistant';
       assistantBubble.innerHTML = `
         <div class="msg-avatar">🧠</div>
         <div class="msg-body">
-          <div class="msg-meta"><span>GranthMind AI</span><span style="color: #c084fc;">● Thinking...</span></div>
+          <div class="msg-meta">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <span>GranthMind AI</span>
+              <span style="font-size: 0.7rem; background: rgba(139, 92, 246, 0.2); color: #c084fc; padding: 1px 7px; border-radius: 8px; font-weight: 800;">${selectedModelName.split('(')[0].trim()}</span>
+            </span>
+            <span style="color: #c084fc;">● Thinking...</span>
+          </div>
           <div class="msg-content">
-            <span style="color: #94a3b8; font-style: italic;">Processing with Google AI Gateway...</span>
+            <span style="color: #94a3b8; font-style: italic;">Synthesizing response with ${selectedModelName.split('(')[0].trim()}...</span>
           </div>
         </div>
       `;

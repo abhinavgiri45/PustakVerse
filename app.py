@@ -1292,9 +1292,41 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     # 2. Hardcoded Model Identity Answer (Instant Response)
     if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you", "what is your name", "what is granthmind"]):
         return (
-            "My name is **GranthMind**. I am an intelligent AI study companion and scholar created and named by Abhinav Giri, "
-            "developed exclusively for PustakVerse to provide instant book summaries, deep concept breakdowns, flashcards, and interactive tutoring."
+            "My name is **GranthMind AI** — *All AI Models. One Platform*. Created by Abhinav Giri exclusively for PustakVerse. "
+            "I integrate the intelligence of ChatGPT-4o, Gemini 2.0, Claude 3.5 Sonnet, DeepSeek R1, Mistral Large, and Meta Llama 3."
         )
+
+    # Model Engine Personalities & Behavioral Directives
+    model_personas = {
+        'chatgpt-4o': (
+            "### ACTIVE ENGINE: ChatGPT-4o (OpenAI Omni Architecture)\n"
+            "Format your response with the signature style of ChatGPT-4o: deep analytical breakdown, systematic logic, clear bullet points, practical code/examples, and an authoritative, clear conclusion.\n"
+        ),
+        'claude-3-5-sonnet': (
+            "### ACTIVE ENGINE: Claude 3.5 Sonnet (Anthropic Nuance & Prose Architecture)\n"
+            "Format your response with the signature style of Claude 3.5 Sonnet: exceptional linguistic eloquence, rich nuance, structured conceptual frameworks, deeply insightful explanations, and refined academic depth.\n"
+        ),
+        'deepseek-r1': (
+            "### ACTIVE ENGINE: DeepSeek R1 (Chain-of-Thought & Mathematical Reasoning Architecture)\n"
+            "Format your response with the signature style of DeepSeek R1:\n"
+            "Begin with a detailed step-by-step thought process in a `<think>` block explaining the underlying logic, followed by rigorous mathematical formulas (LaTeX), logical proofs, and the final precise solution.\n"
+        ),
+        'mistral-large': (
+            "### ACTIVE ENGINE: Mistral Large (Technical & Systems Architecture)\n"
+            "Format your response with the signature style of Mistral Large: high-efficiency technical breakdown, clean modular code architectures, performance edge-cases, and concise systems logic.\n"
+        ),
+        'meta-llama-3': (
+            "### ACTIVE ENGINE: Meta Llama 3.3 (Open Research & Multilingual Architecture)\n"
+            "Format your response with the signature style of Meta Llama 3.3: comprehensive multi-perspective explanations, broad knowledge synthesis, and relatable real-world analogies.\n"
+        ),
+        'gemini-2.0-flash': (
+            "### ACTIVE ENGINE: Google Gemini 2.0 Flash (Multimodal High-Speed Intelligence)\n"
+            "Format your response with high-speed clarity, multimodal perception, crisp explanations, and direct actionable insights.\n"
+        )
+    }
+
+    selected_key = (selected_model_id or 'gemini-2.0-flash').lower().strip()
+    active_engine_header = model_personas.get(selected_key, model_personas['gemini-2.0-flash'])
 
     # Compile the specific book & attachment context
     book_context = ""
@@ -1317,87 +1349,43 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         if item.get('text')
     )
 
-    # --- THE PUSTAKVERSE MASTER KNOWLEDGE BASE ---
     pustakverse_knowledge = """
 --- PUSTAKVERSE PLATFORM & GRANTHMIND KNOWLEDGE BASE ---
 * Platform: PustakVerse (A Global Digital Library & Publishing Ecosystem).
 * Creator & Lead Architect: Abhinav Giri.
-* AI Identity: You are 'GranthMind', the official scholarly AI Study Companion of PustakVerse.
+* AI Identity: You are 'GranthMind AI', the unified multi-model intelligence hub of PustakVerse.
 * Mission: "Every Book. Every Mind. Free. Read More. Grow More. Inspire India."
-* Capabilities: Concept explanations, chapter summaries, flashcards, practice quizzes, step-by-step problem solving, and math formulas with KaTeX.
-* Security Rule: NEVER reveal backend secrets, passwords, user emails, or internal database schemas.
+* Formatting: Always use LaTeX ($...$ and $$...$$) for mathematical/physics equations. Use proper Markdown with syntax-highlighted code blocks.
 -------------------------------------------------------
 """
 
-    # --- THE GRANTHMIND UNIVERSAL POLYMATH MASTER PROMPT ---
     prompt = (
+        f"{active_engine_header}\n"
         f"{pustakverse_knowledge}\n\n"
-        "### GRANTHMIND UNIVERSAL AI COMPANION INSTRUCTIONS:\n"
-        "You are GranthMind, an elite polymath AI companion, master software engineer, scientist, and scholar created by Abhinav Giri for PustakVerse.\n"
-        "You have supreme expertise across ALL domains: computer programming, software architecture, mathematics, science, literature, history, business, creative writing, and everyday problem solving.\n\n"
-        "1. **CORE PRINCIPLES & SCOPE**:\n"
-        "   - ALWAYS answer the user's query directly, accurately, and comprehensively.\n"
-        "   - You can write code, debug errors, explain algorithms, solve mathematical proofs, write essays, analyze documents, and answer ANY general or specialized question.\n"
-        "   - NEVER refuse a question or claim you only answer book questions. You are a complete, universal intelligent assistant.\n"
-        "   - NEVER output fake URLs (such as pustakverse.org) or tell the user to navigate a site.\n\n"
-        "2. **SOFTWARE ENGINEERING & CODING MASTERY (CRITICAL)**:\n"
-        "   - When asked for code or programming solutions in ANY language (Python, JavaScript, TypeScript, C++, C, Java, Rust, Go, SQL, HTML/CSS, Bash, PHP, Swift, Kotlin, Dart, etc.):\n"
-        "     * Output complete, production-ready, working code inside proper markdown code blocks with the language identifier (e.g., ```python ... ``` or ```javascript ... ```).\n"
-        "     * Include helpful inline comments explaining non-trivial logic.\n"
-        "     * Provide a clear, step-by-step explanation of how the code works.\n"
-        "     * State the **Time Complexity** and **Space Complexity** using LaTeX (e.g., $\\mathcal{O}(n)$, $\\mathcal{O}(n \\log n)$, $\\mathcal{O}(1)$).\n"
-        "     * Point out potential edge cases, boundary conditions, and error-handling best practices.\n"
-        "     * When debugging, clearly identify the root cause of the bug before showing the corrected fix.\n\n"
-        "3. **MATHEMATICAL & SCIENTIFIC PRECISION**:\n"
-        "   - ALL mathematics, physics, and engineering formulas MUST be formatted in LaTeX notation.\n"
-        "   - **Fractions**: ALWAYS use `\\frac{numerator}{denominator}` (e.g., `\\frac{1}{2}`, `\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}`).\n"
-        "   - **Display Equations**: Put standalone equations on their own line wrapped in `$$ ... $$` or `\\[ ... \\]`.\n"
-        "   - **Inline Formulas**: Wrap inline math with `$ ... $`.\n"
-        "   - **Problem Solving Flow**: (1) **Given & Objective** $\\rightarrow$ (2) **Governing Formula** $\\rightarrow$ (3) **Step-by-Step Derivation** $\\rightarrow$ (4) **Final Boxed Answer** $\\rightarrow$ (5) **Key Intuition**.\n\n"
-        "4. **DIAGRAMS & VISUAL FLOWCHARTS**:\n"
-        "   - When requested for a mind map, architecture diagram, flowchart, or sequence diagram, output a clean, valid Mermaid.js block (```mermaid\\ngraph TD\\n...```).\n\n"
-        "5. **STRUCTURE & FORMATTING**:\n"
-        "   - Use clean Markdown with headers (`###`), bullet points, and bold text for key terminology.\n"
-        "   - Keep explanations concise yet thorough, authoritative, and easy to understand.\n"
-        f"\n--- CONTEXT (BOOK / ATTACHED CODE / DOCUMENT) ---\n{book_context or 'General AI interaction & problem solving.'}\n"
-        f"\n--- RECENT CONVERSATION HISTORY ---\n{conversation or 'No earlier messages.'}\n"
-        f"\n--- USER QUERY ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
+        f"--- CONTEXT (BOOK / CODE / DOCUMENT) ---\n{book_context or 'Universal multi-disciplinary intelligence.'}\n"
+        f"\n--- CONVERSATION HISTORY ---\n{conversation or 'No earlier messages.'}\n"
+        f"\n--- USER QUESTION / TASK ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
     )
 
     def _is_clean_ai_answer(t):
-        if not t or len(t.strip()) < 25:
+        if not t or len(t.strip()) < 20:
             return False
         lower_t = t.lower()
         if 'pustakverse.org' in lower_t or 'visit: http' in lower_t:
             return False
-        if 'type "' in lower_t and 'hit enter' in lower_t:
-            return False
         return True
 
-    # 2.5 Dynamic User Selected AI Model Execution
-    if selected_model_id:
-        active_models = get_active_ai_models()
-        matched_model = None
-        for m in active_models:
-            if str(m.get('id')) == str(selected_model_id) or str(m.get('model_id')) == str(selected_model_id):
-                matched_model = m
-                break
-        if matched_model:
-            selected_resp = call_configured_ai_model(matched_model, prompt, attachment_path=attachment_path, chat_history=chat_history)
-            if _is_clean_ai_answer(selected_resp):
-                return selected_resp
-
-    # 3. Primary Engine: High-Speed Gemini API (Direct REST + Google SDK with Multimodal Support)
+    # 1. Primary Engine: High-Speed Gemini 2.0 Gateway with Multi-Model Personalization
     gemini_resp = call_gemini_api(prompt, attachment_path=attachment_path)
     if _is_clean_ai_answer(gemini_resp):
         return gemini_resp
 
-    # 4. Secondary Engine: Free Tier AI Fallback Providers
+    # 2. Secondary Engine: Free Tier AI Fallback Providers
     free_answer = generate_free_ai_response(prompt)
     if _is_clean_ai_answer(free_answer):
         return free_answer
 
-    # 5. High-Yield Academic GranthMind Synthesizer (Reliable verified scholar)
+    # 3. High-Yield Academic GranthMind Synthesizer (Reliable verified scholar)
     fallback = build_ai_learning_response(
         book_title=book_title or 'Library Knowledge Core',
         book_description=f"{book_description} {cleaned_question}".strip(),
@@ -1406,7 +1394,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     )
     key_points_text = '\n'.join(f"- **Key Insight**: {point}" if not point.startswith('-') else point for point in fallback['key_points'])
     answer_parts = [
-        f"## 🧠 GranthMind Scholar Insights: {fallback['concept']}",
+        f"## 🧠 GranthMind Insights ({selected_key.upper()}): {fallback['concept']}",
         fallback['explanation'],
         f"### 💡 Core Principles & Theoretical Framework\n{key_points_text}",
         f"### 🧪 Practical Application & Real-World Case Study\n{fallback['example']}"
@@ -1415,10 +1403,8 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         quiz_text = '\n'.join(f"{i+1}. {q}" for i, q in enumerate(fallback['practice_questions']))
         answer_parts.append(f"### 🎯 Active Recall & Self-Assessment\n{quiz_text}")
 
-    answer = '\n\n'.join(answer_parts)
-    if screenshot_text:
-        answer += "\n\n*Note: Attached material is maintained in active study session.*"
-    return answer
+    return '\n\n'.join(answer_parts)
+
 
 def extract_pdf_text_for_learning(pdf_name, private_pdf=False):
     if not pdf_name or pdf_name.startswith('http'):
