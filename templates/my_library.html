@@ -6,10 +6,13 @@
     <title>My Library - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <script>
         (function() {
             try {
-                const theme = localStorage.getItem('pustakverse_theme') || 'light';
+                const theme = localStorage.getItem('pustakverse_theme') || 'dark';
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark-theme');
                 } else if (theme === 'sepia') {
@@ -19,397 +22,502 @@
         })();
     </script>
     <style>
-        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
-        
-        .navbar-brand img, .logo-img { 
-            height: 48px; 
+        :root {
+            --bg-page: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-card: #182234;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #f97316;
+            --accent-purple: #8b5cf6;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* Navbar Header */
+        .lib-navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px clamp(16px, 4vw, 40px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .lib-nav-brand img {
+            height: 42px;
             width: auto;
-            max-width: 220px;
-            background: transparent; 
-            padding: 0; 
-            border-radius: 8px; 
-            object-fit: contain; 
+            object-fit: contain;
             display: block;
         }
-        
-        .navbar-links { 
-            display: flex; 
-            gap: 16px; 
-            align-items: center; 
-            margin-left: auto; 
+
+        .lib-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        
-        .navbar-links a { 
-            color: white; 
-            text-decoration: none; 
-            font-weight: 600; 
-            font-size: 1rem; 
-            transition: 0.2s; 
-            padding: 12px 16px; 
-            min-height: 48px; 
-            display: inline-flex; 
-            align-items: center; 
-            box-sizing: border-box; 
+
+        .lib-nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 8px 14px;
+            border-radius: 10px;
+            transition: all 0.2s;
         }
-        
-        .navbar-links a:hover { 
-            color: #f66d2f; 
+
+        .lib-nav-links a:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.06);
         }
-        
-        .hero-section { 
-            background: #1a202c; 
-            color: white; 
-            padding: 50px 20px 80px; 
-            text-align: center; 
-            border-bottom: 4px solid #f66d2f; 
+
+        .btn-granthmind-nav {
+            background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        /* Hero Banner */
+        .lib-hero {
+            padding: 40px clamp(16px, 4vw, 40px) 20px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        .lib-hero-title {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0 0 6px;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .lib-hero-sub {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin: 0 0 24px;
+        }
+
+        /* Unified Reading Habit & Streak Card */
+        .habit-control-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            margin-bottom: 24px;
+        }
+
+        .habit-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .streak-flame-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: rgba(249, 115, 22, 0.12);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            display: grid;
+            place-items: center;
+            font-size: 1.7rem;
+            flex-shrink: 0;
+        }
+
+        .streak-title {
+            font-size: 1.18rem;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 2px;
+        }
+
+        .streak-desc {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .habit-goal-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 12px;
+        }
+
+        .habit-goal-select {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.82rem;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+        }
+        .habit-goal-select option {
+            background: #0f172a;
+            color: white;
+        }
+
+        .btn-goal-save {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .btn-goal-save:hover { transform: scale(1.05); }
+
+        .btn-study-notes {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            color: #c084fc;
+            padding: 9px 18px;
+            border-radius: 14px;
+            font-size: 0.84rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-study-notes:hover {
+            background: var(--accent-purple);
+            color: white;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Unified Controls Bar: Search & Shelf Filters */
+        .lib-controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .shelf-tabs-group {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .shelf-tabs-group::-webkit-scrollbar { display: none; }
+
+        .shelf-tab-btn {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 18px;
+            border-radius: 24px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shelf-tab-btn:hover {
+            color: white;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .shelf-tab-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .lib-search-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 340px;
+        }
+
+        .lib-search-input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.88rem;
+            width: 100%;
+            outline: none;
+        }
+        .lib-search-input::placeholder { color: #64748b; }
+
+        /* Book Grid Layout */
+        .lib-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 clamp(16px, 4vw, 40px) 40px;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 20px;
+        }
+
+        .book-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .book-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.35);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .book-cover {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            background: #1e293b;
+            display: block;
+        }
+
+        .book-info {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .book-tag-row {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            gap: 18px;
-        }
-        
-        .hero-section h1 { 
-            margin: 0; 
-            font-size: 2.5rem; 
-            letter-spacing: -0.5px; 
-        }
-        
-        .hero-section p { 
-            font-size: 1.1rem; 
-            color: #cbd5e1; 
-            margin: 0; 
-            max-width: 740px;
-            line-height: 1.6;
+            margin-bottom: 6px;
         }
 
-        .search-container { 
-            width: 100%; 
-            max-width: 760px; 
-            margin: 30px auto 0 auto; 
-            display: flex; 
-            align-items: center; 
-            background: white; 
-            border-radius: 32px; 
-            padding: 10px 18px; 
-            box-shadow: 0 18px 35px rgba(0,0,0,0.14); 
-            border: 1px solid rgba(15,23,42,0.08);
+        .book-tag {
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .search-container input { 
-            flex: 1; 
-            border: none; 
-            outline: none; 
-            padding: 16px 14px; 
-            font-size: 1.05rem; 
-            color: #1e293b; 
-            background: transparent; 
+        .shelf-dropdown {
+            font-size: 0.72rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 2px 6px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+        }
+        .shelf-dropdown option { background: #0f172a; color: white; }
+
+        .book-title {
+            font-size: 0.98rem;
+            font-weight: 800;
+            line-height: 1.3;
+            margin: 0 0 4px;
+            color: white;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .book-title a { color: inherit; text-decoration: none; }
+        .book-title a:hover { color: var(--accent); }
+
+        .book-author {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 0 0 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .search-container input::placeholder { 
-            color: #64748b; 
-            opacity: 1; 
+        .book-actions {
+            margin-top: auto;
+            display: flex;
+            gap: 8px;
         }
 
-        .icon-btn { 
-            background: none; 
-            border: none; 
-            cursor: pointer; 
-            color: #334155; 
-            min-width: 50px; 
-            min-height: 50px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: 0.2s; 
-            padding: 0; 
+        .btn-read-full {
+            flex: 1;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-align: center;
+            transition: opacity 0.15s;
+        }
+        .btn-read-full:hover { opacity: 0.9; }
+
+        .btn-invoice {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            color: white;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
         }
 
-        .icon-btn:hover { 
-            color: #f66d2f; 
-            transform: scale(1.1); 
-        }
-
-        .container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 40px; 
-        }
-        
-        .book-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
-            gap: 25px; 
-        }
-        
-        .book-card { 
-            background: white; 
-            border-radius: 10px; 
-            overflow: hidden; 
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            border: 1px solid #e2e8f0; 
-            transition: transform 0.2s; 
-        }
-        
-        .book-card:hover { 
-            transform: translateY(-5px); 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
-        }
-        
-        .book-cover { 
-            width: 100%; 
-            height: auto; 
-            aspect-ratio: 250 / 320; 
-            object-fit: cover; 
-            background: #e2e8f0; 
-            display: block; 
-            transition: opacity 0.2s; 
-        }
-        
-        .book-cover-link:hover .book-cover { 
-            opacity: 0.85; 
-        }
-        
-        .book-info { 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            flex: 1; 
-        }
-        
-        .book-tag { 
-            color: #f66d2f; 
-            font-size: 0.85rem; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            margin-bottom: 8px; 
-        }
-        
-        .book-title { 
-            font-size: 1.15rem; 
-            color: #1e293b; 
-            margin: 0 0 5px 0; 
-            font-weight: bold; 
-            line-height: 1.3; 
-        }
-        
-        .book-title a { 
-            color: inherit; 
-            text-decoration: none; 
-        }
-        
-        .book-title a:hover { 
-            color: #f66d2f; 
-        }
-        
-        .book-author { 
-            font-size: 1rem; 
-            color: #334155; 
-            margin: 0 0 10px 0; 
-        }
-        
-        .book-actions { 
-            display: flex; 
-            gap: 12px; 
-            margin-top: auto; 
-        }
-        
-        .btn { 
-            flex: 1; 
-            padding: 12px 0; 
-            min-height: 48px; 
-            text-align: center; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            font-size: 1rem; 
-            cursor: pointer; 
-            border: none; 
-            transition: 0.2s; 
-            text-decoration: none; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            box-sizing: border-box; 
-        }
-        
-        .btn:hover { 
-            opacity: 0.85; 
-        }
-        
-        .btn-read { 
-            background-color: #2d3748; 
-            color: white; 
-        }
-
-        .flash { 
-            padding: 15px; 
-            border-radius: 6px; 
-            margin-bottom: 20px; 
-            text-align: center; 
-            font-weight: 500; 
-        }
-        
-        .flash.success { background: #dcfce7; color: #166534; } 
-        .flash.error { background: #fee2e2; color: #991b1b; } 
-
-        .no-results { 
-            display: none; 
-            text-align: center; 
-            grid-column: 1 / -1; 
-            padding: 40px 0; 
-        }
-
-        .no-results h2 { 
-            color: #1e293b; 
-            margin-bottom: 10px; 
-            font-size: 1.8rem; 
-        }
-
-        .no-results p { 
-            color: #334155; 
+        /* Empty & No results states */
+        .no-results, .empty-library-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
         }
 
         @media (max-width: 768px) {
-            .navbar { flex-direction: column; padding: 15px; }
-            .navbar-links { width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-            .container { padding: 20px; }
-            .book-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-            .book-actions { flex-direction: column; }
+            .habit-control-card {
+                grid-template-columns: 1fr;
+                gap: 14px;
+                padding: 16px;
+            }
+            .habit-goal-form { width: 100%; justify-content: space-between; }
+            .btn-study-notes { width: 100%; justify-content: center; }
+            .lib-search-box { max-width: 100%; }
+            .book-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px !important;
+            }
+            .lib-navbar { padding: 10px 16px; }
+            .lib-nav-links { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
-
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <a href="/" aria-label="PustakVerse">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse Logo" class="logo-img" style="height: 48px; width: auto; object-fit: contain;">
+    <!-- NAVBAR HEADER -->
+    <header class="lib-navbar">
+        <div class="lib-nav-brand">
+            <a href="/" aria-label="PustakVerse Home">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img">
             </a>
         </div>
-        <div class="navbar-links" style="display: flex; align-items: center; gap: 12px;">
-            <a href="/">← Back to Library</a>
-            <a href="{{ url_for('ask_ai') }}" style="color: #c084fc; font-weight: 800;">🧠 GranthMind AI</a>
+        <div class="lib-nav-links">
+            <a href="/">← Library</a>
+            <a href="{{ url_for('ask_ai') }}" class="btn-granthmind-nav">🧠 GranthMind AI</a>
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
             <a href="{{ url_for('payment_history') }}">Payment History</a>
-            <a href="{{ url_for('logout') }}" class="btn-red btn-sm" style="color: white !important;">Logout</a>
-            <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
+            <a href="{{ url_for('logout') }}" style="color: #ef4444 !important;">Logout</a>
+            <button type="button" onclick="toggleTheme()" class="shelf-tab-btn" style="padding: 6px 12px;" title="Toggle Theme">
                 <span id="themeIcon">🌙</span>
-                <span id="themeText">Dark Mode</span>
             </button>
         </div>
-    </nav>
+    </header>
 
-    <div class="hero-section">
-        <h1>My Personal Library</h1>
-        <p>Books you have saved, purchased, or published.</p>
-    </div>
+    <!-- HERO SECTION -->
+    <div class="lib-hero">
+        <h1 class="lib-hero-title">My Personal Library</h1>
+        <p class="lib-hero-sub">Books you have saved, purchased, or are actively studying with GranthMind.</p>
 
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        
-        
-        <!-- DAILY READING GOALS & HABIT TRACKER -->
-        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 16px; padding: 20px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div style="font-size: 2.2rem; background: white; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(22,163,74,0.12); border: 1px solid #bbf7d0;">🎯</div>
+        <!-- SINGLE UNIFIED HABIT & STREAK CARD -->
+        <div class="habit-control-card">
+            <div class="habit-left">
+                <div class="streak-flame-icon">🔥</div>
                 <div>
-                    <span style="font-size: 0.75rem; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.08em;">Daily Reading Habit</span>
-                    <h3 style="margin: 2px 0 0; color: #14532d; font-size: 1.25rem; font-weight: 800;">Target: 30 Minutes Daily</h3>
-                    <p style="margin: 2px 0 0; font-size: 0.82rem; color: #166534;">Consistent reading builds sharper focus and expands your knowledge horizon.</p>
+                    <div class="streak-title"><span id="myLibStreak">1</span>-Day Reading Streak</div>
+                    <div class="streak-desc">Keep learning every day to build unstoppable reading momentum.</div>
                 </div>
             </div>
-            <form action="{{ url_for('reader_update_goals') }}" method="POST" style="display: flex; align-items: center; gap: 8px; background: white; padding: 6px 10px; border-radius: 12px; border: 1px solid #86efac;">
+
+            <form action="{{ url_for('reader_update_goals') }}" method="POST" class="habit-goal-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <span style="font-size: 0.8rem; font-weight: 700; color: #15803d;">Goal:</span>
-                <select name="daily_minutes_goal" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; background: white; font-weight: 700;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #f97316;">🎯 Target:</span>
+                <select name="daily_minutes_goal" class="habit-goal-select">
                     <option value="15">15 Mins / Day</option>
                     <option value="30" selected>30 Mins / Day</option>
                     <option value="45">45 Mins / Day</option>
                     <option value="60">1 Hour / Day</option>
                 </select>
-                <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">Save</button>
+                <button type="submit" class="btn-goal-save">Save</button>
             </form>
-        </div>
 
-        <!-- READER SHELVES & LIBRARY FILTER -->
-        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; padding: 14px 18px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px;">
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="libraryFilterPills">
-                <button type="button" onclick="filterLibraryShelf('all', this)" class="lib-shelf-btn active" style="padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: none; background: #ea580c; color: white; cursor: pointer; transition: all 0.2s;">
-                    📚 All Books ({{ books|length }})
-                </button>
-                <button type="button" onclick="filterLibraryShelf('paid', this)" class="lib-shelf-btn" style="padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s;">
-                    💎 Purchased / Premium
-                </button>
-                <button type="button" onclick="filterLibraryShelf('free', this)" class="lib-shelf-btn" style="padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s;">
-                    🆓 Saved Free Books
-                </button>
-            </div>
-            <button type="button" onclick="openReaderNotesModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 20px; font-weight: 700; font-size: 0.84rem; border: 1.5px solid #8b5cf6; background: #f5f3ff; color: #7c3aed; cursor: pointer;">
+            <button type="button" onclick="openReaderNotesModal()" class="btn-study-notes">
                 <span>📝</span> Personal Study Notes
             </button>
         </div>
 
-        <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
-            <input type="search" id="searchInput" name="search" placeholder="Search your library... (Ctrl + K)" aria-label="Search your library">
-            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice" aria-label="Search by Voice">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                </svg>
-            </button>
-        </form>
-
-        <!-- Reading Goals & Daily Streak Banner -->
-        <div class="reading-goals-banner" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 22px 28px; margin: 25px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 18px;">
-                <div style="width: 54px; height: 54px; border-radius: 50%; background: #fff7ed; border: 1.5px solid #fdba74; display: grid; place-items: center; font-size: 1.6rem;">🔥</div>
-                <div>
-                    <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; color: #ea580c; letter-spacing: 0.08em;">Reader Habit Tracker</div>
-                    <h2 style="margin: 2px 0 0; font-size: 1.3rem; color: #0f172a;"><span id="myLibStreak">1</span>-Day Reading Streak</h2>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Keep learning every day to expand your horizons!</div>
-                </div>
+        <!-- CONTROLS BAR (SHELF TABS & SEARCH) -->
+        <div class="lib-controls-bar">
+            <div class="shelf-tabs-group" id="shelfTabsContainer">
+                <button type="button" class="shelf-tab-btn active" onclick="filterByShelf('all', this)">
+                    📚 All Books ({{ saved_books|length }})
+                </button>
+                <button type="button" class="shelf-tab-btn" onclick="filterByShelf('reading', this)">
+                    📖 Currently Reading (<span id="readingShelfCount">0</span>)
+                </button>
+                <button type="button" class="shelf-tab-btn" onclick="filterByShelf('completed', this)">
+                    ✅ Completed (<span id="completedShelfCount">0</span>)
+                </button>
             </div>
-            <div style="flex: 1; min-width: 220px; max-width: 360px;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 6px;">
-                    <span>🎯 Monthly Reading Challenge</span>
-                    <span><span id="booksReadCount">{{ saved_books|length }}</span> / 5 Books</span>
-                </div>
-                <div style="height: 10px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
-                    <div id="goalProgressBar" style="height: 100%; width: {{ [(((saved_books|length) / 5) * 100)|round|int, 100]|min }}%; background: linear-gradient(90deg, #f97316, #ea580c); border-radius: 10px;"></div>
-                </div>
+
+            <div class="lib-search-box">
+                <span>🔍</span>
+                <input type="search" id="searchInput" class="lib-search-input" placeholder="Search your books, authors... (Ctrl + K)">
             </div>
         </div>
+    </div>
 
-        <!-- Shelf Filter Tabs -->
-        <div style="display: flex; justify-content: center; gap: 10px; margin: 15px 0 30px; flex-wrap: wrap;">
-            <button type="button" class="shelf-tab active" onclick="filterByShelf('all', this)" style="background: #2d3748; color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                📚 All Books ({{ saved_books|length }})
-            </button>
-            <button type="button" class="shelf-tab" onclick="filterByShelf('reading', this)" style="background: #e2e8f0; color: #1e293b; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                📖 Currently Reading (<span id="readingShelfCount">0</span>)
-            </button>
-            <button type="button" class="shelf-tab" onclick="filterByShelf('completed', this)" style="background: #e2e8f0; color: #1e293b; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                ✅ Completed (<span id="completedShelfCount">0</span>)
-            </button>
-        </div>
-
-        <div class="book-grid">
+    <!-- BOOK CATALOG GRID -->
+    <main class="lib-container">
+        <div class="book-grid" id="bookGrid">
             {% for book in saved_books %}
             <div class="book-card" id="bookCard_{{ book.id }}" data-book-id="{{ book.id }}" data-title="{{ book.title | escape | lower }}" data-author="{% if book.author_role == 'developer' %}developer{% else %}{{ book.author_name | escape | lower }}{% endif %}" data-catalog="{{ book.catalog | escape | lower }}">
                 
                 {% set cover = book.cover_image %}
-                
-                <a href="{{ url_for('view_book', book_id=book.id) }}" class="book-cover-link" style="display: block;">
+                <a href="{{ url_for('view_book', book_id=book.id) }}" style="display: block;">
                     {% if cover.startswith('http') %}
                         <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
                     {% else %}
@@ -418,9 +526,9 @@
                 </a>
 
                 <div class="book-info">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div class="book-tag">{{ book.catalog }}</div>
-                        <select onchange="updateShelfStatus({{ book.id }}, this.value)" id="shelfSelect_{{ book.id }}" style="font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; background: #f8fafc; color: #334155; font-weight: 600; cursor: pointer;">
+                    <div class="book-tag-row">
+                        <span class="book-tag">{{ book.catalog }}</span>
+                        <select onchange="updateShelfStatus({{ book.id }}, this.value)" id="shelfSelect_{{ book.id }}" class="shelf-dropdown">
                             <option value="saved">📑 Saved</option>
                             <option value="reading">📖 Reading</option>
                             <option value="completed">✅ Done</option>
@@ -430,14 +538,10 @@
                     <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
-                    <p style="color: #64748b; font-size: 0.85em; margin-bottom: 16px;">
-                        Added: <strong>{{ (book.added_at or book.created_at) | to_ist }}</strong>
-                    </p>
-                    
-                    <div class="book-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Read Full Book</a>
+                    <div class="book-actions">
+                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn-read-full">Read Book</a>
                         {% if book.order_id %}
-                        <a href="/invoice/{{ book.order_id }}" target="_blank" class="btn" style="background: #0f172a; color: white; padding: 10px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px; text-decoration: none;" title="Download Purchase Tax Invoice">
+                        <a href="/invoice/{{ book.order_id }}" target="_blank" class="btn-invoice" title="Download Tax Invoice">
                             📄 Invoice
                         </a>
                         {% endif %}
@@ -445,20 +549,39 @@
                 </div>
             </div>
             {% else %}
-                <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
-                    <h2 style="color: #334155;">Your library is currently empty.</h2>
-                    <p style="color: #64748b; margin-bottom: 20px;">Head over to the Global Library to find your next great read!</p>
-                    <a href="/" style="display: inline-block; background: #f66d2f; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 6px;">Browse Books</a>
+                <div class="empty-library-state">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">📚</div>
+                    <h2 style="color: white; margin-bottom: 8px;">Your library is currently empty.</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 22px;">Head over to the Global Library to explore thousands of free books and research papers!</p>
+                    <a href="/" style="display: inline-block; background: var(--accent); color: white; padding: 12px 28px; text-decoration: none; font-weight: 800; border-radius: 12px;">Browse Global Library</a>
                 </div>
             {% endfor %}
 
-            <div class="no-results" id="noResultsMsg">
-                <h2>No matches found in this shelf.</h2>
-                <p>Try searching for a different title, author, or category.</p>
+            <div class="no-results" id="noResultsMsg" style="display: none;">
+                <div style="font-size: 2.4rem; margin-bottom: 8px;">🔍</div>
+                <h3 style="color: white; margin: 0 0 6px;">No matches found in this shelf</h3>
+                <p style="color: var(--text-muted); margin: 0;">Try searching for a different title or author keyword.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- PERSONAL STUDY NOTES MODAL -->
+    <div id="readerNotesModal" style="display: none; position: fixed; inset: 0; background: rgba(9, 13, 22, 0.85); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 20px; max-width: 580px; width: 100%; padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; color: white; display: flex; align-items: center; gap: 8px;">
+                    <span>📝</span> Personal Study Notes
+                </h3>
+                <button type="button" onclick="closeReaderNotesModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+            </div>
+            <textarea id="personalNotesArea" placeholder="Jot down notes, exam key points, formulas, or book reflections..." style="width: 100%; height: 220px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; color: white; font-family: inherit; font-size: 0.92rem; resize: none; outline: none; box-sizing: border-box;"></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+                <button type="button" onclick="savePersonalNotes()" style="background: var(--accent-purple); color: white; border: none; padding: 9px 20px; border-radius: 10px; font-weight: 800; cursor: pointer;">Save Notes</button>
             </div>
         </div>
     </div>
 
+    <!-- SCRIPT LOGIC -->
     <script>
         let currentShelf = 'all';
 
@@ -497,16 +620,8 @@
 
         function filterByShelf(shelf, btn) {
             currentShelf = shelf;
-            document.querySelectorAll('.shelf-tab').forEach(t => {
-                t.style.background = '#e2e8f0';
-                t.style.color = '#1e293b';
-                t.classList.remove('active');
-            });
-            if (btn) {
-                btn.style.background = '#2d3748';
-                btn.style.color = 'white';
-                btn.classList.add('active');
-            }
+            document.querySelectorAll('.shelf-tab-btn').forEach(t => t.classList.remove('active'));
+            if (btn) btn.classList.add('active');
             filterBooks();
         }
 
@@ -544,209 +659,46 @@
             if (streakEl) streakEl.textContent = streak;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initShelfStatuses();
-            updateStreakDisplay();
-        });
-
-        const searchInput = document.getElementById('searchInput');
-        const searchForm = document.getElementById('searchForm');
-        const micBtn = document.getElementById('micBtn');
-
-        if (searchInput) {
-            searchInput.addEventListener('keyup', filterBooks);
-        }
-
-        if (searchForm) {
-            searchForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                filterBooks();
-                searchInput.blur();
-            });
-        }
-
-        if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
-
-            micBtn.addEventListener('click', () => {
-                recognition.start();
-                micBtn.style.color = '#f66d2f';
-                micBtn.style.transform = 'scale(1.2)';
-                searchInput.placeholder = 'Listening...';
-            });
-
-            recognition.onresult = (event) => {
-                searchInput.value = event.results[0][0].transcript;
-                filterBooks();
-            };
-
-            recognition.onerror = () => {
-                resetMic();
-            };
-
-            recognition.onend = () => {
-                resetMic();
-            };
-
-            function resetMic() {
-                micBtn.style.color = '#334155';
-                micBtn.style.transform = 'scale(1)';
-                searchInput.placeholder = 'Search your library...';
-            }
-        } else if (micBtn) {
-            micBtn.style.display = 'none';
-        }
-
-        // Multi-Theme Controller
-        function applyTheme(theme) {
-            document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-            document.body.classList.remove('dark-theme', 'sepia-theme');
-            const icon = document.getElementById('themeIcon');
-            const text = document.getElementById('themeText');
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark-theme');
-                document.body.classList.add('dark-theme');
-                if (icon) icon.textContent = '🌙';
-                if (text) text.textContent = 'Dark Mode';
-            } else if (theme === 'sepia') {
-                document.documentElement.classList.add('sepia-theme');
-                document.body.classList.add('sepia-theme');
-                if (icon) icon.textContent = '📜';
-                if (text) text.textContent = 'Sepia Mode';
-            } else {
-                if (icon) icon.textContent = '☀️';
-                if (text) text.textContent = 'Light Mode';
-            }
-            try { localStorage.setItem('pustakverse_theme', theme); } catch(e) {}
-        }
-        function toggleTheme() {
-            const current = localStorage.getItem('pustakverse_theme') || 'light';
-            const next = current === 'light' ? 'dark' : (current === 'dark' ? 'sepia' : 'light');
-            applyTheme(next);
-        }
-        (function() {
-            const saved = localStorage.getItem('pustakverse_theme') || 'light';
-            applyTheme(saved);
-        })();
-
-        // Scroll Progress Bar
-        window.addEventListener('scroll', function() {
-            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const scrolled = (winScroll / height) * 100;
-            const bar = document.getElementById('myBar');
-            if (bar) bar.style.width = scrolled + '%';
-        });
-    </script>
-
-    
-
-
-    <!-- READER NOTES & ANNOTATION JOURNAL MODAL -->
-    <div id="readerNotesModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 99999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px);">
-        <div style="background: white; border-radius: 20px; width: 100%; max-width: 620px; padding: 26px; box-shadow: 0 25px 60px rgba(0,0,0,0.25); border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
-                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                    <span>📝</span> Personal Reading Notes & Highlights
-                </h3>
-                <button type="button" onclick="closeReaderNotesModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
-            </div>
-            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 12px;">Save thoughts, memorable quotes, and study takeaways from your library books.</p>
-            <div style="margin-bottom: 12px;">
-                <select id="notesBookSelector" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; background: white;" onchange="loadBookNote()">
-                    <option value="general">📓 General Reading Journal</option>
-                    {% for b in books %}
-                    <option value="book_{{ b.id }}">{{ b.title }} (by {{ b.author_name }})</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <textarea id="readerNotesText" rows="7" placeholder="Write your thoughts, key insights, or favorite quotes here..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem; font-family: inherit; box-sizing: border-box; resize: vertical; line-height: 1.5;"></textarea>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px;">
-                <span id="notesSavedIndicator" style="font-size: 0.78rem; color: #16a34a; font-weight: 700;"></span>
-                <div style="display: flex; gap: 8px;">
-                    <button type="button" onclick="copyReaderNotes()" class="btn-sm btn-dark" style="padding: 7px 14px; font-size: 0.82rem; cursor: pointer;">📋 Copy Notes</button>
-                    <button type="button" onclick="saveReaderNote()" class="btn-sm btn-green" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">💾 Save Notes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Library Shelf Filtering
-        function filterLibraryShelf(type, btn) {
-            document.querySelectorAll('.lib-shelf-btn').forEach(b => {
-                b.style.background = '#f8fafc';
-                b.style.color = '#334155';
-                b.style.border = '1px solid #cbd5e1';
-            });
-            if (btn) {
-                btn.style.background = '#ea580c';
-                btn.style.color = 'white';
-                btn.style.border = 'none';
-            }
-
-            const cards = document.querySelectorAll('.book-card');
-            let count = 0;
-            cards.forEach(card => {
-                const isPaid = card.querySelector('.btn-green, [href*="invoice"]') !== null;
-                let show = true;
-                if (type === 'paid') {
-                    show = isPaid;
-                } else if (type === 'free') {
-                    show = !isPaid;
-                }
-                card.style.display = show ? 'flex' : 'none';
-                if (show) count++;
-            });
-        }
-
-        // Reader Notes Management
         function openReaderNotesModal() {
             const m = document.getElementById('readerNotesModal');
             if (m) {
                 m.style.display = 'flex';
-                loadBookNote();
+                document.getElementById('personalNotesArea').value = localStorage.getItem('pv_personal_notes') || '';
             }
         }
+
         function closeReaderNotesModal() {
             const m = document.getElementById('readerNotesModal');
             if (m) m.style.display = 'none';
         }
-        function loadBookNote() {
-            const bookKey = document.getElementById('notesBookSelector').value;
-            const textEl = document.getElementById('readerNotesText');
-            const saved = localStorage.getItem('pv_note_' + bookKey) || '';
-            if (textEl) textEl.value = saved;
-            const ind = document.getElementById('notesSavedIndicator');
-            if (ind) ind.textContent = saved ? '✓ Notes loaded' : '';
-        }
-        function saveReaderNote() {
-            const bookKey = document.getElementById('notesBookSelector').value;
-            const text = document.getElementById('readerNotesText').value;
-            localStorage.setItem('pv_note_' + bookKey, text);
-            const ind = document.getElementById('notesSavedIndicator');
-            if (ind) {
-                ind.textContent = '✓ Saved successfully!';
-                setTimeout(() => { ind.textContent = ''; }, 3000);
-            }
-        }
-        function copyReaderNotes() {
-            const text = document.getElementById('readerNotesText').value;
-            if (text) {
-                navigator.clipboard.writeText(text).then(() => {
-                    const ind = document.getElementById('notesSavedIndicator');
-                    if (ind) {
-                        ind.textContent = '📋 Copied to clipboard!';
-                        setTimeout(() => { ind.textContent = ''; }, 3000);
-                    }
-                });
-            }
-        }
-    </script>
 
+        function savePersonalNotes() {
+            const val = document.getElementById('personalNotesArea').value;
+            localStorage.setItem('pv_personal_notes', val);
+            closeReaderNotesModal();
+            alert('✓ Notes saved securely in your browser!');
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark-theme');
+            localStorage.setItem('pustakverse_theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').textContent = isDark ? '🌙' : '☀️';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initShelfStatuses();
+            updateStreakDisplay();
+            const sInput = document.getElementById('searchInput');
+            if (sInput) sInput.addEventListener('keyup', filterBooks);
+        });
+
+        // Global hotkey to focus search
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                document.getElementById('searchInput')?.focus();
+            }
+        });
+    </script>
 </body>
 </html>
