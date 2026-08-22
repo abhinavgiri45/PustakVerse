@@ -2251,6 +2251,21 @@ def ensure_payment_schema():
                 ))
         except Exception: pass
 
+        
+        # ---> EXECUTIVE LEADERSHIP SOCIAL MEDIA EXTENSIONS <---
+        for col_def in [
+            ("instagram_id", "VARCHAR(255) DEFAULT NULL"),
+            ("x_id", "VARCHAR(255) DEFAULT NULL"),
+            ("linkedin_id", "VARCHAR(255) DEFAULT NULL"),
+            ("github_id", "VARCHAR(255) DEFAULT NULL"),
+            ("website_url", "VARCHAR(500) DEFAULT NULL")
+        ]:
+            try:
+                cursor.execute(f"SHOW COLUMNS FROM leadership_team LIKE '{col_def[0]}'")
+                if not cursor.fetchone():
+                    cursor.execute(f"ALTER TABLE leadership_team ADD COLUMN {col_def[0]} {col_def[1]}")
+            except Exception: pass
+
         # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
         # 1. Reader: Personal Notes & Highlights
         cursor.execute("CREATE TABLE IF NOT EXISTS user_notes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, note_text TEXT NOT NULL, page_number INT DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
@@ -7080,9 +7095,14 @@ def developer_add_leadership():
     name = request.form.get('name', '').strip()
     role_title = request.form.get('role_title', '').strip()
     email = request.form.get('email', '').strip()
-    phone = request.form.get('phone', '').strip()
+    phone = request.form.get('phone', '').strip() or None
     address = request.form.get('address', '').strip()
     bio = request.form.get('bio', '').strip()
+    instagram_id = request.form.get('instagram_id', '').strip() or None
+    x_id = request.form.get('x_id', '').strip() or None
+    linkedin_id = request.form.get('linkedin_id', '').strip() or None
+    github_id = request.form.get('github_id', '').strip() or None
+    website_url = request.form.get('website_url', '').strip() or None
     photo_url = request.form.get('photo_url', '').strip()
     photo_file = request.files.get('photo_file')
     is_founder = request.form.get('is_founder') == 'on'
@@ -7092,8 +7112,8 @@ def developer_add_leadership():
     except (ValueError, TypeError):
         display_order = 10
 
-    if not name or not role_title or not email or not phone:
-        flash('Please provide Full Name, Role Title, Email, and Phone Number.', 'error')
+    if not name or not role_title or not email:
+        flash('Please provide Full Name, Role Title, and Email ID (Phone & Social IDs are optional).', 'error')
         return redirect(url_for('dashboard'))
 
     final_photo = 'PustakVerse.png'
@@ -7110,9 +7130,9 @@ def developer_add_leadership():
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            INSERT INTO leadership_team (name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
-        """, (name, role_title, email, phone, address, final_photo, bio, is_founder, display_order))
+            INSERT INTO leadership_team (name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s, %s, %s, %s, %s)
+        """, (name, role_title, email, phone, address, final_photo, bio, is_founder, display_order, instagram_id, x_id, linkedin_id, github_id, website_url))
         db.commit()
         log_official_activity(session['user_id'], f"Appointed executive {name} as {role_title}")
         flash(f"Successfully appointed {name} as {role_title}!", "success")
@@ -7136,9 +7156,14 @@ def developer_edit_leadership(leader_id):
     name = request.form.get('name', '').strip()
     role_title = request.form.get('role_title', '').strip()
     email = request.form.get('email', '').strip()
-    phone = request.form.get('phone', '').strip()
+    phone = request.form.get('phone', '').strip() or None
     address = request.form.get('address', '').strip()
     bio = request.form.get('bio', '').strip()
+    instagram_id = request.form.get('instagram_id', '').strip() or None
+    x_id = request.form.get('x_id', '').strip() or None
+    linkedin_id = request.form.get('linkedin_id', '').strip() or None
+    github_id = request.form.get('github_id', '').strip() or None
+    website_url = request.form.get('website_url', '').strip() or None
     photo_url = request.form.get('photo_url', '').strip()
     photo_file = request.files.get('photo_file')
     is_founder = request.form.get('is_founder') == 'on'
@@ -7173,9 +7198,9 @@ def developer_edit_leadership(leader_id):
 
         cursor.execute("""
             UPDATE leadership_team 
-            SET name = %s, role_title = %s, email = %s, phone = %s, address = %s, photo = %s, bio = %s, is_founder = %s, display_order = %s
+            SET name = %s, role_title = %s, email = %s, phone = %s, address = %s, photo = %s, bio = %s, is_founder = %s, display_order = %s, instagram_id = %s, x_id = %s, linkedin_id = %s, github_id = %s, website_url = %s
             WHERE id = %s
-        """, (name, role_title, email, phone, address, final_photo, bio, is_founder, display_order, leader_id))
+        """, (name, role_title, email, phone, address, final_photo, bio, is_founder, display_order, instagram_id, x_id, linkedin_id, github_id, website_url, leader_id))
         db.commit()
         log_official_activity(session['user_id'], f"Updated executive #{leader_id}: {name} ({role_title})")
         flash(f"Leadership profile for {name} updated successfully!", "success")

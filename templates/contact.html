@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leadership & Contact · PustakVerse</title>
+    <title>Contact & Leadership · PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +31,7 @@
             flex-direction: column;
         }
 
-        /* Custom Scrollbar */
+        /* Sleek Scrollbars */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 2px solid #f1f5f9; }
@@ -123,11 +123,11 @@
 
         .section-header {
             text-align: center;
-            margin-bottom: 36px;
+            margin-bottom: 32px;
         }
         .section-title {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.7rem;
+            font-size: 1.65rem;
             font-weight: 800;
             color: var(--nav-bg);
             display: flex;
@@ -141,7 +141,46 @@
             margin-top: 4px;
         }
 
-        /* Leadership Cards Grid */
+        /* 1. Official Support & Community Channels Grid */
+        .channels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 60px;
+        }
+        .channel-card {
+            background: white;
+            border: 1px solid var(--border-line);
+            border-radius: 16px;
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+            color: var(--text-dark);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+        }
+        .channel-card:hover {
+            border-color: var(--primary-orange);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        .channel-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: #f1f5f9;
+            flex-shrink: 0;
+        }
+        .channel-title { font-weight: 800; font-size: 0.98rem; display: block; }
+        .channel-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+        /* 2. Leadership Cards Grid */
         .leadership-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -232,7 +271,7 @@
             font-size: 0.86rem;
             color: #475569;
             line-height: 1.5;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             flex: 1;
         }
 
@@ -241,12 +280,13 @@
             width: 100%;
             background: #f8fafc;
             border: 1px solid var(--border-line);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 14px 16px;
             display: flex;
             flex-direction: column;
             gap: 10px;
             text-align: left;
+            margin-bottom: 14px;
         }
         .contact-row {
             display: flex;
@@ -269,43 +309,40 @@
         }
         .contact-link:hover { color: var(--primary-orange); }
 
-        /* Secondary Support Channels */
-        .channels-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
-            margin-top: 20px;
-        }
-        .channel-card {
-            background: white;
-            border: 1px solid var(--border-line);
-            border-radius: 14px;
-            padding: 20px;
+        /* Social Handles Row */
+        .leader-social-row {
             display: flex;
-            align-items: center;
-            gap: 14px;
-            text-decoration: none;
-            color: var(--text-dark);
-            transition: all 0.2s;
-        }
-        .channel-card:hover {
-            border-color: var(--primary-orange);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-        }
-        .channel-icon-wrap {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
             justify-content: center;
-            font-size: 1.4rem;
-            background: #f1f5f9;
-            flex-shrink: 0;
+            width: 100%;
+            padding-top: 6px;
         }
-        .channel-title { font-weight: 800; font-size: 0.95rem; display: block; }
-        .channel-sub { font-size: 0.78rem; color: var(--text-muted); }
+        .social-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-decoration: none;
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .social-pill:hover {
+            transform: translateY(-2px);
+            background: #0f172a;
+            color: white;
+            border-color: #0f172a;
+        }
+        .social-pill.ig:hover { background: #e1306c; border-color: #e1306c; }
+        .social-pill.x:hover { background: #000000; border-color: #000000; }
+        .social-pill.li:hover { background: #0a66c2; border-color: #0a66c2; }
+        .social-pill.gh:hover { background: #24292e; border-color: #24292e; }
+        .social-pill.web:hover { background: var(--primary-orange); border-color: var(--primary-orange); }
     </style>
 </head>
 <body>
@@ -326,13 +363,61 @@
     </nav>
 
     <div class="hero-banner">
-        <span class="hero-badge">PustakVerse Ecosystem</span>
-        <h1 class="hero-title">Executive Leadership & Contact Portal</h1>
-        <p class="hero-sub">Direct official contacts, leadership directory, and community assistance channels.</p>
+        <span class="hero-badge">PustakVerse Network</span>
+        <h1 class="hero-title">Official Channels & Leadership Contact</h1>
+        <p class="hero-sub">Direct assistance channels, community portals, and executive leadership directory.</p>
     </div>
 
     <div class="main-content">
-        <!-- 1. LEADERSHIP DIRECTORY -->
+        <!-- 1. OFFICIAL SUPPORT & COMMUNITY CHANNELS (PLACED AT THE TOP) -->
+        <div class="section-header">
+            <h2 class="section-title"><span>📬</span> Official Channels & Support Portals</h2>
+            <p class="section-sub">Connect with the PustakVerse community and reach direct support across our network.</p>
+        </div>
+
+        <div class="channels-grid">
+            <a href="mailto:abhinavgiri370@gmail.com" class="channel-card">
+                <div class="channel-icon-wrap" style="color: #ea580c; background: #fff7ed;">✉️</div>
+                <div>
+                    <span class="channel-title">Founder Support</span>
+                    <span class="channel-sub">abhinavgiri370@gmail.com</span>
+                </div>
+            </a>
+
+            <a href="mailto:noreply.pustakverse@gmail.com" class="channel-card">
+                <div class="channel-icon-wrap" style="color: #0284c7; background: #f0f9ff;">🤖</div>
+                <div>
+                    <span class="channel-title">Automated Dispatch</span>
+                    <span class="channel-sub">noreply.pustakverse@gmail.com</span>
+                </div>
+            </a>
+
+            <a href="https://www.instagram.com/abhinavgiri45/" target="_blank" class="channel-card">
+                <div class="channel-icon-wrap" style="color: #e11d48; background: #fff1f2;">📸</div>
+                <div>
+                    <span class="channel-title">Instagram</span>
+                    <span class="channel-sub">@abhinavgiri45</span>
+                </div>
+            </a>
+
+            <a href="https://t.me/PustakVerse" target="_blank" class="channel-card">
+                <div class="channel-icon-wrap" style="color: #0ea5e9; background: #f0f9ff;">✈️</div>
+                <div>
+                    <span class="channel-title">Telegram Channel</span>
+                    <span class="channel-sub">t.me/PustakVerse</span>
+                </div>
+            </a>
+
+            <a href="https://www.youtube.com/channel/UCGNxh6xulgXLnKZlAYZM8og" target="_blank" class="channel-card">
+                <div class="channel-icon-wrap" style="color: #dc2626; background: #fef2f2;">📺</div>
+                <div>
+                    <span class="channel-title">YouTube</span>
+                    <span class="channel-sub">@PustakVerse-Official</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- 2. LEADERSHIP DIRECTORY (PLACED BELOW OFFICIAL CHANNELS) -->
         <div class="section-header">
             <h2 class="section-title"><span>🏛️</span> Executive Leadership Directory</h2>
             <p class="section-sub">Meet the founders, executives, and architects driving the PustakVerse platform.</p>
@@ -377,7 +462,7 @@
                     <div class="contact-row">
                         <span class="contact-icon">📞</span>
                         <div>
-                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Direct Contact No</span>
+                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
                             <a href="tel:{{ leader.phone }}" class="contact-link">{{ leader.phone }}</a>
                         </div>
                     </div>
@@ -387,85 +472,51 @@
                     <div class="contact-row">
                         <span class="contact-icon">📍</span>
                         <div>
-                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Official Address / Region</span>
+                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Address</span>
                             <span style="font-weight: 600; color: #0f172a;">{{ leader.address }}</span>
                         </div>
                     </div>
                     {% endif %}
                 </div>
+
+                <!-- Optional Social Handles Row -->
+                {% if leader.instagram_id or leader.x_id or leader.linkedin_id or leader.github_id or leader.website_url %}
+                <div class="leader-social-row">
+                    {% if leader.instagram_id %}
+                    <a href="{% if leader.instagram_id.startswith('http') %}{{ leader.instagram_id }}{% else %}https://instagram.com/{{ leader.instagram_id.replace('@', '') }}{% endif %}" target="_blank" class="social-pill ig" title="Instagram">
+                        <span>📸</span> <span>Instagram</span>
+                    </a>
+                    {% endif %}
+
+                    {% if leader.x_id %}
+                    <a href="{% if leader.x_id.startswith('http') %}{{ leader.x_id }}{% else %}https://x.com/{{ leader.x_id.replace('@', '') }}{% endif %}" target="_blank" class="social-pill x" title="X (Twitter)">
+                        <span>𝕏</span> <span>Twitter / X</span>
+                    </a>
+                    {% endif %}
+
+                    {% if leader.linkedin_id %}
+                    <a href="{% if leader.linkedin_id.startswith('http') %}{{ leader.linkedin_id }}{% else %}https://linkedin.com/in/{{ leader.linkedin_id }}{% endif %}" target="_blank" class="social-pill li" title="LinkedIn">
+                        <span>💼</span> <span>LinkedIn</span>
+                    </a>
+                    {% endif %}
+
+                    {% if leader.github_id %}
+                    <a href="{% if leader.github_id.startswith('http') %}{{ leader.github_id }}{% else %}https://github.com/{{ leader.github_id }}{% endif %}" target="_blank" class="social-pill gh" title="GitHub">
+                        <span>💻</span> <span>GitHub</span>
+                    </a>
+                    {% endif %}
+
+                    {% if leader.website_url %}
+                    <a href="{{ leader.website_url }}" target="_blank" class="social-pill web" title="Website / Portfolio">
+                        <span>🌐</span> <span>Portfolio</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
-
-        <!-- 2. OFFICIAL SUPPORT & COMMUNITY CHANNELS -->
-        <div class="section-header" style="margin-top: 20px;">
-            <h2 class="section-title"><span>📬</span> Official Channels & Support Portals</h2>
-            <p class="section-sub">Connect with the PustakVerse community across our primary network.</p>
-        </div>
-
-        <div class="channels-grid">
-            <a href="mailto:abhinavgiri370@gmail.com" class="channel-card">
-                <div class="channel-icon-wrap" style="color: #ea580c; background: #fff7ed;">✉️</div>
-                <div>
-                    <span class="channel-title">Founder Support</span>
-                    <span class="channel-sub">abhinavgiri370@gmail.com</span>
-                </div>
-            </a>
-
-            <a href="mailto:noreply.pustakverse@gmail.com" class="channel-card">
-                <div class="channel-icon-wrap" style="color: #0284c7; background: #f0f9ff;">🤖</div>
-                <div>
-                    <span class="channel-title">Automated Dispatch</span>
-                    <span class="channel-sub">noreply.pustakverse@gmail.com</span>
-                </div>
-            </a>
-
-            <a href="https://www.instagram.com/abhinavgiri45/" target="_blank" class="channel-card">
-                <div class="channel-icon-wrap" style="color: #e11d48; background: #fff1f2;">📸</div>
-                <div>
-                    <span class="channel-title">Instagram</span>
-                    <span class="channel-sub">@abhinavgiri45</span>
-                </div>
-            </a>
-
-            <a href="https://t.me/PustakVerse" target="_blank" class="channel-card">
-                <div class="channel-icon-wrap" style="color: #0ea5e9; background: #f0f9ff;">✈️</div>
-                <div>
-                    <span class="channel-title">Telegram Channel</span>
-                    <span class="channel-sub">t.me/PustakVerse</span>
-                </div>
-            </a>
-
-            <a href="https://www.youtube.com/channel/UCGNxh6xulgXLnKZlAYZM8og" target="_blank" class="channel-card">
-                <div class="channel-icon-wrap" style="color: #dc2626; background: #fef2f2;">📺</div>
-                <div>
-                    <span class="channel-title">YouTube</span>
-                    <span class="channel-sub">@PustakVerse-Official</span>
-                </div>
-            </a>
-        </div>
     </div>
-
-
-    <!-- FLOATING NATIVE MOBILE BOTTOM NAVIGATION BAR -->
-    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
-        <a href="/" class="mobile-nav-item">
-            <span class="nav-icon">🏠</span>
-            <span>Home</span>
-        </a>
-        <a href="{{ url_for('my_library') }}" class="mobile-nav-item">
-            <span class="nav-icon">📚</span>
-            <span>Library</span>
-        </a>
-        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
-            <span class="nav-icon">👤</span>
-            <span>Dashboard</span>
-        </a>
-        <a href="{{ url_for('contact') }}" class="mobile-nav-item active">
-            <span class="nav-icon">🏛️</span>
-            <span>Contact</span>
-        </a>
-    </nav>
 
 </body>
 </html>

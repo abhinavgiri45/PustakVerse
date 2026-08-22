@@ -729,29 +729,7 @@
         }
     </script>
 
-    <!-- FLOATING NATIVE MOBILE BOTTOM NAVIGATION BAR -->
-    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
-        <a href="/" class="mobile-nav-item">
-            <span class="nav-icon">🏠</span>
-            <span>Home</span>
-        </a>
-        <a href="{{ url_for('my_library') }}" class="mobile-nav-item">
-            <span class="nav-icon">📚</span>
-            <span>Library</span>
-        </a>
-        <a href="javascript:void(0);" onclick="navigator.share ? navigator.share({title: document.title, url: window.location.href}) : alert('URL copied: ' + window.location.href);" class="mobile-nav-item">
-            <span class="nav-icon">🔗</span>
-            <span>Share</span>
-        </a>
-        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
-            <span class="nav-icon">👤</span>
-            <span>Account</span>
-        </a>
-        <a href="{{ url_for('contact') }}" class="mobile-nav-item">
-            <span class="nav-icon">🏛️</span>
-            <span>Contact</span>
-        </a>
-    </nav>
+    
 
 </body>
 </html>

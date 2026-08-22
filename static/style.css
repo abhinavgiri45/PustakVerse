@@ -479,53 +479,7 @@ nav { background: rgba(15,23,42,.94); position: sticky; top: 0; backdrop-filter:
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Floating Native Mobile Bottom Navigation Bar */
-.mobile-bottom-nav {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 9999;
-    justify-content: space-around;
-    align-items: center;
-    padding: 0 10px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25);
-}
 
-.mobile-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-    text-decoration: none;
-    font-size: 0.72rem;
-    font-weight: 700;
-    gap: 3px;
-    padding: 6px 12px;
-    border-radius: 12px;
-    transition: all 0.2s ease;
-    flex: 1;
-}
-
-.mobile-nav-item svg, .mobile-nav-item .nav-icon {
-    font-size: 1.25rem;
-    line-height: 1;
-}
-
-.mobile-nav-item.active, .mobile-nav-item:hover {
-    color: #f97316;
-}
-
-.mobile-nav-item.active .nav-icon {
-    transform: scale(1.1);
-}
 
 /* Horizontal Swipeable Category Carousel on Mobile */
 .filter-nav-scroll {
@@ -555,15 +509,10 @@ nav { background: rgba(15,23,42,.94); position: sticky; top: 0; backdrop-filter:
 
 /* Mobile Screens (Phones < 768px) */
 @media (max-width: 768px) {
-    /* Show Mobile Bottom Navigation */
-    .mobile-bottom-nav {
-        display: flex;
-    }
+    
 
     /* Add bottom padding to body so content is not obscured by bottom nav */
-    body {
-        padding-bottom: 76px !important;
-    }
+    
 
     /* Modern 2-Column Mobile Book Catalog Grid */
     .book-grid {
