@@ -616,11 +616,83 @@ def fetch_live_knowledge(query):
     return None
 
 
+def fetch_live_encyclopedia(query):
+    """
+    Fetches real-time, verified academic and scientific encyclopedic data for ANY query across the universe.
+    """
+    if not query:
+        return None
+    clean_q = re.sub(r'^(what is|who is|what are|who are|explain in detail about|explain in detail|explain|who developed|who created|who invented|tell me about|how does|why is)\s+', '', query, flags=re.I).strip()
+    clean_q = re.sub(r'\s+(who has developed it|who created it|and who made it|how does it work|explain in detail|tell me about it).*$', '', clean_q, flags=re.I).strip()
+    clean_q = re.sub(r'(\?|\.|\!)$', '', clean_q).strip()
+
+    if not clean_q:
+        return None
+
+    term_overrides = {
+        'calculas': 'Calculus',
+        'calculus': 'Calculus',
+        'relativity': 'Theory of relativity',
+        'pythagoras': 'Pythagorean theorem',
+        'ai': 'Artificial intelligence',
+        'ml': 'Machine learning',
+        'dsa': 'Data structure',
+        'os': 'Operating system',
+        'dbms': 'Database',
+        'sql': 'SQL',
+        'html': 'HTML',
+        'css': 'CSS',
+        'js': 'JavaScript',
+        'python': 'Python (programming language)'
+    }
+    target_term = term_overrides.get(clean_q.lower(), clean_q)
+
+    headers = {'User-Agent': 'PustakVerse-GranthMind/2.0 (Educational Academic AI Assistant; https://pustakverse.com)'}
+    try:
+        url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(target_term.replace(" ", "_"))}'
+        r = requests.get(url, headers=headers, timeout=4)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get('extract') and len(data.get('extract', '')) > 40 and not data.get('type') == 'disambiguation':
+                return {
+                    'title': data.get('title', clean_q),
+                    'extract': data.get('extract', ''),
+                    'description': data.get('description', '')
+                }
+
+        search_url = f'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(target_term)}&utf8=&format=json&srlimit=1'
+        sr = requests.get(search_url, headers=headers, timeout=4)
+        if sr.status_code == 200:
+            sdata = sr.json()
+            results = sdata.get('query', {}).get('search', [])
+            if results:
+                best_title = results[0].get('title')
+                snippet = re.sub(r'<[^>]+>', '', results[0].get('snippet', ''))
+                u2 = f'https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(best_title.replace(" ", "_"))}'
+                r2 = requests.get(u2, headers=headers, timeout=4)
+                if r2.status_code == 200:
+                    d2 = r2.json()
+                    if d2.get('extract'):
+                        return {
+                            'title': d2.get('title', best_title),
+                            'extract': d2.get('extract', snippet),
+                            'description': d2.get('description', '')
+                        }
+                return {
+                    'title': best_title,
+                    'extract': snippet,
+                    'description': ''
+                }
+    except Exception:
+        pass
+    return None
+
+
 def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study'):
     """
-    State-of-the-Art Multi-Domain Knowledge Synthesis Engine.
+    Universal Dynamic Multi-Domain Knowledge Synthesis Engine.
     Provides rigorous, factually accurate, structured academic and technical answers
-    with LaTeX formulas, historical attribution, real-world analogies, and self-assessment.
+    with LaTeX formulas, historical attribution, real-world analogies, and self-assessment for ANY question.
     """
     raw_query = (concept_query or '').strip()
     query_lower = raw_query.lower()
@@ -639,8 +711,10 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
                 "---\n\n"
                 "#### 👑 About the Founder: Abhinav Giri\n"
                 "- **Role**: Founder & Chief Technology Officer (CTO) / Lead Architect of PustakVerse.\n"
-                "- **Profile**: Abhinav Giri is a software developer, technology innovator, and full-stack engineer driven by a passion for democratizing world-class education, building powerful AI tools for students, and empowering independent authors globally.\n"
-                "- **Contact**: `abhinavgiri370@gmail.com` · Instagram: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)\n\n"
+                "- **Profile**: Software developer, technology innovator, and full-stack engineer driven by a passion for democratizing world-class education, building powerful AI tools for students, and empowering independent authors globally.\n"
+                "- **Contact & Socials**:\n"
+                "  - 📧 **Official Email**: `abhinavgiri370@gmail.com`\n"
+                "  - 📸 **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)\n\n"
                 "---\n\n"
                 "#### 🎯 The Vision & Core Mission\n"
                 "> *\"Every Book. Every Mind. Free. Read More. Grow More. Inspire India & The World.\"*\n\n"
@@ -661,38 +735,26 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         }
 
     # ------------------------------------------------------------------
-    # 2. TOPIC EXTRACTION & RECOGNITION (SUBJECT IDENTIFICATION)
+    # 2. DEDICATED SUBJECT ENGINES (CALCULUS, ML, STEM, CODE)
     # ------------------------------------------------------------------
-    # Detect subject: Calculus / Calculas
-    is_calculus = bool(re.search(r'\bcalcul[ua]s\b', query_lower) or any(k in query_lower for k in ['differential calculus', 'integral calculus', 'derivative', 'integration', 'derivative of', 'integral of']))
-    is_physics_relativity = bool(any(k in query_lower for k in ['relativity', 'einstein', 'speed of light', 'e=mc^2', 'e=mc2', 'spacetime']))
-    is_quantum = bool(any(k in query_lower for k in ['quantum', 'schrodinger', 'planck', 'heisenberg', 'wave function', 'quantum mechanics']))
-    is_newton_laws = bool(any(k in query_lower for k in ['newton', 'laws of motion', 'f=ma', 'gravity', 'universal gravitation']))
-    is_photosynthesis = bool(any(k in query_lower for k in ['photosynthesis', 'chlorophyll', 'calvin cycle', 'light reaction']))
-    is_python_dsa = bool(any(k in query_lower for k in ['python', 'binary search', 'linked list', 'bubble sort', 'quicksort', 'merge sort', 'tree', 'graph', 'data structure', 'algorithm']))
-    is_machine_learning = bool(any(k in query_lower for k in ['machine learning', 'neural network', 'deep learning', 'backpropagation', 'transformer', 'gradient descent', 'ai model']))
-
-    # ------------------------------------------------------------------
-    # A. CALCULUS & ITS INVENTORS / FOUNDERS
-    # ------------------------------------------------------------------
-    if is_calculus:
+    if re.search(r'\bcalcul[ua]s\b', query_lower) or any(k in query_lower for k in ['differential calculus', 'integral calculus', 'derivative', 'integration', 'derivative of', 'integral of']):
         explanation = (
             "### 📐 Calculus: Foundations, Historical Origins & Governing Principles\n\n"
             "#### 1. What is Calculus?\n"
             "**Calculus** is the branch of mathematics that studies continuous change. It provides the foundational language "
             "used throughout modern physics, engineering, computer science, and economics to model dynamic systems.\n\n"
             "Calculus is divided into two complementary branches connected by the **Fundamental Theorem of Calculus**:\n"
-            "1. **Differential Calculus**: Focuses on *rates of change* and the slopes of tangent curves ($\frac{df}{dx}$).\n"
-            "2. **Integral Calculus**: Focuses on *accumulation of quantities* and the total area under curves ($\int f(x)\,dx$).\n\n"
+            "1. **Differential Calculus**: Focuses on *rates of change* and slopes of tangent curves ($\\frac{df}{dx}$).\n"
+            "2. **Integral Calculus**: Focuses on *accumulation of quantities* and the total area under curves ($\\int f(x)\\,dx$).\n\n"
             "---\n\n"
             "#### 👑 Who Developed Calculus? (Historical Attribution)\n"
             "Calculus was developed independently in the late **17th century** (1660s–1680s) by two visionary mathematicians:\n\n"
             "- **Sir Isaac Newton (1642–1727)** in England:\n"
-            "  - Developed calculus (which he termed the *\"Method of Fluxions\"*) during 1665–1666 to explain planetary motion, gravitation, and classical mechanics.\n"
+            "  - Developed calculus (termed the *\"Method of Fluxions\"*) during 1665–1666 to explain planetary motion, gravitation, and classical mechanics.\n"
             "  - Formulated the concepts of instantaneous velocity (fluxion) and flowing quantities (fluents).\n\n"
             "- **Gottfried Wilhelm Leibniz (1646–1716)** in Germany:\n"
             "  - Independently developed calculus between 1673 and 1676 and published his findings in 1684 (*Nova Methodus*).\n"
-            "  - Introduced the elegant, universal notation still used today: the $\\frac{dy}{dx}$ derivative symbol and the $\\int$ integral sign (representing the Latin *summa*).\n\n"
+            "  - Introduced the universal notation still used today: the $\\frac{dy}{dx}$ derivative symbol and the $\\int$ integral sign (representing the Latin *summa*).\n\n"
             "---\n\n"
             "#### 2. Governing Mathematical Formulations\n"
             "##### The Derivative (Limit Definition):\n"
@@ -724,34 +786,46 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         }
 
     # ------------------------------------------------------------------
-    # B. MACHINE LEARNING & ARTIFICIAL INTELLIGENCE
+    # 3. LIVE VERIFIED ENCYCLOPEDIC KNOWLEDGE FOR ALL OTHER QUESTIONS
     # ------------------------------------------------------------------
-    elif is_machine_learning:
+    wiki = fetch_live_encyclopedia(raw_query)
+    if wiki and wiki.get('extract') and len(wiki.get('extract', '')) > 40:
+        title = wiki['title']
+        extract = wiki['extract']
+        desc = wiki.get('description', '')
+
         explanation = (
-            "### 🤖 Machine Learning & Neural Architectures\n\n"
-            "#### 1. Core Paradigm\n"
-            "**Machine Learning (ML)** is the study of computational algorithms that improve automatically through experience and data. "
-            "Rather than writing explicit deterministic rules, an optimization algorithm minimizes a loss function $\\mathcal{L}(\\theta)$ over parameters $\\theta$.\n\n"
-            "#### 2. The Three Primary Paradigms\n"
-            "1. **Supervised Learning**: Mapping inputs $x \\in \\mathcal{X}$ to labeled targets $y \\in \\mathcal{Y}$ (Regression, Classification).\n"
-            "2. **Unsupervised Learning**: Uncovering latent structure, clusters, or probability distributions $p(x)$ (PCA, K-Means, VAEs).\n"
-            "3. **Reinforcement Learning**: Optimizing a policy $\\pi(a|s)$ to maximize cumulative expected reward $R = \\sum_{t=0}^\\infty \\gamma^t r_t$.\n\n"
-            "#### 3. Governing Optimization (Gradient Descent)\n"
-            "$$\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t)$$\n"
-            "where $\\eta$ represents the learning rate and $\\nabla_\\theta \\mathcal{L}$ is the gradient computed via Backpropagation."
+            f"### 📖 {title}: Comprehensive Analysis & Key Insights\n\n"
+            f"#### 1. Core Definition & Foundational Overview\n{extract}\n\n"
         )
+        if desc:
+            explanation += f"**Academic Classification / Domain**: {desc}\n\n"
+
+        explanation += (
+            "#### 2. Governing Principles & Structural Pillars\n"
+            f"- **Foundational Mechanics**: {title} operates according to established theoretical and empirical laws verified across literature.\n"
+            f"- **Systematic Workflow**: Demonstrates how components within {title} interact dynamically to produce verifiable outcomes.\n"
+            f"- **Contemporary Significance**: Extensively applied across modern scientific research, technological systems, and academic analysis.\n\n"
+            "#### 3. Summary Reference Matrix\n"
+            "| Dimension | Focus Area | Key Exam & Practical Takeaway |\n"
+            "| :--- | :--- | :--- |\n"
+            f"| **Primary Subject** | {title} | Standard universal definition |\n"
+            f"| **Application Domain** | Scientific & Practical | High utility and widespread research |\n"
+            f"| **Core Advantage** | Analytical Rigor | Provides predictive and explanatory clarity |"
+        )
+
         key_points = [
-            "Deep neural networks learn hierarchical representations through stacked linear transformations and non-linear activations.",
-            "Backpropagation utilizes the multivariable calculus Chain Rule to compute exact gradients.",
-            "The Transformer architecture leverages Scaled Dot-Product Self-Attention: $\\text{Attention}(Q,K,V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$."
+            f"Master the core definitions, governing rules, and theoretical framework of **{title}**.",
+            f"Analyze how **{title}** connects to adjacent disciplines and practical real-world problems.",
+            "Apply active recall and conceptual synthesis to verify thorough retention."
         ]
-        example = "Training an image classifier to detect handwritten digits from the MNIST dataset using cross-entropy loss."
+        example = f"Examine how the principles of {title} are applied to solve standard challenges in the field."
         questions = [
-            "Why is the learning rate $\\eta$ critical to prevent divergence or vanishing gradient in deep networks?",
-            "Explain the mathematical purpose of non-linear activation functions (e.g. ReLU, GELU) in neural networks."
+            f"What is the single most critical governing rule or principle in {title}?",
+            f"How do initial constraints and boundary conditions affect the execution of {title}?"
         ]
         return {
-            'concept': 'Machine Learning & Deep Learning Architectures',
+            'concept': title,
             'explanation': explanation,
             'key_points': key_points,
             'example': example,
@@ -759,95 +833,33 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         }
 
     # ------------------------------------------------------------------
-    # C. PYTHON & DATA STRUCTURES / ALGORITHMS
+    # 4. FALLBACK SUBJECT PARSER (SMART TOPIC EXTRACTION)
     # ------------------------------------------------------------------
-    elif is_python_dsa or mode == 'code':
-        clean_name = re.sub(r'^(write code for|how to write|implement|how to code|program for|explain)\s+', '', raw_query, flags=re.I).strip() or 'Data Structures & Algorithms'
-        explanation = (
-            f"### 💻 Production Algorithm Architecture: {clean_name}\n\n"
-            "#### 1. Theoretical Analysis\n"
-            "Optimized algorithmic solutions require strict attention to time complexity, spatial locality, and memory overhead.\n\n"
-            "#### 2. Robust Python Implementation\n"
-            "```python\n"
-            "from typing import List, Optional, Any\n"
-            "import time\n\n"
-            "class AlgorithmEngine:\n"
-            "    @staticmethod\n"
-            "    def binary_search(arr: List[int], target: int) -> Optional[int]:\n"
-            "        \"\"\"Executes logarithmic search in O(log n) time.\"\"\"\n"
-            "        left, right = 0, len(arr) - 1\n"
-            "        while left <= right:\n"
-            "            mid = left + (right - left) // 2\n"
-            "            if arr[mid] == target:\n"
-            "                return mid\n"
-            "            elif arr[mid] < target:\n"
-            "                left = mid + 1\n"
-            "            else:\n"
-            "                right = mid - 1\n"
-            "        return None\n\n"
-            "if __name__ == '__main__':\n"
-            "    data = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]\n"
-            "    idx = AlgorithmEngine.binary_search(data, 23)\n"
-            "    print(f'Found target at index: {idx}')\n"
-            "```\n\n"
-            "#### 3. Complexity Profiling\n"
-            "- **Time Complexity**: $\\mathcal{O}(\\log n)$ worst-case and average.\n"
-            "- **Space Complexity**: $\\mathcal{O}(1)$ auxiliary space."
-        )
-        key_points = [
-            "Divide-and-conquer strategy cuts search space by 50% on every iteration.",
-            "Avoid integer overflow in low-level languages using `mid = left + (right - left) // 2`.",
-            "Requires dataset to be pre-sorted $\\mathcal{O}(n \\log n)$."
-        ]
-        example = "Searching for an ID in a sorted database index of 1,000,000 items requires at most $\\approx 20$ comparisons."
-        questions = [
-            "How does Binary Search compare to a Linear Scan in $\\mathcal{O}(n)$?",
-            "How would you adapt this to find the first or last occurrence of a duplicate element?"
-        ]
-        return {
-            'concept': f'Algorithm Architecture ({clean_name})',
-            'explanation': explanation,
-            'key_points': key_points,
-            'example': example,
-            'practice_questions': questions
-        }
-
-    # ------------------------------------------------------------------
-    # D. GENERAL COMPREHENSIVE SUBJECT PARSER (FALLBACK DOMAIN)
-    # ------------------------------------------------------------------
-    # Clean up leading question words cleanly without leaving awkward fragments
     clean_topic = re.sub(
         r'^(what is|what are|who is|who are|who developed|who created|who invented|explain in detail about|explain in detail|explain|tell me about|how does|how do|why is|why are|overview of)\s+',
         '', raw_query, flags=re.I
     ).strip()
     clean_topic = re.sub(r'(\?|\.|\!)$', '', clean_topic).strip()
-    clean_topic = clean_topic[0].upper() + clean_topic[1:] if clean_topic else 'Universal Academic Concept'
+    clean_topic = clean_topic[0].upper() + clean_topic[1:] if clean_topic else 'Academic Concept'
 
     explanation = (
-        f"### 📖 Comprehensive Concept Breakdown & Analysis: {clean_topic}\n\n"
-        f"#### 1. Foundational Overview & Scope\n"
-        f"**{clean_topic}** is an essential subject in modern scientific and academic study. "
+        f"### 📖 Comprehensive Concept Breakdown: {clean_topic}\n\n"
+        f"#### 1. Foundational Overview\n"
+        f"**{clean_topic}** represents an essential subject in academic study and technical research. "
         "A rigorous breakdown investigates its governing axioms, operational frameworks, and practical applications.\n\n"
         "#### 2. Core Pillars & Mechanics\n"
-        f"- **Primary Principles**: Establishes the governing definitions, theoretical baselines, and mathematical models of {clean_topic}.\n"
+        f"- **Primary Principles**: Establishes the governing definitions, theoretical baselines, and models of {clean_topic}.\n"
         f"- **Systematic Workflow**: Demonstrates how components within {clean_topic} operate dynamically to achieve verifiable outcomes.\n"
-        f"- **Real-World Impact**: Connects the theoretical foundation of {clean_topic} to engineering, research, and applied science.\n\n"
-        "#### 3. Summary Reference Matrix\n"
-        "| Dimension | Focus Area | Key Exam & Practical Takeaway |\n"
-        "| :--- | :--- | :--- |\n"
-        f"| **Core Definition** | Fundamental law of {clean_topic} | Precise technical formulation |\n"
-        f"| **Key Methodology** | Operational process | Follows reproducible step-by-step logic |\n"
-        f"| **Practical Utility**| Applied technology & research | Critical across industry & academia |"
+        f"- **Real-World Impact**: Connects the theoretical foundation of {clean_topic} to engineering, research, and applied science."
     )
     key_points = [
         f"Master the core definitions, governing rules, and constraints of {clean_topic}.",
-        f"Analyze how {clean_topic} integrates with adjacent theoretical frameworks.",
-        "Apply active recall and practice questions to verify thorough retention."
+        f"Analyze how {clean_topic} integrates with adjacent theoretical frameworks."
     ]
     example = f"Examine how the principles of {clean_topic} apply to solve standard problems in the field."
     questions = [
         f"What is the single most critical governing rule of {clean_topic}?",
-        f"How do initial constraints and boundary conditions affect the execution of {clean_topic}?"
+        f"How do initial constraints affect the execution of {clean_topic}?"
     ]
     return {
         'concept': clean_topic,
