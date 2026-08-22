@@ -3,7 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.title }} - PustakVerse</title>
+        <title>{{ book.title }} · PustakVerse</title>
+    
+    <!-- DYNAMIC BOOK OPEN GRAPH & TWITTER PREVIEWS -->
+    <meta property="og:type" content="book">
+    <meta property="og:site_name" content="PustakVerse">
+    <meta property="og:title" content="{{ book.title }} — by {{ book.author_name }}">
+    <meta property="og:description" content="{{ (book.description or 'Read ' ~ book.title ~ ' by ' ~ book.author_name ~ ' on PustakVerse. Every Book. Every Mind. Free.') | striptags | truncate(200) }}">
+    {% if book.cover_image.startswith('http') %}
+        <meta property="og:image" content="{{ book.cover_image }}">
+        <meta name="twitter:image" content="{{ book.cover_image }}">
+    {% else %}
+        <meta property="og:image" content="{{ url_for('static', filename='uploads/covers/' + book.cover_image, _external=True) }}">
+        <meta name="twitter:image" content="{{ url_for('static', filename='uploads/covers/' + book.cover_image, _external=True) }}">
+    {% endif %}
+    <meta property="og:image:alt" content="{{ book.title }} Cover">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ book.title }} — by {{ book.author_name }}">
+    <meta name="twitter:description" content="{{ (book.description or 'Read ' ~ book.title ~ ' on PustakVerse.') | striptags | truncate(200) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         (function() {
