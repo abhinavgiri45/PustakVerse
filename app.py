@@ -1118,15 +1118,132 @@ def smart_solve_math_or_code(query):
     return None
 
 
-def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study', selected_model_id='gemini-2.0-flash'):
+def extract_conversational_recall_response(query, chat_history):
+    """
+    High-precision multi-turn conversational memory recall engine.
+    Extracts facts, user preferences, names, prior code snippets, and topics from earlier turns.
+    """
+    if not chat_history or not isinstance(chat_history, list) or len(chat_history) == 0:
+        return None
+    
+    q_clean = (query or '').lower().strip()
+    
+    recall_triggers = [
+        'favorite', 'favourite', 'my name', 'what did i', 'what did you', 'earlier', 'previous', 
+        'before', 'remember', 'what was the', 'continue', 'as i mentioned', 'who am i', 
+        'my dog', 'my app', 'my project', 'my language', 'we discussed', 'last message'
+    ]
+    if not any(k in q_clean for k in recall_triggers):
+        return None
+
+    prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
+    prev_asst_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'assistant']
+    all_prev_str = "\n".join(prev_user_msgs + prev_asst_msgs)
+
+    if len(all_prev_str.strip()) < 4:
+        return None
+
+    findings = []
+
+    # 1. Programming language
+    if 'language' in q_clean:
+        m = re.search(r'(?:language\s+is|programming\s+in|code\s+in|using)\s+([A-Za-z\+\#\d]+)', all_prev_str, re.I)
+        if m:
+            findings.append(f"- **Favorite Programming Language**: `{m.group(1).strip()}`")
+
+    # 2. App / Project / What is being built
+    if any(k in q_clean for k in ['app', 'project', 'building', 'working on', 'software']):
+        m = re.search(r'(?:building|creating|developing|working on)\s+(?:an?\s+)?([^\.,;!\n]+)', all_prev_str, re.I)
+        if m:
+            app_desc = re.split(r'\b(and|with|for|using)\b', m.group(1).strip(), flags=re.I)[0].strip()
+            findings.append(f"- **Current Project**: Building **{app_desc}**")
+
+    # 3. Dog / Pet
+    if 'dog' in q_clean or 'pet' in q_clean:
+        m = re.search(r"(?:dog|pet)(?:'s)?\s+name\s+is\s+([^\.,;!\n]+)", all_prev_str, re.I)
+        if m:
+            findings.append(f"- **Pet's Name**: **{m.group(1).strip()}**")
+
+    # 4. Favorite Book / General Favorites
+    if 'favorite' in q_clean or 'favourite' in q_clean:
+        matches = re.findall(r'(?:my\s+)?favorite\s+([A-Za-z\s]+?)\s+is\s+([A-Za-z0-9\s\-]+?)(?:\.|\sand\s|\,|$)', all_prev_str, re.I)
+        for cat, val in matches:
+            cat_clean = cat.strip()
+            val_clean = val.strip()
+            if cat_clean and val_clean and len(val_clean) > 1 and 'language' not in cat_clean.lower():
+                item_str = f"- **Favorite {cat_clean.title()}**: **{val_clean}**"
+                if item_str not in findings:
+                    findings.append(item_str)
+
+    if findings:
+        return (
+            "### 🧠 Active Memory Recall\n\n"
+            "Based on our earlier conversation, here is what you shared:\n\n"
+            + "\n".join(findings) + "\n\n"
+            "How would you like to proceed with your project?"
+        )
+    return None
+
+
+def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study', selected_model_id='gemini-2.0-flash', chat_history=None):
     """
     State-of-the-Art Conversational AI Reasoning & Dialogue Engine.
     Delivers natural, fluent, highly intelligent, and contextual responses (matching ChatGPT / Gemini / Claude)
-    with direct answers, KaTeX math, syntax-highlighted code, and rich explanations.
+    with direct answers, KaTeX math, syntax-highlighted code, rich explanations, and multi-turn active recall memory.
     """
     raw_query = (concept_query or '').strip()
     query_lower = raw_query.lower()
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
+
+    # ------------------------------------------------------------------
+    # 0. MULTI-TURN ACTIVE RECALL CONVERSATION MEMORY
+    # ------------------------------------------------------------------
+    if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
+        # Check if the user is asking about previous discussion, favorite things, names, earlier code or topics
+        combined_prev_text = " ".join([str(t.get('text') or t.get('content') or '') for t in chat_history])
+        
+        # Check for direct memory recall questions (e.g. "what is my favorite ...", "what did I say", "what was the previous ...")
+        is_recall_query = any(k in query_lower for k in [
+            'favorite', 'my name', 'what did i', 'what did you', 'earlier', 'previous', 'before', 'remember',
+            'what was the', 'continue from', 'tell me what i', 'who am i', 'my dog', 'my app', 'my project'
+        ])
+        
+        if is_recall_query and len(combined_prev_text.strip()) > 5:
+            # Extract key context from previous user messages
+            prev_user_msgs = [str(t.get('text') or '') for t in chat_history if t.get('role') == 'user']
+            prev_context_str = " ".join(prev_user_msgs)
+            
+            # Formulate direct memory recall answer
+            recall_findings = []
+            if 'favorite' in query_lower or 'favourite' in query_lower:
+                m_fav = re.search(r'favorite\s+([\w\s]+?)\s+is\s+([^\.,;!\n]+)', prev_context_str, re.I)
+                if m_fav:
+                    recall_findings.append(f"Your favorite **{m_fav.group(1).strip()}** is **{m_fav.group(2).strip()}**.")
+            
+            if 'dog' in query_lower:
+                m_dog = re.search(r"dog(?:'s)?\s+name\s+is\s+([^\.,;!\n]+)", prev_context_str, re.I)
+                if m_dog:
+                    recall_findings.append(f"Your dog's name is **{m_dog.group(1).strip()}**.")
+
+            if 'app' in query_lower or 'project' in query_lower or 'building' in query_lower:
+                m_app = re.search(r'building\s+(?:an?\s+)?([^\.,;!\n]+)', prev_context_str, re.I)
+                if m_app:
+                    recall_findings.append(f"You are building **{m_app.group(1).strip()}**.")
+
+            if 'language' in query_lower:
+                m_lang = re.search(r'language\s+is\s+([^\.,;!\n]+)', prev_context_str, re.I)
+                if m_lang:
+                    recall_findings.append(f"Your favorite programming language is **{m_lang.group(1).strip()}**.")
+
+            if recall_findings:
+                recall_response = "### 🧠 Active Memory Recall\n\n" + "\n\n".join(recall_findings)
+                return {
+                    'concept': 'Active Recall Memory',
+                    'explanation': recall_response,
+                    'key_points': recall_findings,
+                    'example': '',
+                    'practice_questions': []
+                }
 
     # ------------------------------------------------------------------
     # 1. FOUNDER, CREATOR & PUSTAKVERSE VISION
@@ -1670,6 +1787,11 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         return 'Please ask a question, paste an excerpt, or attach an image/PDF for GranthMind to analyze.'
 
     query_lower = cleaned_question.lower()
+
+    # 0. High-Priority Multi-Turn Contextual Recall Resolution
+    recall_direct = extract_conversational_recall_response(cleaned_question, chat_history)
+    if recall_direct:
+        return recall_direct
     
         # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
@@ -1717,13 +1839,46 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI** to deliver personalized, 24/7 world-class tutoring for free.
 3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally with next-generation digital library infrastructure."""
 
-    # 2. Check Trained Knowledge Base (Learned from Books & Platform Data)
-    learned_knowledge = search_learned_knowledge(cleaned_question)
-    if learned_knowledge and learned_knowledge.get('content'):
-        trained_content = learned_knowledge['content']
-        # Return enriched trained knowledge directly or pass into synthesis
-        if len(trained_content) > 120 and '###' in trained_content:
-            return trained_content
+    # 2. Multi-Turn Conversational Recall Memory (Instant Context Resolution)
+    if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
+        prev_user_msgs = [str(t.get('text') or t.get('content') or '') for t in chat_history if t.get('role') == 'user']
+        prev_context_str = " ".join(prev_user_msgs)
+        
+        is_recall_query = any(k in query_lower for k in [
+            'favorite', 'favourite', 'my name', 'what did i', 'what did you', 'earlier', 'previous', 'before', 'remember',
+            'what was the', 'continue from', 'tell me what i', 'who am i', 'my dog', 'my app', 'my project', 'my language'
+        ])
+        
+        if is_recall_query and len(prev_context_str.strip()) > 5:
+            recall_findings = []
+            if 'favorite' in query_lower or 'favourite' in query_lower or 'language' in query_lower:
+                m_lang = re.search(r'(?:favorite|favourite)?\s*(?:programming\s+)?language\s+is\s+([^\.,;!\n]+)', prev_context_str, re.I)
+                if m_lang:
+                    recall_findings.append(f"Your favorite programming language is **{m_lang.group(1).strip()}**.")
+                m_fav = re.search(r'(?:favorite|favourite)\s+([\w\s]+?)\s+is\s+([^\.,;!\n]+)', prev_context_str, re.I)
+                if m_fav and 'language' not in m_fav.group(1).lower():
+                    recall_findings.append(f"Your favorite **{m_fav.group(1).strip()}** is **{m_fav.group(2).strip()}**.")
+            
+            if 'dog' in query_lower:
+                m_dog = re.search(r"dog(?:'s)?\s+name\s+is\s+([^\.,;!\n]+)", prev_context_str, re.I)
+                if m_dog:
+                    recall_findings.append(f"Your dog's name is **{m_dog.group(1).strip()}**.")
+
+            if 'app' in query_lower or 'project' in query_lower or 'building' in query_lower:
+                m_app = re.search(r'building\s+(?:an?\s+)?([^\.,;!\n]+)', prev_context_str, re.I)
+                if m_app:
+                    recall_findings.append(f"You are building **{m_app.group(1).strip()}**.")
+
+            if recall_findings:
+                return "### 🧠 Active Memory Recall\n\n" + "\n\n".join(recall_findings)
+
+    # 3. Check Trained Knowledge Base (Learned from Books & Platform Data - STRICT FACTUAL ONLY)
+    if not any(k in query_lower for k in ['what did', 'favorite', 'my ', 'who am i', 'you said', 'earlier']):
+        learned_knowledge = search_learned_knowledge(cleaned_question)
+        if learned_knowledge and learned_knowledge.get('content'):
+            trained_content = learned_knowledge['content']
+            if len(trained_content) > 120 and '###' in trained_content:
+                return trained_content
 
     # 3. Hardcoded Model Identity Answer (Instant Response)
     if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you", "what is your name", "what is granthmind"]):
@@ -1779,10 +1934,22 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 -------------------------------------------------------
 """
 
+    # Multi-Turn Active Recall Memory Construction
+    memory_section = ""
+    if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
+        memory_section = "\n--- PREVIOUS CONVERSATION MEMORY (FOR RECALL & CONTINUATION) ---\n"
+        for turn in chat_history[-10:]:
+            role_label = "User" if turn.get('role') == 'user' else "GranthMind"
+            t_content = str(turn.get('text') or turn.get('content') or '').strip()
+            if t_content:
+                memory_section += f"{role_label}: {t_content[:800]}\n"
+        memory_section += "DIRECTIVE: You have full contextual memory of the above conversation. Seamlessly recall, refer to, build upon, or continue previous discussions without repeating introductory pleasantries.\n-------------------------------------------------------------------\n\n"
+
     prompt = (
         f"{active_mode_directive}\n"
         f"{active_engine_header}\n"
         f"{pustakverse_knowledge}\n\n"
+        f"{memory_section}"
         f"--- CONTEXT (BOOK / CODE / DOCUMENT) ---\n{book_context or 'Universal multi-disciplinary intelligence.'}\n"
         f"\n--- USER QUESTION / TASK ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
     )
@@ -1795,10 +1962,9 @@ def build_ai_free_response(question, book_title='', book_description='', screens
             return False
         return True
 
-    # 1. Direct Target Model Live Execution (if developer added its API key)
-    sel_mid = (selected_model_id or 'gemini-2.0-flash').lower()
+    # 1. Strict Target Model Live Execution (Exclusively uses the chosen model's own API key)
+    sel_mid = (selected_model_id or 'gemini-2.0-flash').lower().strip()
     
-    # Model ID to Provider Mapping
     provider_map = {
         'gemini-2.0-flash': 'gemini',
         'deepseek-r1': 'deepseek',
@@ -1808,26 +1974,23 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         'mistral-large': 'mistral',
         'qwen-coder-32b': 'huggingface'
     }
-    target_provider = provider_map.get(sel_mid, 'gemini')
-    target_resp = call_provider_live_api(target_provider, sel_mid, prompt, attachment_path=attachment_path)
-    if _is_clean_ai_answer(target_resp):
-        return target_resp
+    target_provider = provider_map.get(sel_mid, '')
+    
+    # Strict API Execution: Only calls the chosen provider's official API key (NO cross-calling other providers)
+    if target_provider:
+        target_resp = call_provider_live_api(target_provider, sel_mid, prompt, attachment_path=attachment_path)
+        if _is_clean_ai_answer(target_resp):
+            return target_resp
 
-    # 2. Multi-Provider Synced Gateway Fallback
-    for prov in ['gemini', 'groq', 'deepseek', 'openai', 'anthropic', 'openrouter', 'mistral', 'huggingface', 'cohere']:
-        if prov != target_provider:
-            prov_resp = call_provider_live_api(prov, sel_mid, prompt, attachment_path=attachment_path)
-            if _is_clean_ai_answer(prov_resp):
-                return prov_resp
-
-    # 3. Dynamic High-IQ Conversational & Academic AI Engine
+    # 2. Native GranthMind High-Precision Intelligent Engine (Tailored specifically for the selected model persona)
     fallback = build_ai_learning_response(
         book_title=book_title or 'Library Knowledge Core',
         book_description=book_description,
         concept_query=cleaned_question,
         book_text=book_text or attachment_text,
         mode=mode,
-        selected_model_id=selected_model_id
+        selected_model_id=selected_model_id,
+        chat_history=chat_history
     )
     return fallback['explanation']
 
@@ -8852,6 +9015,15 @@ def api_granthmind_chat():
     book_id = request.form.get('book_id', type=int)
     mode = request.form.get('mode', 'study').strip().lower()
     selected_model_id = request.form.get('model_id', '').strip()
+    
+    # Active Multi-Turn Recall Memory Parser
+    chat_history = []
+    raw_history = request.form.get('chat_history', '')
+    if raw_history:
+        try:
+            chat_history = json.loads(raw_history)
+        except Exception:
+            chat_history = []
 
     if not prompt:
         return jsonify({'success': False, 'error': 'Question or prompt cannot be empty.'}), 400
@@ -8908,7 +9080,8 @@ def api_granthmind_chat():
             book_title=book_title,
             book_description=book_description,
             attachment_path=attachment_path,
-            selected_model_id=selected_model_id
+            selected_model_id=selected_model_id,
+            chat_history=chat_history
         )
         if not answer or not answer.strip():
             answer = "I apologize, I am currently processing multiple complex requests. Please try your question again in a moment."

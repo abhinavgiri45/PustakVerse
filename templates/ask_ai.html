@@ -1396,12 +1396,19 @@
       currentSession.messages.push({ role: 'user', text: promptText, time: timeStr });
       saveSessions(sessions);
 
-      // Send to API
+      // Send to API with active multi-turn recall memory
       const formData = new FormData();
       formData.append('prompt', promptText);
       formData.append('mode', activeMode);
       formData.append('model_id', document.getElementById('modelSelector').value);
       formData.append('csrf_token', '{{ csrf_token() }}');
+      
+      // Pass the last 10 turns of conversation history for perfect memory recall
+      if (currentSession && currentSession.messages && currentSession.messages.length > 0) {
+        const recentHistory = currentSession.messages.slice(-10);
+        formData.append('chat_history', JSON.stringify(recentHistory));
+      }
+
       const bookEl = document.getElementById('bookIdInput');
       if (bookEl) formData.append('book_id', bookEl.value);
       if (hasFile) formData.append('attachment', fileInput.files[0]);
