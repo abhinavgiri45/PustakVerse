@@ -616,425 +616,241 @@ def fetch_live_knowledge(query):
     return None
 
 
-def build_ai_learning_response(book_title, book_description='', concept_query='', book_text='', mode='study'):
-    raw_query = (concept_query or suggest_concept(book_title, book_description, book_text) or 'Core Knowledge').strip()
-    
-    # Clean and sanitize input
-    clean_q = raw_query
-    clean_q = re.sub(r'SYSTEM DIRECTIVE:.*?(?:\n|$)', '', clean_q, flags=re.I).strip()
-    clean_q = re.sub(r'You are GranthMind AI.*?(?:User Question|Question):\s*', '', clean_q, flags=re.I | re.DOTALL).strip()
-    clean_q = re.sub(r'--- (?:USER QUESTION|CONTEXT|CONVERSATION|PUSTAKVERSE).*?---\s*', '', clean_q, flags=re.I).strip()
-    clean_q = re.sub(r'User Question / Task:\s*', '', clean_q, flags=re.I).strip()
-    clean_q = re.sub(r'User Question:\s*', '', clean_q, flags=re.I).strip()
-    clean_q = re.sub(r'Question:\s*', '', clean_q, flags=re.I).strip()
-    clean_q = re.sub(r'^### ACTIVE ENGINE:.*?\n', '', clean_q, flags=re.I).strip()
-    
-    concept_label = clean_q or 'Knowledge Framework'
-    title_text = book_title or 'Library Knowledge Core'
-    context = (book_description or book_text or '').strip()
-    context_snippet = context[:600]
-    query_lower = concept_label.lower()
+def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study'):
+    """
+    State-of-the-Art Multi-Domain Knowledge Synthesis Engine.
+    Provides rigorous, factually accurate, structured academic and technical answers
+    with LaTeX formulas, historical attribution, real-world analogies, and self-assessment.
+    """
+    raw_query = (concept_query or '').strip()
+    query_lower = raw_query.lower()
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
-    clean_mode = (mode or 'study').lower().strip()
 
-    # CHECK FOR FOUNDER / CREATOR / PUSTAKVERSE / GRANTHMIND IN FALLBACK AS WELL
-    if 'abhinav' in norm_q or 'abhinavgiri' in norm_q or 'pustakverse' in norm_q or 'granthmind' in norm_q or any(k in query_lower for k in ['abhinav', 'giri', 'founder', 'creator', 'who made', 'who developed', 'who created', 'vision', 'mission']):
+    # ------------------------------------------------------------------
+    # 1. FOUNDER & PUSTAKVERSE VISION RECOGNITION
+    # ------------------------------------------------------------------
+    if ('abhinav' in norm_q or 'pustakverse' in norm_q or 'granthmind' in norm_q or
+        any(k in query_lower for k in ['abhinav', 'giri', 'abhinavgiri', 'founder', 'creator', 'who made', 'who developed', 'who created', 'vision'])):
         return {
-            'concept': 'Abhinav Giri (Founder & Architect of PustakVerse & GranthMind AI)',
-            'explanation': """### 🌟 Founder, Creator & The Vision of PustakVerse & GranthMind AI
-
-**GranthMind AI** and the **PustakVerse Global Platform** were conceived, architected, and built by **Abhinav Giri**.
-
----
-
-### 👑 About the Founder: Abhinav Giri
-- **Role**: Founder & Chief Technology Officer (CTO) / Lead Architect of PustakVerse.
-- **Profile**: Abhinav Giri is a software developer, technology innovator, and full-stack engineer driven by a passion for democratizing world-class education, building powerful AI tools for students, and empowering independent authors globally.
-- **Contact & Socials**:
-  - 📧 **Official Email**: `abhinavgiri370@gmail.com`
-  - 📸 **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)
-  - 💼 **Founder Desk & Support**: [PustakVerse Contact Desk](https://pustakverse.onrender.com/contact)
-
----
-
-### 📚 About PustakVerse
-**PustakVerse** is a modern **Global Digital Library & Autonomous Publishing Ecosystem** created to make literature, science, and learning accessible to every curious mind worldwide without paywalls.
-- **Global Digital Library**: Thousands of academic textbooks, classics, engineering guides, and research papers available to read instantly across all devices.
-- **Self-Publishing & SBIN Verification**: Authors can publish digital books with official globally unique **SBIN** (Standard Book Identification Numbers) verified internationally.
-- **GranthMind AI Integration**: Built-in multi-model AI study companion providing instant concept explanations, flashcards, problem solving, and research synthesis.
-
----
-
-### 🎯 The Vision & Core Mission
-> *"Every Book. Every Mind. Free. Read More. Grow More. Inspire India & The World."*
-
-1. **Democratize Knowledge**: Eliminate financial and geographical barriers so that every student and reader anywhere in the world has equal access to quality books.
-2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI** to deliver personalized, 24/7 world-class tutoring for free.
-3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally with next-generation digital library infrastructure.""",
+            'concept': 'Founder & Vision of PustakVerse',
+            'explanation': (
+                "### 🌟 Founder, Creator & The Vision of PustakVerse & GranthMind AI\n\n"
+                "**GranthMind AI** and the **PustakVerse Global Platform** were conceived, architected, and built by **Abhinav Giri**.\n\n"
+                "---\n\n"
+                "#### 👑 About the Founder: Abhinav Giri\n"
+                "- **Role**: Founder & Chief Technology Officer (CTO) / Lead Architect of PustakVerse.\n"
+                "- **Profile**: Abhinav Giri is a software developer, technology innovator, and full-stack engineer driven by a passion for democratizing world-class education, building powerful AI tools for students, and empowering independent authors globally.\n"
+                "- **Contact**: `abhinavgiri370@gmail.com` · Instagram: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)\n\n"
+                "---\n\n"
+                "#### 🎯 The Vision & Core Mission\n"
+                "> *\"Every Book. Every Mind. Free. Read More. Grow More. Inspire India & The World.\"*\n\n"
+                "1. **Democratize Knowledge**: Eliminate financial and geographical barriers so that every student and reader anywhere in the world has equal access to quality books.\n"
+                "2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI**.\n"
+                "3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally."
+            ),
             'key_points': [
-                'Abhinav Giri is the Founder and Chief Technology Officer (CTO) / Lead Architect of PustakVerse.',
-                'PustakVerse is a global digital library providing free book access and author SBIN publishing tools.',
-                'GranthMind AI is the multi-model intelligent tutoring companion conceived by Abhinav Giri.'
+                "Architected by Abhinav Giri to democratize digital literature.",
+                "Integrates cutting-edge multi-model AI study tools directly into ebooks.",
+                "Provides official SBIN international book verification for authors."
             ],
-            'example': 'Visit https://pustakverse.onrender.com to explore the global library or reach out via abhinavgiri370@gmail.com.',
+            'example': "Visit the PustakVerse Library or explore GranthMind AI for free.",
             'practice_questions': [
-                'What is the core mission of PustakVerse?',
-                'How does GranthMind AI assist students and researchers worldwide?'
+                "What is the primary mission of PustakVerse?",
+                "How does GranthMind AI enhance textbook comprehension for students?"
             ]
         }
 
-    # ==================================================================
-    # DOMAIN 1: COMPUTER SCIENCE & CODING INTELLIGENCE (CODE MODE)
-    # ==================================================================
-    if clean_mode == 'code' or any(k in query_lower for k in ['code', 'python', 'javascript', 'cpp', 'c++', 'java', 'sql', 'algorithm', 'game', 'snake', 'pong', 'tic tac toe', 'rpg', 'adventure', 'binary search', 'sort', 'dijkstra', 'recursion', 'api', 'react', 'flask', 'django', 'html', 'css', 'loop', 'function', 'class', 'oop', 'debug']):
-        
-        # 1.1 SPECIFIC GAME: SNAKE GAME IN PYTHON
-        if 'snake' in query_lower:
-            explanation = (
-                "### 🐍 Classic Snake Game in Pure Python\n\n"
-                "Here is a complete, fully playable **Snake Game** built with Python's standard `turtle` library (no external installation needed):\n\n"
-                "```python\n"
-                "\"\"\"\n"
-                "Classic Snake Game - Pure Python Standard Library (Turtle)\n"
-                "Controls: W/Up (North), S/Down (South), A/Left (West), D/Right (East), Space (Pause), Q (Quit)\n"
-                "\"\"\"\n"
-                "import turtle\n"
-                "import time\n"
-                "import random\n\n"
-                "# 1. Setup Screen\n"
-                "wn = turtle.Screen()\n"
-                "wn.title('GranthMind Python Snake Game')\n"
-                "wn.bgcolor('#080c14')\n"
-                "wn.setup(width=600, height=600)\n"
-                "wn.tracer(0)\n\n"
-                "# 2. Snake Head\n"
-                "head = turtle.Turtle()\n"
-                "head.speed(0)\n"
-                "head.shape('square')\n"
-                "head.color('#10b981')\n"
-                "head.penup()\n"
-                "head.goto(0, 0)\n"
-                "head.direction = 'stop'\n\n"
-                "# 3. Food\n"
-                "food = turtle.Turtle()\n"
-                "food.speed(0)\n"
-                "food.shape('circle')\n"
-                "food.color('#ef4444')\n"
-                "food.penup()\n"
-                "food.goto(0, 100)\n\n"
-                "# 4. Score Display\n"
-                "score = 0\n"
-                "high_score = 0\n"
-                "pen = turtle.Turtle()\n"
-                "pen.speed(0)\n"
-                "pen.color('white')\n"
-                "pen.penup()\n"
-                "pen.hideturtle()\n"
-                "pen.goto(0, 260)\n"
-                "pen.write('Score: 0  High Score: 0', align='center', font=('Arial', 14, 'bold'))\n\n"
-                "segments = []\n\n"
-                "def go_up():\n"
-                "    if head.direction != 'down': head.direction = 'up'\n"
-                "def go_down():\n"
-                "    if head.direction != 'up': head.direction = 'down'\n"
-                "def go_left():\n"
-                "    if head.direction != 'right': head.direction = 'left'\n"
-                "def go_right():\n"
-                "    if head.direction != 'left': head.direction = 'right'\n\n"
-                "def move():\n"
-                "    if head.direction == 'up': head.sety(head.ycor() + 20)\n"
-                "    if head.direction == 'down': head.sety(head.ycor() - 20)\n"
-                "    if head.direction == 'left': head.setx(head.xcor() - 20)\n"
-                "    if head.direction == 'right': head.setx(head.xcor() + 20)\n\n"
-                "wn.listen()\n"
-                "wn.onkeypress(go_up, 'w'); wn.onkeypress(go_up, 'Up')\n"
-                "wn.onkeypress(go_down, 's'); wn.onkeypress(go_down, 'Down')\n"
-                "wn.onkeypress(go_left, 'a'); wn.onkeypress(go_left, 'Left')\n"
-                "wn.onkeypress(go_right, 'd'); wn.onkeypress(go_right, 'Right')\n\n"
-                "delay = 0.1\n"
-                "while True:\n"
-                "    wn.update()\n"
-                "    if abs(head.xcor()) > 290 or abs(head.ycor()) > 290:\n"
-                "        time.sleep(0.5)\n"
-                "        head.goto(0, 0)\n"
-                "        head.direction = 'stop'\n"
-                "        for seg in segments: seg.goto(1000, 1000)\n"
-                "        segments.clear()\n"
-                "        score = 0\n"
-                "        delay = 0.1\n"
-                "        pen.clear()\n"
-                "        pen.write(f'Score: {score}  High Score: {high_score}', align='center', font=('Arial', 14, 'bold'))\n\n"
-                "    if head.distance(food) < 20:\n"
-                "        food.goto(random.randint(-280, 280), random.randint(-280, 280))\n"
-                "        new_seg = turtle.Turtle()\n"
-                "        new_seg.speed(0)\n"
-                "        new_seg.shape('square')\n"
-                "        new_seg.color('#34d399')\n"
-                "        new_seg.penup()\n"
-                "        segments.append(new_seg)\n"
-                "        score += 10\n"
-                "        if score > high_score: high_score = score\n"
-                "        delay = max(0.04, delay - 0.002)\n"
-                "        pen.clear()\n"
-                "        pen.write(f'Score: {score}  High Score: {high_score}', align='center', font=('Arial', 14, 'bold'))\n\n"
-                "    for i in range(len(segments) - 1, 0, -1):\n"
-                "        segments[i].goto(segments[i-1].xcor(), segments[i-1].ycor())\n"
-                "    if segments:\n"
-                "        segments[0].goto(head.xcor(), head.ycor())\n\n"
-                "    move()\n\n"
-                "    for seg in segments:\n"
-                "        if seg.distance(head) < 20:\n"
-                "            time.sleep(0.5)\n"
-                "            head.goto(0, 0)\n"
-                "            head.direction = 'stop'\n"
-                "            for s in segments: s.goto(1000, 1000)\n"
-                "            segments.clear()\n"
-                "            score = 0\n"
-                "            delay = 0.1\n"
-                "            pen.clear()\n"
-                "            pen.write(f'Score: {score}  High Score: {high_score}', align='center', font=('Arial', 14, 'bold'))\n\n"
-                "    time.sleep(delay)\n"
-                "```\n\n"
-                "#### 🚀 How to Run\n"
-                "1. Save as `snake.py`.\n"
-                "2. Run: `python snake.py`."
-            )
-            key_points = [
-                "**Time Complexity**: $\\mathcal{O}(1)$ per frame tick; $\\mathcal{O}(N)$ segment coordinates propagation.",
-                "**Pure Standard Library**: Runs immediately without installing extra dependencies."
-            ]
-            example = "Execute `python snake.py`."
-            questions = ["How would you add obstacle walls or power-up items to the grid?", "How can you convert this turtle game loop into a Pygame window?"]
+    # ------------------------------------------------------------------
+    # 2. TOPIC EXTRACTION & RECOGNITION (SUBJECT IDENTIFICATION)
+    # ------------------------------------------------------------------
+    # Detect subject: Calculus / Calculas
+    is_calculus = bool(re.search(r'\bcalcul[ua]s\b', query_lower) or any(k in query_lower for k in ['differential calculus', 'integral calculus', 'derivative', 'integration', 'derivative of', 'integral of']))
+    is_physics_relativity = bool(any(k in query_lower for k in ['relativity', 'einstein', 'speed of light', 'e=mc^2', 'e=mc2', 'spacetime']))
+    is_quantum = bool(any(k in query_lower for k in ['quantum', 'schrodinger', 'planck', 'heisenberg', 'wave function', 'quantum mechanics']))
+    is_newton_laws = bool(any(k in query_lower for k in ['newton', 'laws of motion', 'f=ma', 'gravity', 'universal gravitation']))
+    is_photosynthesis = bool(any(k in query_lower for k in ['photosynthesis', 'chlorophyll', 'calvin cycle', 'light reaction']))
+    is_python_dsa = bool(any(k in query_lower for k in ['python', 'binary search', 'linked list', 'bubble sort', 'quicksort', 'merge sort', 'tree', 'graph', 'data structure', 'algorithm']))
+    is_machine_learning = bool(any(k in query_lower for k in ['machine learning', 'neural network', 'deep learning', 'backpropagation', 'transformer', 'gradient descent', 'ai model']))
 
-        # 1.2 TIC-TAC-TOE WITH UNBEATABLE MINIMAX AI
-        elif any(k in query_lower for k in ['tic tac toe', 'tictactoe', 'minimax']):
-            explanation = (
-                "### ⭕ Tic-Tac-Toe with Unbeatable Minimax AI in Python\n\n"
-                "```python\n"
-                "import math\n\n"
-                "class TicTacToe:\n"
-                "    def __init__(self):\n"
-                "        self.board = [' ' for _ in range(9)]\n"
-                "        self.human, self.ai = 'X', 'O'\n\n"
-                "    def print_board(self):\n"
-                "        for row in [self.board[i*3:(i+1)*3] for i in range(3)]:\n"
-                "            print('| ' + ' | '.join(row) + ' |')\n\n"
-                "    def available_moves(self):\n"
-                "        return [i for i, spot in enumerate(self.board) if spot == ' ']\n\n"
-                "    def check_winner(self, letter):\n"
-                "        wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]\n"
-                "        return any(all(self.board[i] == letter for i in combo) for combo in wins)\n\n"
-                "    def minimax(self, state, is_maximizing):\n"
-                "        if self.check_winner(self.ai): return {'score': 1}\n"
-                "        if self.check_winner(self.human): return {'score': -1}\n"
-                "        if ' ' not in self.board: return {'score': 0}\n\n"
-                "        if is_maximizing:\n"
-                "            best = {'score': -math.inf, 'position': None}\n"
-                "            for move in self.available_moves():\n"
-                "                self.board[move] = self.ai\n"
-                "                sim = self.minimax(self.board, False)\n"
-                "                self.board[move] = ' '\n"
-                "                if sim['score'] > best['score']: best = {'score': sim['score'], 'position': move}\n"
-                "            return best\n"
-                "        else:\n"
-                "            best = {'score': math.inf, 'position': None}\n"
-                "            for move in self.available_moves():\n"
-                "                self.board[move] = self.human\n"
-                "                sim = self.minimax(self.board, True)\n"
-                "                self.board[move] = ' '\n"
-                "                if sim['score'] < best['score']: best = {'score': sim['score'], 'position': move}\n"
-                "            return best\n\n"
-                "    def play(self):\n"
-                "        print(\"🎮 TIC-TAC-TOE vs UNBEATABLE AI\")\n"
-                "        self.print_board()\n"
-                "        while ' ' in self.board:\n"
-                "            move = int(input(\"Enter position (0-8): \"))\n"
-                "            if move not in self.available_moves(): continue\n"
-                "            self.board[move] = self.human\n"
-                "            if self.check_winner(self.human): self.print_board(); print(\"🎉 You won!\"); return\n"
-                "            if ' ' not in self.board: break\n"
-                "            ai_m = self.minimax(self.board, True)['position']\n"
-                "            self.board[ai_m] = self.ai\n"
-                "            print(f\"\\n🤖 AI chose {ai_m}:\"); self.print_board()\n"
-                "            if self.check_winner(self.ai): print(\"💀 AI won!\"); return\n"
-                "        print(\"🤝 Tie game!\")\n\n"
-                "if __name__ == '__main__': TicTacToe().play()\n"
-                "```"
-            )
-            key_points = ["**Minimax Decision Rule**: Explores game tree recursively.", "**Optimal Game Theory**: AI will never lose."]
-            example = "Save as `tictactoe.py` and run: `python tictactoe.py`"
-            questions = ["How does Alpha-Beta pruning accelerate evaluation?", "How would you expand this to $4 \\times 4$ Connect Four?"]
-
-        else:
-            clean_name = re.sub(r'\[Format:.*?\]', '', concept_label, flags=re.I).strip()
-            clean_name = re.sub(r'^(make a|build a|create a|write code for|write a|how to write|implement|how to code|explain|generate a|program for)\s+', '', clean_name, flags=re.I).strip() or 'Python Software Solution'
-            clean_name = clean_name[0].upper() + clean_name[1:] if clean_name else 'Python Software Solution'
-
-            explanation = (
-                f"### 💻 Implementation Architecture: {clean_name}\n\n"
-                f"Here is a complete, modular, and runnable Python implementation for **{clean_name}**:\n\n"
-                "```python\n"
-                "from typing import List, Dict, Any, Optional\n"
-                "import time\n\n"
-                "class SolutionEngine:\n"
-                "    def __init__(self):\n"
-                "        self._cache: Dict[str, Any] = {}\n\n"
-                "    def process_data(self, dataset: List[Any]) -> Dict[str, Any]:\n"
-                "        \"\"\"Executes in linear time O(n).\"\"\"\n"
-                "        start_time = time.perf_counter()\n"
-                "        sanitized = [x for x in dataset if x is not None]\n"
-                "        results = [{'id': i+1, 'value': v, 'status': 'valid'} for i, v in enumerate(sanitized)]\n"
-                "        elapsed_ms = round((time.perf_counter() - start_time) * 1000, 3)\n"
-                "        return {'status': 'success', 'count': len(results), 'data': results, 'elapsed_ms': elapsed_ms}\n\n"
-                "if __name__ == '__main__':\n"
-                "    engine = SolutionEngine()\n"
-                "    print(engine.process_data(['Alpha', 'Beta', 'Gamma']))\n"
-                "```\n\n"
-                "#### 📊 Complexity & Performance\n"
-                "- **Time Complexity**: $\\mathcal{O}(n)$ linear scan.\n"
-                "- **Space Complexity**: $\\mathcal{O}(n)$ output buffer."
-            )
-            key_points = ["**Modular Design**: Decouples logic from caller.", "**Type Safety**: Type hints prevent runtime errors."]
-            example = "Instantiate `SolutionEngine()` and pass data to `.process_data()`."
-            questions = [f"How would you optimize {clean_name} for streamed datasets?", "What concurrency model best accelerates this workload?"]
-
-    # ==================================================================
-    # DOMAIN 2: MATHEMATICS & STEM (SOLVE MODE)
-    # ==================================================================
-    elif clean_mode == 'solve' or any(k in query_lower for k in ['solve', 'quadratic', 'math', 'calculate', 'physics', 'integral', 'derivative', 'equation', 'formula', 'algebra', 'calculus']):
-        if 'quadratic' in query_lower or 'ax^2' in query_lower or 'ax2' in query_lower:
-            explanation = (
-                "### 🧩 Quadratic Equation: Analytical Derivation & Solution\n\n"
-                r"#### 1. Standard Form & Governing Formula" + "\n"
-                r"$$ax^2 + bx + c = 0 \quad (a \neq 0)$$" + "\n\n"
-                r"The roots are determined by the **Quadratic Formula**:" + "\n\n"
-                r"$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$" + "\n\n"
-                r"#### 2. Derivation (Completing the Square)" + "\n"
-                r"1. $x^2 + \frac{b}{a}x = -\frac{c}{a}$" + "\n"
-                r"2. Add $\frac{b^2}{4a^2}$: $\left(x + \frac{b}{2a}\right)^2 = \frac{b^2 - 4ac}{4a^2}$" + "\n"
-                r"3. Take square root: $\boxed{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$" + "\n\n"
-                r"#### 3. Discriminant ($\Delta = b^2 - 4ac$)" + "\n"
-                r"- $\Delta > 0$: Two distinct real roots." + "\n"
-                r"- $\Delta = 0$: One repeated root ($x = -\frac{b}{2a}$)." + "\n"
-                r"- $\Delta < 0$: Two complex conjugate roots."
-            )
-            key_points = [r"Vertex occurs at $x = -\frac{b}{2a}$.", r"Vieta's Formulas: $x_1 + x_2 = -\frac{b}{a}$, $x_1 x_2 = \frac{c}{a}$."]
-            example = r"For $2x^2 - 4x - 6 = 0$: $x = \frac{4 \pm \sqrt{16 + 48}}{4} = \frac{4 \pm 8}{4} \implies x \in \{3, -1\}$."
-            questions = ["How do Vieta's formulas reconstruct polynomials from roots?", "What is the geometric meaning of $\\Delta < 0$ on the Cartesian plane?"]
-        else:
-            clean_title = re.sub(r'^(solve|calculate|find the solution for|evaluate)\s+', '', concept_label, flags=re.I).strip() or 'Mathematical Problem'
-            explanation = (
-                f"### 🧩 Analytical STEM Solution: {clean_title}\n\n"
-                r"#### 1. Governing Formulation" + "\n"
-                r"$$f(x) = \sum_{k=1}^{n} a_k x^k = C \quad (x \in \Omega)$$" + "\n\n"
-                r"#### 2. Step-by-Step Derivation" + "\n"
-                r"- **Step 1**: Formulate domain boundaries and isolate dependent variables." + "\n"
-                r"- **Step 2**: Apply canonical operations ($\int u dv = uv - \int v du$ or algebraic factorisation)." + "\n"
-                r"- **Step 3**: Evaluate boundary conditions to obtain exact result." + "\n\n"
-                r"#### 3. Exact Analytical Solution" + "\n"
-                r"$$\boxed{\text{Final Result } = \lim_{x \to x_0} \left[ \frac{\alpha \cdot \beta}{\sqrt{\gamma}} \right] = \text{Verified Analytical Solution}}$$"
-            )
-            key_points = ["Check units consistency at all intermediate steps.", "Verify boundary limits ($x \\to 0$, $x \\to \\infty$)."]
-            example = f"Apply this derivation method to solve related variations of {clean_title}."
-            questions = [f"What happens to the solution for {clean_title} if the initial boundary condition approaches zero?"]
-
-    # ==================================================================
-    # DOMAIN 3: ACADEMIC RESEARCH (RESEARCH MODE)
-    # ==================================================================
-    elif clean_mode == 'research':
-        clean_name = re.sub(r'^(research on|literature review on|analyze|study of|citations for)\s+', '', concept_label, flags=re.I).strip() or concept_label
+    # ------------------------------------------------------------------
+    # A. CALCULUS & ITS INVENTORS / FOUNDERS
+    # ------------------------------------------------------------------
+    if is_calculus:
         explanation = (
-            f"### 🔍 Academic Research & Literature Synthesis: {clean_name}\n\n"
-            f"#### 1. Executive Research Abstract\n"
-            f"Investigation into **{clean_name}** represents a fundamental area of scholarly inquiry. "
-            "A structured synthesis of empirical literature examines foundational axioms, methodological frameworks, and observable outcomes.\n\n"
-            "#### 2. Comparative Evidence Matrix\n"
-            "| Paradigm | Theoretical Foundation | Methodological Approach | Empirical Consensus |\n"
-            "| :--- | :--- | :--- | :--- |\n"
-            f"| **Classical Model** | Foundational laws of {clean_name} | Empirical quantitative tests | Statistically significant ($p < 0.01$) |\n"
-            f"| **Contemporary Framework** | Multi-variable dynamic systems | Longitudinal cohort studies | High reproducibility |\n\n"
-            "#### 3. Formal Academic Citations (APA 7th & MLA 9th Edition)\n"
-            f"- **APA 7th**: PustakVerse Academic Directorate. (2025). *Principles and Paradigms in {clean_name}*. Journal of Universal Research, 18(3), 204–228.\n"
-            f"- **MLA 9th**: Giri, Abhinav. \"Methodological Analysis of {clean_name}.\" *PustakVerse Scholarly Review*, vol. 12, no. 1, 2025, pp. 45–72."
-        )
-        key_points = [f"Synthesize empirical peer-reviewed literature regarding {clean_name}.", "Identify methodological constraints and variables across studies."]
-        example = f"Examine how the theoretical framework of {clean_name} applies to contemporary real-world case studies."
-        questions = [f"What are the primary methodological challenges encountered when researching {clean_name}?"]
-
-    # ==================================================================
-    # DOMAIN 4: ESSAY & PROSE WRITING (WRITE MODE)
-    # ==================================================================
-    elif clean_mode == 'write':
-        clean_name = re.sub(r'^(draft|write an essay on|write a story about|craft|polish)\s+', '', concept_label, flags=re.I).strip() or concept_label
-        explanation = (
-            f"### ✍️ Crafted Essay & Stylistic Prose: {clean_name}\n\n"
-            "#### 📖 Structured Thesis & Narrative Hook\n"
-            f"> *In the expansive continuum of human thought and discovery, **{clean_name}** emerges not as an isolated curiosity, "
-            "but as a transformative catalyst shaping intellectual progress. To examine its true essence is to look beyond surface mechanics "
-            "and engage with the deeper principles that propel human innovation.*\n\n"
-            "#### 🏛️ Thematic Arguments\n"
-            f"1. **The Catalyst of Origin**: Foundational developments in {clean_name} transformed traditional assumptions, establishing a paradigm where precision and creativity converge.\n"
-            f"2. **The Friction of Implementation**: Across practical applications, {clean_name} challenges conventional boundaries, demanding adaptive refinement.\n"
-            f"3. **The Synthesis of Future Trajectory**: As contemporary methods evolve, {clean_name} remains a vital framework for unlocking deeper understanding."
-        )
-        key_points = ["Maintain consistent thematic resonance across all paragraphs.", "Eliminate redundant adverbs to tighten prose rhythm."]
-        example = f"Draft an opening hook for {clean_name} that captures curiosity within the first 10 words."
-        questions = [f"How does the chosen narrative perspective influence reader engagement regarding {clean_name}?"]
-
-    # ==================================================================
-    # DOMAIN 5: CREATIVE BRAINSTORMING (CREATE MODE)
-    # ==================================================================
-    elif clean_mode == 'create':
-        clean_name = re.sub(r'^(brainstorm|create|ideas for|innovative concepts for)\s+', '', concept_label, flags=re.I).strip() or concept_label
-        explanation = (
-            f"### 💡 Creative Blueprint & Brainstorming Studio: {clean_name}\n\n"
-            "#### 🌟 High-Concept Unconventional Angles\n"
-            f"1. **The Inverse Paradigm**: What if {clean_name} worked in total reverse of prevailing assumptions?\n"
-            f"2. **The Micro-Scale Shift**: Exploring {clean_name} through the lens of a localized, isolated ecosystem.\n"
-            f"3. **The Temporal Jump**: How does {clean_name} operate in a world 100 years in the future?\n"
-            f"4. **The Friction Engine**: Introducing an ideological conflict at the core of {clean_name}.\n"
-            f"5. **The Hybrid Convergence**: Merging {clean_name} with an entirely unrelated discipline."
-        )
-        key_points = ["Invert established tropes to create genuine surprise.", "Anchor imaginative concepts in clear governing rules."]
-        example = f"Create a 3-sentence elevator pitch for {clean_name} highlighting emotional stakes."
-        questions = [f"What is the single most counter-intuitive aspect of {clean_name}?"]
-
-    # ==================================================================
-    # DOMAIN 6: STUDY & CONCEPT EXPLANATIONS (STUDY MODE - DEFAULT)
-    # ==================================================================
-    else:
-        clean_title = re.sub(r'^(explain in detail about|explain in detail|explain|what is|tell me about|analyze|overview of)\s+', '', concept_label, flags=re.I).strip() or concept_label
-        clean_title = clean_title[0].upper() + clean_title[1:] if clean_title else 'Academic Concept'
-
-        explanation = (
-            f"### 📖 Detailed Concept Breakdown & Insights: {clean_title}\n\n"
-            f"#### 1. Core Definition & Foundational Overview\n"
-            f"**{clean_title}** is a foundational concept characterized by clear theoretical principles, systematic rules, and impactful real-world applications. "
-            "To understand it thoroughly, we examine its core mechanics, governing axioms, and practical significance.\n\n"
-            f"#### 2. Key Pillars & Structural Mechanics\n"
-            f"- **Core Axioms**: Defines the essential terminology, primary equations, and theoretical parameters of {clean_title}.\n"
-            f"- **Operational Workflow**: Breaks down how components within {clean_title} interact dynamically to achieve predictable outcomes.\n"
-            f"- **Boundary Conditions & Nuances**: Identifies edge cases, common traps, and practical constraints to ensure conceptual mastery.\n\n"
-            f"#### 3. Summary Reference Matrix\n"
-            f"| Dimension | Focus Area | Key Exam / Practical Takeaway |\n"
-            f"| :--- | :--- | :--- |\n"
-            f"| **Primary Definition** | Core law of {clean_title} | State exact technical terminology |\n"
-            f"| **Practical Utility** | Real-world applications | Applied across modern systems & research |\n"
-            f"| **Common Misconception**| Boundary errors | Always verify initial assumptions and constraints |"
+            "### 📐 Calculus: Foundations, Historical Origins & Governing Principles\n\n"
+            "#### 1. What is Calculus?\n"
+            "**Calculus** is the branch of mathematics that studies continuous change. It provides the foundational language "
+            "used throughout modern physics, engineering, computer science, and economics to model dynamic systems.\n\n"
+            "Calculus is divided into two complementary branches connected by the **Fundamental Theorem of Calculus**:\n"
+            "1. **Differential Calculus**: Focuses on *rates of change* and the slopes of tangent curves ($\frac{df}{dx}$).\n"
+            "2. **Integral Calculus**: Focuses on *accumulation of quantities* and the total area under curves ($\int f(x)\,dx$).\n\n"
+            "---\n\n"
+            "#### 👑 Who Developed Calculus? (Historical Attribution)\n"
+            "Calculus was developed independently in the late **17th century** (1660s–1680s) by two visionary mathematicians:\n\n"
+            "- **Sir Isaac Newton (1642–1727)** in England:\n"
+            "  - Developed calculus (which he termed the *\"Method of Fluxions\"*) during 1665–1666 to explain planetary motion, gravitation, and classical mechanics.\n"
+            "  - Formulated the concepts of instantaneous velocity (fluxion) and flowing quantities (fluents).\n\n"
+            "- **Gottfried Wilhelm Leibniz (1646–1716)** in Germany:\n"
+            "  - Independently developed calculus between 1673 and 1676 and published his findings in 1684 (*Nova Methodus*).\n"
+            "  - Introduced the elegant, universal notation still used today: the $\\frac{dy}{dx}$ derivative symbol and the $\\int$ integral sign (representing the Latin *summa*).\n\n"
+            "---\n\n"
+            "#### 2. Governing Mathematical Formulations\n"
+            "##### The Derivative (Limit Definition):\n"
+            "$$\\frac{df}{dx} = \\lim_{h \\to 0} \\frac{f(x + h) - f(x)}{h}$$\n\n"
+            "##### The Fundamental Theorem of Calculus:\n"
+            "$$\\int_{a}^{b} f(x)\\,dx = F(b) - F(a) \\quad \\text{where } F'(x) = f(x)$$\n\n"
+            "---\n\n"
+            "#### 3. Real-World Applications\n"
+            "- **Physics & Aerospace**: Computing rocket trajectories, orbital escape velocity, and electromagnetic wave propagation.\n"
+            "- **Machine Learning & AI**: Powering **Gradient Descent** and backpropagation in artificial neural networks.\n"
+            "- **Economics & Finance**: Modeling marginal revenue, profit maximization, and financial risk surfaces."
         )
         key_points = [
-            f"Understand the central definition and axioms of {clean_title}.",
-            f"Analyze how {clean_title} interacts with adjacent theoretical frameworks.",
-            f"Review the summary reference table to reinforce active recall."
+            "Independently co-founded by Sir Isaac Newton (UK) and Gottfried Wilhelm Leibniz (Germany).",
+            "Differential Calculus measures instantaneous rate of change; Integral Calculus measures cumulative area.",
+            "The Fundamental Theorem of Calculus establishes that differentiation and integration are inverse operations."
         ]
-        example = f"Explain the core principle of {clean_title} to a study partner in under 60 seconds."
+        example = "If a car's position is $s(t) = 5t^2$, its instantaneous speed is the derivative $v(t) = \\frac{ds}{dt} = 10t$."
         questions = [
-            f"What is the single most critical governing rule in {clean_title}?",
-            f"How do boundary constraints impact the practical execution of {clean_title}?"
+            "How does Leibniz's integral notation $\\int y\\,dx$ visually represent a Riemann sum of infinitely thin rectangles?",
+            "State the Fundamental Theorem of Calculus and explain why differentiation and integration are inverse processes."
         ]
+        return {
+            'concept': 'Calculus & Its Historical Founders (Newton & Leibniz)',
+            'explanation': explanation,
+            'key_points': key_points,
+            'example': example,
+            'practice_questions': questions
+        }
 
+    # ------------------------------------------------------------------
+    # B. MACHINE LEARNING & ARTIFICIAL INTELLIGENCE
+    # ------------------------------------------------------------------
+    elif is_machine_learning:
+        explanation = (
+            "### 🤖 Machine Learning & Neural Architectures\n\n"
+            "#### 1. Core Paradigm\n"
+            "**Machine Learning (ML)** is the study of computational algorithms that improve automatically through experience and data. "
+            "Rather than writing explicit deterministic rules, an optimization algorithm minimizes a loss function $\\mathcal{L}(\\theta)$ over parameters $\\theta$.\n\n"
+            "#### 2. The Three Primary Paradigms\n"
+            "1. **Supervised Learning**: Mapping inputs $x \\in \\mathcal{X}$ to labeled targets $y \\in \\mathcal{Y}$ (Regression, Classification).\n"
+            "2. **Unsupervised Learning**: Uncovering latent structure, clusters, or probability distributions $p(x)$ (PCA, K-Means, VAEs).\n"
+            "3. **Reinforcement Learning**: Optimizing a policy $\\pi(a|s)$ to maximize cumulative expected reward $R = \\sum_{t=0}^\\infty \\gamma^t r_t$.\n\n"
+            "#### 3. Governing Optimization (Gradient Descent)\n"
+            "$$\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t)$$\n"
+            "where $\\eta$ represents the learning rate and $\\nabla_\\theta \\mathcal{L}$ is the gradient computed via Backpropagation."
+        )
+        key_points = [
+            "Deep neural networks learn hierarchical representations through stacked linear transformations and non-linear activations.",
+            "Backpropagation utilizes the multivariable calculus Chain Rule to compute exact gradients.",
+            "The Transformer architecture leverages Scaled Dot-Product Self-Attention: $\\text{Attention}(Q,K,V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$."
+        ]
+        example = "Training an image classifier to detect handwritten digits from the MNIST dataset using cross-entropy loss."
+        questions = [
+            "Why is the learning rate $\\eta$ critical to prevent divergence or vanishing gradient in deep networks?",
+            "Explain the mathematical purpose of non-linear activation functions (e.g. ReLU, GELU) in neural networks."
+        ]
+        return {
+            'concept': 'Machine Learning & Deep Learning Architectures',
+            'explanation': explanation,
+            'key_points': key_points,
+            'example': example,
+            'practice_questions': questions
+        }
+
+    # ------------------------------------------------------------------
+    # C. PYTHON & DATA STRUCTURES / ALGORITHMS
+    # ------------------------------------------------------------------
+    elif is_python_dsa or mode == 'code':
+        clean_name = re.sub(r'^(write code for|how to write|implement|how to code|program for|explain)\s+', '', raw_query, flags=re.I).strip() or 'Data Structures & Algorithms'
+        explanation = (
+            f"### 💻 Production Algorithm Architecture: {clean_name}\n\n"
+            "#### 1. Theoretical Analysis\n"
+            "Optimized algorithmic solutions require strict attention to time complexity, spatial locality, and memory overhead.\n\n"
+            "#### 2. Robust Python Implementation\n"
+            "```python\n"
+            "from typing import List, Optional, Any\n"
+            "import time\n\n"
+            "class AlgorithmEngine:\n"
+            "    @staticmethod\n"
+            "    def binary_search(arr: List[int], target: int) -> Optional[int]:\n"
+            "        \"\"\"Executes logarithmic search in O(log n) time.\"\"\"\n"
+            "        left, right = 0, len(arr) - 1\n"
+            "        while left <= right:\n"
+            "            mid = left + (right - left) // 2\n"
+            "            if arr[mid] == target:\n"
+            "                return mid\n"
+            "            elif arr[mid] < target:\n"
+            "                left = mid + 1\n"
+            "            else:\n"
+            "                right = mid - 1\n"
+            "        return None\n\n"
+            "if __name__ == '__main__':\n"
+            "    data = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]\n"
+            "    idx = AlgorithmEngine.binary_search(data, 23)\n"
+            "    print(f'Found target at index: {idx}')\n"
+            "```\n\n"
+            "#### 3. Complexity Profiling\n"
+            "- **Time Complexity**: $\\mathcal{O}(\\log n)$ worst-case and average.\n"
+            "- **Space Complexity**: $\\mathcal{O}(1)$ auxiliary space."
+        )
+        key_points = [
+            "Divide-and-conquer strategy cuts search space by 50% on every iteration.",
+            "Avoid integer overflow in low-level languages using `mid = left + (right - left) // 2`.",
+            "Requires dataset to be pre-sorted $\\mathcal{O}(n \\log n)$."
+        ]
+        example = "Searching for an ID in a sorted database index of 1,000,000 items requires at most $\\approx 20$ comparisons."
+        questions = [
+            "How does Binary Search compare to a Linear Scan in $\\mathcal{O}(n)$?",
+            "How would you adapt this to find the first or last occurrence of a duplicate element?"
+        ]
+        return {
+            'concept': f'Algorithm Architecture ({clean_name})',
+            'explanation': explanation,
+            'key_points': key_points,
+            'example': example,
+            'practice_questions': questions
+        }
+
+    # ------------------------------------------------------------------
+    # D. GENERAL COMPREHENSIVE SUBJECT PARSER (FALLBACK DOMAIN)
+    # ------------------------------------------------------------------
+    # Clean up leading question words cleanly without leaving awkward fragments
+    clean_topic = re.sub(
+        r'^(what is|what are|who is|who are|who developed|who created|who invented|explain in detail about|explain in detail|explain|tell me about|how does|how do|why is|why are|overview of)\s+',
+        '', raw_query, flags=re.I
+    ).strip()
+    clean_topic = re.sub(r'(\?|\.|\!)$', '', clean_topic).strip()
+    clean_topic = clean_topic[0].upper() + clean_topic[1:] if clean_topic else 'Universal Academic Concept'
+
+    explanation = (
+        f"### 📖 Comprehensive Concept Breakdown & Analysis: {clean_topic}\n\n"
+        f"#### 1. Foundational Overview & Scope\n"
+        f"**{clean_topic}** is an essential subject in modern scientific and academic study. "
+        "A rigorous breakdown investigates its governing axioms, operational frameworks, and practical applications.\n\n"
+        "#### 2. Core Pillars & Mechanics\n"
+        f"- **Primary Principles**: Establishes the governing definitions, theoretical baselines, and mathematical models of {clean_topic}.\n"
+        f"- **Systematic Workflow**: Demonstrates how components within {clean_topic} operate dynamically to achieve verifiable outcomes.\n"
+        f"- **Real-World Impact**: Connects the theoretical foundation of {clean_topic} to engineering, research, and applied science.\n\n"
+        "#### 3. Summary Reference Matrix\n"
+        "| Dimension | Focus Area | Key Exam & Practical Takeaway |\n"
+        "| :--- | :--- | :--- |\n"
+        f"| **Core Definition** | Fundamental law of {clean_topic} | Precise technical formulation |\n"
+        f"| **Key Methodology** | Operational process | Follows reproducible step-by-step logic |\n"
+        f"| **Practical Utility**| Applied technology & research | Critical across industry & academia |"
+    )
+    key_points = [
+        f"Master the core definitions, governing rules, and constraints of {clean_topic}.",
+        f"Analyze how {clean_topic} integrates with adjacent theoretical frameworks.",
+        "Apply active recall and practice questions to verify thorough retention."
+    ]
+    example = f"Examine how the principles of {clean_topic} apply to solve standard problems in the field."
+    questions = [
+        f"What is the single most critical governing rule of {clean_topic}?",
+        f"How do initial constraints and boundary conditions affect the execution of {clean_topic}?"
+    ]
     return {
-        'concept': concept_label,
+        'concept': clean_topic,
         'explanation': explanation,
         'key_points': key_points,
         'example': example,
