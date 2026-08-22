@@ -394,7 +394,8 @@
             <span>PustakVerse</span>
         </a>
         <div class="nav-actions">
-            <a href="/">← Back to Library</a>
+            <a href="/">
+            <a href="{{ url_for('ask_ai') }}" style="color: #c084fc; font-weight: 800;">🧠 GranthMind AI</a>← Back to Library</a>
             {% if session.user_id %}
                 <a href="{{ url_for('dashboard') }}" style="background: var(--primary-orange); color: white; padding: 7px 16px; border-radius: 20px;">Dashboard</a>
             {% else %}

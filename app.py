@@ -3134,6 +3134,8 @@ def learn_book(book_id):
 
     return render_template('learn_book.html', book=book, concept=concept, ai_response=ai_response)
 
+@app.route('/granthmind', methods=['GET', 'POST'])
+@app.route('/ai-tutor', methods=['GET', 'POST'])
 @app.route('/ask_ai', methods=['GET', 'POST'])
 def ask_ai():
     if 'user_id' not in session:
@@ -8334,3 +8336,83 @@ def api_verify_sbin():
         } if registered_book else None
     }
     return jsonify(response)
+
+
+
+# ======================================================================
+# GRANTHMIND AI ASYNC CHAT API
+# ======================================================================
+@app.route('/api/granthmind/chat', methods=['POST'])
+def api_granthmind_chat():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Please log in to chat with GranthMind AI.'}), 401
+
+    prompt = request.form.get('prompt', '').strip()
+    book_id = request.form.get('book_id', type=int)
+    mode = request.form.get('mode', 'study').strip().lower()
+    selected_model_id = request.form.get('model_id', '').strip()
+
+    if not prompt:
+        return jsonify({'success': False, 'error': 'Question or prompt cannot be empty.'}), 400
+
+    # Handle image attachment if any
+    attachment_path = ''
+    if 'attachment' in request.files:
+        f = request.files['attachment']
+        if f and f.filename:
+            fn = secure_filename(f"gm_{session['user_id']}_{int(time.time())}_{f.filename}")
+            up_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'ai_attachments')
+            os.makedirs(up_dir, exist_ok=True)
+            saved_path = os.path.join(up_dir, fn)
+            f.save(saved_path)
+            attachment_path = saved_path
+
+    # Contextual Mode Prompt Wrapping
+    mode_instructions = {
+        'study': "You are GranthMind AI in STUDY mode. Provide structured explanations, key concepts, summaries, and practice questions to help the student learn effectively.",
+        'research': "You are GranthMind AI in RESEARCH mode. Provide academic-grade analysis, structured literature citations (APA/MLA), factual synthesis, and deep analytical depth.",
+        'write': "You are GranthMind AI in WRITE mode. Assist in drafting compelling prose, essays, creative stories, dialogue, and refining grammar and tone with literary excellence.",
+        'code': "You are GranthMind AI in CODE mode. Provide clean, secure, production-ready code with complete syntax highlighting, step-by-step logic explanation, and edge-case handling.",
+        'create': "You are GranthMind AI in CREATE mode. Brainstorm original creative ideas, book plot structures, character arcs, and innovative pedagogical concepts.",
+        'solve': "You are GranthMind AI in SOLVE mode. Break down mathematical problems, physics equations, and logical riddles step-by-step with clear formulas and final answers."
+    }
+    system_prefix = mode_instructions.get(mode, mode_instructions['study'])
+
+    # Query Book Context if book_id is provided
+    book_context = ""
+    if book_id:
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT title, catalog, description FROM books WHERE id = %s", (book_id,))
+            b = cursor.fetchone()
+            if b:
+                book_context = f"\n[Book Context: '{b['title']}' (Category: {b['catalog']}) - {b.get('description', '')[:400]}]\n"
+        except Exception: pass
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+    full_prompt = f"{system_prefix}{book_context}\nUser Question: {prompt}"
+
+    try:
+        # Generate Answer with Selected AI Model Engine
+        answer = query_ai_model(full_prompt, attachment_path=attachment_path, model_id=selected_model_id)
+        if not answer or not answer.strip():
+            answer = "I apologize, I am currently processing multiple complex requests. Please try your question again in a moment."
+
+        # Save to chat history
+        save_ai_chat_message(session['user_id'], book_id, 'user', prompt, attachment_path)
+        save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
+
+        return jsonify({
+            'success': True,
+            'answer': answer,
+            'mode': mode,
+            'timestamp': datetime.now().strftime('%I:%M %p')
+        })
+    except Exception as e:
+        logging.error(f"GranthMind Chat API error: {e}")
+        return jsonify({'success': False, 'error': f"AI processing error: {str(e)}"}), 500

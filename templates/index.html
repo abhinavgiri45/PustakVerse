@@ -190,6 +190,12 @@
             </a>
         </div>
         <div class="navbar-links">
+            <!-- PROMINENT GRANTHMIND AI NAVBAR BUTTON -->
+            <a href="{{ url_for('ask_ai') }}" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: white; border-radius: 25px; padding: 7px 18px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); border: 1px solid rgba(255,255,255,0.3); text-decoration: none;">
+                <img src="{{ url_for('static', filename='GranthMind.png') }}" style="width: 20px; height: 20px; border-radius: 5px; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+                <span>GranthMind AI</span>
+                <span style="background: #fbbf24; color: #78350f; font-size: 0.68rem; padding: 2px 6px; border-radius: 10px; font-weight: 900;">FREE</span>
+            </a>
             <a href="{{ url_for('tools_hub') }}">🛠️ Tools</a>
             <a href="{{ url_for('contact') }}">Contact</a>
             {% if session.user_id %}
@@ -329,14 +335,56 @@
                 <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Published Authors</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #8b5cf6;">🤖 Free AI Tutor</div>
-                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Instant Doubts Resolution</div>
+                <div style="font-size: 1.25rem; font-weight: 900; color: #8b5cf6; display: flex; align-items: center; justify-content: center; gap: 6px;"><img src="/static/GranthMind.png" style="width: 26px; height: 26px; border-radius: 6px;" onerror="this.src='/static/PustakVerse.png'"> GranthMind AI</div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">All AI Models · Instant Doubts</div>
             </div>
         </div>
     </div>
 
 
     <div class="container">
+
+        <!-- ====================================================================== -->
+        <!-- GRANTHMIND AI INTERACTIVE HERO SHOWCASE BANNER                         -->
+        <!-- ====================================================================== -->
+        <div style="margin-bottom: 30px; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #090d16 100%); border: 1.5px solid #6366f1; border-radius: 24px; padding: 30px 26px; color: white; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2); position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -30px; top: -30px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%); pointer-events: none;"></div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; position: relative; z-index: 2;">
+                
+                <!-- Left: Branding & Tagline -->
+                <div style="display: flex; align-items: center; gap: 18px; max-width: 580px;">
+                    <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind AI Logo" style="width: 80px; height: 80px; border-radius: 18px; object-fit: cover; box-shadow: 0 0 25px rgba(139, 92, 246, 0.5); border: 2px solid rgba(139, 92, 246, 0.6);" onerror="this.src='/static/PustakVerse.png'">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.5); padding: 3px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 800; color: #c084fc; margin-bottom: 6px;">
+                            <span>✨</span> ALL AI MODELS. ONE PLATFORM.
+                        </div>
+                        <h2 style="font-size: 1.65rem; font-weight: 900; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                            GranthMind AI Companion
+                        </h2>
+                        <p style="color: #94a3b8; font-size: 0.88rem; margin: 4px 0 0; line-height: 1.4;">
+                            Chat with ChatGPT, Gemini, Claude, Copilot, DeepSeek &amp; Mistral. Study concepts, solve math, code, and write essays for free.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right: Action Button & Mode Badges -->
+                <div style="display: flex; flex-direction: column; gap: 10px; align-items: flex-end;">
+                    <a href="{{ url_for('ask_ai') }}" style="background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%); color: white; text-decoration: none; padding: 12px 28px; border-radius: 30px; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4); transition: transform 0.2s;">
+                        <span>🧠</span> Launch GranthMind AI ↗
+                    </a>
+                    <div style="display: flex; gap: 6px; font-size: 0.72rem; color: #cbd5e1; font-weight: 700; flex-wrap: wrap;">
+                        <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">📖 STUDY</span>
+                        <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">🔍 RESEARCH</span>
+                        <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">✍️ WRITE</span>
+                        <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">&lt;/&gt; CODE</span>
+                        <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">🧩 SOLVE</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
         <!-- Dynamic Continue Reading Hero Widget -->
         <div id="continueReadingWidget" style="display: none; margin-bottom: 24px; padding: 18px 24px; background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 16px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.08); align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; position: relative;">
             <div style="display: flex; align-items: center; gap: 16px;">
@@ -817,6 +865,13 @@
             </div>
         </div>
     </div>
+
+
+    <!-- FLOATING GRANTHMIND AI LAUNCHER BUTTON -->
+    <a href="{{ url_for('ask_ai') }}" title="Ask GranthMind AI" style="position: fixed; bottom: 26px; right: 26px; z-index: 9990; background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%); color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(124, 58, 237, 0.45); border: 2px solid rgba(255,255,255,0.25); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <img src="{{ url_for('static', filename='GranthMind.png') }}" style="width: 24px; height: 24px; border-radius: 6px; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+        <span>GranthMind AI</span>
+    </a>
 
 </body>
 </html>
