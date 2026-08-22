@@ -923,7 +923,7 @@ def smart_solve_math_or_code(query):
                 "$$ax^2 + bx + c = 0 \\quad (a \\neq 0)$$\n\n"
                 "The roots are determined by the **Quadratic Formula**:\n"
                 "$$\\mathbf{x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}}$$\n\n"
-                "#### 2. Discriminant ($\Delta = b^2 - 4ac$):\n"
+                "#### 2. Discriminant ($\\Delta = b^2 - 4ac$):\n"
                 "- $\\Delta > 0$: Two distinct real roots ($x_1 \\neq x_2$).\n"
                 "- $\\Delta = 0$: Exactly one repeated real root ($x = -\\frac{b}{2a}$).\n"
                 "- $\\Delta < 0$: Two complex conjugate roots ($x = \\alpha \\pm i\\beta$).\n\n"
@@ -1267,13 +1267,15 @@ def get_active_ai_models():
         if cleaned:
             return cleaned
 
-    # Default Clean Professional GranthMind Engines (No duplicate dots)
+    # Default Free Lifetime GranthMind AI Engines
     return [
-        {'id': 'gemini-2.0-flash', 'display_name': 'GranthMind Pro (Gemini 2.0 Flash)', 'provider_type': 'gemini', 'model_id': 'gemini-2.0-flash', 'is_default': 1},
-        {'id': 'deepseek-r1', 'display_name': 'GranthMind DeepThink (DeepSeek R1)', 'provider_type': 'deepseek', 'model_id': 'deepseek-r1', 'is_default': 0},
-        {'id': 'groq-llama-3-3', 'display_name': 'GranthMind Turbo (Groq LLaMA 3.3 70B)', 'provider_type': 'groq', 'model_id': 'meta-llama-3', 'is_default': 0},
-        {'id': 'gpt-4o-mini', 'display_name': 'GranthMind Vision & Scholar (GPT-4o Mini)', 'provider_type': 'openai', 'model_id': 'chatgpt-4o', 'is_default': 0},
-        {'id': 'claude-3-5-sonnet', 'display_name': 'GranthMind Code & Logic (Claude 3.5 Sonnet)', 'provider_type': 'anthropic', 'model_id': 'claude-3-5-sonnet', 'is_default': 0},
+        {'id': 'gemini-2.0-flash', 'display_name': '✨ GranthMind Pro (Gemini 2.0 Flash · Free Lifetime)', 'provider_type': 'gemini', 'model_id': 'gemini-2.0-flash', 'is_default': 1},
+        {'id': 'deepseek-r1', 'display_name': '🧠 GranthMind DeepThink (DeepSeek R1 · Free Lifetime)', 'provider_type': 'deepseek', 'model_id': 'deepseek-r1', 'is_default': 0},
+        {'id': 'groq-llama-3-3', 'display_name': '⚡ GranthMind Turbo (Groq LLaMA 3.3 70B · Free Lifetime)', 'provider_type': 'groq', 'model_id': 'meta-llama-3', 'is_default': 0},
+        {'id': 'gpt-4o-mini', 'display_name': '👁️ GranthMind Vision & Scholar (GPT-4o Mini · Free Lifetime)', 'provider_type': 'openai', 'model_id': 'chatgpt-4o', 'is_default': 0},
+        {'id': 'qwen-coder-32b', 'display_name': '💻 GranthMind Code & Logic (Qwen 2.5 Coder · Free Lifetime)', 'provider_type': 'qwen', 'model_id': 'qwen-coder', 'is_default': 0},
+        {'id': 'claude-3-5-sonnet', 'display_name': '💡 GranthMind Logic (Claude 3.5 Sonnet · Free Lifetime)', 'provider_type': 'anthropic', 'model_id': 'claude-3-5-sonnet', 'is_default': 0},
+        {'id': 'mistral-large', 'display_name': '🌐 GranthMind Mistral (Mistral Large · Free Lifetime)', 'provider_type': 'mistral', 'model_id': 'mistral-large', 'is_default': 0},
     ]
 
 
@@ -1335,38 +1337,118 @@ def call_gemini_api(prompt, attachment_path='', timeout=10):
     return ''
 
 
-def generate_free_ai_response(prompt, timeout=8):
+def generate_free_ai_response(prompt, selected_model_id='gemini-2.0-flash', timeout=8):
     """
-    Calls configured free multi-provider gateways if API keys are present in environment.
+    Unified Multi-Provider Free Lifetime Gateway with cascading fallbacks:
+    1. Groq Free LPU Gateway (LLaMA 3.3 70B, LLaMA 3.1 8B, Mixtral)
+    2. OpenRouter Free Lifetime Gateway (DeepSeek R1:free, LLaMA 3.3:free, Qwen Coder:free)
+    3. GitHub Models Free Gateway (GPT-4o Mini, Phi 3.5)
+    4. Hugging Face Serverless Free Gateway (Qwen 2.5 72B, LLaMA 3)
+    5. Cohere Free Gateway (Command R+)
     """
-    # 1. Groq Gateway (if GROQ_API_KEY)
-    groq_key = (os.environ.get('GROQ_API_KEY') or '').strip()
-    if groq_key:
-        try:
-            r = requests.post('https://api.groq.com/openai/v1/chat/completions',
-                headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
-                json={'model': 'llama-3.3-70b-versatile', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3000},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-        except Exception: pass
+    model_key = (selected_model_id or 'gemini-2.0-flash').lower()
 
-    # 2. OpenRouter Gateway (if OPENROUTER_API_KEY)
-    openrouter_key = (os.environ.get('OPENROUTER_API_KEY') or '').strip()
+    # 1. Groq Cloud LPU Free Tier (Ultra-Fast 500 tokens/sec)
+    groq_key = (os.environ.get('GROQ_API_KEY') or os.environ.get('GROQ_KEY') or '').strip().strip("'\"")
+    if groq_key:
+        groq_models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it']
+        for g_model in groq_models:
+            try:
+                r = requests.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
+                    json={'model': g_model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                    if ans and len(ans) > 20:
+                        return ans
+            except Exception: pass
+
+    # 2. OpenRouter Free Lifetime Gateway (:free models)
+    openrouter_key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('OPENROUTER_KEY') or '').strip().strip("'\"")
     if openrouter_key:
+        # Route model based on user selection
+        free_models = [
+            'deepseek/deepseek-r1:free',
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'qwen/qwen-2.5-coder-32b-instruct:free',
+            'google/gemma-2-9b-it:free',
+            'mistralai/mistral-7b-instruct:free'
+        ]
+        if 'deepseek' in model_key:
+            free_models.insert(0, 'deepseek/deepseek-r1:free')
+        elif 'code' in model_key or 'qwen' in model_key:
+            free_models.insert(0, 'qwen/qwen-2.5-coder-32b-instruct:free')
+
+        for or_model in free_models:
+            try:
+                r = requests.post(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {openrouter_key}', 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pustakverse.onrender.com', 'X-Title': 'PustakVerse GranthMind AI'},
+                    json={'model': or_model, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                    if ans and len(ans) > 20:
+                        return ans
+            except Exception: pass
+
+    # 3. GitHub Models Free Gateway (if GITHUB_TOKEN or GITHUB_API_KEY)
+    github_token = (os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_API_KEY') or '').strip().strip("'\"")
+    if github_token:
+        gh_models = ['gpt-4o-mini', 'Phi-3.5-mini-instruct', 'Mistral-large-2407']
+        for gh_m in gh_models:
+            try:
+                r = requests.post(
+                    'https://models.inference.ai.azure.com/chat/completions',
+                    headers={'Authorization': f'Bearer {github_token}', 'Content-Type': 'application/json'},
+                    json={'model': gh_m, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                    if ans and len(ans) > 20:
+                        return ans
+            except Exception: pass
+
+    # 4. Hugging Face Serverless Free Inference
+    hf_token = (os.environ.get('HUGGINGFACE_API_KEY') or os.environ.get('HF_TOKEN') or '').strip().strip("'\"")
+    if hf_token:
+        hf_models = ['Qwen/Qwen2.5-72B-Instruct', 'meta-llama/Llama-3.1-8B-Instruct']
+        for hf_m in hf_models:
+            try:
+                r = requests.post(
+                    f'https://api-inference.huggingface.co/models/{hf_m}/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {hf_token}', 'Content-Type': 'application/json'},
+                    json={'model': hf_m, 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    ans = r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                    if ans and len(ans) > 20:
+                        return ans
+            except Exception: pass
+
+    # 5. Cohere Free Tier Gateway
+    cohere_key = (os.environ.get('COHERE_API_KEY') or '').strip().strip("'\"")
+    if cohere_key:
         try:
-            r = requests.post('https://openrouter.ai/api/v1/chat/completions',
-                headers={'Authorization': f'Bearer {openrouter_key}', 'Content-Type': 'application/json'},
-                json={'model': 'meta-llama/llama-3.3-70b-instruct:free', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3000},
+            r = requests.post(
+                'https://api.cohere.com/v2/chat',
+                headers={'Authorization': f'Bearer {cohere_key}', 'Content-Type': 'application/json'},
+                json={'model': 'command-r-plus-08-2024', 'messages': [{'role': 'user', 'content': prompt}]},
                 timeout=timeout
             )
             if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                msg = r.json().get('message', {}).get('content', [{}])[0].get('text', '').strip()
+                if msg and len(msg) > 20:
+                    return msg
         except Exception: pass
 
     return ''
-
 
 
 def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None, attachment_text='', attachment_path='', selected_model_id=None, mode='study', system_instruction=''):
