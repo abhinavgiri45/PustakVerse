@@ -431,7 +431,40 @@
     .msg-content p:last-child { margin-bottom: 0; }
     .msg-content ul, .msg-content ol { margin-left: 20px; margin-bottom: 10px; }
     
-            /* Interactive Message Sources & References Widget */
+                /* Thought Time Badge & Indicators (DeepSeek/ChatGPT Style) */
+    .thought-time-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      color: #c084fc;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-right: 6px;
+    }
+    .thought-summary-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      width: fit-content;
+    }
+    .thought-summary-badge .thought-icon {
+      font-size: 0.85rem;
+      color: #c084fc;
+    }
+
+    /* Interactive Message Sources & References Widget */
     .msg-sources-container {
       margin-top: 12px;
       padding-top: 10px;
@@ -1590,7 +1623,11 @@
       container.appendChild(userBubble);
       container.scrollTop = container.scrollHeight;
 
-      // Append Assistant Bubble with Dynamic Stages
+      // Track start time for accurate "Thought for Xs" calculation
+      const sendStartTime = Date.now();
+      const relevantStages = getThinkingStagesForPrompt(promptText, activeMode, selectedModelName);
+
+      // Append Assistant Bubble with Relevant Dynamic Stages
       const assistantBubble = document.createElement('div');
       assistantBubble.className = 'msg-card msg-assistant';
       assistantBubble.innerHTML = `
@@ -1608,8 +1645,8 @@
           <div class="msg-content">
             <div class="ai-thinking-box">
               <div class="ai-thinking-stage">
-                <span class="ai-stage-icon">✨</span>
-                <span class="ai-stage-label">Thinking deeply & analyzing query...</span>
+                <span class="ai-stage-icon">${relevantStages[0].icon}</span>
+                <span class="ai-stage-label">${escapeHtml(relevantStages[0].label)}</span>
               </div>
               <div class="ai-shimmer-track">
                 <div class="ai-shimmer-bar"></div>
@@ -1621,23 +1658,19 @@
       container.appendChild(assistantBubble);
       container.scrollTop = container.scrollHeight;
 
-      // Rotate thinking stages dynamically (Thinking, Searching Web, Synthesizing, Formulating)
-      const stages = [
-        { icon: "✨", label: "Thinking deeply & analyzing query..." },
-        { icon: "🌐", label: "Searching knowledge base & live web..." },
-        { icon: "🧠", label: `Synthesizing intelligence with ${selectedModelName}...` },
-        { icon: "✍️", label: "Formulating comprehensive response..." }
-      ];
+      // Cycle only through relevant domain-specific stages
       let stageIdx = 0;
       const stageTimer = setInterval(() => {
-        stageIdx = (stageIdx + 1) % stages.length;
-        const iconEl = assistantBubble.querySelector('.ai-stage-icon');
-        const labelEl = assistantBubble.querySelector('.ai-stage-label');
-        if (iconEl && labelEl) {
-          iconEl.textContent = stages[stageIdx].icon;
-          labelEl.textContent = stages[stageIdx].label;
+        if (relevantStages.length > 1) {
+          stageIdx = (stageIdx + 1) % relevantStages.length;
+          const iconEl = assistantBubble.querySelector('.ai-stage-icon');
+          const labelEl = assistantBubble.querySelector('.ai-stage-label');
+          if (iconEl && labelEl) {
+            iconEl.textContent = relevantStages[stageIdx].icon;
+            labelEl.textContent = relevantStages[stageIdx].label;
+          }
         }
-      }, 1300);
+      }, 1200);
 
       input.value = '';
       input.style.height = 'auto';
@@ -1685,9 +1718,15 @@
         const msgEl = assistantBubble.querySelector('.msg-content');
         const statusInd = assistantBubble.querySelector('.msg-status-indicator');
 
-        // REMOVE thinking status indicator after response arrives
+        // Calculate exact thinking time taken (e.g. 1.8s)
+        const elapsedSec = ((Date.now() - sendStartTime) / 1000).toFixed(1);
+
+        // Display "Thought for Xs" badge and clean timestamp
         if (statusInd) {
-          statusInd.innerHTML = `<span style="color: #64748b; font-size: 0.75rem;">${body.timestamp || timeStr}</span>`;
+          statusInd.innerHTML = `
+            <span class="thought-time-pill" title="Processing Time">💭 Thought for ${elapsedSec}s</span>
+            <span style="color: #64748b; font-size: 0.73rem;">${body.timestamp || timeStr}</span>
+          `;
         }
 
         if (status === 403 && body.need_auth) {
@@ -1780,6 +1819,55 @@
 
 
     
+    
+    // Domain & Intent Specific Thinking Stages Classifier
+    function getThinkingStagesForPrompt(promptText, activeMode, modelName) {
+      const p = promptText.toLowerCase();
+
+      // A. Coding & Software Development Queries
+      if (activeMode === 'code' || /\b(code|python|javascript|java|c\+\+|html|css|sql|script|function|class|algorithm|debug|app|api|program|game|component|backend|frontend)\b/.test(p)) {
+        return [
+          { icon: "🧠", label: "Thinking... Analyzing algorithm & architecture" },
+          { icon: "⚙️", label: "Constructing logic & syntax structures" },
+          { icon: "💻", label: "Writing code..." }
+        ];
+      }
+
+      // B. Math / STEM / Equations & Derivations
+      if (activeMode === 'solve' || /\b(solve|equation|derive|derivation|integral|derivative|calculus|formula|math|proof|calculate|physics|algebra|geometry)\b/.test(p)) {
+        return [
+          { icon: "🧠", label: "Thinking... Analyzing mathematical problem" },
+          { icon: "📐", label: "Deriving step-by-step proof & formulas" },
+          { icon: "✍️", label: "Formulating solution..." }
+        ];
+      }
+
+      // C. Factual, Web Search, Institutions & Real-world Information
+      if (/\b(where is|who is|director|principal|location|address|founded|history|news|weather|capital|school|college|university|when was|what is the price|details of|contact)\b/.test(p)) {
+        return [
+          { icon: "🧠", label: "Thinking... Analyzing query" },
+          { icon: "🌐", label: "Searching the web for verified information" },
+          { icon: "✍️", label: "Formulating verified answer..." }
+        ];
+      }
+
+      // D. Creative & Essay Writing
+      if (activeMode === 'write' || activeMode === 'create' || /\b(write|essay|story|poem|letter|dialogue|brainstorm|compose|draft)\b/.test(p)) {
+        return [
+          { icon: "🧠", label: "Thinking... Conceptualizing tone & structure" },
+          { icon: "✨", label: "Crafting literary prose" },
+          { icon: "✍️", label: "Composing response..." }
+        ];
+      }
+
+      // E. Universal / General Query
+      return [
+        { icon: "🧠", label: `Thinking deeply with ${modelName || 'GranthMind'}...` },
+        { icon: "✍️", label: "Formulating response..." }
+      ];
+    }
+
+
     // Sources & Citations Interactive Widget
     function attachSourcesWidget(assistantBubble, sources) {
       if (!sources || !sources.length) return;
