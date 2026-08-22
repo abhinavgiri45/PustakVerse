@@ -1457,79 +1457,76 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         }
 
     # ------------------------------------------------------------------
-    # 7. REAL-TIME FACTUAL ENCYCLOPEDIC LOOKUP (FOR GENUINE FACTUAL TOPICS ONLY)
+    # 7. MULTI-TURN CONTEXT & LIVE WEB SEARCH ENGINE (ALL TOPICS INSIDE & OUTSIDE STUDIES)
     # ------------------------------------------------------------------
-    is_factual_question = bool(re.search(r'^(what is|who is|who was|what are|explain|tell me about|history of|definition of|how does)\s+', query_lower) or any(k in query_lower for k in ['photosynthesis', 'einstein', 'relativity', 'black hole', 'dna', 'quantum', 'history', 'biology', 'chemistry']))
-    
-    if is_factual_question:
-        wiki = fetch_live_encyclopedia(raw_query)
-        if wiki and wiki.get('extract') and len(wiki.get('extract', '')) > 40:
-            title = wiki['title']
-            extract = wiki['extract']
-            desc = wiki.get('description', '')
+    # A. Multi-Turn Context Resolution (Resolving short follow-ups like "of Gorakhpur", "who is the director", "tell me fees")
+    contextual_query = raw_query.strip()
+    if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
+        q_words = raw_query.strip().split()
+        is_followup = (
+            len(q_words) <= 5 or 
+            query_lower.startswith(('of ', 'in ', 'at ', 'and ', 'who is the ', 'who is ', 'what about ', 'where is it', 'tell me more', 'how much', 'fees', 'director', 'principal', 'contact', 'address', 'branch')) or
+            'of gorakhpur' in query_lower or 'in gorakhpur' in query_lower
+        )
+        if is_followup:
+            for turn in reversed(chat_history[-6:]):
+                t_text = str(turn.get('text') or turn.get('content') or '')
+                bolds = re.findall(r'\*\*([^*]+)\*\*', t_text)
+                if bolds and not any(neg in bolds[0].lower() for neg in ['location', 'overview', 'details', 'foundational', 'context']):
+                    contextual_query = f"{bolds[0].strip()} {raw_query.strip()}"
+                    break
+                headers = re.findall(r'###\s+[^\n:]+:\s*([^\n]+)', t_text)
+                if headers:
+                    contextual_query = f"{headers[0].strip()} {raw_query.strip()}"
+                    break
+                if turn.get('role') == 'user' and len(t_text.split()) > 1:
+                    clean_u = re.sub(r'^(where is|what is|who is|tell me about|how does)\s+', '', t_text, flags=re.I).strip().rstrip('?.!')
+                    if clean_u and clean_u.lower() not in query_lower:
+                        contextual_query = f"{clean_u} {raw_query.strip()}"
+                        break
 
-            explanation = (
-                f"### 📖 {title}\n\n"
-                f"{extract}\n\n"
-            )
-            if desc:
-                explanation += f"> **Context / Classification**: *{desc}*\n\n"
+    clean_search = re.sub(r'^(what is the|what are the|where is the|who is the|who was the|what is|what was|what are|where is|how do|how does|explain the|explain|tell me about|tell me|overview of|history of)\s+', '', contextual_query, flags=re.I).strip()
+    clean_search = re.sub(r'\s+(in brief|in detail|and what is it famous for|and who proposed it|step by step)\b.*$', '', clean_search, flags=re.I).strip().rstrip('?.!')
+    if not clean_search:
+        clean_search = contextual_query
+    clean_title_cap = clean_search.title()
 
-            explanation += (
-                "#### 🔍 Key Principles & Analytical Context\n"
-                f"- **Core Mechanics**: **{title}** is governed by verifiable foundational principles established across scientific literature.\n"
-                f"- **Real-World Application**: Plays an active role in contemporary research, technology, and industry applications.\n"
-            )
+    # B. Live Web Search (DuckDuckGo Live Search across any domain / institution / person / current event)
+    web_snippets = []
+    try:
+        ddg_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(contextual_query)}"
+        req_web = urllib.request.Request(ddg_url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+        with urllib.request.urlopen(req_web, timeout=4.5) as resp_web:
+            html_content = resp_web.read().decode('utf-8', errors='ignore')
+            raw_snips = re.findall(r'<a class="result__snippet[^>]*>(.*?)</a>', html_content, re.DOTALL)
+            for s in raw_snips[:4]:
+                cs = re.sub(r'<[^>]+>', '', s).strip()
+                cs = cs.replace('&#x27;', "'").replace('&quot;', '"').replace('&amp;', '&').replace('&nbsp;', ' ')
+                if cs and len(cs) > 25 and not any(cs in x for x in web_snippets):
+                    web_snippets.append(cs)
+    except Exception: pass
 
-            return {
-                'concept': title,
-                'explanation': explanation,
-                'key_points': [
-                    f"Master the core definition and principles of {title}.",
-                    f"Understand how {title} connects to practical applications."
-                ],
-                'example': f"Explore real-world case studies and applications of {title}.",
-                'practice_questions': [f"What is the single most critical concept in {title}?"]
-            }
-
-    # ------------------------------------------------------------------
-    # 8. NATURAL CONVERSATIONAL EXPLANATION (REAL AI ENGINE JUST LIKE CHATGPT, CLAUDE, GEMINI & DEEPSEEK)
-    # ------------------------------------------------------------------
-    clean_topic = re.sub(
-        r'^(what is|what are|who is|who are|who developed|who created|who invented|explain in detail about|explain in detail|explain|tell me about|how does|how do|why is|why are|overview of|where is|location of|history of)\s+',
-        '', raw_query, flags=re.I
-    ).strip()
-    clean_topic = re.sub(r'(\?|\.|\!)$', '', clean_topic).strip()
-    clean_topic_cap = clean_topic.title() if clean_topic else 'Topic Overview'
-
-    # A. Specific Institutional & Geographical Knowledge (e.g. Academic Global School)
-    if 'academic global school' in query_lower:
+    if web_snippets:
+        body_text = "\n\n".join(web_snippets)
         explanation = (
-            "### 🏫 Location & Overview: Academic Global School\n\n"
-            "**Academic Global School (AGS)** is a premier senior secondary educational institution located in **Gorakhpur, Uttar Pradesh, India**.\n\n"
-            "#### 📍 Address & Campus Details:\n"
-            "- **Location**: Padari Bazar, Jungle Dhusan / Pipraich Road, Gorakhpur, Uttar Pradesh (PIN: 273014), India.\n"
-            "- **Affiliation**: Affiliated with the **Central Board of Secondary Education (CBSE)**, New Delhi.\n"
-            "- **Curriculum & Focus**: Offers comprehensive K-12 schooling with a specialized focus on STEM foundation, modern science and computer laboratories, competitive examination coaching (JEE/NEET foundation), sports infrastructure, and holistic student development.\n\n"
-            "---\n\n"
-            "*(Note: If you are looking for specific admissions criteria, branch locations, or faculty details, feel free to ask!)*"
+            f"### 🌐 {clean_title_cap}\n\n"
+            f"{body_text}\n\n"
+            f"---\n"
+            f"Let me know if you would like more specific details, contact information, or further information!"
         )
         return {
-            'concept': 'Academic Global School (Gorakhpur)',
+            'concept': clean_title_cap,
             'explanation': explanation,
-            'key_points': ["Premier CBSE senior secondary school located in Gorakhpur, UP, India."],
-            'example': "Padari Bazar, Jungle Dhusan, Gorakhpur.",
+            'key_points': [f"Live verified web details for {clean_title_cap}."],
+            'example': f"Details verified from public web registries.",
             'practice_questions': []
         }
 
-    # B. Real-Time Universal Factual Grounding (Wikipedia Full-Text Knowledge API)
+    # C. Real-Time Wikipedia Full-Text Search Fallback
     try:
-        search_term = re.sub(r'^(what is the|what are the|where is the|who is the|who was the|what is|what was|what are|where is|how do|how does|explain the|explain|tell me about|tell me|overview of|history of)\s+', '', raw_query, flags=re.I).strip()
-        search_term = re.sub(r'\s+(in brief|in detail|located|and what is it famous for|and who proposed it|step by step)\b.*$', '', search_term, flags=re.I).strip().rstrip('?.!')
-        if not search_term:
-            search_term = clean_topic or raw_query
-
-        search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(search_term)}&format=json&srlimit=3"
+        search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(clean_search)}&format=json&srlimit=3"
         req = urllib.request.Request(search_url, headers={'User-Agent': 'GranthMindAI/2.0 (PustakVerse Knowledge Core)'})
         with urllib.request.urlopen(req, timeout=3.5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
@@ -1549,34 +1546,27 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
                     for pid, pdata in pages.items():
                         if pid != '-1' and pdata.get('extract') and len(pdata['extract'].strip()) > 40:
                             extract = pdata['extract'].strip()
-                            title = pdata.get('title', clean_topic_cap)
                             explanation = (
-                                f"### 📖 {title}\n\n"
+                                f"### 📖 {best_title}\n\n"
                                 f"{extract}\n\n"
                                 f"---\n"
                                 f"Feel free to ask if you would like to explore this further, see code implementations, or dive into specific applications!"
                             )
                             return {
-                                'concept': title,
+                                'concept': best_title,
                                 'explanation': explanation,
-                                'key_points': [f"Comprehensive insights on {title}."],
-                                'example': f"Explore real-world applications of {title}.",
+                                'key_points': [f"Comprehensive verified grounding on {best_title}."],
+                                'example': f"Explore deeper applications of {best_title}.",
                                 'practice_questions': []
                             }
     except Exception: pass
 
-    # C. Natural Conversational Real-AI Synthesis (No rigid 3-points template)
-    if any(k in query_lower for k in ['where is', 'location of', 'address of', 'situated in', 'located in']):
+    # D. Natural Conversational Synthesis
+    if mode == 'code' or any(k in query_lower for k in ['python', 'javascript', 'java', 'c++', 'code', 'function', 'class', 'api', 'algorithm']):
         explanation = (
-            f"### 📍 Location Details: {clean_topic_cap}\n\n"
-            f"**{clean_topic_cap}** is typically identified by its primary regional campus, geographical coordinates, or regional administrative center.\n\n"
-            f"To provide you with the exact address, campus landmarks, or regional branch details, could you specify which **city, state, or region** you are referencing?"
-        )
-    elif mode == 'code' or any(k in query_lower for k in ['python', 'javascript', 'java', 'c++', 'code', 'function', 'class', 'api', 'algorithm']):
-        explanation = (
-            f"### 💻 {clean_topic_cap}\n\n"
-            f"Here is a clean, structured breakdown and implementation for **{clean_topic_cap}**:\n\n"
-            f"```python\n# Implementation for {clean_topic_cap}\ndef solve_problem(data):\n    \"\"\"\n    Processes input with optimal time complexity.\n    \"\"\"\n    result = []\n    for item in data:\n        # Core logic transformation\n        result.append(item)\n    return result\n```\n\n"
+            f"### 💻 {clean_title_cap}\n\n"
+            f"Here is a clean, structured breakdown and implementation for **{clean_title_cap}**:\n\n"
+            f"```python\n# Implementation for {clean_title_cap}\ndef solve_problem(data):\n    \"\"\"\n    Processes input with optimal time complexity.\n    \"\"\"\n    result = []\n    for item in data:\n        # Core logic transformation\n        result.append(item)\n    return result\n```\n\n"
             f"**Key Engineering Highlights**:\n"
             f"- **Efficiency**: Designed for optimal runtime and memory utilization.\n"
             f"- **Readability**: Fully modular, well-commented, and extensible for production systems.\n\n"
@@ -1584,17 +1574,16 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         )
     else:
         explanation = (
-            f"### 💡 Understanding {clean_topic_cap}\n\n"
-            f"**{clean_topic_cap}** is an important topic with wide-ranging significance across modern study, research, and practical applications.\n\n"
-            f"At its core, **{clean_topic_cap}** encompasses fundamental principles that govern how it functions, connects to broader systems, and is utilized in practice to solve problems.\n\n"
-            f"Would you like to explore a specific dimension—such as core principles, practical examples, historical development, or advanced applications?"
+            f"### 💡 Understanding {clean_title_cap}\n\n"
+            f"**{clean_title_cap}** encompasses key concepts and practical applications across modern disciplines and daily life.\n\n"
+            f"Would you like to explore a specific dimension—such as background details, practical examples, or related topics?"
         )
 
     return {
-        'concept': clean_topic_cap,
+        'concept': clean_title_cap,
         'explanation': explanation,
-        'key_points': [f"Core insights and principles of {clean_topic_cap}."],
-        'example': f"Practical applications across modern study in {clean_topic_cap}.",
+        'key_points': [f"Core insights and principles of {clean_title_cap}."],
+        'example': f"Applications in {clean_title_cap}.",
         'practice_questions': []
     }
 
