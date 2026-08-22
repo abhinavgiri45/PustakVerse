@@ -7948,7 +7948,7 @@ def ai_multilingual_translate():
 @app.route('/api/author/ai_enhance_blurb', methods=['POST'])
 def author_ai_enhance_blurb():
     """Author AI assistant generating SEO tags, hook lines, and compelling back-cover blurbs."""
-    if session.get('role') not in ['author', 'developer']:
+    if session.get('role') not in ['author', 'developer', 'official']:
         return jsonify({'success': False, 'message': 'Author privileges required.'}), 403
 
     data = request.json or request.form
@@ -7970,7 +7970,7 @@ Format with:
 4. **Tags**: (comma-separated list)
 """
     result = build_ai_free_response(prompt)
-    return jsonify({'success': True, 'enhanced_blurb': result})
+    return jsonify({'success': True, 'enhanced_blurb': result, 'synopsis': result})
 
 if __name__ == '__main__':
     ensure_payment_schema()

@@ -349,6 +349,21 @@
                     </div>
                 </div>
 
+                <!-- TOOL 4: AUTHOR AI BOOK BLURB & SYNOPSIS ENHANCER -->
+                <div class="tool-card" style="border: 2px solid #c084fc;">
+                    <div>
+                        <h3 style="color: #7c3aed;"><span>🪄</span> Author AI Book Blurb & Synopsis Enhancer</h3>
+                        <p>Generate captivating marketing synopses, audience hooks, and SEO keywords for your new book drafts using GranthMind AI.</p>
+                        <input type="text" id="aiBlurbTitle" placeholder="Draft Book Title *">
+                        <input type="text" id="aiBlurbCatalog" placeholder="Category (e.g. Science, Fiction, Technology)">
+                        <textarea id="aiBlurbNotes" rows="3" placeholder="Rough plot summary, main thesis, target audience, or key concepts..."></textarea>
+                        <button type="button" onclick="generateAiBlurb()" class="btn-tool" style="background: linear-gradient(135deg, #9333ea, #7c3aed); font-weight: 800;">
+                            ✨ Generate Professional Synopsis
+                        </button>
+                        <div id="aiBlurbResultArea" class="result-box" style="display: none; background: #fdf4ff; border-color: #f5d0fe; line-height: 1.6; white-space: pre-wrap; font-size: 0.88rem; color: #1e293b;"></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -625,6 +640,52 @@
                 out.style.background = '#fef2f2';
                 out.style.borderColor = '#fca5a5';
             }
+        }
+
+    
+        // Author AI Blurb & Synopsis Enhancer
+        function generateAiBlurb() {
+            const titleInput = document.getElementById('aiBlurbTitle');
+            const catalogInput = document.getElementById('aiBlurbCatalog');
+            const notesInput = document.getElementById('aiBlurbNotes');
+            const resArea = document.getElementById('aiBlurbResultArea');
+
+            const title = (titleInput ? titleInput.value : '').trim();
+            const catalog = (catalogInput ? catalogInput.value : '').trim();
+            const notes = (notesInput ? notesInput.value : '').trim();
+
+            if (!title) {
+                if (titleInput) titleInput.focus();
+                alert('Please enter a draft book title first.');
+                return;
+            }
+
+            if (resArea) {
+                resArea.style.display = 'block';
+                resArea.style.background = '#fdf4ff';
+                resArea.style.borderColor = '#f5d0fe';
+                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with GranthMind AI...</span>';
+            }
+
+            fetch('/api/author/ai_enhance_blurb', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && (data.enhanced_blurb || data.synopsis)) {
+                    resArea.textContent = data.enhanced_blurb || data.synopsis;
+                } else {
+                    resArea.textContent = data.message || 'Could not generate synopsis. Please try again.';
+                }
+            })
+            .catch(err => {
+                if (resArea) resArea.textContent = 'Network error while generating synopsis. Please try again.';
+            });
         }
 
     </script>
