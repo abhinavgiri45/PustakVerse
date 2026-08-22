@@ -2260,8 +2260,8 @@ def ensure_payment_schema():
                 name VARCHAR(255) NOT NULL,
                 role_title VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL,
-                phone VARCHAR(100) NOT NULL,
-                address TEXT NOT NULL,
+                phone VARCHAR(100) DEFAULT NULL,
+                address TEXT DEFAULT NULL,
                 photo VARCHAR(500) DEFAULT 'PustakVerse.png',
                 bio TEXT,
                 is_founder BOOLEAN DEFAULT FALSE,
@@ -2293,6 +2293,15 @@ def ensure_payment_schema():
         except Exception: pass
 
         
+        
+        # ---> MAKE PHONE AND ADDRESS OPTIONAL/NULLABLE IN LEADERSHIP_TEAM <---
+        try:
+            cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN phone VARCHAR(100) NULL DEFAULT NULL")
+        except Exception: pass
+        try:
+            cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN address TEXT NULL DEFAULT NULL")
+        except Exception: pass
+
         # ---> EXECUTIVE LEADERSHIP SOCIAL MEDIA EXTENSIONS <---
         for col_def in [
             ("instagram_id", "VARCHAR(255) DEFAULT NULL"),
@@ -7461,6 +7470,11 @@ def developer_add_leadership():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
+        try:
+            cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN phone VARCHAR(100) NULL DEFAULT NULL")
+            cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN address TEXT NULL DEFAULT NULL")
+        except Exception: pass
+
         cursor.execute("""
             INSERT INTO leadership_team (name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s, %s, %s, %s, %s)
@@ -7527,6 +7541,11 @@ def developer_edit_leadership(leader_id):
             os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'leadership'), exist_ok=True)
             photo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'leadership', filename))
             final_photo = filename
+
+        try:
+            cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN phone VARCHAR(100) NULL DEFAULT NULL")
+            cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN address TEXT NULL DEFAULT NULL")
+        except Exception: pass
 
         cursor.execute("""
             UPDATE leadership_team 
