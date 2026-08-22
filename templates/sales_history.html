@@ -163,6 +163,7 @@
                             <th>Razorpay Gateway Fee (2% + GST)</th>
                             <th>Author Net Royalty</th>
                             <th>Status</th>
+                            <th style="text-align: right;">Invoice / Receipt</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -179,6 +180,11 @@
                             <td style="font-size: 0.85rem; color: #64748b;">-₹{{ "%.2f"|format(fee/100) }}</td>
                             <td style="font-weight: 800; color: #166534;">₹{{ "%.2f"|format(earning/100) }}</td>
                             <td><span class="status-paid">✓ SETTLED</span></td>
+                            <td style="text-align: right;">
+                                <a href="/invoice/{{ sale.razorpay_order_id }}" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #0f172a; color: white; border-radius: 6px; font-size: 0.78rem; font-weight: 700; text-decoration: none;">
+                                    <span>📄</span> Invoice
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -4959,6 +4959,14 @@ def my_library():
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, personal_library.added_at, users.username as author_name, users.role as author_role FROM personal_library JOIN books ON personal_library.book_id = books.id JOIN users ON books.author_id = users.id WHERE personal_library.user_id = %s ORDER BY personal_library.added_at DESC", (session['user_id'],))
             
         saved_books = clean_book_data(cursor.fetchall())
+        
+        # Attach purchase order ID so readers can view invoice right from their library card
+        try:
+            cursor.execute("SELECT book_id, razorpay_order_id FROM purchases WHERE user_id = %s AND status = 'paid'", (session['user_id'],))
+            order_map = {p['book_id']: p['razorpay_order_id'] for p in cursor.fetchall()}
+            for b in saved_books:
+                b['order_id'] = order_map.get(b['id'])
+        except Exception: pass
     except Exception: 
         flash("Database error.", "error")
     finally:

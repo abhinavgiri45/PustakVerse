@@ -390,8 +390,13 @@
                         Added: <strong>{{ (book.added_at or book.created_at) | to_ist }}</strong>
                     </p>
                     
-                    <div class="book-actions">
-                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Read Full Book</a>
+                    <div class="book-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Read Full Book</a>
+                        {% if book.order_id %}
+                        <a href="/invoice/{{ book.order_id }}" target="_blank" class="btn" style="background: #0f172a; color: white; padding: 10px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px; text-decoration: none;" title="Download Purchase Tax Invoice">
+                            📄 Invoice
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
