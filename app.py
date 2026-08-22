@@ -9304,8 +9304,8 @@ def api_verify_sbin():
 # ======================================================================
 def collect_knowledge_sources(query, chat_history=None):
     """
-    Collects real-time verified knowledge sources & citations across global repositories,
-    Wikipedia encyclopedias, live web indices, and PustakVerse library.
+    Collects real-time verified external knowledge sources & citations across global repositories,
+    Wikipedia encyclopedias, live web indices, research papers, and open web.
     """
     sources = []
     clean_q = re.sub(r'^(what is the|what are the|where is the|who is the|who was the|what is|what was|what are|where is|how do|how does|explain the|explain|tell me about|tell me|overview of|history of)\s+', '', query, flags=re.I).strip()
@@ -9321,23 +9321,23 @@ def collect_knowledge_sources(query, chat_history=None):
                 search_term = f"{bolds[0].strip()} {search_term}"
                 break
 
-    # 1. Wikipedia Knowledge Graph Search
+    # 1. Wikipedia External Knowledge Graph Search
     try:
-        w_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(search_term)}&format=json&srlimit=2"
-        req_w = urllib.request.Request(w_url, headers={'User-Agent': 'GranthMindAI/2.0 (PustakVerse Knowledge Core)'})
+        w_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(search_term)}&format=json&srlimit=3"
+        req_w = urllib.request.Request(w_url, headers={'User-Agent': 'GranthMindAI/2.0 (External Web Knowledge)'})
         with urllib.request.urlopen(req_w, timeout=3) as resp_w:
             w_data = json.loads(resp_w.read().decode('utf-8'))
             results = w_data.get('query', {}).get('search', [])
             for r in results:
                 title = r['title']
                 sources.append({
-                    'title': f"{title} · Wikipedia Knowledge Base",
+                    'title': f"{title} · Wikipedia",
                     'url': f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}",
                     'domain': 'wikipedia.org'
                 })
     except Exception: pass
 
-    # 2. DuckDuckGo Instant Answers & Topics
+    # 2. DuckDuckGo Instant Answers & Live External Web Topics
     try:
         ddg_api = f"https://api.duckduckgo.com/?q={urllib.parse.quote(search_term)}&format=json&no_html=1&skip_disambig=1"
         req_ddg = urllib.request.Request(ddg_api, headers={'User-Agent': 'GranthMindAI/2.0'})
@@ -9345,7 +9345,7 @@ def collect_knowledge_sources(query, chat_history=None):
             ddg_data = json.loads(resp_ddg.read().decode('utf-8'))
             if ddg_data.get('AbstractURL'):
                 sources.append({
-                    'title': ddg_data.get('Heading', search_term) or 'DuckDuckGo Knowledge Graph',
+                    'title': ddg_data.get('Heading', search_term) or 'DuckDuckGo Knowledge Base',
                     'url': ddg_data['AbstractURL'],
                     'domain': 'duckduckgo.com'
                 })
@@ -9353,18 +9353,24 @@ def collect_knowledge_sources(query, chat_history=None):
                 if isinstance(topic, dict) and topic.get('FirstURL'):
                     t_title = topic['FirstURL'].split('/')[-1].replace('_', ' ')
                     sources.append({
-                        'title': t_title or 'Live Web Verified Reference',
+                        'title': t_title or 'Live Web Reference',
                         'url': topic['FirstURL'],
                         'domain': 'duckduckgo.com'
                     })
     except Exception: pass
 
-    # 3. Always include PustakVerse Core Library & Knowledge Index
-    sources.append({
-        'title': 'PustakVerse Knowledge Core & Academic Library',
-        'url': 'https://pustakverse.onrender.com',
-        'domain': 'pustakverse.com'
-    })
+    # 3. If no specific topic pages returned, provide live external web & encyclopedic indexes
+    if not sources:
+        sources.append({
+            'title': f"{search_term.title()} · Wikipedia Search",
+            'url': f"https://en.wikipedia.org/wiki/Special:Search?search={urllib.parse.quote(search_term)}",
+            'domain': 'wikipedia.org'
+        })
+        sources.append({
+            'title': f"{search_term.title()} · Live Web Search",
+            'url': f"https://duckduckgo.com/?q={urllib.parse.quote(search_term)}",
+            'domain': 'duckduckgo.com'
+        })
 
     # Deduplicate sources by URL
     seen_urls = set()

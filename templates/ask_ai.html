@@ -811,13 +811,21 @@
 
     .input-footer {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       width: 100%;
       max-width: 100%;
-      margin: 6px 0 0;
-      font-size: 0.72rem;
+      margin: 7px 0 0;
+      font-size: 0.73rem;
       color: #64748b;
+      text-align: center;
+      gap: 10px;
+    }
+    .ai-disclaimer-text {
+      color: #64748b;
+      font-size: 0.73rem;
+      font-weight: 500;
+      letter-spacing: 0.1px;
     }
 
     /* Auth Required Modal */
@@ -952,10 +960,7 @@
         font-size: 0.68rem !important;
         margin-top: 4px !important;
         justify-content: center !important;
-        gap: 10px !important;
-      }
-      .input-footer span:last-child {
-        display: none !important;
+        text-align: center !important;
       }
       .messages-scroll {
         padding: 10px !important;
@@ -1201,9 +1206,8 @@
           </form>
 
           <div class="input-footer">
-            <span>⚡ Powered by PustakVerse</span>
             <span id="fileBadge" style="display: none; color: #38bdf8; font-weight: 700;">📎 Attached: <span id="fileName"></span></span>
-            <span>🔒 Safe, Private &amp; Secure · Exclusively on PustakVerse</span>
+            <span class="ai-disclaimer-text">GranthMind AI can make mistakes. Verify important info.</span>
           </div>
         </div>
       </footer>
