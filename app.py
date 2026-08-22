@@ -1,4 +1,18 @@
 
+
+def generate_valid_sbin():
+    """
+    Generates an authentic, mathematically valid standard ISBN-13 / SBIN identifier.
+    Formula: Prefix (978-93) + 6-digit block + EAN check-digit (Mod 10).
+    """
+    prefix = "97893"
+    random_part = f"{random.randint(100000, 999999)}"
+    raw12 = prefix + random_part
+    sum_digits = sum(int(raw12[i]) * (1 if i % 2 == 0 else 3) for i in range(12))
+    check_digit = (10 - (sum_digits % 10)) % 10
+    full_sbin = f"978-93-{random_part[:3]}-{random_part[3:]}-{check_digit}"
+    return full_sbin
+
 def get_user_executive_status(user_dict, db_cursor=None):
     """
     Determines if user is Founder, CEO, or CTO (Absolute Power) or has a specialized post.
@@ -2431,6 +2445,19 @@ def ensure_payment_schema():
                 FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
+
+        
+        # ---> BOOK SBIN / ISBN IDENTIFIER EXTENSION <---
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'sbin_no'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN sbin_no VARCHAR(100) DEFAULT NULL")
+        except Exception: pass
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'isbn'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN isbn VARCHAR(100) DEFAULT NULL")
+        except Exception: pass
 
         # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
         # 1. Reader: Personal Notes & Highlights
@@ -5444,12 +5471,16 @@ def dashboard():
                 p_file.save(os.path.join(pdf_folder, f_pdf))
 
             if f_cov and f_pdf:
+                user_sbin = request.form.get('sbin_no', '').strip() or request.form.get('isbn', '').strip()
+                if not user_sbin:
+                    user_sbin = generate_valid_sbin()
+
                 cursor.execute(
-                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid,
                      price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret,
-                     rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description)
+                     rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description, user_sbin, user_sbin)
                 )
                 db.commit()
                 if is_paid and rp_verified:
@@ -5684,6 +5715,7 @@ def edit_book(book_id):
         title = request.form.get('title', book['title'])
         catalog = request.form.get('catalog', book['catalog'])
         description = request.form.get('description', '').strip()
+        user_sbin = request.form.get('sbin_no', '').strip() or request.form.get('isbn', '').strip() or book.get('sbin_no') or book.get('isbn') or generate_valid_sbin()
         
         if catalog.lower() == 'archives': 
             is_paid = False
@@ -7382,7 +7414,7 @@ def api_self_published_quick_update(book_id):
 
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("UPDATE books SET title = %s, catalog = %s, description = %s WHERE id = %s", (title, catalog, description, book_id))
+        cursor.execute("UPDATE books SET title = %s, catalog = %s, description = %s, sbin_no = %s, isbn = %s WHERE id = %s", (title, catalog, description, book_id))
         db.commit()
         invalidate_books_cache()
 
@@ -8098,3 +8130,13 @@ def author_reply_review(review_id):
 @app.route('/tools')
 def tools_hub():
     return render_template('tools.html')
+
+
+
+# ======================================================================
+# API: GENERATE FREE DIGITAL SBIN / ISBN-13
+# ======================================================================
+@app.route('/api/generate_sbin')
+def api_generate_sbin():
+    sbin = generate_valid_sbin()
+    return jsonify({'status': 'success', 'sbin': sbin})

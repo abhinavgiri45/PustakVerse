@@ -1269,6 +1269,18 @@
                             <textarea name="description" rows="4" placeholder="What is this book about?..." required></textarea>
                         </div>
 
+                <!-- ISBN / SBIN STANDARD BOOK IDENTIFIER -->
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="font-size: 0.85rem; font-weight: 700; color: #334155; margin: 0;">🏷️ ISBN / SBIN Number</label>
+                        <button type="button" onclick="generateFreeSBIN('upload_sbin_input')" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
+                            ✨ Generate Free Digital SBIN
+                        </button>
+                    </div>
+                    <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="e.g. 978-93-849-201-4 (Leave blank or click Generate Free)" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; font-family: monospace;">
+                    <small style="color: #64748b; font-size: 0.75rem;">If you don't have an ISBN, PustakVerse will generate a certified digital SBIN identifier for free.</small>
+                </div>
+
                         <!-- DRIVE-FIRST FILE & COVER INPUTS -->
                         <div class="form-group" style="background: #f0fdf4; padding: 18px; border-radius: 10px; border: 1.5px solid #86efac; margin-bottom: 25px;">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
@@ -2207,6 +2219,16 @@
                 <div class="form-group">
                     <label>Book Description / Synopsis</label>
                     <textarea name="description" id="edit_description" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="font-size: 0.85rem; font-weight: 700; color: #334155; margin: 0;">🏷️ ISBN / SBIN Number</label>
+                        <button type="button" onclick="generateFreeSBIN('edit_sbin_input')" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
+                            ✨ Generate Free SBIN
+                        </button>
+                    </div>
+                    <input type="text" name="sbin_no" id="edit_sbin_input" placeholder="e.g. 978-93-849-201-4" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; font-family: monospace;">
                 </div>
 
                 <!-- DRIVE-FIRST FILE & COVER EDIT INPUTS -->

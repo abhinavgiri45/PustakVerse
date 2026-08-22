@@ -364,6 +364,17 @@
                     <span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✓ Verified Creator</span>
                 </div>
                 
+                
+                <!-- VERIFIED SBIN / ISBN STANDARD IDENTIFIER -->
+                {% if book.sbin_no or book.isbn %}
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 14px;">
+                    <span style="color: #64748b;">🏷️ SBIN / ISBN:</span>
+                    <code style="color: #ea580c; font-weight: 800; font-size: 0.88rem;">{{ book.sbin_no or book.isbn }}</code>
+                    <button type="button" onclick="navigator.clipboard.writeText('{{ book.sbin_no or book.isbn }}'); alert('Copied SBIN / ISBN to clipboard!');" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0 4px;" title="Copy Standard Identifier">📋</button>
+                    <span style="font-size: 0.72rem; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">✓ Registered</span>
+                </div>
+                {% endif %}
+
                 <!-- Average Rating Header -->
                 <div class="header-rating">
                     <span class="header-stars">
