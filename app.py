@@ -2701,8 +2701,9 @@ def save_ai_chat_message(user_id, book_id, role, text, screenshot=''):
 @app.before_request
 def ensure_payment_schema_before_request():
     global payment_schema_ready
-    if not payment_schema_ready: 
-        payment_schema_ready = ensure_payment_schema()
+    if not payment_schema_ready:
+        payment_schema_ready = True
+        threading.Thread(target=ensure_payment_schema, daemon=True).start()
 
 @app.before_request
 def update_last_activity():
