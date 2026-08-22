@@ -620,6 +620,110 @@
             </div>
 
 
+            
+            <!-- ABSOLUTE EXECUTIVES (FOUNDER, CEO, CTO): APPOINT & DELEGATE OFFICIAL POSTS & POWERS -->
+            {% if session.role == 'developer' or is_absolute_power %}
+            <div class="panel" style="border-left: 5px solid #0284c7; grid-column: span 2; margin-top: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h2 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin: 0;">
+                            <span>🎖️</span> Official Staff Posts & Power Delegation
+                        </h2>
+                        <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0;">
+                            Founder, CEO, and CTO hold <strong>Absolute System Power</strong>. Assign specialized executive posts (COO, CPO, CCO, Legal, Community, Moderator) to delegate specific platform powers.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="table-scroll-container">
+                    <table>
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th>Official Username</th>
+                                <th>Official Email</th>
+                                <th>Assigned Post / Title</th>
+                                <th>System Power Level</th>
+                                <th style="text-align: right;">Assign New Post</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in (searched_users or all_users or []) if u.role == 'official' %}
+                            <tr>
+                                <td>
+                                    <strong>{{ u.username }}</strong>
+                                    <span style="display: block; font-size: 0.75rem; color: #64748b;">Staff Member</span>
+                                </td>
+                                <td><a href="mailto:{{ u.email }}" style="color: #0284c7; text-decoration: none; font-size: 0.85rem;">{{ u.email }}</a></td>
+                                <td>
+                                    <span style="background: #f1f5f9; color: #0f172a; font-weight: 800; font-size: 0.82rem; padding: 4px 10px; border-radius: 6px; display: inline-block;">
+                                        {{ u.official_designation or 'Official Moderator' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% set des = (u.official_designation or '') | lower %}
+                                    {% if 'ceo' in des or 'chief executive' in des or 'cto' in des or 'chief technology' in des or 'founder' in des %}
+                                        <span style="background: #ffedd5; color: #9a3412; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; border: 1px solid #fed7aa;">
+                                            ⚡ Absolute Power
+                                        </span>
+                                    {% elif 'coo' in des or 'operations' in des %}
+                                        <span style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            ⚙️ Operations Tier
+                                        </span>
+                                    {% elif 'cpo' in des or 'product' in des %}
+                                        <span style="background: #fdf4ff; color: #86198f; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            🎨 Product Tier
+                                        </span>
+                                    {% elif 'cco' in des or 'content' in des or 'editor' in des %}
+                                        <span style="background: #fefce8; color: #854d0e; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            ✍️ Content Tier
+                                        </span>
+                                    {% elif 'legal' in des or 'compliance' in des %}
+                                        <span style="background: #fee2e2; color: #991b1b; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            ⚖️ Legal Tier
+                                        </span>
+                                    {% elif 'community' in des %}
+                                        <span style="background: #f0fdf4; color: #166534; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            💬 Community Tier
+                                        </span>
+                                    {% else %}
+                                        <span style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            🛡️ Moderator Tier
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    <form action="{{ url_for('developer_assign_official_post', official_id=u.id) }}" method="POST" style="display: inline-flex; gap: 6px; align-items: center;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <select name="designation" style="padding: 5px 8px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; margin: 0; background: white;">
+                                            <option value="Chief Executive Officer (CEO)" {% if 'ceo' in des %}selected{% endif %}>CEO (Absolute Power)</option>
+                                            <option value="Chief Technology Officer (CTO)" {% if 'cto' in des %}selected{% endif %}>CTO (Absolute Power)</option>
+                                            <option value="Chief Operating Officer (COO)" {% if 'coo' in des %}selected{% endif %}>COO (Operations Power)</option>
+                                            <option value="Chief Product Officer (CPO)" {% if 'cpo' in des %}selected{% endif %}>CPO (Product Power)</option>
+                                            <option value="Chief Content Officer (CCO)" {% if 'cco' in des %}selected{% endif %}>CCO (Editorial Power)</option>
+                                            <option value="Senior Legal Counsel" {% if 'legal' in des %}selected{% endif %}>Senior Legal Counsel</option>
+                                            <option value="Community Director" {% if 'community' in des %}selected{% endif %}>Community Director</option>
+                                            <option value="Official Moderator" {% if des == 'official moderator' or not des %}selected{% endif %}>Official Moderator</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-dark" style="padding: 6px 12px; font-size: 0.78rem;">
+                                            Update Post
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">
+                                    No other officials currently registered. You can promote users to Official status in the User Management panel.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+
             <!-- DEVELOPER: PENDING USERNAME CHANGE REQUESTS (OFFICIALS & AUTHORS) -->
             <div class="panel" style="border-left: 5px solid #8b5cf6;">
                 <h2 style="color: #6d28d9; display: flex; align-items: center; gap: 8px;">

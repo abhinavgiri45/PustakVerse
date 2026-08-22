@@ -1,3 +1,44 @@
+
+def get_user_executive_status(user_dict, db_cursor=None):
+    """
+    Determines if user is Founder, CEO, or CTO (Absolute Power) or has a specialized post.
+    """
+    if not user_dict:
+        return {'designation': 'Reader', 'is_absolute': False, 'post_tier': 'reader'}
+        
+    role = user_dict.get('role', 'reader')
+    if role == 'developer':
+        return {'designation': 'Founder & Lead Developer', 'is_absolute': True, 'post_tier': 'founder'}
+
+    designation = user_dict.get('official_designation') or 'Official Moderator'
+
+    if db_cursor and role == 'official':
+        try:
+            db_cursor.execute("SELECT role_title, is_founder FROM leadership_team WHERE (email = %s OR name = %s) AND is_active = TRUE LIMIT 1", (user_dict.get('email'), user_dict.get('username')))
+            lead_rec = db_cursor.fetchone()
+            if lead_rec:
+                designation = lead_rec['role_title']
+        except Exception: pass
+
+    desig_lower = designation.lower()
+    is_absolute = any(k in desig_lower for k in ['founder', 'ceo', 'chief executive', 'cto', 'chief technology'])
+
+    post_tier = 'moderator'
+    if is_absolute:
+        post_tier = 'absolute'
+    elif any(k in desig_lower for k in ['coo', 'operations']):
+        post_tier = 'operations'
+    elif any(k in desig_lower for k in ['cpo', 'product']):
+        post_tier = 'product'
+    elif any(k in desig_lower for k in ['cco', 'content', 'editor']):
+        post_tier = 'content'
+    elif any(k in desig_lower for k in ['legal', 'counsel', 'compliance']):
+        post_tier = 'legal'
+    elif any(k in desig_lower for k in ['community', 'support']):
+        post_tier = 'community'
+
+    return {'designation': designation, 'is_absolute': is_absolute, 'post_tier': post_tier}
+
 import os
 import secrets
 import random
@@ -2265,6 +2306,14 @@ def ensure_payment_schema():
                 if not cursor.fetchone():
                     cursor.execute(f"ALTER TABLE leadership_team ADD COLUMN {col_def[0]} {col_def[1]}")
             except Exception: pass
+
+        
+        # ---> OFFICIAL DESIGNATION & POST-BASED POWERS EXTENSION <---
+        try:
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'official_designation'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN official_designation VARCHAR(100) DEFAULT 'Official Moderator'")
+        except Exception: pass
 
         # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
         # 1. Reader: Personal Notes & Highlights
@@ -5254,8 +5303,21 @@ def dashboard():
             
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
+            exec_info = get_user_executive_status(user_profile, cursor)
+            session['official_designation'] = exec_info['designation']
+            session['is_absolute_power'] = exec_info['is_absolute']
+            session['post_tier'] = exec_info['post_tier']
             
-            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
+            cursor.execute("SELECT * FROM leadership_team ORDER BY is_founder DESC, display_order ASC, id ASC")
+            leadership_team = cursor.fetchall()
+            
+            cursor.execute("SELECT c.id, c.name, COUNT(b.id) AS book_count FROM catalogs c LEFT JOIN books b ON c.name = b.catalog GROUP BY c.id, c.name ORDER BY c.name ASC")
+            all_categories = cursor.fetchall()
+            
+            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 100")
+            official_logs = cursor.fetchall()
+            
+            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, official_designation=exec_info['designation'], is_absolute_power=exec_info['is_absolute'], post_tier=exec_info['post_tier'], leadership_team=leadership_team, all_categories=all_categories, official_logs=official_logs)
 
         if role == 'author':
             cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
@@ -7302,3 +7364,39 @@ def view_invoice(order_id):
         if db:
             try: db.close()
             except: pass
+
+
+
+# ======================================================================
+# EXECUTIVE HIERARCHY: ASSIGN OFFICIAL POST & POWERS
+# ======================================================================
+@app.route('/developer/officials/assign_post/<int:official_id>', methods=['POST'])
+def developer_assign_official_post(official_id):
+    if session.get('role') != 'developer' and not session.get('is_absolute_power'):
+        flash('Unauthorized. Absolute Executive clearance (Founder, CEO, CTO) required.', 'error')
+        return redirect(url_for('dashboard'))
+
+    designation = request.form.get('designation', 'Official Moderator').strip()
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, email, role FROM users WHERE id = %s AND role = 'official'", (official_id,))
+        official = cursor.fetchone()
+        if not official:
+            flash("Official account not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("UPDATE users SET official_designation = %s WHERE id = %s", (designation, official_id))
+        db.commit()
+        log_official_activity(session['user_id'], f"Assigned post '{designation}' to Official {official['username']}")
+        flash(f"Successfully designated {official['username']} as {designation} with corresponding post powers!", "success")
+    except Exception as e:
+        logging.error(f"Error assigning official post: {e}")
+        flash("Could not update official post.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
