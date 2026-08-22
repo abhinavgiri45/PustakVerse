@@ -187,10 +187,10 @@
 
     <div class="tools-nav">
         <button type="button" onclick="switchToolTab('readers', this)" class="tool-tab-btn active">📖 Reader & Student Tools</button>
-        {% if session.role in ['author', 'official', 'developer'] %}
+        {% if session.get('role') in ['author', 'official', 'developer'] %}
         <button type="button" onclick="switchToolTab('authors', this)" class="tool-tab-btn">✍️ Author & Publisher Tools</button>
         {% endif %}
-        {% if session.role in ['official', 'developer'] %}
+        {% if session.get('role') in ['official', 'developer'] %}
         <button type="button" onclick="switchToolTab('system', this)" class="tool-tab-btn">⚡ Diagnostics & System Tools</button>
         {% endif %}
     </div>
@@ -284,7 +284,7 @@
         <!-- ====================================================================== -->
         <!-- TAB 2: AUTHORS & PUBLISHERS SUITE                                     -->
         <!-- ====================================================================== -->
-        {% if session.role in ['author', 'official', 'developer'] %}
+        {% if session.get('role') in ['author', 'official', 'developer'] %}
         <div id="tab-authors" class="tool-panel">
             <div class="card-grid">
 
@@ -350,7 +350,7 @@
         <!-- ====================================================================== -->
         <!-- TAB 3: DIAGNOSTICS & SYSTEM SUITE                                     -->
         <!-- ====================================================================== -->
-        {% if session.role in ['official', 'developer'] %}
+        {% if session.get('role') in ['official', 'developer'] %}
         <div id="tab-system" class="tool-panel">
             <div class="card-grid">
 

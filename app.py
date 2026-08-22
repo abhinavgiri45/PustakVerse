@@ -42,16 +42,16 @@ def is_valid_isbn_format(code_str):
 def generate_valid_sbin(db_cursor=None):
     """
     Generates an authentic, globally compliant, 100% UNIQUE standard ISBN-13 / SBIN identifier.
-    Formula: Prefix (978-93) + 6-digit unique book block + EAN check-digit (Mod 10).
+    Formula: Prefix (978-93-8) [6 digits] + 6-digit unique book block [6 digits] + EAN check-digit (Mod 10) [1 digit] = 13 digits total.
     Guarantees that no duplicate identifier is assigned across any book in PustakVerse.
     """
-    prefix = "97893"
+    prefix = "978938"
     for _ in range(100): # Retry loop to guarantee absolute global uniqueness across database
         random_part = f"{random.randint(100000, 999999)}"
-        raw12 = prefix + random_part
+        raw12 = prefix + random_part # Exactly 12 digits
         sum_digits = sum(int(raw12[i]) * (1 if i % 2 == 0 else 3) for i in range(12))
         check_digit = (10 - (sum_digits % 10)) % 10
-        full_sbin = f"978-93-{random_part[:3]}-{random_part[3:]}-{check_digit}"
+        full_sbin = f"978-93-8{random_part[:2]}-{random_part[2:]}-{check_digit}"
         
         if db_cursor:
             try:
