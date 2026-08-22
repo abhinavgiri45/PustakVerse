@@ -870,7 +870,7 @@
       {% endif %}
 
       <div class="sidebar-section-title">
-        <span>Recent Chats (15 Days)</span>
+        <span>Recent Chats (45 Days)</span>
         <button type="button" onclick="clearCurrentSession()" style="background: none; border: none; color: #ef4444; font-size: 0.72rem; cursor: pointer; font-weight: 700;">Clear</button>
       </div>
 
@@ -880,7 +880,7 @@
       </div>
 
       <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.7rem; color: #64748b; text-align: center;">
-        🔒 Chats stored in browser · Auto-cleaned after 15 days
+        🔒 Chats stored in browser · Auto-cleaned after 45 days
       </div>
     </aside>
 
@@ -1015,7 +1015,7 @@
   <!-- SCRIPT LOGIC -->
   <script>
     const STORAGE_KEY = 'granthmind_sessions_v3';
-    const FIFTEEN_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
+    const FORTY_FIVE_DAYS_MS = 45 * 24 * 60 * 60 * 1000;
     let currentSessionId = null;
     let activeMode = 'study';
 
@@ -1155,7 +1155,7 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         let list = raw ? JSON.parse(raw) : [];
         const now = Date.now();
-        list = list.filter(s => (now - s.createdAt) < FIFTEEN_DAYS_MS);
+        list = list.filter(s => (now - s.createdAt) < FORTY_FIVE_DAYS_MS);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
         return list;
       } catch (e) {
