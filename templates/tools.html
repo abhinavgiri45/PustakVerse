@@ -328,11 +328,6 @@
                                 🔍 Verify
                             </button>
                         </div>
-                        <div style="text-align: right; margin-bottom: 10px;">
-                            <button type="button" onclick="generateHubSBIN()" style="background: none; border: none; color: #ea580c; font-weight: 800; cursor: pointer; font-size: 0.78rem; text-decoration: underline;">
-                                ✨ Mint New 100% Unique Free Digital SBIN
-                            </button>
-                        </div>
                         <div id="sbinVerifierOutput" class="result-box" style="display: none;"></div>
                     </div>
                 </div>
@@ -563,6 +558,75 @@
         // Client Env
         document.getElementById('clientEnv').textContent = navigator.userAgent.slice(0, 60) + '...';
         document.getElementById('screenRes').textContent = `${window.screen.width} x ${window.screen.height} px`;
+    
+        // Global ISBN / SBIN Verifier Hub
+        async function verifySbinHub() {
+            const input = document.getElementById('verifySbinInput');
+            const code = (input.value || '').trim();
+            const out = document.getElementById('sbinVerifierOutput');
+            if (!code) {
+                input.focus();
+                out.innerHTML = '<span style="color: #dc2626; font-weight: 700;">⚠️ Please enter an ISBN or SBIN identifier code to verify.</span>';
+                out.style.display = 'block';
+                out.style.background = '#fef2f2';
+                out.style.borderColor = '#fca5a5';
+                return;
+            }
+            out.innerHTML = '<span style="color: #64748b; font-weight: 700;">⏳ Verifying mathematical checksum & checking PustakVerse registry...</span>';
+            out.style.display = 'block';
+            out.style.background = '#f8fafc';
+            out.style.borderColor = '#e2e8f0';
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    let html = `
+                        <div style="color: #166534; font-weight: 800; font-size: 0.95rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                            <span>✓</span> ${data.format || 'Valid Identifier'}
+                        </div>
+                        <div style="font-size: 0.82rem; color: #334155; line-height: 1.5;">
+                            <div><strong>Code:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-family: monospace;">${data.code}</code></div>
+                            <div><strong>Mathematical Status:</strong> <span style="color: #16a34a; font-weight: 700;">✓ Parity Checksum Verified</span></div>
+                            <div><strong>Agency Standard:</strong> ${data.registration_agency || 'Global International Standard'}</div>
+                    `;
+                    if (data.registered_on_pustakverse && data.book) {
+                        html += `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #86efac;">
+                                <strong style="color: #0f172a;">📚 Registered PustakVerse Book:</strong>
+                                <div style="font-weight: 800; color: #ea580c; font-size: 0.92rem; margin-top: 2px;">${data.book.title}</div>
+                                <div style="color: #64748b; font-size: 0.8rem;">By ${data.book.author} · Category: ${data.book.catalog}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #86efac; color: #0284c7; font-size: 0.8rem; font-weight: 600;">
+                                🌐 Legitimate standard identifier. Not currently bound to any book in PustakVerse (Available for authors).
+                            </div>
+                        `;
+                    }
+                    html += `</div>`;
+                    out.innerHTML = html;
+                    out.style.background = '#f0fdf4';
+                    out.style.borderColor = '#86efac';
+                } else {
+                    out.innerHTML = `
+                        <div style="color: #dc2626; font-weight: 800; font-size: 0.9rem; margin-bottom: 4px;">
+                            ❌ Invalid Checksum / Identifier
+                        </div>
+                        <div style="font-size: 0.82rem; color: #b91c1c;">
+                            ${data.message || 'Identifier failed mathematical check-digit verification.'}
+                        </div>
+                    `;
+                    out.style.background = '#fef2f2';
+                    out.style.borderColor = '#fca5a5';
+                }
+            } catch (err) {
+                out.innerHTML = '<span style="color: #dc2626; font-weight: 700;">Failed to verify identifier. Please check your connection and try again.</span>';
+                out.style.background = '#fef2f2';
+                out.style.borderColor = '#fca5a5';
+            }
+        }
+
     </script>
 </body>
 </html>

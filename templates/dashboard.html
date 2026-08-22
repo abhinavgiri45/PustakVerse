@@ -18,6 +18,136 @@
                 }
             } catch(e) {}
         })();
+    
+        // =====================================================================
+        // AUTHOR DASHBOARD SBIN MINTING & VERIFICATION ENGINE
+        // =====================================================================
+        let lastMintedSBIN = '';
+
+        function toggleUploadSBIN(val) {
+            const box = document.getElementById('upload_custom_sbin_box');
+            if (box) {
+                box.style.display = (val === 'yes') ? 'block' : 'none';
+            }
+        }
+
+        async function verifyInputSBIN(code, statusDivId) {
+            const statusDiv = document.getElementById(statusDivId);
+            if (!statusDiv) return;
+            const val = (code || '').trim();
+            if (!val) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    if (data.registered_on_pustakverse && data.book) {
+                        statusDiv.style.color = '#dc2626';
+                        statusDiv.innerHTML = `⚠️ Conflict: Already assigned to "${data.book.title}" by ${data.book.author}.`;
+                    } else {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Valid Unique ${data.format || 'SBIN-13'} (EAN-13 Checksum Verified)`;
+                    }
+                } else {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = `❌ Invalid: ${data.message || 'Incorrect checksum'}`;
+                }
+            } catch (e) {
+                statusDiv.style.color = '#64748b';
+                statusDiv.innerHTML = 'Checking...';
+            }
+        }
+
+        async function generateAndSetSBIN(inputId, statusDivId) {
+            const input = document.getElementById(inputId);
+            const statusDiv = document.getElementById(statusDivId);
+            if (statusDiv) {
+                statusDiv.style.color = '#0284c7';
+                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
+            }
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    if (input) input.value = data.sbin;
+                    if (statusDiv) {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Generated Genuine Unique SBIN: ${data.sbin}`;
+                    }
+                }
+            } catch (e) {
+                if (statusDiv) {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = 'Failed to generate SBIN. Please try again.';
+                }
+            }
+        }
+
+        async function mintAuthorDashboardSBIN() {
+            const box = document.getElementById('authorMintedSbinBox');
+            const codeEl = document.getElementById('authorMintedSbinCode');
+            if (codeEl) codeEl.textContent = 'Generating...';
+            if (box) box.style.display = 'block';
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    lastMintedSBIN = data.sbin;
+                    if (codeEl) codeEl.textContent = data.sbin;
+                    // Reset copy button
+                    document.getElementById('copySbinIcon').textContent = '📋';
+                    document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                }
+            } catch (e) {
+                if (codeEl) codeEl.textContent = 'Error generating SBIN';
+            }
+        }
+
+        function copyMintedSBIN() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                navigator.clipboard.writeText(lastMintedSBIN).then(() => {
+                    document.getElementById('copySbinIcon').textContent = '✓';
+                    document.getElementById('copySbinText').textContent = 'Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copySbinIcon').textContent = '📋';
+                        document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                    }, 2500);
+                });
+            }
+        }
+
+        function applyMintedSBINToForm() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                // Check "I already have an ISBN / SBIN"
+                const radios = document.getElementsByName('has_sbin');
+                for (let r of radios) {
+                    if (r.value === 'yes') {
+                        r.checked = true;
+                        toggleUploadSBIN('yes');
+                        break;
+                    }
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.value = lastMintedSBIN;
+                    verifyInputSBIN(lastMintedSBIN, 'upload_sbin_status');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.style.border = '2px solid #ea580c';
+                    setTimeout(() => { input.style.border = '1px solid #cbd5e1'; }, 2000);
+                }
+            }
+        }
+
     </script>
     <style>
         :root { 
@@ -1020,7 +1150,137 @@
                 document.getElementById('royalty100').textContent = '₹' + (p * 100).toLocaleString('en-IN');
                 document.getElementById('royalty500').textContent = '₹' + (p * 500).toLocaleString('en-IN');
             }
-        </script>
+        
+        // =====================================================================
+        // AUTHOR DASHBOARD SBIN MINTING & VERIFICATION ENGINE
+        // =====================================================================
+        let lastMintedSBIN = '';
+
+        function toggleUploadSBIN(val) {
+            const box = document.getElementById('upload_custom_sbin_box');
+            if (box) {
+                box.style.display = (val === 'yes') ? 'block' : 'none';
+            }
+        }
+
+        async function verifyInputSBIN(code, statusDivId) {
+            const statusDiv = document.getElementById(statusDivId);
+            if (!statusDiv) return;
+            const val = (code || '').trim();
+            if (!val) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    if (data.registered_on_pustakverse && data.book) {
+                        statusDiv.style.color = '#dc2626';
+                        statusDiv.innerHTML = `⚠️ Conflict: Already assigned to "${data.book.title}" by ${data.book.author}.`;
+                    } else {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Valid Unique ${data.format || 'SBIN-13'} (EAN-13 Checksum Verified)`;
+                    }
+                } else {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = `❌ Invalid: ${data.message || 'Incorrect checksum'}`;
+                }
+            } catch (e) {
+                statusDiv.style.color = '#64748b';
+                statusDiv.innerHTML = 'Checking...';
+            }
+        }
+
+        async function generateAndSetSBIN(inputId, statusDivId) {
+            const input = document.getElementById(inputId);
+            const statusDiv = document.getElementById(statusDivId);
+            if (statusDiv) {
+                statusDiv.style.color = '#0284c7';
+                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
+            }
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    if (input) input.value = data.sbin;
+                    if (statusDiv) {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Generated Genuine Unique SBIN: ${data.sbin}`;
+                    }
+                }
+            } catch (e) {
+                if (statusDiv) {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = 'Failed to generate SBIN. Please try again.';
+                }
+            }
+        }
+
+        async function mintAuthorDashboardSBIN() {
+            const box = document.getElementById('authorMintedSbinBox');
+            const codeEl = document.getElementById('authorMintedSbinCode');
+            if (codeEl) codeEl.textContent = 'Generating...';
+            if (box) box.style.display = 'block';
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    lastMintedSBIN = data.sbin;
+                    if (codeEl) codeEl.textContent = data.sbin;
+                    // Reset copy button
+                    document.getElementById('copySbinIcon').textContent = '📋';
+                    document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                }
+            } catch (e) {
+                if (codeEl) codeEl.textContent = 'Error generating SBIN';
+            }
+        }
+
+        function copyMintedSBIN() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                navigator.clipboard.writeText(lastMintedSBIN).then(() => {
+                    document.getElementById('copySbinIcon').textContent = '✓';
+                    document.getElementById('copySbinText').textContent = 'Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copySbinIcon').textContent = '📋';
+                        document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                    }, 2500);
+                });
+            }
+        }
+
+        function applyMintedSBINToForm() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                // Check "I already have an ISBN / SBIN"
+                const radios = document.getElementsByName('has_sbin');
+                for (let r of radios) {
+                    if (r.value === 'yes') {
+                        r.checked = true;
+                        toggleUploadSBIN('yes');
+                        break;
+                    }
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.value = lastMintedSBIN;
+                    verifyInputSBIN(lastMintedSBIN, 'upload_sbin_status');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.style.border = '2px solid #ea580c';
+                    setTimeout(() => { input.style.border = '1px solid #cbd5e1'; }, 2000);
+                }
+            }
+        }
+
+    </script>
 
         {% if session.role == 'reader' %}
             <!-- READER POWER SUITE: Shelves, Book Requests & Habit Goals -->
@@ -1243,6 +1503,48 @@
         {% endif %}
 
         {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
+            <!-- AUTHOR SBIN GENERATOR & MINTING STUDIO -->
+            <div class="panel" style="margin-bottom: 24px; border: 2px solid #fdba74; background: linear-gradient(to right, #fffaf5, #ffffff);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; font-size: 1.25rem;">
+                            <span>✨</span> Mint 100% Unique Free Digital SBIN (Standard Book Identifier)
+                        </h2>
+                        <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">
+                            Generate authentic, globally compliant 13-digit EAN-13 identifiers with guaranteed database uniqueness and mathematical check-digit parity for your manuscripts.
+                        </p>
+                    </div>
+                    <button type="button" onclick="mintAuthorDashboardSBIN()" class="btn-sm" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; padding: 10px 20px; font-weight: 800; font-size: 0.88rem; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                        <span>✨</span> Mint New Unique SBIN
+                    </button>
+                </div>
+
+                <!-- MINTED SBIN DISPLAY BOX -->
+                <div id="authorMintedSbinBox" style="display: none; padding: 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-top: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-size: 0.78rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em;">
+                                ✓ Authentic Globally Unique SBIN-13 Generated
+                            </div>
+                            <div id="authorMintedSbinCode" style="font-size: 1.6rem; font-weight: 900; color: #0f172a; font-family: monospace; letter-spacing: 0.05em; margin: 4px 0;">
+                                978-93-800-0000-0
+                            </div>
+                            <div style="font-size: 0.8rem; color: #15803d; font-weight: 600;">
+                                Verified EAN-13 Modulo-10 Checksum · Bookland / India Digital Standard
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" onclick="copyMintedSBIN()" class="btn-sm" style="background: white; border: 1.5px solid #86efac; color: #166534; padding: 8px 14px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                <span id="copySbinIcon">📋</span> <span id="copySbinText">Copy SBIN</span>
+                            </button>
+                            <button type="button" onclick="applyMintedSBINToForm()" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 8px 16px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                <span>🚀</span> Use in Publish Form
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid-2">
                 <div class="panel">
                     <h2>Publish a New Book</h2>
@@ -2933,6 +3235,136 @@
             return true;
         }
 
+    
+        // =====================================================================
+        // AUTHOR DASHBOARD SBIN MINTING & VERIFICATION ENGINE
+        // =====================================================================
+        let lastMintedSBIN = '';
+
+        function toggleUploadSBIN(val) {
+            const box = document.getElementById('upload_custom_sbin_box');
+            if (box) {
+                box.style.display = (val === 'yes') ? 'block' : 'none';
+            }
+        }
+
+        async function verifyInputSBIN(code, statusDivId) {
+            const statusDiv = document.getElementById(statusDivId);
+            if (!statusDiv) return;
+            const val = (code || '').trim();
+            if (!val) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    if (data.registered_on_pustakverse && data.book) {
+                        statusDiv.style.color = '#dc2626';
+                        statusDiv.innerHTML = `⚠️ Conflict: Already assigned to "${data.book.title}" by ${data.book.author}.`;
+                    } else {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Valid Unique ${data.format || 'SBIN-13'} (EAN-13 Checksum Verified)`;
+                    }
+                } else {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = `❌ Invalid: ${data.message || 'Incorrect checksum'}`;
+                }
+            } catch (e) {
+                statusDiv.style.color = '#64748b';
+                statusDiv.innerHTML = 'Checking...';
+            }
+        }
+
+        async function generateAndSetSBIN(inputId, statusDivId) {
+            const input = document.getElementById(inputId);
+            const statusDiv = document.getElementById(statusDivId);
+            if (statusDiv) {
+                statusDiv.style.color = '#0284c7';
+                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
+            }
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    if (input) input.value = data.sbin;
+                    if (statusDiv) {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Generated Genuine Unique SBIN: ${data.sbin}`;
+                    }
+                }
+            } catch (e) {
+                if (statusDiv) {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = 'Failed to generate SBIN. Please try again.';
+                }
+            }
+        }
+
+        async function mintAuthorDashboardSBIN() {
+            const box = document.getElementById('authorMintedSbinBox');
+            const codeEl = document.getElementById('authorMintedSbinCode');
+            if (codeEl) codeEl.textContent = 'Generating...';
+            if (box) box.style.display = 'block';
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    lastMintedSBIN = data.sbin;
+                    if (codeEl) codeEl.textContent = data.sbin;
+                    // Reset copy button
+                    document.getElementById('copySbinIcon').textContent = '📋';
+                    document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                }
+            } catch (e) {
+                if (codeEl) codeEl.textContent = 'Error generating SBIN';
+            }
+        }
+
+        function copyMintedSBIN() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                navigator.clipboard.writeText(lastMintedSBIN).then(() => {
+                    document.getElementById('copySbinIcon').textContent = '✓';
+                    document.getElementById('copySbinText').textContent = 'Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copySbinIcon').textContent = '📋';
+                        document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                    }, 2500);
+                });
+            }
+        }
+
+        function applyMintedSBINToForm() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                // Check "I already have an ISBN / SBIN"
+                const radios = document.getElementsByName('has_sbin');
+                for (let r of radios) {
+                    if (r.value === 'yes') {
+                        r.checked = true;
+                        toggleUploadSBIN('yes');
+                        break;
+                    }
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.value = lastMintedSBIN;
+                    verifyInputSBIN(lastMintedSBIN, 'upload_sbin_status');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.style.border = '2px solid #ea580c';
+                    setTimeout(() => { input.style.border = '1px solid #cbd5e1'; }, 2000);
+                }
+            }
+        }
+
     </script>
 
     <!-- ADD AI MODEL MODAL -->
@@ -3297,7 +3729,137 @@
     document.addEventListener('DOMContentLoaded', () => {
         updateUploadedCount();
     });
-</script>
+
+        // =====================================================================
+        // AUTHOR DASHBOARD SBIN MINTING & VERIFICATION ENGINE
+        // =====================================================================
+        let lastMintedSBIN = '';
+
+        function toggleUploadSBIN(val) {
+            const box = document.getElementById('upload_custom_sbin_box');
+            if (box) {
+                box.style.display = (val === 'yes') ? 'block' : 'none';
+            }
+        }
+
+        async function verifyInputSBIN(code, statusDivId) {
+            const statusDiv = document.getElementById(statusDivId);
+            if (!statusDiv) return;
+            const val = (code || '').trim();
+            if (!val) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    if (data.registered_on_pustakverse && data.book) {
+                        statusDiv.style.color = '#dc2626';
+                        statusDiv.innerHTML = `⚠️ Conflict: Already assigned to "${data.book.title}" by ${data.book.author}.`;
+                    } else {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Valid Unique ${data.format || 'SBIN-13'} (EAN-13 Checksum Verified)`;
+                    }
+                } else {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = `❌ Invalid: ${data.message || 'Incorrect checksum'}`;
+                }
+            } catch (e) {
+                statusDiv.style.color = '#64748b';
+                statusDiv.innerHTML = 'Checking...';
+            }
+        }
+
+        async function generateAndSetSBIN(inputId, statusDivId) {
+            const input = document.getElementById(inputId);
+            const statusDiv = document.getElementById(statusDivId);
+            if (statusDiv) {
+                statusDiv.style.color = '#0284c7';
+                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
+            }
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    if (input) input.value = data.sbin;
+                    if (statusDiv) {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Generated Genuine Unique SBIN: ${data.sbin}`;
+                    }
+                }
+            } catch (e) {
+                if (statusDiv) {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = 'Failed to generate SBIN. Please try again.';
+                }
+            }
+        }
+
+        async function mintAuthorDashboardSBIN() {
+            const box = document.getElementById('authorMintedSbinBox');
+            const codeEl = document.getElementById('authorMintedSbinCode');
+            if (codeEl) codeEl.textContent = 'Generating...';
+            if (box) box.style.display = 'block';
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    lastMintedSBIN = data.sbin;
+                    if (codeEl) codeEl.textContent = data.sbin;
+                    // Reset copy button
+                    document.getElementById('copySbinIcon').textContent = '📋';
+                    document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                }
+            } catch (e) {
+                if (codeEl) codeEl.textContent = 'Error generating SBIN';
+            }
+        }
+
+        function copyMintedSBIN() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                navigator.clipboard.writeText(lastMintedSBIN).then(() => {
+                    document.getElementById('copySbinIcon').textContent = '✓';
+                    document.getElementById('copySbinText').textContent = 'Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copySbinIcon').textContent = '📋';
+                        document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                    }, 2500);
+                });
+            }
+        }
+
+        function applyMintedSBINToForm() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                // Check "I already have an ISBN / SBIN"
+                const radios = document.getElementsByName('has_sbin');
+                for (let r of radios) {
+                    if (r.value === 'yes') {
+                        r.checked = true;
+                        toggleUploadSBIN('yes');
+                        break;
+                    }
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.value = lastMintedSBIN;
+                    verifyInputSBIN(lastMintedSBIN, 'upload_sbin_status');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.style.border = '2px solid #ea580c';
+                    setTimeout(() => { input.style.border = '1px solid #cbd5e1'; }, 2000);
+                }
+            }
+        }
+
+    </script>
 
 
     <!-- Searchable & Scrollable Book Selectors Logic -->
@@ -3347,6 +3909,136 @@
                 badge.textContent = '✓ Selected: ' + title;
             }
         }
+    
+        // =====================================================================
+        // AUTHOR DASHBOARD SBIN MINTING & VERIFICATION ENGINE
+        // =====================================================================
+        let lastMintedSBIN = '';
+
+        function toggleUploadSBIN(val) {
+            const box = document.getElementById('upload_custom_sbin_box');
+            if (box) {
+                box.style.display = (val === 'yes') ? 'block' : 'none';
+            }
+        }
+
+        async function verifyInputSBIN(code, statusDivId) {
+            const statusDiv = document.getElementById(statusDivId);
+            if (!statusDiv) return;
+            const val = (code || '').trim();
+            if (!val) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    if (data.registered_on_pustakverse && data.book) {
+                        statusDiv.style.color = '#dc2626';
+                        statusDiv.innerHTML = `⚠️ Conflict: Already assigned to "${data.book.title}" by ${data.book.author}.`;
+                    } else {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Valid Unique ${data.format || 'SBIN-13'} (EAN-13 Checksum Verified)`;
+                    }
+                } else {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = `❌ Invalid: ${data.message || 'Incorrect checksum'}`;
+                }
+            } catch (e) {
+                statusDiv.style.color = '#64748b';
+                statusDiv.innerHTML = 'Checking...';
+            }
+        }
+
+        async function generateAndSetSBIN(inputId, statusDivId) {
+            const input = document.getElementById(inputId);
+            const statusDiv = document.getElementById(statusDivId);
+            if (statusDiv) {
+                statusDiv.style.color = '#0284c7';
+                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
+            }
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    if (input) input.value = data.sbin;
+                    if (statusDiv) {
+                        statusDiv.style.color = '#16a34a';
+                        statusDiv.innerHTML = `✓ Generated Genuine Unique SBIN: ${data.sbin}`;
+                    }
+                }
+            } catch (e) {
+                if (statusDiv) {
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.innerHTML = 'Failed to generate SBIN. Please try again.';
+                }
+            }
+        }
+
+        async function mintAuthorDashboardSBIN() {
+            const box = document.getElementById('authorMintedSbinBox');
+            const codeEl = document.getElementById('authorMintedSbinCode');
+            if (codeEl) codeEl.textContent = 'Generating...';
+            if (box) box.style.display = 'block';
+            try {
+                const res = await fetch('/api/generate_sbin');
+                const data = await res.json();
+                if (data.status === 'success' && data.sbin) {
+                    lastMintedSBIN = data.sbin;
+                    if (codeEl) codeEl.textContent = data.sbin;
+                    // Reset copy button
+                    document.getElementById('copySbinIcon').textContent = '📋';
+                    document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                }
+            } catch (e) {
+                if (codeEl) codeEl.textContent = 'Error generating SBIN';
+            }
+        }
+
+        function copyMintedSBIN() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                navigator.clipboard.writeText(lastMintedSBIN).then(() => {
+                    document.getElementById('copySbinIcon').textContent = '✓';
+                    document.getElementById('copySbinText').textContent = 'Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copySbinIcon').textContent = '📋';
+                        document.getElementById('copySbinText').textContent = 'Copy SBIN';
+                    }, 2500);
+                });
+            }
+        }
+
+        function applyMintedSBINToForm() {
+            if (!lastMintedSBIN) {
+                const codeEl = document.getElementById('authorMintedSbinCode');
+                lastMintedSBIN = codeEl ? codeEl.textContent.trim() : '';
+            }
+            if (lastMintedSBIN && !lastMintedSBIN.includes('Generating') && !lastMintedSBIN.includes('Error')) {
+                // Check "I already have an ISBN / SBIN"
+                const radios = document.getElementsByName('has_sbin');
+                for (let r of radios) {
+                    if (r.value === 'yes') {
+                        r.checked = true;
+                        toggleUploadSBIN('yes');
+                        break;
+                    }
+                }
+                const input = document.getElementById('upload_sbin_input');
+                if (input) {
+                    input.value = lastMintedSBIN;
+                    verifyInputSBIN(lastMintedSBIN, 'upload_sbin_status');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.style.border = '2px solid #ea580c';
+                    setTimeout(() => { input.style.border = '1px solid #cbd5e1'; }, 2000);
+                }
+            }
+        }
+
     </script>
 
 </body>
