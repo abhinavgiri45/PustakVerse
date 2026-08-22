@@ -189,7 +189,7 @@
         </div>
     </div>
 
-    <div class="filter-nav">
+    <div class="filter-nav-scroll">
         <button type="button" onclick="applyQuickFilter('all', this)" class="quick-filter-btn active" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: none; background: #992b00; color: #ffffff; cursor: pointer; transition: 0.2s;">🌟 All Books</button>
         <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🆓 100% Free</button>
         <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">⭐ 4.5+ Rating</button>
@@ -553,5 +553,37 @@
             }
         });
     </script>
+
+    <!-- FLOATING NATIVE MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <a href="/" class="mobile-nav-item active">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="javascript:void(0);" onclick="document.getElementById('searchInput').focus(); window.scrollTo({top: 150, behavior: 'smooth'});" class="mobile-nav-item">
+            <span class="nav-icon">🔍</span>
+            <span>Search</span>
+        </a>
+        {% if session.user_id %}
+            <a href="{{ url_for('my_library') }}" class="mobile-nav-item">
+                <span class="nav-icon">📚</span>
+                <span>Library</span>
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+                <span class="nav-icon">👤</span>
+                <span>Dashboard</span>
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="mobile-nav-item">
+                <span class="nav-icon">🔑</span>
+                <span>Sign In</span>
+            </a>
+        {% endif %}
+        <a href="{{ url_for('contact') }}" class="mobile-nav-item">
+            <span class="nav-icon">🏛️</span>
+            <span>Contact</span>
+        </a>
+    </nav>
+
 </body>
 </html>

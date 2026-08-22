@@ -285,19 +285,44 @@
             margin-top: 30px; 
         }
 
+        
         @media (max-width: 768px) { 
             .book-header { 
-                flex-direction: column; 
+                flex-direction: column !important; 
+                padding: 20px 16px !important;
+                border-radius: 14px !important;
+                gap: 20px !important;
             } 
             .book-cover { 
-                width: 100%; 
-                height: auto; 
+                max-width: 190px !important; 
+                height: auto !important; 
+                margin: 0 auto !important;
+                display: block !important;
+                border-radius: 10px !important;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.18) !important;
             } 
             .summary-container { 
-                flex-direction: column; 
-                gap: 20px; 
+                flex-direction: column !important; 
+                gap: 16px !important; 
+            }
+            h1 {
+                font-size: 1.6rem !important;
+                text-align: center !important;
+            }
+            .author {
+                text-align: center !important;
+                font-size: 0.95rem !important;
+            }
+            .header-rating {
+                justify-content: center !important;
+                margin-bottom: 18px !important;
+            }
+            .tag {
+                display: table !important;
+                margin: 0 auto 10px auto !important;
             }
         }
+
     </style>
 </head>
 <body>
@@ -703,5 +728,30 @@
             }).catch(() => {});
         }
     </script>
+
+    <!-- FLOATING NATIVE MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <a href="/" class="mobile-nav-item">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('my_library') }}" class="mobile-nav-item">
+            <span class="nav-icon">📚</span>
+            <span>Library</span>
+        </a>
+        <a href="javascript:void(0);" onclick="navigator.share ? navigator.share({title: document.title, url: window.location.href}) : alert('URL copied: ' + window.location.href);" class="mobile-nav-item">
+            <span class="nav-icon">🔗</span>
+            <span>Share</span>
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item">
+            <span class="nav-icon">👤</span>
+            <span>Account</span>
+        </a>
+        <a href="{{ url_for('contact') }}" class="mobile-nav-item">
+            <span class="nav-icon">🏛️</span>
+            <span>Contact</span>
+        </a>
+    </nav>
+
 </body>
 </html>
