@@ -6111,9 +6111,15 @@ def dashboard():
         two_factor_enabled = bool(user_profile.get('two_factor_enabled'))
         
         # Calculate Account Security Score (0 - 100%)
-        security_score = 40
-        if two_factor_enabled:
-            security_score += 35
+        # Balanced, transparent 4-pillar system:
+        # Pillar 1 (25%): Verified Account & Email
+        # Pillar 2 (25%): Encrypted Password Cryptography
+        # Pillar 3 (25%): Two-Step Verification (Active or Admin Enforced)
+        # Pillar 4 (25%): Security Recovery Question
+        security_score = 50 # Base (25% Email + 25% Password Encryption)
+        is_2fa_active = two_factor_enabled or (role in ['developer', 'official'])
+        if is_2fa_active:
+            security_score += 25
         if user_profile.get('security_question'):
             security_score += 25
             

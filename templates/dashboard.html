@@ -1026,28 +1026,116 @@
                 <h2>🛡️ Security & Account Protection</h2>
                 
                 <!-- Account Security Health Score -->
-                <div style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); padding: 18px 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Account Security Score</span>
-                        <span style="font-weight: 800; font-size: 1.2rem; color: {% if security_score >= 80 %}#16a34a{% elif security_score >= 50 %}#d97706{% else %}#dc2626{% endif %};">
-                            {{ security_score }}%
+                <div style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); padding: 20px 22px; border-radius: 14px; border: 1.5px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span style="font-weight: 800; color: #0f172a; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                                <span>🛡️</span> Account Security Health
+                            </span>
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                                Multi-Factor Cryptographic & Identity Protection
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 800; 
+                                {% if security_score >= 100 %}background: #dcfce7; color: #166534; border: 1px solid #86efac;
+                                {% elif security_score >= 75 %}background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd;
+                                {% elif security_score >= 50 %}background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+                                {% else %}background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% endif %}">
+                                {% if security_score >= 100 %}✓ Maximum Protection
+                                {% elif security_score >= 75 %}⚡ Strong Shield
+                                {% elif security_score >= 50 %}⚠️ Moderate Protection
+                                {% else %}🔴 Action Required{% endif %}
+                            </span>
+                            <span style="font-weight: 900; font-size: 1.4rem; color: {% if security_score >= 100 %}#16a34a{% elif security_score >= 75 %}#2563eb{% elif security_score >= 50 %}#d97706{% else %}#dc2626{% endif %};">
+                                {{ security_score }}%
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 16px; position: relative;">
+                        <div style="height: 100%; width: {{ security_score }}%; background: {% if security_score >= 100 %}linear-gradient(90deg, #22c55e, #16a34a){% elif security_score >= 75 %}linear-gradient(90deg, #3b82f6, #2563eb){% elif security_score >= 50 %}linear-gradient(90deg, #f59e0b, #d97706){% else %}linear-gradient(90deg, #ef4444, #dc2626){% endif %}; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 6px;"></div>
+                    </div>
+
+                    <!-- Security Pillars Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-bottom: 14px;">
+                        <!-- Pillar 1: Verified Email -->
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.82rem;">
+                            <span style="color: #16a34a; font-weight: 800; font-size: 0.95rem;">✓</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #166534;">Verified Email Address</div>
+                                <div style="font-size: 0.72rem; color: #15803d;">+25% · Account Authenticated</div>
+                            </div>
+                        </div>
+
+                        <!-- Pillar 2: Password Encryption -->
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.82rem;">
+                            <span style="color: #16a34a; font-weight: 800; font-size: 0.95rem;">✓</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #166534;">Encrypted Password</div>
+                                <div style="font-size: 0.72rem; color: #15803d;">+25% · Bcrypt Cryptography</div>
+                            </div>
+                        </div>
+
+                        <!-- Pillar 3: Two-Step Verification -->
+                        {% if two_factor_enabled or session.role in ['developer', 'official'] %}
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.82rem;">
+                            <span style="color: #16a34a; font-weight: 800; font-size: 0.95rem;">✓</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #166534;">Two-Step Verification</div>
+                                <div style="font-size: 0.72rem; color: #15803d;">+25% · Active & Protected</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 0.82rem;">
+                            <span style="color: #d97706; font-weight: 800; font-size: 0.95rem;">⚠️</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #92400e;">Two-Step Verification</div>
+                                <div style="font-size: 0.72rem; color: #b45309;">Disabled · (+25% available)</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Pillar 4: Recovery Question -->
+                        {% if user_profile.security_question %}
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.82rem;">
+                            <span style="color: #16a34a; font-weight: 800; font-size: 0.95rem;">✓</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #166534;">Recovery Question Set</div>
+                                <div style="font-size: 0.72rem; color: #15803d;">+25% · Emergency Fallback</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 0.82rem;">
+                            <span style="color: #d97706; font-weight: 800; font-size: 0.95rem;">⚠️</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #92400e;">Recovery Question</div>
+                                <div style="font-size: 0.72rem; color: #b45309;">Not Configured · (+25% available)</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if security_score < 100 %}
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; color: #1e40af; display: flex; align-items: center; gap: 6px;">
+                        <span>💡</span>
+                        <span><strong>Tip to achieve 100% Protection:</strong> 
+                        {% if not (two_factor_enabled or session.role in ['developer', 'official']) and not user_profile.security_question %}
+                            Enable Two-Step Verification below and configure a Recovery Question.
+                        {% elif not (two_factor_enabled or session.role in ['developer', 'official']) %}
+                            Turn on Two-Step Verification in the section below.
+                        {% elif not user_profile.security_question %}
+                            Set a security recovery question on your profile.
+                        {% endif %}
                         </span>
                     </div>
-                    <div style="width: 100%; height: 8px; background: #cbd5e1; border-radius: 4px; overflow: hidden; margin-bottom: 12px;">
-                        <div style="height: 100%; width: {{ security_score }}%; background: {% if security_score >= 80 %}#22c55e{% elif security_score >= 50 %}#f59e0b{% else %}#ef4444{% endif %}; transition: width 0.4s ease;"></div>
+                    {% else %}
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; color: #15803d; display: flex; align-items: center; gap: 6px;">
+                        <span>🔒</span>
+                        <span><strong>Maximum Protection Active:</strong> Your account meets highest enterprise cryptographic and identity protection standards.</span>
                     </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82rem;">
-                        <span style="padding: 3px 8px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600;">✓ Email Verified</span>
-                        {% if two_factor_enabled or session.role in ['developer', 'official'] %}
-                            <span style="padding: 3px 8px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600;">✓ Two-Step Verification Active</span>
-                        {% else %}
-                            <span style="padding: 3px 8px; border-radius: 4px; background: #fee2e2; color: #991b1b; font-weight: 600;">⚠ Two-Step Verification Off</span>
-                        {% endif %}
-                        <span style="padding: 3px 8px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600;">✓ Encrypted Password</span>
-                        {% if user_profile.security_question %}
-                            <span style="padding: 3px 8px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600;">✓ Recovery Question Set</span>
-                        {% endif %}
-                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Two-Step Verification Section -->
