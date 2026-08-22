@@ -1519,100 +1519,153 @@ def get_active_ai_models():
     return synced_models
 
 
+def call_gemini_api(prompt, attachment_path='', timeout=12):
+    """
+    Executes official Gemini API inference using GEMINI_API_KEY from environment or database.
+    """
+    api_key = get_provider_api_key('gemini') or os.getenv('GEMINI_API_KEY', '') or os.getenv('GOOGLE_API_KEY', '')
+    if not api_key:
+        return ''
+    
+    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    for m in models_to_try:
+        try:
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}'
+            payload = {
+                "contents": [{
+                    "parts": [{"text": prompt}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "maxOutputTokens": 3500
+                }
+            }
+            r = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=timeout)
+            if r.status_code == 200:
+                data = r.json()
+                candidates = data.get('candidates', [])
+                if candidates:
+                    parts = candidates[0].get('content', {}).get('parts', [])
+                    if parts:
+                        text = parts[0].get('text', '').strip()
+                        if text:
+                            return text
+        except Exception:
+            continue
+    return ''
+
+
 def call_provider_live_api(provider, model_id, prompt, attachment_path='', timeout=10):
     """
     Executes real-time inference against the synced official API provider.
+    Guaranteed zero-crash exception safe.
     """
-    p = (provider or '').lower()
-    api_key = get_provider_api_key(p)
-    if not api_key:
-        return ''
+    try:
+        p = (provider or '').lower().strip()
+        api_key = get_provider_api_key(p)
+        if not api_key:
+            return ''
 
-    # 1. Google Gemini Live API
-    if p == 'gemini':
-        return call_gemini_api(prompt, attachment_path=attachment_path, timeout=timeout)
+        # 1. Google Gemini Live API
+        if p == 'gemini':
+            return call_gemini_api(prompt, attachment_path=attachment_path, timeout=timeout)
 
-    # 2. OpenAI Official API (GPT-4o / GPT-4o Mini)
-    if p == 'openai':
-        try:
-            r = requests.post(
-                'https://api.openai.com/v1/chat/completions',
-                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                json={'model': model_id if model_id.startswith('gpt') else 'gpt-4o-mini', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-        except Exception: pass
+        # 2. OpenAI Official API (GPT-4o / GPT-4o Mini)
+        if p == 'openai':
+            try:
+                r = requests.post(
+                    'https://api.openai.com/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    json={'model': model_id if model_id.startswith('gpt') else 'gpt-4o-mini', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            except Exception: pass
 
-    # 3. Groq Official LPU Cloud API
-    if p == 'groq':
-        try:
-            r = requests.post(
-                'https://api.groq.com/openai/v1/chat/completions',
-                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                json={'model': 'llama-3.3-70b-versatile', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-        except Exception: pass
+        # 3. Groq Official LPU Cloud API
+        if p == 'groq':
+            try:
+                r = requests.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    json={'model': 'llama-3.3-70b-versatile', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            except Exception: pass
 
-    # 4. Anthropic Claude Official API
-    if p == 'anthropic':
-        try:
-            r = requests.post(
-                'https://api.anthropic.com/v1/messages',
-                headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json'},
-                json={'model': 'claude-3-5-sonnet-20241022', 'max_tokens': 3500, 'messages': [{'role': 'user', 'content': prompt}]},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                content_blocks = r.json().get('content', [])
-                if content_blocks and 'text' in content_blocks[0]:
-                    return content_blocks[0]['text'].strip()
-        except Exception: pass
+        # 4. Anthropic Claude Official API
+        if p == 'anthropic':
+            try:
+                r = requests.post(
+                    'https://api.anthropic.com/v1/messages',
+                    headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json'},
+                    json={'model': 'claude-3-5-sonnet-20241022', 'max_tokens': 3500, 'messages': [{'role': 'user', 'content': prompt}]},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    content_blocks = r.json().get('content', [])
+                    if content_blocks and 'text' in content_blocks[0]:
+                        return content_blocks[0]['text'].strip()
+            except Exception: pass
 
-    # 5. DeepSeek Official API
-    if p == 'deepseek':
-        try:
-            r = requests.post(
-                'https://api.deepseek.com/v1/chat/completions',
-                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                json={'model': 'deepseek-reasoner' if 'r1' in model_id.lower() else 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-        except Exception: pass
+        # 5. DeepSeek Official API
+        if p == 'deepseek':
+            try:
+                r = requests.post(
+                    'https://api.deepseek.com/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    json={'model': 'deepseek-reasoner' if 'r1' in model_id.lower() else 'deepseek-chat', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            except Exception: pass
 
-    # 6. OpenRouter Official API
-    if p == 'openrouter' or get_provider_api_key('openrouter'):
-        or_key = api_key if p == 'openrouter' else get_provider_api_key('openrouter')
-        try:
-            r = requests.post(
-                'https://openrouter.ai/api/v1/chat/completions',
-                headers={'Authorization': f'Bearer {or_key}', 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pustakverse.onrender.com', 'X-Title': 'PustakVerse GranthMind'},
-                json={'model': model_id if '/' in model_id else 'deepseek/deepseek-r1:free', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-        except Exception: pass
+        # 6. OpenRouter Official API
+        if p == 'openrouter' or get_provider_api_key('openrouter'):
+            or_key = api_key if p == 'openrouter' else get_provider_api_key('openrouter')
+            try:
+                r = requests.post(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {or_key}', 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pustakverse.onrender.com', 'X-Title': 'PustakVerse GranthMind'},
+                    json={'model': model_id if '/' in model_id else 'deepseek/deepseek-r1:free', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            except Exception: pass
 
-    # 7. Mistral Official API
-    if p == 'mistral':
-        try:
-            r = requests.post(
-                'https://api.mistral.ai/v1/chat/completions',
-                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                json={'model': 'mistral-large-latest', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
-                timeout=timeout
-            )
-            if r.status_code == 200:
-                return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-        except Exception: pass
+        # 7. Mistral Official API
+        if p == 'mistral':
+            try:
+                r = requests.post(
+                    'https://api.mistral.ai/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    json={'model': 'mistral-large-latest', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            except Exception: pass
 
+        # 8. HuggingFace Serverless Inference
+        if p == 'huggingface':
+            try:
+                r = requests.post(
+                    'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    json={'model': 'Qwen/Qwen2.5-Coder-32B-Instruct', 'messages': [{'role': 'user', 'content': prompt}], 'max_tokens': 3500},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    return r.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            except Exception: pass
+
+    except Exception as e:
+        logging.warning("call_provider_live_api handled error: %s", e)
     return ''
 
 
