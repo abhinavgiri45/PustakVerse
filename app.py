@@ -1385,13 +1385,13 @@ def inject_global_settings():
             fetched_settings['checkout_donation_active'] = bool(fetched_settings.get('checkout_donation_active') if fetched_settings.get('checkout_donation_active') is not None else True)
             fetched_settings['donation_default_inr'] = int(fetched_settings.get('donation_default_inr') or 10)
             
-            fast_cache.set('site_settings', fetched_settings, ttl=120)
+            fast_cache.set('site_settings', fetched_settings, ttl=600) # 10-minute cache
             global_cache['settings'] = fetched_settings
         else:
             fetched_settings = global_cache.get('settings', {})
 
         if fetched_catalogs is not None:
-            fast_cache.set('site_catalogs', fetched_catalogs, ttl=120)
+            fast_cache.set('site_catalogs', fetched_catalogs, ttl=600) # 10-minute cache
             global_cache['catalogs'] = fetched_catalogs
         else:
             fetched_catalogs = global_cache.get('catalogs', [])
@@ -2023,7 +2023,7 @@ def get_db_pool():
                     from mysql.connector import pooling
                     _db_pool = pooling.MySQLConnectionPool(
                         pool_name="pustakverse_tidb_pool",
-                        pool_size=10,
+                        pool_size=15,
                         pool_reset_session=True,
                         host=db_host,
                         port=db_port,
@@ -2032,18 +2032,18 @@ def get_db_pool():
                         database=db_name,
                         ssl_verify_cert=False,
                         ssl_verify_identity=False,
-                        connection_timeout=6
+                        connection_timeout=4
                     )
-                    logging.info("✓ [TiDB POOL] Connection pool established (Size: 5)")
+                    logging.info("✓ [TiDB POOL] High-speed connection pool established (Size: 15)")
                 except Exception as e:
                     logging.debug("Direct DB connection mode active: %s", e)
                     _db_pool = None
     return _db_pool
 
-def get_db_connection(retries=2, delay=0.5):
+def get_db_connection(retries=2, delay=0.3):
     last_exception = None
     
-    # Try fetching connection from high-speed pool
+    # Fast path: Fetch connection from high-speed connection pool
     pool = get_db_pool()
     if pool:
         try:
@@ -2053,7 +2053,7 @@ def get_db_connection(retries=2, delay=0.5):
         except Exception as e:
             logging.debug("Pool connection busy, falling back to direct connection: %s", e)
 
-    # Fallback to direct connection if pool is busy or uninitialized
+    # Fallback to direct connection
     db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST') or '127.0.0.1'
     db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
     db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
@@ -2072,7 +2072,7 @@ def get_db_connection(retries=2, delay=0.5):
         except Exception:
             pass
 
-    effective_timeout = 1 if (app and app.config.get('TESTING')) else 6
+    effective_timeout = 1 if (app and app.config.get('TESTING')) else 4
     effective_retries = 1 if (app and app.config.get('TESTING')) else retries
 
     for attempt in range(effective_retries):
@@ -2808,10 +2808,9 @@ def api_search_books():
 @app.route('/')
 def index():
     session['pustakverse_intro_seen'] = True
-
     show_telegram_popup = session.pop('show_telegram_popup', False)
     
-    # 1. Try fast in-memory cache
+    # 1. High-Speed Tier-1 In-Memory Cache (Instant Response)
     cached_books = fast_cache.get('books_index')
     cached_stats = fast_cache.get('platform_stats')
     if cached_books is not None and cached_stats is not None:
@@ -2823,18 +2822,22 @@ def index():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
+        
+        # High-Speed Optimized Query with LIMIT 50 for Instant Page Load
         cursor.execute("""
             SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, users.username as author_name, users.role as author_role, COALESCE(AVG(interactions.rating), 5.0) as avg_rating
             FROM books 
             JOIN users ON books.author_id = users.id 
             LEFT JOIN interactions ON books.id = interactions.book_id
+            WHERE books.is_quarantined = FALSE
             GROUP BY books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.created_at, users.username, users.role
             ORDER BY books.created_at DESC
+            LIMIT 50
         """)
         books = clean_book_data(cursor.fetchall())
-        fast_cache.set('books_index', books, ttl=300) # 5-minute high-speed memory cache
+        fast_cache.set('books_index', books, ttl=600) # 10-minute high-speed memory cache
 
-        # Consolidated single-trip platform metrics fetch
+        # Consolidated single-trip platform metrics
         try:
             cursor.execute("""
                 SELECT 
@@ -2852,17 +2855,15 @@ def index():
         except Exception:
             stats['total_books'] = len(books)
 
-        fast_cache.set('platform_stats', stats, ttl=300)
-    except Exception: 
-        flash("Database connection timeout. Retrying...", "error")
+        fast_cache.set('platform_stats', stats, ttl=600)
+    except Exception as ex: 
+        logging.warning("Homepage DB fetch notice: %s", ex)
     finally:
         if db:
             try: db.close()
             except: pass
 
-    # If cached books was used earlier, also retrieve or compute accurate stats
     cached_stats = fast_cache.get('platform_stats') or stats
-
     return render_template('index.html', books=books, stats=cached_stats, show_telegram_popup=show_telegram_popup)
 
 @app.route('/intro')
