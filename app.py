@@ -2111,7 +2111,7 @@ def get_db_pool():
                     from mysql.connector import pooling
                     _db_pool = pooling.MySQLConnectionPool(
                         pool_name="pustakverse_tidb_pool",
-                        pool_size=5,
+                        pool_size=10,
                         pool_reset_session=True,
                         host=db_host,
                         port=db_port,
@@ -2895,12 +2895,7 @@ def api_search_books():
 
 @app.route('/')
 def index():
-    if request.args.get('skip_intro') == '1' or session.get('user_id'):
-        session['pustakverse_intro_seen'] = True
-
-    if not session.get('pustakverse_intro_seen') and not session.get('user_id'):
-        session['pustakverse_intro_seen'] = True
-        return redirect(url_for('intro'))
+    session['pustakverse_intro_seen'] = True
 
     show_telegram_popup = session.pop('show_telegram_popup', False)
     
@@ -2925,31 +2920,27 @@ def index():
             ORDER BY books.created_at DESC
         """)
         books = clean_book_data(cursor.fetchall())
-        fast_cache.set('books_index', books, ttl=45)
+        fast_cache.set('books_index', books, ttl=300) # 5-minute high-speed memory cache
 
-        # Query 100% authentic live platform metrics from the database
+        # Consolidated single-trip platform metrics fetch
         try:
-            cursor.execute("SELECT COUNT(*) AS cnt FROM books WHERE is_quarantined = FALSE")
-            row_b = cursor.fetchone()
-            stats['total_books'] = row_b['cnt'] if row_b else len(books)
+            cursor.execute("""
+                SELECT 
+                    (SELECT COUNT(*) FROM books WHERE is_quarantined = FALSE) as total_books,
+                    (SELECT COUNT(*) FROM users WHERE role = 'reader') as total_readers,
+                    (SELECT COUNT(*) FROM users WHERE role = 'author') as total_authors
+            """)
+            row_stats = cursor.fetchone()
+            if row_stats:
+                stats['total_books'] = row_stats.get('total_books') or len(books)
+                stats['total_readers'] = row_stats.get('total_readers') or 0
+                stats['total_authors'] = row_stats.get('total_authors') or 0
+            else:
+                stats['total_books'] = len(books)
         except Exception:
             stats['total_books'] = len(books)
 
-        try:
-            cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE role = 'reader'")
-            row_r = cursor.fetchone()
-            stats['total_readers'] = row_r['cnt'] if row_r else 0
-        except Exception:
-            stats['total_readers'] = 0
-
-        try:
-            cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE role = 'author'")
-            row_a = cursor.fetchone()
-            stats['total_authors'] = row_a['cnt'] if row_a else 0
-        except Exception:
-            stats['total_authors'] = 0
-
-        fast_cache.set('platform_stats', stats, ttl=60)
+        fast_cache.set('platform_stats', stats, ttl=300)
     except Exception: 
         flash("Database connection timeout. Retrying...", "error")
     finally:
@@ -8416,3 +8407,44 @@ def api_granthmind_chat():
     except Exception as e:
         logging.error(f"GranthMind Chat API error: {e}")
         return jsonify({'success': False, 'error': f"AI processing error: {str(e)}"}), 500
+
+
+
+import gzip
+from io import BytesIO
+
+@app.after_request
+def optimize_response_speed(response):
+    """
+    High-Performance Speed Optimizer:
+    1. Sets aggressive browser caching on static assets (images, CSS, JS, fonts).
+    2. Compresses HTML, JSON, JS, and CSS payloads using Gzip to minimize bandwidth and transfer latency.
+    """
+    # 1. Static Asset Caching (7 days for images/fonts/scripts)
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=604800, immutable'
+        return response
+
+    # 2. General Page Cache Headers
+    if request.method == 'GET' and response.status_code == 200:
+        if not response.headers.get('Cache-Control'):
+            response.headers['Cache-Control'] = 'public, max-age=30, stale-while-revalidate=60'
+
+    # 3. Gzip Compression for text/HTML/JSON
+    accept_encoding = request.headers.get('Accept-Encoding', '')
+    if 'gzip' in accept_encoding.lower() and response.status_code < 300 and not response.direct_passthrough:
+        content_type = response.headers.get('Content-Type', '')
+        if any(t in content_type for t in ['text/html', 'text/css', 'application/javascript', 'application/json', 'image/svg+xml']):
+            try:
+                data = response.get_data()
+                if len(data) > 500: # Only compress if payload > 500 bytes
+                    gzip_buffer = BytesIO()
+                    with gzip.GzipFile(mode='wb', fileobj=gzip_buffer, compresslevel=6) as gzip_file:
+                        gzip_file.write(data)
+                    response.set_data(gzip_buffer.getvalue())
+                    response.headers['Content-Encoding'] = 'gzip'
+                    response.headers['Content-Length'] = len(response.get_data())
+            except Exception:
+                pass
+
+    return response
