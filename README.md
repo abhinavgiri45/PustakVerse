@@ -165,7 +165,7 @@ PustakVerse/
     ├── forgot_password.html   # Password recovery portal
     ├── google_set_password.html # Google sign-up password setup
     ├── index.html             # Global library storefront
-    ├── intro.html             # Anime-style onboarding experience
+    ├── intro.html             # Cinematic onboarding experience
     ├── learn_book.html        # Interactive AI tutor & flashcards
     ├── login.html             # Multi-role login & Two-Step Verification
     ├── my_library.html        # Personal library shelves & progress manager

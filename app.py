@@ -2211,6 +2211,46 @@ def ensure_payment_schema():
         cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS ai_chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NULL, role ENUM('user', 'assistant') NOT NULL, message_text TEXT NOT NULL, screenshot VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, INDEX idx_ai_chat_user_book (user_id, book_id, id))")
         
+        
+        # ---> EXECUTIVE LEADERSHIP & MANAGEMENT TEAM <---
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS leadership_team (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                role_title VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                phone VARCHAR(100) NOT NULL,
+                address TEXT NOT NULL,
+                photo VARCHAR(500) DEFAULT 'PustakVerse.png',
+                bio TEXT,
+                is_founder BOOLEAN DEFAULT FALSE,
+                display_order INT DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        """)
+
+        try:
+            cursor.execute("SELECT COUNT(*) as cnt FROM leadership_team")
+            if cursor.fetchone().get('cnt', 0) == 0:
+                cursor.execute("""
+                    INSERT INTO leadership_team (name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    'Abhinav Giri',
+                    'Founder & Lead Developer',
+                    'abhinavgiri370@gmail.com',
+                    '+91 98765 43210',
+                    'India',
+                    'PustakVerse.png',
+                    'Visionary Founder, Lead Architect, and Full-Stack Developer of PustakVerse.',
+                    True,
+                    1,
+                    True
+                ))
+        except Exception: pass
+
         # ---> 36 COMPREHENSIVE SUITE FEATURE TABLES & EXTENSIONS <---
         # 1. Reader: Personal Notes & Highlights
         cursor.execute("CREATE TABLE IF NOT EXISTS user_notes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, note_text TEXT NOT NULL, page_number INT DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
@@ -3022,7 +3062,20 @@ def check_username():
 
 @app.route('/contact')
 def contact(): 
-    return render_template('contact.html')
+    db = None
+    leaders = []
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM leadership_team WHERE is_active = TRUE ORDER BY is_founder DESC, display_order ASC, id ASC")
+        leaders = cursor.fetchall()
+    except Exception as e:
+        logging.error(f"Error loading leadership team for contact page: {e}")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return render_template('contact.html', leaders=leaders)
 
 @app.route('/terms')
 def terms():
@@ -5160,8 +5213,10 @@ def dashboard():
             
             cursor.execute("SELECT c.id, c.name, COUNT(b.id) AS book_count FROM catalogs c LEFT JOIN books b ON c.name = b.catalog GROUP BY c.id, c.name ORDER BY c.name ASC")
             all_categories = cursor.fetchall()
+            cursor.execute("SELECT * FROM leadership_team ORDER BY is_founder DESC, display_order ASC, id ASC")
+            leadership_team = cursor.fetchall()
             
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories)
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team)
 
         if role == 'official':
             if search_query: 
@@ -7003,3 +7058,160 @@ def public_author_profile(username):
         if db:
             try: db.close()
             except: pass
+
+
+# ======================================================================
+# DEVELOPER: LEADERSHIP & EXECUTIVE TEAM APPOINTMENT (CEO, CTO, FOUNDER)
+# ======================================================================
+@app.route('/developer/leadership/add', methods=['POST'])
+def developer_add_leadership():
+    if session.get('role') != 'developer':
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('dashboard'))
+
+    name = request.form.get('name', '').strip()
+    role_title = request.form.get('role_title', '').strip()
+    email = request.form.get('email', '').strip()
+    phone = request.form.get('phone', '').strip()
+    address = request.form.get('address', '').strip()
+    bio = request.form.get('bio', '').strip()
+    photo_url = request.form.get('photo_url', '').strip()
+    photo_file = request.files.get('photo_file')
+    is_founder = request.form.get('is_founder') == 'on'
+    
+    try:
+        display_order = int(request.form.get('display_order', 10) or 10)
+    except (ValueError, TypeError):
+        display_order = 10
+
+    if not name or not role_title or not email or not phone:
+        flash('Please provide Full Name, Role Title, Email, and Phone Number.', 'error')
+        return redirect(url_for('dashboard'))
+
+    final_photo = 'PustakVerse.png'
+    if photo_url:
+        final_photo = photo_url
+    elif photo_file and photo_file.filename:
+        filename = secure_filename(f"lead_{int(time.time())}_{photo_file.filename}")
+        os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'leadership'), exist_ok=True)
+        photo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'leadership', filename))
+        final_photo = filename
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO leadership_team (name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+        """, (name, role_title, email, phone, address, final_photo, bio, is_founder, display_order))
+        db.commit()
+        log_official_activity(session['user_id'], f"Appointed executive {name} as {role_title}")
+        flash(f"Successfully appointed {name} as {role_title}!", "success")
+    except Exception as e:
+        logging.error(f"Error appointing leadership: {e}")
+        flash(f"Could not appoint leader: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/developer/leadership/edit/<int:leader_id>', methods=['POST'])
+def developer_edit_leadership(leader_id):
+    if session.get('role') != 'developer':
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('dashboard'))
+
+    name = request.form.get('name', '').strip()
+    role_title = request.form.get('role_title', '').strip()
+    email = request.form.get('email', '').strip()
+    phone = request.form.get('phone', '').strip()
+    address = request.form.get('address', '').strip()
+    bio = request.form.get('bio', '').strip()
+    photo_url = request.form.get('photo_url', '').strip()
+    photo_file = request.files.get('photo_file')
+    is_founder = request.form.get('is_founder') == 'on'
+
+    try:
+        display_order = int(request.form.get('display_order', 10) or 10)
+    except (ValueError, TypeError):
+        display_order = 10
+
+    if not name or not role_title or not email:
+        flash('Name, Role Title, and Email are required.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM leadership_team WHERE id = %s", (leader_id,))
+        current_leader = cursor.fetchone()
+        if not current_leader:
+            flash("Leader record not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        final_photo = current_leader.get('photo', 'PustakVerse.png')
+        if photo_url:
+            final_photo = photo_url
+        elif photo_file and photo_file.filename:
+            filename = secure_filename(f"lead_{int(time.time())}_{photo_file.filename}")
+            os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'leadership'), exist_ok=True)
+            photo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'leadership', filename))
+            final_photo = filename
+
+        cursor.execute("""
+            UPDATE leadership_team 
+            SET name = %s, role_title = %s, email = %s, phone = %s, address = %s, photo = %s, bio = %s, is_founder = %s, display_order = %s
+            WHERE id = %s
+        """, (name, role_title, email, phone, address, final_photo, bio, is_founder, display_order, leader_id))
+        db.commit()
+        log_official_activity(session['user_id'], f"Updated executive #{leader_id}: {name} ({role_title})")
+        flash(f"Leadership profile for {name} updated successfully!", "success")
+    except Exception as e:
+        logging.error(f"Error updating leadership: {e}")
+        flash(f"Could not update leader: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/developer/leadership/delete/<int:leader_id>', methods=['POST'])
+def developer_delete_leadership(leader_id):
+    if session.get('role') != 'developer':
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM leadership_team WHERE id = %s", (leader_id,))
+        leader = cursor.fetchone()
+        if not leader:
+            flash("Leader record not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        if leader.get('is_founder'):
+            flash("The Founder profile cannot be deleted. You may update its contact details instead.", "error")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("DELETE FROM leadership_team WHERE id = %s", (leader_id,))
+        db.commit()
+        log_official_activity(session['user_id'], f"Removed executive #{leader_id} ({leader.get('name')})")
+        flash(f"Removed {leader.get('name')} from leadership roster.", "success")
+    except Exception as e:
+        logging.error(f"Error deleting leadership: {e}")
+        flash("Could not delete leader record.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
