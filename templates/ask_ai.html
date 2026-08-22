@@ -296,107 +296,6 @@
       flex: 1;
     }
 
-    /* Modes Navigation Bar */
-    .modes-bar {
-      background: #0b1120;
-      border-bottom: 1px solid var(--border-color);
-      padding: 8px 24px;
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      flex-shrink: 0;
-      scrollbar-width: none;
-    }
-    .modes-bar::-webkit-scrollbar { display: none; }
-
-    .mode-tab-btn {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: #94a3b8;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 800;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-    .mode-tab-btn:hover {
-      background: rgba(255,255,255,0.08);
-      color: #e2e8f0;
-    }
-    .mode-tab-btn.active {
-      background: var(--mode-bg);
-      color: #fff;
-      border-color: var(--mode-color);
-      box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
-    }
-
-    /* Active Category Intelligence Hub */
-    .active-category-hub {
-      background: rgba(15, 23, 42, 0.6);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 8px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-shrink: 0;
-      font-size: 0.76rem;
-    }
-    .active-category-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .category-badge-pill {
-      background: var(--mode-bg);
-      border: 1px solid var(--mode-color);
-      color: var(--text-main);
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-weight: 800;
-      font-size: 0.72rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .category-desc-text {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-    }
-    .category-quick-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .category-quick-actions::-webkit-scrollbar { display: none; }
-    .quick-chip-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #cbd5e1;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.15s;
-    }
-    .quick-chip-btn:hover {
-      background: var(--mode-bg);
-      border-color: var(--mode-color);
-      color: white;
-    }
-
     /* Chat Area (Full Workplace Canvas) */
     .chat-area {
       display: flex;
@@ -717,8 +616,55 @@
       .workspace { grid-template-columns: 1fr !important; }
       .sidebar { display: none !important; }
       .prompts-grid { grid-template-columns: 1fr; }
-      .active-category-hub { flex-direction: column; align-items: flex-start; }
+      
     }
+      /* Gemini-Style Integrated Model Selector Pill in Search Bar */
+    .model-pill-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .gemini-model-pill {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #e2e8f0;
+      padding: 6px 28px 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      transition: all 0.2s ease;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 10px;
+      max-width: 190px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .gemini-model-pill:hover, .gemini-model-pill:focus {
+      background-color: rgba(139, 92, 246, 0.18);
+      border-color: rgba(139, 92, 246, 0.6);
+      color: white;
+      box-shadow: 0 0 14px rgba(139, 92, 246, 0.3);
+    }
+    .gemini-model-pill option {
+      background: #0b1120;
+      color: #f8fafc;
+      font-size: 0.85rem;
+      padding: 10px;
+    }
+    @media (max-width: 640px) {
+      .gemini-model-pill { max-width: 110px; font-size: 0.72rem; padding: 5px 22px 5px 8px; }
+    }
+
   </style>
 </head>
 <body>
@@ -748,23 +694,6 @@
         <span>🎁</span> <span id="guestCountText">4 Free Messages Left</span>
       </div>
       {% endif %}
-
-      <select id="modelSelector" class="model-selector" title="Select AI Engine">
-        {% if available_models and available_models|length > 0 %}
-          {% for m in available_models %}
-            <option value="{{ m.model_id }}" {% if m.is_default or loop.first %}selected{% endif %}>
-              {{ m.display_name }}
-            </option>
-          {% endfor %}
-        {% else %}
-          <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash (Fast &amp; Smart)</option>
-          <option value="chatgpt-4o">🟢 ChatGPT-4o (Deep Reasoning)</option>
-          <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet (Nuance &amp; Writing)</option>
-          <option value="deepseek-r1">🔵 DeepSeek R1 (Math &amp; Logic)</option>
-          <option value="mistral-large">🟡 Mistral Large (Code &amp; Systems)</option>
-          <option value="meta-llama-3">🔷 Meta Llama 3.3 (Open Research)</option>
-        {% endif %}
-      </select>
 
       <a href="/" class="btn-nav-back">🏠 PustakVerse</a>
     </div>
@@ -814,50 +743,38 @@
     <!-- CHAT WORKSPACE -->
     <main class="chat-area">
 
-      <!-- MODES BAR -->
-      <div class="modes-bar">
-        <button type="button" class="mode-tab-btn active" id="tab_study" onclick="setGranthMode('study', this)">
-          <span>📖</span> STUDY (Concept &amp; Exams)
-        </button>
-        <button type="button" class="mode-tab-btn" id="tab_research" onclick="setGranthMode('research', this)">
-          <span>🔍</span> RESEARCH (Citations &amp; Depth)
-        </button>
-        <button type="button" class="mode-tab-btn" id="tab_write" onclick="setGranthMode('write', this)">
-          <span>✍️</span> WRITE (Essays &amp; Prose)
-        </button>
-        <button type="button" class="mode-tab-btn" id="tab_code" onclick="setGranthMode('code', this)">
-          <span>&lt;/&gt;</span> CODE (Python, SQL &amp; Debug)
-        </button>
-        <button type="button" class="mode-tab-btn" id="tab_create" onclick="setGranthMode('create', this)">
-          <span>💡</span> CREATE (Ideas &amp; Outlines)
-        </button>
-        <button type="button" class="mode-tab-btn" id="tab_solve" onclick="setGranthMode('solve', this)">
-          <span>🧩</span> SOLVE (Math &amp; Physics Steps)
-        </button>
-      </div>
 
-      <!-- ACTIVE CATEGORY CONTEXT & QUICK ACTIONS BAR -->
-      <div class="active-category-hub" id="activeCategoryHub">
-        <div class="active-category-left">
-          <span class="category-badge-pill" id="catBadge">📖 STUDY WORKSPACE</span>
-          <span class="category-desc-text" id="catDesc">Exam concepts, intuitive breakdowns &amp; summaries</span>
-        </div>
-        <div class="category-quick-actions" id="catQuickActions">
-          <!-- Populated dynamically via JS -->
-        </div>
-      </div>
 
       <!-- MESSAGES SCROLL (SINGLE CONTAINER WITH ZERO DOUBLE SCROLLBARS) -->
       <div class="messages-scroll" id="messagesContainer">
 
-        <!-- WELCOME HERO STATE -->
+        <!-- WELCOME HERO STATE (UNIVERSAL AI) -->
         <div class="welcome-hero" id="welcomeHero">
           <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind AI" class="welcome-logo" onerror="this.src='/static/PustakVerse.png'">
-          <h1 class="welcome-title" id="welcomeHeroTitle">GranthMind AI</h1>
-          <p class="welcome-sub" id="welcomeHeroSub">All AI Models. One Platform. Select a specialized category mode above to begin your workflow.</p>
+          <h1 class="welcome-title">GranthMind AI</h1>
+          <p class="welcome-sub">Universal AI Intelligence Hub · All AI Models · One Unified Platform</p>
 
           <div class="prompts-grid" id="welcomePromptsGrid">
-            <!-- Populated dynamically based on category mode -->
+            <div class="prompt-chip" onclick="usePrompt('Explain in detail about abhinavgiri and the vision of PustakVerse')">
+              <div class="prompt-chip-icon">🌟</div>
+              <div class="prompt-chip-title">Founder &amp; Vision</div>
+              <div class="prompt-chip-desc">Who created PustakVerse &amp; GranthMind AI?</div>
+            </div>
+            <div class="prompt-chip" onclick="usePrompt('Make a Basic game using python (Snake)')">
+              <div class="prompt-chip-icon">🐍</div>
+              <div class="prompt-chip-title">Python Game &amp; Code</div>
+              <div class="prompt-chip-desc">Playable Snake game or algorithm script</div>
+            </div>
+            <div class="prompt-chip" onclick="usePrompt('Solve quadratic equation ax^2 + bx + c = 0 with derivation')">
+              <div class="prompt-chip-icon">🧩</div>
+              <div class="prompt-chip-title">Math &amp; STEM Derivation</div>
+              <div class="prompt-chip-desc">Step-by-step LaTeX formula &amp; proof</div>
+            </div>
+            <div class="prompt-chip" onclick="usePrompt('Explain the key concepts and mechanism of photosynthesis simply')">
+              <div class="prompt-chip-icon">📖</div>
+              <div class="prompt-chip-title">Study &amp; Deep Concepts</div>
+              <div class="prompt-chip-desc">Intuitive breakdown with key takeaways</div>
+            </div>
           </div>
         </div>
 
@@ -871,7 +788,27 @@
             {% if book %}<input type="hidden" id="bookIdInput" value="{{ book.id }}">{% endif %}
             
             <div class="input-box-wrapper">
-              <button type="button" class="btn-action-icon" onclick="document.getElementById('fileAttachment').click()" title="Attach Image or Diagram" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">
+              <!-- GEMINI-STYLE INTEGRATED MODEL SELECTOR PILL -->
+              <div class="model-pill-wrapper">
+                <select id="modelSelector" class="gemini-model-pill" title="Select AI Engine (Gemini Style)">
+                  {% if available_models and available_models|length > 0 %}
+                    {% for m in available_models %}
+                      <option value="{{ m.model_id }}" {% if m.is_default or loop.first %}selected{% endif %}>
+                        {{ m.display_name }}
+                      </option>
+                    {% endfor %}
+                  {% else %}
+                    <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash</option>
+                    <option value="chatgpt-4o">🟢 ChatGPT-4o</option>
+                    <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet</option>
+                    <option value="deepseek-r1">🔵 DeepSeek R1</option>
+                    <option value="mistral-large">🟡 Mistral Large</option>
+                    <option value="meta-llama-3">🔷 Meta Llama 3.3</option>
+                  {% endif %}
+                </select>
+              </div>
+
+              <button type="button" class="btn-action-icon" onclick="document.getElementById('fileAttachment').click()" title="Attach Image or Diagram" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 4px; display: flex; align-items: center;">
                 📎
               </button>
               <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
@@ -1062,47 +999,10 @@
       }
     };
 
-    function setGranthMode(mode, btn) {
-      activeMode = mode;
-      document.getElementById('currentMode').value = mode;
-      document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
-      else {
-        const tabEl = document.getElementById('tab_' + mode);
-        if (tabEl) tabEl.classList.add('active');
-      }
-
-      const cfg = categoryConfigs[mode] || categoryConfigs['study'];
-      
-      // Update Root CSS Variables for category accent
-      document.documentElement.style.setProperty('--mode-color', cfg.color);
-      document.documentElement.style.setProperty('--mode-bg', cfg.bg);
-
-      // Update Active Category Hub Bar
-      document.getElementById('catBadge').textContent = cfg.name;
-      document.getElementById('catBadge').style.borderColor = cfg.color;
-      document.getElementById('catBadge').style.background = cfg.bg;
-      document.getElementById('catDesc').textContent = cfg.desc;
-
-      // Update Input Placeholder
-      document.getElementById('promptInput').placeholder = cfg.placeholder;
-
-      // Update Quick Action Chips in Category Hub
-      const chipsContainer = document.getElementById('catQuickActions');
-      chipsContainer.innerHTML = cfg.chips.map(c => `
-        <button type="button" class="quick-chip-btn" onclick="sendQuickPrompt('${escapeHtml(c.prompt)}')">${c.text}</button>
-      `).join('');
-
-      // Update Welcome Hero if shown
-      document.getElementById('welcomeHeroTitle').textContent = cfg.heroTitle;
-      document.getElementById('welcomeHeroSub').textContent = cfg.heroSub;
-      const promptsGrid = document.getElementById('welcomePromptsGrid');
-      promptsGrid.innerHTML = cfg.prompts.map(p => `
-        <div class="prompt-card" onclick="sendQuickPrompt('${escapeHtml(p.prompt)}')">
-          <div class="prompt-card-title">${p.title}</div>
-          <div class="prompt-card-desc">${p.desc}</div>
-        </div>
-      `).join('');
+    function setGranthMode(mode) {
+      activeMode = mode || 'universal';
+      const mInput = document.getElementById('currentMode');
+      if (mInput) mInput.value = activeMode;
     }
 
     function getSessions() {
@@ -1258,6 +1158,18 @@
         e.preventDefault();
         submitGranthMindMessage(e);
       }
+    }
+
+        function usePrompt(text) {
+      const input = document.getElementById('promptInput');
+      input.value = text;
+      submitGranthMindMessage(new Event('submit'));
+    }
+
+    function setGranthMode(mode, btn) {
+      activeMode = mode || 'universal';
+      const modeInput = document.getElementById('currentMode');
+      if (modeInput) modeInput.value = activeMode;
     }
 
     function sendQuickPrompt(text) {
