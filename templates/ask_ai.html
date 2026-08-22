@@ -104,8 +104,11 @@
     .brand-group {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
       text-decoration: none;
+      white-space: nowrap;
+      min-width: 0;
+      flex-shrink: 0;
     }
 
     .btn-toggle-sidebar {
@@ -113,8 +116,8 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--text-muted);
       border-radius: 8px;
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -129,30 +132,41 @@
     }
 
     .brand-logo {
-      height: 38px;
-      width: 38px;
-      border-radius: 10px;
+      height: 32px;
+      width: 32px;
+      border-radius: 8px;
       object-fit: cover;
-      box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
       border: 1.5px solid rgba(139, 92, 246, 0.5);
+      flex-shrink: 0;
+    }
+
+    .brand-text-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
     }
 
     .brand-title {
-      font-size: 1.15rem;
+      font-size: 1.08rem;
       font-weight: 900;
       background: var(--accent-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      letter-spacing: -0.02em;
-      line-height: 1.2;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+      white-space: nowrap;
     }
 
     .brand-tagline {
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       color: var(--text-muted);
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      white-space: nowrap;
+      margin-top: 1px;
     }
 
     .top-actions {
@@ -822,9 +836,9 @@
 
       <a href="/" class="brand-group">
         <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind Logo" class="brand-logo" onerror="this.src='/static/PustakVerse.png'">
-        <div>
+        <div class="brand-text-container">
           <div class="brand-title">GranthMind AI</div>
-          <div class="brand-tagline">ALL AI MODELS. ONE PLATFORM.</div>
+          <div class="brand-tagline">All AI Models · One Platform</div>
         </div>
       </a>
     </div>
