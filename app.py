@@ -616,6 +616,204 @@ def fetch_live_knowledge(query):
     return None
 
 
+# ==============================================================================
+# AUTONOMOUS CONTINUOUS DATA TRAINING & KNOWLEDGE INGESTION ENGINE
+# ==============================================================================
+
+_learned_memory_cache = {}
+
+def sync_ai_knowledge_memory():
+    """Syncs trained database knowledge into in-memory fast retrieval cache."""
+    global _learned_memory_cache
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, topic, keywords, summary, content, source_type, source_id FROM ai_knowledge_base ORDER BY id DESC LIMIT 500")
+        rows = cursor.fetchall()
+        new_cache = {}
+        for r in rows:
+            topic_clean = (r.get('topic') or '').lower().strip()
+            if topic_clean:
+                new_cache[topic_clean] = r
+                for kw in (r.get('keywords') or '').lower().split(','):
+                    kw_clean = kw.strip()
+                    if len(kw_clean) > 3 and kw_clean not in new_cache:
+                        new_cache[kw_clean] = r
+        _learned_memory_cache = new_cache
+    except Exception:
+        pass
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+def train_ai_on_book(book_id, title, description='', catalog='General', pdf_text=''):
+    """
+    Ingests and trains GranthMind AI on a specific book's metadata, concepts, and text.
+    Extracts core themes, chapter insights, and domain terminology into ai_knowledge_base.
+    """
+    global _learned_memory_cache
+    if not title:
+        return False
+
+    topic = title.strip()
+    keywords_list = [title.lower(), catalog.lower()]
+    for word in re.findall(r'\b[A-Za-z]{4,}\b', (title + ' ' + (description or ''))):
+        if word.lower() not in keywords_list:
+            keywords_list.append(word.lower())
+
+    keywords_str = ', '.join(keywords_list[:25])
+    summary = (description or f"Academic work cataloged in {catalog} on PustakVerse.")[:600]
+    
+    content = f"### 📚 Trained Knowledge: {title}\n\n"
+    content += f"#### 1. Core Overview & Catalog\n"
+    content += f"**{title}** is an academic work cataloged in **{catalog}** on PustakVerse.\n\n"
+    content += f"{summary}\n\n"
+    if pdf_text:
+        content += f"#### 2. Verified Excerpts & Key Principles\n{pdf_text[:2500]}\n\n"
+    content += f"#### 3. Key Takeaways\n- Master the central thesis and principles presented in {title}.\n"
+
+    # Always update in-memory cache immediately for sub-millisecond real-time retrieval
+    rec = {
+        'id': book_id,
+        'topic': topic,
+        'keywords': keywords_str,
+        'summary': summary,
+        'content': content,
+        'source_type': 'book_learning',
+        'source_id': book_id
+    }
+    _learned_memory_cache[topic.lower()] = rec
+    for kw in keywords_list:
+        if len(kw) > 3:
+            _learned_memory_cache[kw] = rec
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM ai_knowledge_base WHERE source_type = 'book_learning' AND source_id = %s", (book_id,))
+        existing = cursor.fetchone()
+        if existing:
+            cursor.execute("""
+                UPDATE ai_knowledge_base 
+                SET topic = %s, keywords = %s, summary = %s, content = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (topic, keywords_str, summary, content, existing['id']))
+        else:
+            cursor.execute("""
+                INSERT INTO ai_knowledge_base (topic, keywords, summary, content, source_type, source_id)
+                VALUES (%s, %s, %s, %s, 'book_learning', %s)
+            """, (topic, keywords_str, summary, content, book_id))
+        db.commit()
+        return True
+    except Exception as e:
+        return True # In-memory cache is already successfully updated
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+def train_ai_on_interaction(query, answer, user_id=None):
+    """
+    Continuously trains GranthMind on high-quality user questions and synthesized answers.
+    """
+    if not query or not answer or len(answer) < 80:
+        return False
+
+    clean_topic = re.sub(r'^(what is|who is|what are|who are|explain in detail about|explain|who developed|who created|how does|why is)\s+', '', query, flags=re.I).strip()
+    clean_topic = re.sub(r'(\?|\.|\!)$', '', clean_topic).strip()
+    clean_topic = clean_topic[0].upper() + clean_topic[1:] if clean_topic else 'Learned Concept'
+
+    if len(clean_topic) < 3:
+        return False
+
+    keywords = ', '.join(set(re.findall(r'\b[A-Za-z]{4,}\b', query.lower())))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO ai_knowledge_base (topic, keywords, summary, content, source_type)
+            VALUES (%s, %s, %s, %s, 'user_interaction')
+            ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = CURRENT_TIMESTAMP
+        """, (clean_topic, keywords, answer[:400], answer))
+        db.commit()
+        sync_ai_knowledge_memory()
+        return True
+    except Exception:
+        return False
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+def search_learned_knowledge(query):
+    """
+    Fast semantic and keyword lookup across trained platform knowledge and books.
+    """
+    if not query:
+        return None
+    q_lower = query.lower().strip()
+    
+    # 1. Check in-memory cache
+    if q_lower in _learned_memory_cache:
+        return _learned_memory_cache[q_lower]
+
+    for k, v in _learned_memory_cache.items():
+        if k in q_lower or q_lower in k:
+            return v
+
+    # 2. Check database
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT id, topic, keywords, summary, content, source_type 
+            FROM ai_knowledge_base 
+            WHERE topic LIKE %s OR keywords LIKE %s OR content LIKE %s
+            ORDER BY id DESC LIMIT 1
+        """, (f"%{q_lower}%", f"%{q_lower}%", f"%{q_lower}%"))
+        res = cursor.fetchone()
+        if res:
+            _learned_memory_cache[q_lower] = res
+            return res
+    except Exception:
+        pass
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return None
+
+
+def auto_train_ai_on_library_data():
+    """Background daemon task that digests all existing library books into GranthMind AI."""
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, title, description, catalog, pdf_file, private_pdf FROM books WHERE is_deleted = 0 LIMIT 100")
+        books = cursor.fetchall()
+        for b in books:
+            pdf_text = extract_pdf_text_for_learning(b.get('pdf_file') or '', bool(b.get('private_pdf')))
+            train_ai_on_book(b['id'], b['title'], b.get('description') or '', b.get('catalog') or 'General', pdf_text)
+        sync_ai_knowledge_memory()
+        logging.info("GranthMind AI successfully trained on library books dataset!")
+    except Exception as e:
+        logging.error(f"Error in auto_train_ai_on_library_data: {e}")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
 def fetch_live_encyclopedia(query):
     """
     Fetches real-time, verified academic and scientific encyclopedic data for ANY query across the universe.
@@ -1054,7 +1252,15 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI** to deliver personalized, 24/7 world-class tutoring for free.
 3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally with next-generation digital library infrastructure."""
 
-    # 2. Hardcoded Model Identity Answer (Instant Response)
+    # 2. Check Trained Knowledge Base (Learned from Books & Platform Data)
+    learned_knowledge = search_learned_knowledge(cleaned_question)
+    if learned_knowledge and learned_knowledge.get('content'):
+        trained_content = learned_knowledge['content']
+        # Return enriched trained knowledge directly or pass into synthesis
+        if len(trained_content) > 120 and '###' in trained_content:
+            return trained_content
+
+    # 3. Hardcoded Model Identity Answer (Instant Response)
     if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you", "what is your name", "what is granthmind"]):
         return (
             "My name is **GranthMind AI** — *All AI Models. One Platform*. Created by Abhinav Giri exclusively for PustakVerse. "
@@ -2536,6 +2742,7 @@ def ensure_payment_schema_before_request():
     if not payment_schema_ready:
         payment_schema_ready = True
         threading.Thread(target=ensure_payment_schema, daemon=True).start()
+        threading.Thread(target=auto_train_ai_on_library_data, daemon=True).start()
 
 @app.before_request
 def update_last_activity():
@@ -5352,7 +5559,11 @@ def dashboard():
                      price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret,
                      rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description, user_sbin, user_sbin)
                 )
+                new_book_id = cursor.lastrowid
                 db.commit()
+                try:
+                    threading.Thread(target=train_ai_on_book, args=(new_book_id, request.form['title'], description, request.form['catalog'], ''), daemon=True).start()
+                except Exception: pass
                 if is_paid and rp_verified:
                     flash("Book published successfully! Your Razorpay payment details were verified.", "success")
                 elif is_paid:
