@@ -569,8 +569,8 @@
                                     <td>
                                         <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
                                             {{ leader.name }}
-                                            {% if leader.is_founder %}
-                                                <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 6px; border-radius: 12px; margin-left: 4px; font-weight: 800;">👑 Founder</span>
+                                            {% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}
+                                                <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; margin-left: 4px; font-weight: 800; border: 1px solid #fed7aa;">👑 Founder</span>
                                             {% endif %}
                                         </div>
                                         <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">{{ leader.role_title }}</div>

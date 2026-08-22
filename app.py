@@ -2359,6 +2359,17 @@ def ensure_payment_schema():
 
         
         
+        
+        # ---> ENFORCE FOUNDER STATUS FOR ABHINAV GIRI <---
+        try:
+            cursor.execute("""
+                UPDATE leadership_team 
+                SET is_founder = TRUE 
+                WHERE email IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com') 
+                   OR name LIKE '%Abhinav Giri%'
+            """)
+        except Exception: pass
+
         # ---> MAKE PHONE AND ADDRESS OPTIONAL/NULLABLE IN LEADERSHIP_TEAM <---
         try:
             cursor.execute("ALTER TABLE leadership_team MODIFY COLUMN phone VARCHAR(100) NULL DEFAULT NULL")

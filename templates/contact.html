@@ -441,9 +441,18 @@
                 </div>
 
                 <h3 class="leader-name">{{ leader.name }}</h3>
-                <span class="role-badge {% if leader.is_founder %}founder-badge{% endif %}">
-                    {{ leader.role_title }}
-                </span>
+                
+                <!-- FOUNDER & EXECUTIVE DESIGNATION BADGES -->
+                <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                    {% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}
+                    <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em;">
+                        👑 Founder
+                    </span>
+                    {% endif %}
+                    <span class="role-badge {% if leader.is_founder %}founder-badge{% endif %}" style="margin: 0;">
+                        {{ leader.role_title }}
+                    </span>
+                </div>
 
                 {% if leader.bio %}
                 <p class="leader-bio">{{ leader.bio }}</p>
