@@ -189,15 +189,92 @@
         </div>
     </div>
 
-    <div class="filter-nav-scroll">
-        <button type="button" onclick="applyQuickFilter('all', this)" class="quick-filter-btn active" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: none; background: #992b00; color: #ffffff; cursor: pointer; transition: 0.2s;">🌟 All Books</button>
-        <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🆓 100% Free</button>
-        <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">⭐ 4.5+ Rating</button>
-        {% for cat in site_catalogs %}
-            <button type="button" onclick="applyQuickFilter('category:{{ cat.name | escape }}', this)" class="quick-filter-btn" data-cat-name="{{ cat.name | escape | lower }}" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">📚 {{ cat.name }}</button>
-        {% endfor %}
-        <button type="button" onclick="applyQuickFilter('category:Archives', this)" class="quick-filter-btn" data-cat-name="archives" style="padding: 10px 22px; border-radius: 25px; font-weight: bold; font-size: 0.95rem; border: 1px solid #cbd5e1; background: #edf2f7; color: #334155; cursor: pointer; transition: 0.2s;">🏛️ Archives</button>
+    
+    <!-- MODERN CURATED CATEGORY & FILTER NAVIGATION -->
+    <div class="filter-nav-scroll" id="categoryFilterBar" style="display: flex; gap: 8px; align-items: center; justify-content: flex-start; padding: 14px 20px; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+        <button type="button" onclick="applyQuickFilter('all', this)" class="quick-filter-btn active" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: none; background: #ea580c; color: #ffffff; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            🌟 All Books
+        </button>
+        <button type="button" onclick="applyQuickFilter('trending', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            🔥 Trending
+        </button>
+        <button type="button" onclick="applyQuickFilter('free', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            🆓 100% Free
+        </button>
+        <button type="button" onclick="applyQuickFilter('premium', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            💎 Premium
+        </button>
+        <button type="button" onclick="applyQuickFilter('stars', this)" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            ⭐ 4.5+ Rating
+        </button>
+        
+        <!-- Popular Primary Genres -->
+        <button type="button" onclick="applyQuickFilter('category:Computer Science/Technology', this)" class="quick-filter-btn" data-cat-name="computer science/technology" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            💻 Tech & AI
+        </button>
+        <button type="button" onclick="applyQuickFilter('category:Educational', this)" class="quick-filter-btn" data-cat-name="educational" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            🎓 Educational
+        </button>
+        <button type="button" onclick="applyQuickFilter('category:Fiction', this)" class="quick-filter-btn" data-cat-name="fiction" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            📖 Fiction
+        </button>
+        <button type="button" onclick="applyQuickFilter('category:History', this)" class="quick-filter-btn" data-cat-name="history" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            📜 History
+        </button>
+        <button type="button" onclick="applyQuickFilter('category:Archives', this)" class="quick-filter-btn" data-cat-name="archives" style="padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+            🏛️ Archives
+        </button>
+
+        <!-- "More Categories" Dropdown Trigger -->
+        <button type="button" onclick="openCategoriesModal()" class="quick-filter-btn" style="padding: 8px 18px; border-radius: 20px; font-weight: 800; font-size: 0.88rem; border: 1.5px solid #ea580c; background: #fff7ed; color: #ea580c; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+            <span>📂 More Categories ▾</span>
+        </button>
     </div>
+
+    <!-- MODAL / DRAWER: ALL CATEGORIES EXPLORER -->
+    <div id="allCategoriesModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 99999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px);">
+        <div style="background: white; border-radius: 20px; width: 100%; max-width: 620px; max-height: 85vh; overflow-y: auto; padding: 28px; box-shadow: 0 25px 60px rgba(0,0,0,0.25); border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <span>📚</span> Explore All Categories & Subjects
+                    </h3>
+                    <p style="margin: 3px 0 0; font-size: 0.85rem; color: #64748b;">Select any subject to instantly filter the entire library collection.</p>
+                </div>
+                <button type="button" onclick="closeCategoriesModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+
+            <!-- Live Category Search Inside Modal -->
+            <div style="margin-bottom: 16px;">
+                <input type="text" id="modalCategorySearch" placeholder="Filter categories (e.g. Science, Non-Fiction, Art)..." onkeyup="filterModalCategories()" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box;">
+            </div>
+
+            <!-- Grid of All Available Platform Categories -->
+            <div id="modalCategoriesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px;">
+                <button type="button" onclick="selectModalCategory('all', '🌟 All Books')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
+                    🌟 All Books
+                </button>
+                <button type="button" onclick="selectModalCategory('free', '🆓 100% Free')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
+                    🆓 100% Free
+                </button>
+                <button type="button" onclick="selectModalCategory('premium', '💎 Premium Originals')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
+                    💎 Premium
+                </button>
+                <button type="button" onclick="selectModalCategory('stars', '⭐ 4.5+ Rating')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
+                    ⭐ 4.5+ Rating
+                </button>
+                {% for cat in site_catalogs %}
+                <button type="button" onclick="selectModalCategory('category:{{ cat.name | escape }}', '{{ cat.name | escape }}')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
+                    📖 {{ cat.name }}
+                </button>
+                {% endfor %}
+                <button type="button" onclick="selectModalCategory('category:Archives', '🏛️ Archives')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: left; font-weight: 700; font-size: 0.88rem; color: #0f172a; cursor: pointer; transition: all 0.2s;">
+                    🏛️ Classic Archives
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <div class="container">
         <!-- Dynamic Continue Reading Hero Widget -->
@@ -487,17 +564,48 @@
             }
         }
 
-        // Quick Filter Functionality (Free / 4.5+ Stars / Categories / All)
+        
+        // Categories Modal Controls
+        function openCategoriesModal() {
+            const m = document.getElementById('allCategoriesModal');
+            if (m) {
+                m.style.display = 'flex';
+                const search = document.getElementById('modalCategorySearch');
+                if (search) { search.value = ''; filterModalCategories(); search.focus(); }
+            }
+        }
+        function closeCategoriesModal() {
+            const m = document.getElementById('allCategoriesModal');
+            if (m) m.style.display = 'none';
+        }
+        function filterModalCategories() {
+            const query = (document.getElementById('modalCategorySearch').value || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.modal-cat-item');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        }
+        function selectModalCategory(filterType, label) {
+            closeCategoriesModal();
+            applyQuickFilter(filterType);
+            const container = document.getElementById('bookGrid');
+            if (container) {
+                window.scrollTo({ top: container.offsetTop - 80, behavior: 'smooth' });
+            }
+        }
+
+        // Quick Filter Functionality (All, Trending, Free, Premium, 4.5+ Stars, Categories)
         function applyQuickFilter(type, btn) {
             document.querySelectorAll('.quick-filter-btn').forEach(el => {
                 el.classList.remove('active');
-                el.style.background = '#edf2f7';
+                el.style.background = '#f8fafc';
                 el.style.color = '#334155';
                 el.style.border = '1px solid #cbd5e1';
             });
             if (btn) {
                 btn.classList.add('active');
-                btn.style.background = '#992b00';
+                btn.style.background = '#ea580c';
                 btn.style.color = '#ffffff';
                 btn.style.border = 'none';
             }
@@ -524,6 +632,10 @@
 
                 if (type === 'free') {
                     matches = (!isPaid && price === 0);
+                } else if (type === 'premium') {
+                    matches = (isPaid && price > 0);
+                } else if (type === 'trending') {
+                    matches = (rating >= 4.0);
                 } else if (type === 'stars') {
                     matches = (rating >= 4.5);
                 } else if (isCategory) {
@@ -544,6 +656,7 @@
             const noResults = document.getElementById('noResultsMsg');
             if (noResults) noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
         }
+
 
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
