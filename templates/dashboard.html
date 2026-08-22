@@ -1094,16 +1094,25 @@
                     </h2>
                     <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Create promotional discount promo codes for your paid books to boost student and reader engagement.</p>
                     <form onsubmit="createAuthorCoupon(event)" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; gap: 8px;">
-                            <select id="couponBookSelect" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
-                                <option value="">Select Paid Book...</option>
+                        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px;">
+                            <input type="hidden" id="couponBookSelect" required>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="couponBookSearch" placeholder="🔍 Search paid book title..." onkeyup="filterCouponBookList()" style="flex: 1; padding: 8px 10px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; margin: 0; box-sizing: border-box;">
+                                <input type="text" id="couponCodeInput" placeholder="Code (e.g. SAVE30)" required style="width: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; text-transform: uppercase; margin: 0;">
+                            </div>
+                            <div id="couponBookList" style="max-height: 140px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; background: white; padding: 4px; scrollbar-width: thin;">
                                 {% for b in my_books %}
                                     {% if b.is_paid %}
-                                        <option value="{{ b.id }}">{{ b.title }} (₹{{ (b.price_paise / 100)|round(2) }})</option>
+                                    <div class="coupon-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" onclick="selectCouponBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 6px 10px; font-size: 0.82rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; margin-bottom: 2px;">
+                                        <span style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px;">{{ b.title }}</span>
+                                        <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-weight: 700;">
+                                            ₹{{ (b.price_paise / 100)|round(2) }}
+                                        </span>
+                                    </div>
                                     {% endif %}
                                 {% endfor %}
-                            </select>
-                            <input type="text" id="couponCodeInput" placeholder="Code (e.g. SAVE30)" required style="width: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; text-transform: uppercase;">
+                            </div>
+                            <div id="couponSelectedBadge" style="display: none; font-size: 0.78rem; font-weight: 700; color: #b45309; padding: 4px 8px; background: #fef3c7; border-radius: 4px;"></div>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <input type="number" id="couponDiscountInput" min="5" max="90" value="25" placeholder="Discount %" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
