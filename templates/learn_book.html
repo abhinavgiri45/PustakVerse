@@ -3,209 +3,658 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Tutor - {{ book.title }}</title>
+    <title>GranthMind AI Study Suite · {{ book.title }}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Marked.js for Markdown & KaTeX for Formulas -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+    <script>
+        (function() {
+            try {
+                const theme = localStorage.getItem('pustakverse_theme') || 'dark';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                } else if (theme === 'sepia') {
+                    document.documentElement.classList.add('sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
+        :root {
+            --bg-page: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-card: #182234;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #ea580c;
+            --accent-purple: #8b5cf6;
         }
-        .navbar {
-            background: #1e293b;
-            padding: 12px 32px;
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .study-navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px clamp(16px, 4vw, 36px);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-        .navbar img, .logo-img {
-            height: 52px;
-            width: auto;
-            max-width: 220px;
-            background: transparent;
-            padding: 0;
-            object-fit: contain;
-            display: block;
-        }
-        .nav-links a {
-            color: white;
+
+        .study-nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             text-decoration: none;
-            font-weight: 600;
-            margin-left: 18px;
-        }
-        .container {
-            max-width: 1100px;
-            margin: 32px auto;
-            padding: 0 20px 40px;
-        }
-        .header-box {
-            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
             color: white;
-            padding: 28px 30px;
-            border-radius: 16px;
-            box-shadow: 0 16px 35px rgba(15, 23, 42, 0.15);
+            font-weight: 800;
+            font-size: 1.15rem;
+            font-family: 'Outfit', sans-serif;
         }
-        .header-box h1 {
-            margin: 0 0 8px;
-            font-size: 2.2rem;
+        .study-nav-brand img {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
         }
-        .header-box p {
+
+        .study-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .study-nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 8px 14px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .study-nav-links a:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-granthmind-nav {
+            background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+        }
+
+        /* Container */
+        .study-container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 32px clamp(16px, 4vw, 36px) 60px;
+        }
+
+        /* Hero Header Box */
+        .study-header-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            padding: 26px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            margin-bottom: 24px;
+        }
+
+        .study-header-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .book-thumb {
+            width: 58px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+        }
+
+        .study-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            color: #c084fc;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .study-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(1.4rem, 3vw, 1.85rem);
+            font-weight: 800;
+            color: white;
+            margin: 0 0 4px;
+            line-height: 1.25;
+        }
+
+        .study-sub {
+            font-size: 0.88rem;
+            color: var(--text-muted);
             margin: 0;
-            color: #e2e8f0;
-            line-height: 1.6;
         }
-        .panel {
-            background: white;
-            border-radius: 14px;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-            border: 1px solid #e2e8f0;
-            margin-top: 24px;
-            padding: 24px;
+
+        /* Interactive Concept Studio Input Dock */
+        .concept-studio-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 22px 26px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            margin-bottom: 28px;
         }
+
         .concept-form {
             display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .concept-input-row {
+            display: flex;
             align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1.5px solid var(--border-color);
+            border-radius: 16px;
+            padding: 6px 14px;
+            transition: border-color 0.2s;
         }
-        .concept-form input {
+        .concept-input-row:focus-within { border-color: var(--accent); }
+
+        .concept-input {
             flex: 1;
-            min-width: 220px;
-            padding: 14px 16px;
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            font-size: 1rem;
-        }
-        .btn {
-            display: inline-block;
-            padding: 14px 22px;
+            background: transparent;
             border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            text-decoration: none;
-            font-size: 1rem;
-        }
-        .btn-primary {
-            background: #f97316;
             color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            padding: 10px 4px;
+            outline: none;
         }
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #0f172a;
-        }
-        .study-grid {
+        .concept-input::placeholder { color: #64748b; }
+
+        .btn-mic-concept {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 24px;
-            margin-top: 26px;
+            place-items: center;
+            border-radius: 8px;
+            color: var(--text-muted);
+            transition: all 0.2s;
         }
-        .ai-card {
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            border-radius: 12px;
-            padding: 22px;
+        .btn-mic-concept:hover { color: white; background: rgba(255,255,255,0.08); }
+        .btn-mic-concept.listening { color: #ef4444; animation: pulseMic 1.2s infinite; }
+
+        /* Quick Concept Presets */
+        .preset-chips-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-        .ai-card h2, .side-panel h3 {
-            margin-top: 0;
-            font-size: 1.4rem;
+        .preset-label {
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-right: 4px;
         }
-        .ai-card p, .side-panel li, .side-panel p {
-            line-height: 1.7;
-            color: #334155;
-        }
-        .side-panel ul {
-            margin: 0;
-            padding-left: 18px;
-        }
-        .badge {
-            display: inline-block;
-            background: #e0f2fe;
-            color: #075985;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 0.85rem;
+        .preset-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
         }
-        @media (max-width: 760px) {
-            .study-grid {
-                grid-template-columns: 1fr;
-            }
-            .navbar {
-                flex-direction: column;
-                gap: 12px;
-            }
+        .preset-chip:hover {
+            background: rgba(234, 88, 12, 0.15);
+            border-color: var(--accent);
+            color: #fb923c;
+            transform: translateY(-1px);
+        }
+
+        /* Action Buttons Row */
+        .concept-actions-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .btn-explain-concept {
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.15s;
+        }
+        .btn-explain-concept:hover { transform: translateY(-1px); }
+
+        .btn-live-chat-concept {
+            background: rgba(139, 92, 246, 0.12);
+            border: 1.5px solid rgba(139, 92, 246, 0.4);
+            color: #c084fc;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-live-chat-concept:hover {
+            background: var(--accent-purple);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Study Results Grid */
+        .study-results-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 24px;
+        }
+
+        .concept-main-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .concept-headline {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: white;
+            margin: 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .markdown-explanation {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #cbd5e1;
+        }
+        .markdown-explanation h3, .markdown-explanation h4 {
+            color: white;
+            margin: 16px 0 8px;
+        }
+        .markdown-explanation ul, .markdown-explanation ol {
+            padding-left: 20px;
+            margin-bottom: 14px;
+        }
+        .markdown-explanation table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .markdown-explanation th, .markdown-explanation td {
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.2);
+            font-size: 0.88rem;
+        }
+        .markdown-explanation th {
+            background: rgba(255,255,255,0.06);
+            color: white;
+            font-weight: 800;
+        }
+
+        /* Section Cards */
+        .study-sub-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+
+        .sub-card-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .takeaway-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .takeaway-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+        .takeaway-icon { color: #22c55e; flex-shrink: 0; }
+
+        .analogy-box {
+            background: rgba(234, 88, 12, 0.08);
+            border: 1px solid rgba(234, 88, 12, 0.25);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #fdba74;
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .quiz-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .quiz-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            color: white;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+
+        /* Side Panel */
+        .study-side-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .side-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .side-card-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feynman-tip {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 0.85rem;
+            color: #93c5fd;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .study-results-grid { grid-template-columns: 1fr; }
+            .study-header-card { flex-direction: column; align-items: flex-start; }
+            .concept-actions-row { flex-direction: column; }
+            .btn-explain-concept, .btn-live-chat-concept { width: 100%; justify-content: center; }
+            .study-nav-links { display: none; }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
-            </a>
-        </div>
-        <div class="nav-links">
+
+    <!-- NAVBAR HEADER -->
+    <nav class="study-navbar">
+        <a href="/" class="study-nav-brand">
+            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse">
+            <span>PustakVerse</span>
+        </a>
+        <div class="study-nav-links">
             <a href="{{ url_for('view_book', book_id=book.id) }}">← Back to Book</a>
+            <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn-granthmind-nav">🧠 GranthMind AI</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="header-box">
-            <div class="badge">🧠 Powered by GranthMind AI</div>
-            <h1>GranthMind AI Study Tutor · {{ book.title }}</h1>
-            <p>Master any concept from this book with instant multi-tier explanations, practical real-world analogies, and self-assessment questions.</p>
+    <!-- MAIN CONTAINER -->
+    <div class="study-container">
+        
+        <!-- BOOK STUDY HEADER CARD -->
+        <div class="study-header-card">
+            <div class="study-header-left">
+                {% set cover = book.cover_image %}
+                {% if cover.startswith('http') %}
+                    <img src="{{ cover | drive_img }}" alt="{{ book.title }}" class="book-thumb">
+                {% else %}
+                    <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="{{ book.title }}" class="book-thumb">
+                {% endif %}
+                <div>
+                    <span class="study-badge">🧠 GranthMind AI Study Suite</span>
+                    <h1 class="study-title">{{ book.title }}</h1>
+                    <p class="study-sub">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %} · Deep Concept Breakdown &amp; Practice Questions</p>
+                </div>
+            </div>
+
+            <a href="{{ url_for('read_book', book_id=book.id) }}" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; text-decoration: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.88rem; white-space: nowrap;">
+                📖 Read Full Book
+            </a>
         </div>
 
-        <div class="panel">
-            <form class="concept-form" method="POST" action="{{ url_for('learn_book', book_id=book.id) }}">
+        <!-- INTERACTIVE CONCEPT STUDIO INPUT DOCK -->
+        <div class="concept-studio-card">
+            <form class="concept-form" method="POST" action="{{ url_for('learn_book', book_id=book.id) }}" id="conceptForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="text" name="concept" value="{{ concept }}" placeholder="Example: key themes, main formulas, chapter summary, core strategy..." aria-label="Concept to learn">
-                <button type="submit" class="btn btn-primary">Explain with GranthMind</button>
-                <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn btn-secondary" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">💬 Live Chat with GranthMind</a>
+                
+                <div class="concept-input-row">
+                    <span style="font-size: 1.2rem;">💡</span>
+                    <input type="text" name="concept" id="conceptInput" value="{{ concept }}" class="concept-input" placeholder="Enter any term, chapter, formula, or concept to master..." aria-label="Concept to learn">
+                    <button type="button" id="micBtn" class="btn-mic-concept" title="Voice Input" onclick="toggleConceptMic()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="#4285F4"/>
+                            <path d="M11 18.92V22H13V18.92C16.95 18.42 20 15.06 20 11H18C18 14.31 15.31 17 12 17C8.69 17 6 14.31 6 11H4C4 15.06 7.05 18.42 11 18.92Z" fill="#34A853"/>
+                            <path d="M7.05 10.95L5.64 9.54C4.62 10.56 4 11.96 4 13.5H6C6 12.56 6.39 11.66 7.05 10.95Z" fill="#FBBC05"/>
+                            <path d="M18.36 9.54L16.95 10.95C17.61 11.66 18 12.56 18 13.5H20C20 11.96 19.38 10.56 18.36 9.54Z" fill="#EA4335"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- PRESET QUICK CONCEPT CHIPS -->
+                <div class="preset-chips-row">
+                    <span class="preset-label">Quick Insights:</span>
+                    <button type="button" class="preset-chip" onclick="setConcept('Core summary and main thesis')">✨ Main Thesis</button>
+                    <button type="button" class="preset-chip" onclick="setConcept('Key formulas and mathematical principles')">🔑 Key Formulas</button>
+                    <button type="button" class="preset-chip" onclick="setConcept('Major themes and philosophical insights')">💡 Core Themes</button>
+                    <button type="button" class="preset-chip" onclick="setConcept('Real world case studies and applications')">🌍 Real-World Cases</button>
+                    <button type="button" class="preset-chip" onclick="setConcept('Explain like I am five (ELI5)')">🧠 Explain Like I'm 5</button>
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div class="concept-actions-row">
+                    <button type="submit" class="btn-explain-concept">
+                        <span>✨</span> Explain with GranthMind
+                    </button>
+                    <a href="{{ url_for('ask_ai', book_id=book.id) }}?question={{ concept | urlencode }}" class="btn-live-chat-concept">
+                        <span>💬</span> Open in Full GranthMind Workspace
+                    </a>
+                </div>
             </form>
         </div>
 
-        <div class="study-grid">
-            <div class="ai-card">
-                <h2>{{ ai_response['concept'] }}</h2>
-                <p>{{ ai_response['explanation'] }}</p>
+        <!-- STUDY RESULTS DISPLAY -->
+        <div class="study-results-grid">
+            
+            <!-- MAIN EXPLANATION & TAKEAWAYS -->
+            <div class="concept-main-card">
+                <h2 class="concept-headline">
+                    <span>📖</span> {{ ai_response['concept'] }}
+                </h2>
 
-                <h3>Key Takeaways</h3>
-                <ul>
-                    {% for point in ai_response['key_points'] %}
-                        <li>{{ point }}</li>
-                    {% endfor %}
-                </ul>
+                <div class="markdown-explanation" id="explanationText">
+                    {{ ai_response['explanation'] }}
+                </div>
 
-                <h3>Real-World Analogy & Example</h3>
-                <p>{{ ai_response['example'] }}</p>
+                <!-- KEY TAKEAWAYS -->
+                {% if ai_response.get('key_points') %}
+                <div class="study-sub-card">
+                    <h3 class="sub-card-title"><span>⚡</span> Key Takeaways &amp; Core Principles</h3>
+                    <ul class="takeaway-list">
+                        {% for point in ai_response['key_points'] %}
+                            <li class="takeaway-item">
+                                <span class="takeaway-icon">✓</span>
+                                <span>{{ point }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
 
-                <h3>Practice Assessment Questions</h3>
-                <ul>
-                    {% for q in ai_response['practice_questions'] %}
-                        <li>{{ q }}</li>
-                    {% endfor %}
-                </ul>
+                <!-- REAL WORLD ANALOGY -->
+                {% if ai_response.get('example') %}
+                <div class="study-sub-card">
+                    <h3 class="sub-card-title"><span>🌍</span> Real-World Analogy &amp; Application</h3>
+                    <div class="analogy-box">
+                        {{ ai_response['example'] }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- PRACTICE ASSESSMENT QUESTIONS -->
+                {% if ai_response.get('practice_questions') %}
+                <div class="study-sub-card">
+                    <h3 class="sub-card-title"><span>🎯</span> Practice Assessment &amp; Self-Quiz</h3>
+                    <ul class="quiz-list">
+                        {% for q in ai_response['practice_questions'] %}
+                            <li class="quiz-item">
+                                <span style="color: #38bdf8; margin-right: 6px;">Q{{ loop.index }}:</span> {{ q }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
             </div>
 
-            <div class="side-panel panel">
-                <h3>Book context</h3>
-                <p>{{ ai_response['book_context'] }}</p>
-                <h3>Study tip</h3>
-                <p>{{ ai_response['study_tip'] }}</p>
-                <h3>Quick idea</h3>
-                <p>Use the concept name to ask the AI tutor for a simpler explanation, then explain it back in your own words.</p>
+            <!-- SIDEBAR TIPS & CONTEXT -->
+            <div class="study-side-col">
+                <div class="side-card">
+                    <h3 class="side-card-title"><span>📚</span> Book Context</h3>
+                    <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; margin: 0;">
+                        {{ book.description or 'Academic literary work cataloged on PustakVerse. AI analysis grounded directly in the book contents and conceptual frameworks.' }}
+                    </p>
+                </div>
+
+                <div class="side-card">
+                    <h3 class="side-card-title"><span>💡</span> Feynman Technique Tip</h3>
+                    <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; margin: 0;">
+                        Try explaining <strong>{{ ai_response['concept'] }}</strong> in simple words as if teaching a beginner. Notice where you struggle to clarify the gaps.
+                    </p>
+                    <div class="feynman-tip">
+                        🎯 <strong>Active Recall Strategy:</strong> Close your notes and write out the core axioms from memory to lock them into long-term retention.
+                    </div>
+                </div>
+
+                <div class="side-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%); border-color: rgba(139, 92, 246, 0.3);">
+                    <h3 class="side-card-title" style="color: #c084fc;"><span>🤖</span> Ask GranthMind AI Live</h3>
+                    <p style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
+                        Need deeper derivations, multi-step math solutions, or custom code examples for this concept?
+                    </p>
+                    <a href="{{ url_for('ask_ai', book_id=book.id) }}?question={{ concept | urlencode }}" class="btn-live-chat-concept" style="width: 100%; justify-content: center; box-sizing: border-box;">
+                        Launch AI Workspace →
+                    </a>
+                </div>
             </div>
+
         </div>
+
     </div>
+
     <script>
+        function setConcept(text) {
+            document.getElementById('conceptInput').value = text;
+            document.getElementById('conceptForm').submit();
+        }
+
+        // Render Markdown & Math on load
         document.addEventListener("DOMContentLoaded", function() {
+            const expEl = document.getElementById('explanationText');
+            if (expEl && window.marked) {
+                expEl.innerHTML = marked.parse(expEl.textContent.trim());
+            }
+
             if (window.renderMathInElement) {
                 renderMathInElement(document.body, {
                     delimiters: [
@@ -218,6 +667,38 @@
                 });
             }
         });
+
+        // Voice Input
+        let recognition = null;
+        function toggleConceptMic() {
+            const mic = document.getElementById('micBtn');
+            const input = document.getElementById('conceptInput');
+            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                alert('Speech recognition is not supported in this browser.');
+                return;
+            }
+            if (recognition) {
+                recognition.stop();
+                recognition = null;
+                mic.classList.remove('listening');
+                return;
+            }
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            mic.classList.add('listening');
+            recognition.onresult = function(e) {
+                input.value = e.results[0][0].transcript;
+                mic.classList.remove('listening');
+                document.getElementById('conceptForm').submit();
+            };
+            recognition.onerror = function() { mic.classList.remove('listening'); recognition = null; };
+            recognition.onend = function() { mic.classList.remove('listening'); recognition = null; };
+            recognition.start();
+        }
     </script>
 </body>
 </html>
