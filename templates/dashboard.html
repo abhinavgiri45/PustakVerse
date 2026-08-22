@@ -1522,12 +1522,22 @@
                     <form action="{{ url_for('executive_grant_license') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="text" name="username_or_email" required placeholder="Reader Username or Email..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        <select name="book_id" required style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
-                            <option value="">-- Select Target Book --</option>
-                            {% for b in my_books %}
-                            <option value="{{ b.id }}">{{ b.title }} (₹{{ "%.2f"|format(b.price_paise/100) if b.is_paid else 'Free' }})</option>
-                            {% endfor %}
-                        </select>
+                        <!-- SEARCHABLE & SCROLLABLE TARGET BOOK SELECTOR -->
+                        <div>
+                            <input type="hidden" name="book_id" id="giftSelectedBookId" required>
+                            <input type="text" id="giftBookSearch" placeholder="🔍 Search book title or author..." onkeyup="filterGiftBookList()" style="width: 100%; padding: 8px 10px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 4px; box-sizing: border-box;">
+                            <div id="giftBookList" style="max-height: 160px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; background: white; padding: 4px; scrollbar-width: thin;">
+                                {% for b in my_books %}
+                                <div class="gift-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" onclick="selectGiftBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 6px 10px; font-size: 0.82rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; margin-bottom: 2px;">
+                                    <span style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">{{ b.title }}</span>
+                                    <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; font-weight: 700;">
+                                        {{ '₹' ~ "%.2f"|format(b.price_paise/100) if b.is_paid else 'Free' }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div id="giftSelectedBadge" style="display: none; font-size: 0.78rem; font-weight: 700; color: #15803d; margin-top: 4px; padding: 4px 8px; background: #dcfce7; border-radius: 4px;"></div>
+                        </div>
                         <input type="text" name="reason" placeholder="Reason (e.g. Contest Winner, Scholarship)..." style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px;">
                         <button type="submit" class="btn-sm btn-green" style="padding: 8px; font-weight: 700; margin-top: 4px;">🎁 Grant License</button>
                     </form>
@@ -1543,12 +1553,20 @@
                     <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">Award exclusive accolades (BestSeller, Award Winner, Scholarly Pick) to standout books.</p>
                     <form action="{{ url_for('executive_grant_badge') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <select name="book_id" required style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
-                            <option value="">-- Select Book to Honor --</option>
-                            {% for b in my_books %}
-                            <option value="{{ b.id }}">{{ b.title }} (by {{ b.author_name }})</option>
-                            {% endfor %}
-                        </select>
+                        <!-- SEARCHABLE & SCROLLABLE BADGE BOOK SELECTOR -->
+                        <div>
+                            <input type="hidden" name="book_id" id="badgeSelectedBookId" required>
+                            <input type="text" id="badgeBookSearch" placeholder="🔍 Search book title..." onkeyup="filterBadgeBookList()" style="width: 100%; padding: 8px 10px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 4px; box-sizing: border-box;">
+                            <div id="badgeBookList" style="max-height: 160px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; background: white; padding: 4px; scrollbar-width: thin;">
+                                {% for b in my_books %}
+                                <div class="badge-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" onclick="selectBadgeBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 6px 10px; font-size: 0.82rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; margin-bottom: 2px;">
+                                    <span style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">{{ b.title }}</span>
+                                    <span style="font-size: 0.72rem; color: #64748b;">{{ b.author_name }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div id="badgeSelectedBadge" style="display: none; font-size: 0.78rem; font-weight: 700; color: #c2410c; margin-top: 4px; padding: 4px 8px; background: #ffedd5; border-radius: 4px;"></div>
+                        </div>
                         <select name="badge_label" required style="padding: 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
                             <option value="⭐ PustakVerse BestSeller">⭐ PustakVerse BestSeller</option>
                             <option value="🏆 Award Winning Creator">🏆 Award Winning Creator</option>
@@ -3232,6 +3250,56 @@
         updateUploadedCount();
     });
 </script>
+
+
+    <!-- Searchable & Scrollable Book Selectors Logic -->
+    <script>
+        function filterGiftBookList() {
+            const query = (document.getElementById('giftBookSearch').value || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.gift-book-opt');
+            items.forEach(item => {
+                const title = item.getAttribute('data-title') || '';
+                item.style.display = title.includes(query) ? 'flex' : 'none';
+            });
+        }
+        function selectGiftBook(el, id, title) {
+            document.querySelectorAll('.gift-book-opt').forEach(opt => {
+                opt.style.background = 'white';
+                opt.style.color = '#0f172a';
+            });
+            el.style.background = '#0284c7';
+            el.style.color = 'white';
+            document.getElementById('giftSelectedBookId').value = id;
+            const badge = document.getElementById('giftSelectedBadge');
+            if (badge) {
+                badge.style.display = 'block';
+                badge.textContent = '✓ Selected: ' + title;
+            }
+        }
+
+        function filterBadgeBookList() {
+            const query = (document.getElementById('badgeBookSearch').value || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.badge-book-opt');
+            items.forEach(item => {
+                const title = item.getAttribute('data-title') || '';
+                item.style.display = title.includes(query) ? 'flex' : 'none';
+            });
+        }
+        function selectBadgeBook(el, id, title) {
+            document.querySelectorAll('.badge-book-opt').forEach(opt => {
+                opt.style.background = 'white';
+                opt.style.color = '#0f172a';
+            });
+            el.style.background = '#ea580c';
+            el.style.color = 'white';
+            document.getElementById('badgeSelectedBookId').value = id;
+            const badge = document.getElementById('badgeSelectedBadge');
+            if (badge) {
+                badge.style.display = 'block';
+                badge.textContent = '✓ Selected: ' + title;
+            }
+        }
+    </script>
 
 </body>
 </html>
