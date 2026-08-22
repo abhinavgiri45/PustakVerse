@@ -19,6 +19,7 @@
             --text-dark: #0f172a;
             --text-muted: #64748b;
             --border-line: #e2e8f0;
+            --accent-purple: #8b5cf6;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,22 +32,19 @@
             flex-direction: column;
         }
 
-        /* Sleek Scrollbars */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 2px solid #f1f5f9; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
-
-        /* Navigation */
+        /* Navigation Header */
         nav {
             background-color: var(--nav-bg);
-            padding: 14px 32px;
+            padding: 12px clamp(16px, 4vw, 32px);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
+
         .brand-logo {
             display: flex;
             align-items: center;
@@ -57,15 +55,64 @@
             font-size: 1.15rem;
             font-family: 'Outfit', sans-serif;
         }
-        .nav-actions a {
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.88rem;
-            margin-left: 18px;
-            transition: color 0.2s;
+
+        .brand-logo img {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
         }
-        .nav-actions a:hover { color: var(--primary-orange); }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-link {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 8px 14px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-granthmind-nav {
+            background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+            color: white !important;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 800;
+            text-decoration: none;
+            font-size: 0.88rem;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: transform 0.15s;
+        }
+        .btn-granthmind-nav:hover { transform: translateY(-1px); }
+
+        .btn-nav-primary {
+            background: var(--primary-orange);
+            color: white !important;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-nav-primary:hover { background: var(--primary-hover); }
 
         /* Header Hero */
         .hero-banner {
@@ -141,31 +188,33 @@
             margin-top: 4px;
         }
 
-        /* 1. Official Support & Community Channels Grid */
+        /* Channels Grid */
         .channels-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 18px;
             margin-bottom: 60px;
         }
+
         .channel-card {
-            background: white;
+            background: var(--card-bg);
             border: 1px solid var(--border-line);
             border-radius: 16px;
-            padding: 22px;
+            padding: 20px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 16px;
             text-decoration: none;
-            color: var(--text-dark);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            color: inherit;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
             transition: all 0.2s ease;
         }
         .channel-card:hover {
-            border-color: var(--primary-orange);
             transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            border-color: #cbd5e1;
         }
+
         .channel-icon-wrap {
             width: 48px;
             height: 48px;
@@ -174,74 +223,91 @@
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
-            background: #f1f5f9;
             flex-shrink: 0;
         }
-        .channel-title { font-weight: 800; font-size: 0.98rem; display: block; }
-        .channel-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
 
-        /* 2. Leadership Cards Grid */
+        .channel-title {
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--nav-bg);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .channel-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .mail-mini-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .mail-mini-btn:hover { opacity: 0.88; }
+
+        /* Leadership Cards */
         .leadership-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 28px;
-            margin-bottom: 50px;
+            gap: 24px;
         }
+
         .leader-card {
-            background: white;
+            background: var(--card-bg);
             border: 1px solid var(--border-line);
             border-radius: 20px;
-            padding: 32px 24px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            padding: 28px 24px;
+            text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
-            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
             position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .leader-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
         .leader-card.founder-card {
-            border-color: #fdba74;
-            background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+            border: 2px solid #f97316;
+            background: linear-gradient(180deg, #ffffff 0%, #fffbf7 100%);
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);
         }
 
-        /* Circle Avatar */
         .circle-avatar-wrap {
             position: relative;
-            margin-bottom: 18px;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 16px;
         }
         .circle-avatar {
-            width: 120px;
-            height: 120px;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
             object-fit: cover;
-            border: 4px solid white;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-            background: #f1f5f9;
+            border: 3px solid #e2e8f0;
         }
-        .founder-card .circle-avatar {
-            border-color: var(--primary-orange);
-            box-shadow: 0 8px 24px rgba(234, 88, 12, 0.25);
-        }
+        .founder-card .circle-avatar { border-color: #ea580c; }
+
         .founder-crown {
             position: absolute;
-            top: -6px;
+            top: -8px;
             right: -4px;
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+            background: #ea580c;
             color: white;
-            font-size: 1rem;
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.85rem;
             border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .leader-name {
@@ -251,6 +317,7 @@
             color: var(--nav-bg);
             margin-bottom: 4px;
         }
+
         .role-badge {
             display: inline-block;
             background: #f1f5f9;
@@ -259,7 +326,7 @@
             font-weight: 800;
             padding: 4px 12px;
             border-radius: 20px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
         .founder-badge {
             background: #ffedd5;
@@ -268,14 +335,13 @@
         }
 
         .leader-bio {
-            font-size: 0.86rem;
+            font-size: 0.88rem;
             color: #475569;
-            line-height: 1.5;
-            margin-bottom: 16px;
+            line-height: 1.55;
+            margin-bottom: 18px;
             flex: 1;
         }
 
-        /* Leader Contact Details Box */
         .leader-contacts {
             width: 100%;
             background: #f8fafc;
@@ -286,7 +352,7 @@
             flex-direction: column;
             gap: 10px;
             text-align: left;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
         .contact-row {
             display: flex;
@@ -294,37 +360,30 @@
             gap: 10px;
             font-size: 0.85rem;
         }
-        .contact-icon {
-            font-size: 1rem;
-            width: 22px;
-            text-align: center;
-            flex-shrink: 0;
-        }
+        .contact-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
         .contact-link {
             color: #0f172a;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             word-break: break-all;
             transition: color 0.2s;
         }
         .contact-link:hover { color: var(--primary-orange); }
 
-        /* Social Handles Row */
         .leader-social-row {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             justify-content: center;
             width: 100%;
-            padding-top: 6px;
         }
         .social-pill {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 0.76rem;
+            font-size: 0.78rem;
             font-weight: 700;
             text-decoration: none;
             background: #f1f5f9;
@@ -343,67 +402,60 @@
         .social-pill.li:hover { background: #0a66c2; border-color: #0a66c2; }
         .social-pill.gh:hover { background: #24292e; border-color: #24292e; }
         .social-pill.web:hover { background: var(--primary-orange); border-color: var(--primary-orange); }
-    
-        .mail-mini-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.74rem;
-            font-weight: 700;
-            text-decoration: none;
-            transition: opacity 0.15s;
-        }
-        .mail-mini-btn:hover { opacity: 0.85; }
 
-        /* Compose Modal */
+        /* Modal Overlay */
         .mail-modal-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            inset: 0;
             background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
+            z-index: 99999;
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
             padding: 20px;
         }
         .mail-modal-box {
             background: white;
-            border-radius: 18px;
+            border-radius: 20px;
             max-width: 440px;
             width: 100%;
-            padding: 24px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            padding: 28px 24px;
             text-align: center;
-            animation: popIn 0.2s ease-out;
-        }
-        @keyframes popIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            border: 1px solid #e2e8f0;
         }
 
-</style>
+        @media (max-width: 768px) {
+            nav { padding: 10px 16px; }
+            .nav-actions { gap: 8px; }
+            .nav-link { font-size: 0.8rem; padding: 6px 10px; }
+            .btn-granthmind-nav { font-size: 0.78rem; padding: 6px 12px; }
+            .hero-banner { padding: 36px 16px; }
+            .main-content { padding: 24px 16px 40px; }
+        }
+    </style>
 </head>
 <body>
 
+    <!-- NAVBAR HEADER -->
     <nav>
-        <a href="/" class="brand-logo">
-            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" style="height: 36px; width: auto; object-fit: contain;">
+        <a href="/" class="brand-logo" aria-label="PustakVerse Home">
+            <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse">
             <span>PustakVerse</span>
         </a>
         <div class="nav-actions">
-            <a href="/">
-            <a href="{{ url_for('ask_ai') }}" style="color: #c084fc; font-weight: 800;">🧠 GranthMind AI</a>← Back to Library</a>
+            <a href="/" class="nav-link">← Back to Library</a>
+            <a href="{{ url_for('ask_ai') }}" class="btn-granthmind-nav">🧠 GranthMind AI</a>
             {% if session.user_id %}
-                <a href="{{ url_for('dashboard') }}" style="background: var(--primary-orange); color: white; padding: 7px 16px; border-radius: 20px;">Dashboard</a>
+                <a href="{{ url_for('dashboard') }}" class="btn-nav-primary">Dashboard</a>
             {% else %}
-                <a href="{{ url_for('login') }}" style="background: var(--primary-orange); color: white; padding: 7px 16px; border-radius: 20px;">Sign In</a>
+                <a href="{{ url_for('login') }}" class="btn-nav-primary">Sign In</a>
             {% endif %}
         </div>
     </nav>
 
+    <!-- HERO BANNER -->
     <div class="hero-banner">
         <span class="hero-badge">PustakVerse Network</span>
         <h1 class="hero-title">Official Channels & Leadership Contact</h1>
@@ -411,7 +463,7 @@
     </div>
 
     <div class="main-content">
-        <!-- 1. OFFICIAL SUPPORT & COMMUNITY CHANNELS (PLACED AT THE TOP) -->
+        <!-- 1. OFFICIAL SUPPORT & COMMUNITY CHANNELS -->
         <div class="section-header">
             <h2 class="section-title"><span>📬</span> Official Channels & Support Portals</h2>
             <p class="section-sub">Connect with the PustakVerse community and reach direct support across our network.</p>
@@ -427,11 +479,11 @@
                         <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; font-weight: 800;">👑 Founder</span>
                     </div>
                     <span class="channel-sub" style="color: #475569; font-weight: 600;">abhinavgiri370@gmail.com</span>
-                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;" onclick="event.stopPropagation()">
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=abhinavgiri370@gmail.com&su=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" target="_blank" class="mail-mini-btn" style="background: #ea580c; color: white;">
-                            📨 Open in Gmail
+                    <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=abhinavgiri370@gmail.com&su=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" target="_blank" rel="noopener noreferrer" class="mail-mini-btn" style="background: #ea580c; color: white;">
+                            📨 Gmail
                         </a>
-                        <a href="mailto:abhinavgiri370@gmail.com?subject=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+                        <a href="mailto:abhinavgiri370@gmail.com?subject=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
                             💻 Mail App
                         </a>
                         <button type="button" onclick="copyEmailText('abhinavgiri370@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
@@ -450,11 +502,11 @@
                         <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 800;">Official Desk</span>
                     </div>
                     <span class="channel-sub" style="color: #475569; font-weight: 600;">noreply.pustakverse@gmail.com</span>
-                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;" onclick="event.stopPropagation()">
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=noreply.pustakverse@gmail.com&su=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" target="_blank" class="mail-mini-btn" style="background: #0284c7; color: white;">
-                            📨 Open in Gmail
+                    <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=noreply.pustakverse@gmail.com&su=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" target="_blank" rel="noopener noreferrer" class="mail-mini-btn" style="background: #0284c7; color: white;">
+                            📨 Gmail
                         </a>
-                        <a href="mailto:noreply.pustakverse@gmail.com?subject=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+                        <a href="mailto:noreply.pustakverse@gmail.com?subject=PustakVerse%20Helpdesk%20Support%20Request" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
                             💻 Mail App
                         </a>
                         <button type="button" onclick="copyEmailText('noreply.pustakverse@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
@@ -464,7 +516,8 @@
                 </div>
             </div>
 
-            <a href="https://www.instagram.com/abhinavgiri45/" target="_blank" class="channel-card">
+            <!-- INSTAGRAM -->
+            <a href="https://www.instagram.com/abhinavgiri45/" target="_blank" rel="noopener noreferrer" class="channel-card">
                 <div class="channel-icon-wrap" style="color: #e11d48; background: #fff1f2;">📸</div>
                 <div>
                     <span class="channel-title">Instagram</span>
@@ -472,7 +525,8 @@
                 </div>
             </a>
 
-            <a href="https://t.me/PustakVerse" target="_blank" class="channel-card">
+            <!-- TELEGRAM -->
+            <a href="https://t.me/PustakVerse" target="_blank" rel="noopener noreferrer" class="channel-card">
                 <div class="channel-icon-wrap" style="color: #0ea5e9; background: #f0f9ff;">✈️</div>
                 <div>
                     <span class="channel-title">Telegram Channel</span>
@@ -480,7 +534,8 @@
                 </div>
             </a>
 
-            <a href="https://www.youtube.com/channel/UCGNxh6xulgXLnKZlAYZM8og" target="_blank" class="channel-card">
+            <!-- YOUTUBE -->
+            <a href="https://www.youtube.com/channel/UCGNxh6xulgXLnKZlAYZM8og" target="_blank" rel="noopener noreferrer" class="channel-card">
                 <div class="channel-icon-wrap" style="color: #dc2626; background: #fef2f2;">📺</div>
                 <div>
                     <span class="channel-title">YouTube</span>
@@ -489,7 +544,7 @@
             </a>
         </div>
 
-        <!-- 2. LEADERSHIP DIRECTORY (PLACED BELOW OFFICIAL CHANNELS) -->
+        <!-- 2. LEADERSHIP DIRECTORY -->
         <div class="section-header">
             <h2 class="section-title"><span>🏛️</span> Executive Leadership Directory</h2>
             <p class="section-sub">Meet the founders, executives, and architects driving the PustakVerse platform.</p>
@@ -499,10 +554,10 @@
             {% for leader in leaders %}
             <div class="leader-card {% if leader.is_founder %}founder-card{% endif %}">
                 <div class="circle-avatar-wrap">
-                    {% if leader.photo.startswith('http') %}
+                    {% if leader.photo and leader.photo.startswith('http') %}
                         <img src="{{ leader.photo }}" alt="{{ leader.name }}" class="circle-avatar">
                     {% elif leader.photo and leader.photo != 'PustakVerse.png' %}
-                        <img src="{{ url_for('static', filename='uploads/leadership/' + leader.photo) }}" alt="{{ leader.name }}" class="circle-avatar">
+                        <img src="{{ url_for('static', filename='uploads/leadership/' + leader.photo) }}" alt="{{ leader.name }}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
                     {% else %}
                         <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="{{ leader.name }}" class="circle-avatar" style="padding: 10px; background: #0f172a;">
                     {% endif %}
@@ -514,14 +569,13 @@
 
                 <h3 class="leader-name">{{ leader.name }}</h3>
                 
-                <!-- FOUNDER & EXECUTIVE DESIGNATION BADGES -->
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
                     {% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}
                     <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em;">
                         👑 Founder
                     </span>
                     {% endif %}
-                    <span class="role-badge {% if leader.is_founder %}founder-badge{% endif %}" style="margin: 0;">
+                    <span class="role-badge {% if leader.is_founder %}founder-badge{% endif %}">
                         {{ leader.role_title }}
                     </span>
                 </div>
@@ -553,42 +607,42 @@
                     <div class="contact-row">
                         <span class="contact-icon">📍</span>
                         <div>
-                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Address</span>
+                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
                             <span style="font-weight: 600; color: #0f172a;">{{ leader.address }}</span>
                         </div>
                     </div>
                     {% endif %}
                 </div>
 
-                <!-- Optional Social Handles Row -->
+                <!-- Social Handles Row -->
                 {% if leader.instagram_id or leader.x_id or leader.linkedin_id or leader.github_id or leader.website_url %}
                 <div class="leader-social-row">
                     {% if leader.instagram_id %}
-                    <a href="{% if leader.instagram_id.startswith('http') %}{{ leader.instagram_id }}{% else %}https://instagram.com/{{ leader.instagram_id.replace('@', '') }}{% endif %}" target="_blank" class="social-pill ig" title="Instagram">
+                    <a href="{% if leader.instagram_id.startswith('http') %}{{ leader.instagram_id }}{% else %}https://instagram.com/{{ leader.instagram_id.replace('@', '') }}{% endif %}" target="_blank" rel="noopener noreferrer" class="social-pill ig" title="Instagram">
                         <span>📸</span> <span>Instagram</span>
                     </a>
                     {% endif %}
 
                     {% if leader.x_id %}
-                    <a href="{% if leader.x_id.startswith('http') %}{{ leader.x_id }}{% else %}https://x.com/{{ leader.x_id.replace('@', '') }}{% endif %}" target="_blank" class="social-pill x" title="X (Twitter)">
-                        <span>𝕏</span> <span>Twitter / X</span>
+                    <a href="{% if leader.x_id.startswith('http') %}{{ leader.x_id }}{% else %}https://x.com/{{ leader.x_id.replace('@', '') }}{% endif %}" target="_blank" rel="noopener noreferrer" class="social-pill x" title="X (Twitter)">
+                        <span>𝕏</span> <span>Twitter</span>
                     </a>
                     {% endif %}
 
                     {% if leader.linkedin_id %}
-                    <a href="{% if leader.linkedin_id.startswith('http') %}{{ leader.linkedin_id }}{% else %}https://linkedin.com/in/{{ leader.linkedin_id }}{% endif %}" target="_blank" class="social-pill li" title="LinkedIn">
+                    <a href="{% if leader.linkedin_id.startswith('http') %}{{ leader.linkedin_id }}{% else %}https://linkedin.com/in/{{ leader.linkedin_id }}{% endif %}" target="_blank" rel="noopener noreferrer" class="social-pill li" title="LinkedIn">
                         <span>💼</span> <span>LinkedIn</span>
                     </a>
                     {% endif %}
 
                     {% if leader.github_id %}
-                    <a href="{% if leader.github_id.startswith('http') %}{{ leader.github_id }}{% else %}https://github.com/{{ leader.github_id }}{% endif %}" target="_blank" class="social-pill gh" title="GitHub">
+                    <a href="{% if leader.github_id.startswith('http') %}{{ leader.github_id }}{% else %}https://github.com/{{ leader.github_id }}{% endif %}" target="_blank" rel="noopener noreferrer" class="social-pill gh" title="GitHub">
                         <span>💻</span> <span>GitHub</span>
                     </a>
                     {% endif %}
 
                     {% if leader.website_url %}
-                    <a href="{{ leader.website_url }}" target="_blank" class="social-pill web" title="Website / Portfolio">
+                    <a href="{{ leader.website_url }}" target="_blank" rel="noopener noreferrer" class="social-pill web" title="Website / Portfolio">
                         <span>🌐</span> <span>Portfolio</span>
                     </a>
                     {% endif %}
@@ -599,22 +653,21 @@
         </div>
     </div>
 
-
     <!-- EMAIL COMPOSE MODAL DIALOG -->
     <div id="mailComposeModal" class="mail-modal-overlay" onclick="closeMailModal(event)">
         <div class="mail-modal-box" onclick="event.stopPropagation()">
-            <div style="font-size: 2.2rem; margin-bottom: 8px;">📬</div>
-            <h3 id="modalRecipientTitle" style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Compose Message</h3>
-            <p id="modalRecipientEmail" style="font-family: monospace; font-size: 0.9rem; color: #ea580c; font-weight: 700; margin-bottom: 20px; word-break: break-all;"></p>
+            <div style="font-size: 2.4rem; margin-bottom: 8px;">📬</div>
+            <h3 id="modalRecipientTitle" style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Compose Message</h3>
+            <p id="modalRecipientEmail" style="font-family: monospace; font-size: 0.92rem; color: #ea580c; font-weight: 700; margin-bottom: 20px; word-break: break-all;"></p>
             
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
-                <a id="modalGmailLink" href="#" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 10px; background: #ea580c; color: white; text-decoration: none; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+                <a id="modalGmailLink" href="#" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #ea580c; color: white; text-decoration: none; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
                     <span>📨</span> Open in Gmail (Web Browser)
                 </a>
-                <a id="modalMailtoLink" href="#" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 10px; background: #f8fafc; color: #1e293b; border: 1.5px solid #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.92rem;">
+                <a id="modalMailtoLink" href="#" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #f8fafc; color: #1e293b; border: 1.5px solid #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.92rem;">
                     <span>💻</span> Open in Default Mail App (Outlook / Mail)
                 </a>
-                <button type="button" id="modalCopyBtn" onclick="copyModalEmail()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 10px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
+                <button type="button" id="modalCopyBtn" onclick="copyModalEmail()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
                     <span>📋</span> Copy Email Address to Clipboard
                 </button>
             </div>
@@ -626,7 +679,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="copyToast" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 10px 20px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div id="copyToast" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 10px 20px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; z-index: 100000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
         ✓ Email address copied to clipboard!
     </div>
 
@@ -674,6 +727,5 @@
             });
         }
     </script>
-
 </body>
 </html>

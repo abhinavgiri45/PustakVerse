@@ -3295,6 +3295,25 @@ def contact():
         if db:
             try: db.close()
             except: pass
+
+    if not leaders:
+        leaders = [{
+            'id': 1,
+            'name': 'Abhinav Giri',
+            'role_title': 'Founder & Chief Technology Officer (CTO)',
+            'bio': 'Visionary founder and lead architect behind PustakVerse and GranthMind AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.',
+            'email': 'abhinavgiri370@gmail.com',
+            'phone': '+91 99999 99999',
+            'address': 'Greater Noida, Uttar Pradesh, India',
+            'photo': 'PustakVerse.png',
+            'is_founder': True,
+            'instagram_id': 'https://www.instagram.com/abhinavgiri45/',
+            'x_id': 'https://x.com/abhinavgiri45',
+            'linkedin_id': 'https://www.linkedin.com/in/abhinav-giri',
+            'github_id': 'https://github.com/abhinavgiri45',
+            'website_url': 'https://pustakverse.com'
+        }]
+
     return render_template('contact.html', leaders=leaders)
 
 @app.route('/terms')
