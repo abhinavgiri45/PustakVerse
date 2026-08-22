@@ -802,45 +802,108 @@
         border-radius: 14px !important;
       }
 
-      /* Full Width ChatGPT-Style Input Dock */
+      /* Ultra-Responsive Mobile Input Dock & Search Bar (Gemini Mobile Native) */
       .input-dock {
-        padding: 8px 12px 12px !important;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 8px)) !important;
+        width: 100% !important;
+      }
+      .input-container {
+        max-width: 100% !important;
       }
       .input-box-wrapper {
-        border-radius: 24px !important;
-        padding: 8px 10px 8px 14px !important;
-        gap: 8px !important;
-        min-height: 48px !important;
+        border-radius: 26px !important;
+        padding: 4px 6px 4px 10px !important;
+        gap: 6px !important;
+        min-height: 44px !important;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.35) !important;
       }
       .model-pill-wrapper {
         display: inline-flex !important;
+        flex-shrink: 0 !important;
       }
       .gemini-model-pill {
-        max-width: 140px !important;
-        font-size: 0.74rem !important;
-        padding: 5px 22px 5px 10px !important;
-        border-radius: 16px !important;
+        max-width: 95px !important;
+        font-size: 0.7rem !important;
+        padding: 4px 16px 4px 8px !important;
+        border-radius: 14px !important;
+        background-position: right 5px center !important;
+        background-size: 8px !important;
+      }
+      .btn-action-icon {
+        font-size: 1.1rem !important;
+        padding: 2px !important;
+        flex-shrink: 0 !important;
       }
       .chat-textarea {
-        font-size: 0.95rem !important;
-        line-height: 1.4 !important;
+        font-size: 0.92rem !important;
+        line-height: 1.35 !important;
+        min-height: 24px !important;
+        max-height: 110px !important;
+        padding: 4px 0 !important;
+        resize: none !important;
+        overflow: hidden !important;
+        -webkit-appearance: none !important;
+      }
+      .gemini-mic-btn {
+        width: 32px !important;
+        height: 32px !important;
+        flex-shrink: 0 !important;
+      }
+      .gemini-mic-btn svg {
+        width: 17px !important;
+        height: 17px !important;
+      }
+      .btn-send-chat {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 50% !important;
+        font-size: 0.85rem !important;
+        flex-shrink: 0 !important;
+      }
+      .input-footer {
+        font-size: 0.68rem !important;
+        margin-top: 4px !important;
+        justify-content: center !important;
+        gap: 10px !important;
+      }
+      .input-footer span:last-child {
+        display: none !important;
       }
       .messages-scroll {
-        padding: 12px !important;
-        gap: 14px !important;
+        padding: 10px !important;
+        gap: 12px !important;
       }
       .msg-card {
         gap: 8px !important;
       }
       .msg-avatar {
-        width: 30px !important;
-        height: 30px !important;
-        font-size: 0.85rem !important;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.8rem !important;
       }
       .msg-body {
-        padding: 14px 16px !important;
+        padding: 12px 14px !important;
         border-radius: 14px !important;
-        font-size: 0.92rem !important;
+        font-size: 0.9rem !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .gemini-model-pill {
+        max-width: 80px !important;
+        font-size: 0.66rem !important;
+        padding: 3px 14px 3px 5px !important;
+      }
+      .input-box-wrapper {
+        padding: 3px 4px 3px 8px !important;
+        gap: 4px !important;
+      }
+      .btn-action-icon {
+        font-size: 0.95rem !important;
+      }
+      .gemini-mic-btn, .btn-send-chat {
+        width: 30px !important;
+        height: 30px !important;
       }
     }
     
@@ -1636,6 +1699,21 @@
     // Enhanced Gemini-Style Live Speech-to-Text Recognition
     let globalSpeechRecognition = null;
     let isVoiceListening = false;
+
+    
+    function updateMobilePlaceholder() {
+      const promptInput = document.getElementById('promptInput');
+      if (promptInput && !promptInput.value) {
+        if (window.innerWidth <= 640) {
+          promptInput.placeholder = "Ask anything...";
+        } else {
+          promptInput.placeholder = "Ask GranthMind anything... (Press Enter to Send, Shift+Enter for Newline)";
+        }
+      }
+    }
+    window.addEventListener('resize', updateMobilePlaceholder);
+    window.addEventListener('DOMContentLoaded', updateMobilePlaceholder);
+
 
     function toggleVoiceInput() {
       const mic = document.getElementById('micBtn');
