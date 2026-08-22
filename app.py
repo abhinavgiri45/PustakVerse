@@ -1043,7 +1043,7 @@ def build_ai_learning_response(book_title, book_description='', concept_query=''
 
 
 def get_active_ai_models():
-    """Retrieves all active AI model configurations from database with fallback defaults."""
+    """Retrieves clean, non-duplicated active AI model configurations."""
     db = None
     custom_models = []
     try:
@@ -1059,31 +1059,26 @@ def get_active_ai_models():
             try: db.close()
             except: pass
 
-    # Built-in High Performance Engines
-    builtin_models = [
-        {'id': 'gemini-2.0-flash', 'display_name': '✨ Gemini 2.0 Flash (Fast & Smart)', 'provider_type': 'gemini', 'model_id': 'gemini-2.0-flash', 'is_default': 1},
-        {'id': 'chatgpt-4o', 'display_name': '🟢 ChatGPT-4o (Deep Reasoning)', 'provider_type': 'openai', 'model_id': 'chatgpt-4o', 'is_default': 0},
-        {'id': 'claude-3-5-sonnet', 'display_name': '🟠 Claude 3.5 Sonnet (Nuance & Writing)', 'provider_type': 'anthropic', 'model_id': 'claude-3-5-sonnet', 'is_default': 0},
-        {'id': 'deepseek-r1', 'display_name': '🔵 DeepSeek R1 (Math & Logic)', 'provider_type': 'deepseek', 'model_id': 'deepseek-r1', 'is_default': 0},
-        {'id': 'mistral-large', 'display_name': '🟡 Mistral Large (Code & Systems)', 'provider_type': 'mistral', 'model_id': 'mistral-large', 'is_default': 0},
-        {'id': 'meta-llama-3', 'display_name': '🔷 Meta Llama 3.3 (Open Research)', 'provider_type': 'groq', 'model_id': 'meta-llama-3', 'is_default': 0},
+    # If database provides custom models, use them directly with zero duplicate colourful rows
+    if custom_models:
+        seen = set()
+        cleaned = []
+        for m in custom_models:
+            mid = str(m.get('model_id') or m.get('id') or '').lower()
+            if mid and mid not in seen:
+                seen.add(mid)
+                cleaned.append(m)
+        if cleaned:
+            return cleaned
+
+    # Default Clean Professional GranthMind Engines (No duplicate dots)
+    return [
+        {'id': 'gemini-2.0-flash', 'display_name': 'GranthMind Pro (Gemini 2.0 Flash)', 'provider_type': 'gemini', 'model_id': 'gemini-2.0-flash', 'is_default': 1},
+        {'id': 'deepseek-r1', 'display_name': 'GranthMind DeepThink (DeepSeek R1)', 'provider_type': 'deepseek', 'model_id': 'deepseek-r1', 'is_default': 0},
+        {'id': 'groq-llama-3-3', 'display_name': 'GranthMind Turbo (Groq LLaMA 3.3 70B)', 'provider_type': 'groq', 'model_id': 'meta-llama-3', 'is_default': 0},
+        {'id': 'gpt-4o-mini', 'display_name': 'GranthMind Vision & Scholar (GPT-4o Mini)', 'provider_type': 'openai', 'model_id': 'chatgpt-4o', 'is_default': 0},
+        {'id': 'claude-3-5-sonnet', 'display_name': 'GranthMind Code & Logic (Claude 3.5 Sonnet)', 'provider_type': 'anthropic', 'model_id': 'claude-3-5-sonnet', 'is_default': 0},
     ]
-
-    seen_ids = set()
-    merged = []
-    for cm in custom_models:
-        mid = str(cm.get('model_id') or cm.get('id')).lower()
-        if mid not in seen_ids:
-            seen_ids.add(mid)
-            merged.append(cm)
-
-    for bm in builtin_models:
-        mid = bm['model_id'].lower()
-        if mid not in seen_ids:
-            seen_ids.add(mid)
-            merged.append(bm)
-
-    return merged
 
 
 def get_gemini_api_key():

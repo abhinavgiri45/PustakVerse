@@ -201,7 +201,7 @@
     }
     .btn-nav-back:hover { background: rgba(255,255,255,0.15); color: white; }
 
-    /* Main Workspace Layout (Universal Full-Screen Scaling) */
+    /* Main Workspace Layout */
     .workspace {
       display: flex !important;
       flex-direction: row !important;
@@ -225,14 +225,35 @@
       overflow-x: hidden !important;
       height: 100% !important;
       flex-shrink: 0 !important;
-      transition: all 0.2s ease !important;
+      transition: transform 0.25s ease, margin-left 0.25s ease !important;
+      z-index: 100;
     }
     .workspace.sidebar-collapsed .sidebar {
+      margin-left: -280px !important;
       display: none !important;
-      width: 0px !important;
-      min-width: 0px !important;
-      padding: 0 !important;
-      border-right: none !important;
+    }
+
+    /* Mobile Off-Canvas Drawer when toggled */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed !important;
+        top: 60px !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: calc(100vh - 60px) !important;
+        width: 280px !important;
+        z-index: 99999 !important;
+        box-shadow: 10px 0 40px rgba(0,0,0,0.6) !important;
+        display: none !important;
+      }
+      .workspace.sidebar-open .sidebar {
+        display: flex !important;
+        animation: slideInSidebar 0.25s ease-out !important;
+      }
+      @keyframes slideInSidebar {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(0); }
+      }
     }
     .chat-area {
       flex: 1 !important;
@@ -813,12 +834,11 @@
                       </option>
                     {% endfor %}
                   {% else %}
-                    <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash</option>
-                    <option value="chatgpt-4o">🟢 ChatGPT-4o</option>
-                    <option value="claude-3-5-sonnet">🟠 Claude 3.5 Sonnet</option>
-                    <option value="deepseek-r1">🔵 DeepSeek R1</option>
-                    <option value="mistral-large">🟡 Mistral Large</option>
-                    <option value="meta-llama-3">🔷 Meta Llama 3.3</option>
+                    <option value="gemini-2.0-flash" selected>GranthMind Pro (Gemini 2.0 Flash)</option>
+                    <option value="deepseek-r1">GranthMind DeepThink (DeepSeek R1)</option>
+                    <option value="groq-llama-3-3">GranthMind Turbo (Groq LLaMA 3.3 70B)</option>
+                    <option value="gpt-4o-mini">GranthMind Vision & Scholar (GPT-4o Mini)</option>
+                    <option value="claude-3-5-sonnet">GranthMind Code & Logic (Claude 3.5 Sonnet)</option>
                   {% endif %}
                 </select>
               </div>
@@ -1371,14 +1391,19 @@
       }
     }
 
-    // Sidebar Toggle (Full Workplace Canvas)
+    // Sidebar Toggle (Desktop & Mobile Drawer)
     function toggleSidebar() {
       const ws = document.getElementById('mainWorkspace');
       if (!ws) return;
-      const isCollapsed = ws.classList.toggle('sidebar-collapsed');
-      try {
-        localStorage.setItem('granthmind_sidebar_collapsed', isCollapsed ? 'true' : 'false');
-      } catch(e) {}
+      
+      if (window.innerWidth <= 768) {
+        ws.classList.toggle('sidebar-open');
+      } else {
+        const isCollapsed = ws.classList.toggle('sidebar-collapsed');
+        try {
+          localStorage.setItem('granthmind_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        } catch(e) {}
+      }
     }
 
     // Keyboard Shortcuts: Ctrl+B or Cmd+B to toggle sidebar for Full Workplace

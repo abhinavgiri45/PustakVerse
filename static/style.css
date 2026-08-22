@@ -674,48 +674,4 @@ input, textarea, select {
         border-radius: 16px !important;
     }
 
-    /* GranthMind AI Chat on Mobile */
-    .workspace {
-        grid-template-columns: 1fr !important;
-    }
-    .sidebar {
-        display: none !important;
-    }
-    .prompts-grid {
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
-    }
-    .prompt-chip {
-        padding: 12px 14px !important;
-    }
-    .input-box-wrapper {
-        padding: 6px 10px !important;
-        gap: 6px !important;
-        border-radius: 14px !important;
-    }
-    .gemini-model-pill {
-        max-width: 110px !important;
-        font-size: 0.72rem !important;
-        padding: 4px 18px 4px 6px !important;
-    }
-    .btn-action-icon {
-        font-size: 1rem !important;
-        padding: 2px !important;
-    }
-    .google-mic-btn {
-        width: 32px !important;
-        height: 32px !important;
-    }
-    .btn-send-chat {
-        width: 32px !important;
-        height: 32px !important;
-    }
-    .msg-card {
-        padding: 10px 12px !important;
-        border-radius: 14px !important;
-    }
-    .msg-content {
-        font-size: 0.88rem !important;
-        line-height: 1.45 !important;
-    }
-}
+    
