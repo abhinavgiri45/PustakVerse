@@ -431,7 +431,70 @@
     .msg-content p:last-child { margin-bottom: 0; }
     .msg-content ul, .msg-content ol { margin-left: 20px; margin-bottom: 10px; }
     
-    /* Code Blocks Inside Messages */
+        /* Dynamic AI Thinking & Web Search Box */
+    .ai-thinking-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%);
+      border: 1.5px solid rgba(139, 92, 246, 0.25);
+      border-radius: 14px;
+      margin: 4px 0 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .ai-thinking-stage {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #c084fc;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .ai-stage-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulseStage 1.2s infinite ease-in-out;
+    }
+    @keyframes pulseStage {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+    .ai-shimmer-track {
+      height: 4px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .ai-shimmer-bar {
+      height: 100%;
+      width: 60%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #8b5cf6 0%, #38bdf8 50%, #8b5cf6 100%);
+      background-size: 200% 100%;
+      animation: shimmerFlow 1.4s infinite linear;
+    }
+    @keyframes shimmerFlow {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    .streaming-cursor {
+      display: inline-block;
+      color: #8b5cf6;
+      font-weight: 900;
+      animation: blinkCursor 0.7s infinite;
+      margin-left: 2px;
+      font-size: 1rem;
+      vertical-align: baseline;
+    }
+    @keyframes blinkCursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+/* Code Blocks Inside Messages */
     .msg-content code:not(pre code) {
       background: rgba(0, 0, 0, 0.4);
       padding: 2px 6px;
@@ -1369,7 +1432,7 @@
       container.appendChild(userBubble);
       container.scrollTop = container.scrollHeight;
 
-      // Append Assistant Thinking Bubble
+      // Append Assistant Bubble with Dynamic Stages
       const assistantBubble = document.createElement('div');
       assistantBubble.className = 'msg-card msg-assistant';
       assistantBubble.innerHTML = `
@@ -1380,15 +1443,43 @@
               <span>GranthMind AI</span>
               <span style="font-size: 0.68rem; background: var(--mode-bg); color: var(--text-main); border: 1px solid var(--mode-color); padding: 1px 7px; border-radius: 8px; font-weight: 800;">${escapeHtml(selectedModelName)}</span>
             </span>
-            <span style="color: #c084fc;">● Thinking...</span>
+            <span class="msg-status-indicator" style="color: #c084fc; font-weight: 700; font-size: 0.75rem;">
+              ● Thinking...
+            </span>
           </div>
           <div class="msg-content">
-            <span style="color: #94a3b8; font-style: italic;">Synthesizing expert response with ${escapeHtml(selectedModelName)}...</span>
+            <div class="ai-thinking-box">
+              <div class="ai-thinking-stage">
+                <span class="ai-stage-icon">✨</span>
+                <span class="ai-stage-label">Thinking deeply & analyzing query...</span>
+              </div>
+              <div class="ai-shimmer-track">
+                <div class="ai-shimmer-bar"></div>
+              </div>
+            </div>
           </div>
         </div>
       `;
       container.appendChild(assistantBubble);
       container.scrollTop = container.scrollHeight;
+
+      // Rotate thinking stages dynamically (Thinking, Searching Web, Synthesizing, Formulating)
+      const stages = [
+        { icon: "✨", label: "Thinking deeply & analyzing query..." },
+        { icon: "🌐", label: "Searching knowledge base & live web..." },
+        { icon: "🧠", label: `Synthesizing intelligence with ${selectedModelName}...` },
+        { icon: "✍️", label: "Formulating comprehensive response..." }
+      ];
+      let stageIdx = 0;
+      const stageTimer = setInterval(() => {
+        stageIdx = (stageIdx + 1) % stages.length;
+        const iconEl = assistantBubble.querySelector('.ai-stage-icon');
+        const labelEl = assistantBubble.querySelector('.ai-stage-label');
+        if (iconEl && labelEl) {
+          iconEl.textContent = stages[stageIdx].icon;
+          labelEl.textContent = stages[stageIdx].label;
+        }
+      }, 1300);
 
       input.value = '';
       input.style.height = 'auto';
@@ -1413,7 +1504,6 @@
       formData.append('model_id', document.getElementById('modelSelector').value);
       formData.append('csrf_token', '{{ csrf_token() }}');
       
-      // Pass the last 10 turns of conversation history for perfect memory recall
       if (currentSession && currentSession.messages && currentSession.messages.length > 0) {
         const recentHistory = currentSession.messages.slice(-10);
         formData.append('chat_history', JSON.stringify(recentHistory));
@@ -1433,7 +1523,14 @@
       })
       .then(r => r.json().then(data => ({ status: r.status, body: data })))
       .then(({ status, body }) => {
+        clearInterval(stageTimer);
         const msgEl = assistantBubble.querySelector('.msg-content');
+        const statusInd = assistantBubble.querySelector('.msg-status-indicator');
+
+        // REMOVE thinking status indicator after response arrives
+        if (statusInd) {
+          statusInd.innerHTML = `<span style="color: #64748b; font-size: 0.75rem;">${body.timestamp || timeStr}</span>`;
+        }
 
         if (status === 403 && body.need_auth) {
           msgEl.innerHTML = `<span style="color: #fb923c;">⚠️ You have used your 4 free guest messages. Please sign in to continue!</span>`;
@@ -1444,33 +1541,80 @@
         }
 
         if (body.success && body.answer) {
-          msgEl.innerHTML = marked.parse(body.answer);
-          formatCodeBlocks(assistantBubble);
-          renderKatexMath(msgEl);
-          hljs.highlightAll();
+          // Dynamic typewriter text writing streaming effect
+          typewriteStreamingResponse(msgEl, body.answer, assistantBubble, () => {
+            formatCodeBlocks(assistantBubble);
+            renderKatexMath(msgEl);
+            hljs.highlightAll();
 
-          // Update guest counter badge if guest
-          if (body.is_guest && body.guest_remaining !== undefined) {
-            const badge = document.getElementById('guestCountText');
-            if (badge) badge.textContent = `${body.guest_remaining} Free Messages Left`;
-          }
+            // Update guest counter badge if guest
+            if (body.is_guest && body.guest_remaining !== undefined) {
+              const badge = document.getElementById('guestCountText');
+              if (badge) badge.textContent = `${body.guest_remaining} Free Messages Left`;
+            }
 
-          // Save assistant message to current session
-          currentSession.messages.push({ role: 'assistant', text: body.answer, model: selectedModelName, time: body.timestamp || timeStr });
-          saveSessions(sessions);
+            // Save assistant message to current session
+            currentSession.messages.push({ role: 'assistant', text: body.answer, model: selectedModelName, time: body.timestamp || timeStr });
+            saveSessions(sessions);
+          });
         } else {
           msgEl.innerHTML = `<span style="color: #f87171;">⚠️ ${body.error || 'Could not generate response.'}</span>`;
         }
         container.scrollTop = container.scrollHeight;
       })
       .catch(() => {
+        clearInterval(stageTimer);
         const msgEl = assistantBubble.querySelector('.msg-content');
+        const statusInd = assistantBubble.querySelector('.msg-status-indicator');
+        if (statusInd) statusInd.innerHTML = `<span style="color: #ef4444; font-size: 0.75rem;">Error</span>`;
         msgEl.innerHTML = `<span style="color: #f87171;">⚠️ Network connection error. Please try again.</span>`;
       });
 
       fileInput.value = '';
       document.getElementById('fileBadge').style.display = 'none';
     }
+
+    
+    // Typewriter Text Writing Effect (Simulating Live AI Streaming)
+    function typewriteStreamingResponse(targetEl, fullMarkdown, parentBubble, onDone) {
+      targetEl.innerHTML = '';
+      const tokens = fullMarkdown.split(/(\s+)/);
+      let idx = 0;
+      let streamed = '';
+      const container = document.getElementById('messagesContainer');
+      
+      const cursor = document.createElement('span');
+      cursor.className = 'streaming-cursor';
+      cursor.textContent = '▋';
+
+      function streamChunk() {
+        // Stream 2 to 4 tokens per frame for responsive, natural reading speed
+        const chunkCount = Math.max(2, Math.floor(tokens.length / 80));
+        for (let i = 0; i < chunkCount && idx < tokens.length; i++) {
+          streamed += tokens[idx++];
+        }
+
+        try {
+          targetEl.innerHTML = marked.parse(streamed);
+          targetEl.appendChild(cursor);
+        } catch (e) {
+          targetEl.textContent = streamed;
+        }
+
+        if (container) container.scrollTop = container.scrollHeight;
+
+        if (idx < tokens.length) {
+          requestAnimationFrame(streamChunk);
+        } else {
+          if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+          targetEl.innerHTML = marked.parse(fullMarkdown);
+          if (container) container.scrollTop = container.scrollHeight;
+          if (onDone) onDone();
+        }
+      }
+      requestAnimationFrame(streamChunk);
+    }
+
 
     function renderKatexMath(element) {
       if (window.renderMathInElement) {

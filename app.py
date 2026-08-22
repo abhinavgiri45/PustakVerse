@@ -1522,31 +1522,47 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
             'practice_questions': []
         }
 
-    # B. Real-Time Factual Grounding (Wikipedia & Open Knowledge API)
+    # B. Real-Time Universal Factual Grounding (Wikipedia Full-Text Knowledge API)
     try:
-        wiki_query = clean_topic if clean_topic else raw_query
-        url = f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles={urllib.parse.quote(wiki_query)}&format=json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'GranthMindAI/2.0 (PustakVerse Education Platform)'})
+        search_term = re.sub(r'^(what is the|what are the|where is the|who is the|who was the|what is|what was|what are|where is|how do|how does|explain the|explain|tell me about|tell me|overview of|history of)\s+', '', raw_query, flags=re.I).strip()
+        search_term = re.sub(r'\s+(in brief|in detail|located|and what is it famous for|and who proposed it|step by step)\b.*$', '', search_term, flags=re.I).strip().rstrip('?.!')
+        if not search_term:
+            search_term = clean_topic or raw_query
+
+        search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(search_term)}&format=json&srlimit=3"
+        req = urllib.request.Request(search_url, headers={'User-Agent': 'GranthMindAI/2.0 (PustakVerse Knowledge Core)'})
         with urllib.request.urlopen(req, timeout=3.5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
-            pages = data.get('query', {}).get('pages', {})
-            for pid, pdata in pages.items():
-                if pid != '-1' and pdata.get('extract') and len(pdata['extract'].strip()) > 50:
-                    extract = pdata['extract'].strip()
-                    title = pdata.get('title', clean_topic_cap)
-                    explanation = (
-                        f"### 💡 {title}\n\n"
-                        f"{extract}\n\n"
-                        f"---\n"
-                        f"*Let me know if you would like me to break down any specific aspect, provide examples, or explore related concepts!*"
-                    )
-                    return {
-                        'concept': title,
-                        'explanation': explanation,
-                        'key_points': [f"Comprehensive verified grounding on {title}."],
-                        'example': f"Explore deeper applications of {title}.",
-                        'practice_questions': []
-                    }
+            results = data.get('query', {}).get('search', [])
+            if results:
+                best_title = results[0]['title']
+                for r_item in results:
+                    if not any(neg in r_item['title'].lower() for neg in ['disaster', 'timeline of', 'parable of', 'list of']):
+                        best_title = r_item['title']
+                        break
+                
+                extract_url = f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles={urllib.parse.quote(best_title)}&format=json"
+                req2 = urllib.request.Request(extract_url, headers={'User-Agent': 'GranthMindAI/2.0'})
+                with urllib.request.urlopen(req2, timeout=3.5) as resp2:
+                    data2 = json.loads(resp2.read().decode('utf-8'))
+                    pages = data2.get('query', {}).get('pages', {})
+                    for pid, pdata in pages.items():
+                        if pid != '-1' and pdata.get('extract') and len(pdata['extract'].strip()) > 40:
+                            extract = pdata['extract'].strip()
+                            title = pdata.get('title', clean_topic_cap)
+                            explanation = (
+                                f"### 📖 {title}\n\n"
+                                f"{extract}\n\n"
+                                f"---\n"
+                                f"Feel free to ask if you would like to explore this further, see code implementations, or dive into specific applications!"
+                            )
+                            return {
+                                'concept': title,
+                                'explanation': explanation,
+                                'key_points': [f"Comprehensive insights on {title}."],
+                                'example': f"Explore real-world applications of {title}.",
+                                'practice_questions': []
+                            }
     except Exception: pass
 
     # C. Natural Conversational Real-AI Synthesis (No rigid 3-points template)
