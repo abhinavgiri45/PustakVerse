@@ -1281,12 +1281,51 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 
     query_lower = cleaned_question.lower()
     
-    # 1. Hardcoded Creator Answer (Instant Response)
-    if any(kw in query_lower for kw in ["who created you", "who made you", "why were you made", "abhinav giri", "who is abhinav giri", "creator", "owner"]):
-        return (
-            "I was created by Abhinav Giri. Abhinav is a passionate software developer and tech enthusiast "
-            "behind PustakVerse. You can connect with him on Instagram: https://www.instagram.com/abhinavgiri45/"
-        )
+        # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition
+    is_about_creator = any(kw in query_lower for kw in [
+        "who created", "who made", "who developed", "who built", "who is the creator", "who is creator",
+        "who is the founder", "who is founder", "who founded", "founder of", "creator of", "developer of",
+        "who has created", "who have created", "abhinav giri", "about abhinav giri", "tell me about abhinav",
+        "who is abhinav", "vision of pustak", "vision of granth", "mission of pustak", "mission of granth",
+        "what was the vision", "what is the vision", "what is the mission", "what is pustakverse", "what is pustak verse",
+        "about pustakverse", "about pustak verse", "about granthmind", "about granth mind", "tell me about pustak",
+        "tell me about granth", "who own pustak", "who owns pustak", "who owns granth", "owner of pustak"
+    ]) or (
+        ("pustak" in query_lower or "granth" in query_lower) and 
+        any(w in query_lower for w in ["who", "creator", "founder", "created", "made", "developed", "vision", "mission", "owner", "started", "built"])
+    )
+
+    if is_about_creator:
+        return """### 🌟 Founder, Creator & The Vision of PustakVerse & GranthMind AI
+
+**GranthMind AI** and the **PustakVerse Global Platform** were conceived, architected, and built by **Abhinav Giri**.
+
+---
+
+### 👑 About the Founder: Abhinav Giri
+- **Role**: Founder & Chief Technology Officer (CTO) / Lead Architect of PustakVerse.
+- **Profile**: Abhinav Giri is a software developer, technology innovator, and full-stack engineer driven by a passion for democratizing world-class education, building powerful AI tools for students, and empowering independent authors globally.
+- **Contact & Socials**:
+  - 📧 **Official Email**: `abhinavgiri370@gmail.com`
+  - 📸 **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)
+  - 💼 **Founder Desk & Support**: [PustakVerse Contact Desk](https://pustakverse.onrender.com/contact)
+
+---
+
+### 📚 About PustakVerse
+**PustakVerse** is a modern **Global Digital Library & Autonomous Publishing Ecosystem** created to make literature, science, and learning accessible to every curious mind worldwide without paywalls.
+- **Global Digital Library**: Thousands of academic textbooks, classics, engineering guides, and research papers available to read instantly across all devices.
+- **Self-Publishing & SBIN Verification**: Authors can publish digital books with official globally unique **SBIN** (Standard Book Identification Numbers) verified internationally.
+- **GranthMind AI Integration**: Built-in multi-model AI study companion providing instant concept explanations, flashcards, problem solving, and research synthesis.
+
+---
+
+### 🎯 The Vision & Core Mission
+> *"Every Book. Every Mind. Free. Read More. Grow More. Inspire India & The World."*
+
+1. **Democratize Knowledge**: Eliminate financial and geographical barriers so that every student and reader anywhere in the world has equal access to quality books.
+2. **Unified Multi-Model Intelligence**: Unite the world's most powerful AI engines (ChatGPT-4o, Gemini 2.0, Claude 3.5, DeepSeek R1, Mistral, and Meta Llama) into **GranthMind AI** to deliver personalized, 24/7 world-class tutoring for free.
+3. **Empower Creators**: Give authors the freedom to publish, distribute, and protect their work globally with next-generation digital library infrastructure."""
 
     # 2. Hardcoded Model Identity Answer (Instant Response)
     if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you", "what is your name", "what is granthmind"]):

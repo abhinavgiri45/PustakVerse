@@ -816,9 +816,6 @@
 
       <!-- MODES BAR -->
       <div class="modes-bar">
-        <button type="button" class="mode-tab-btn" id="tab_code" onclick="setGranthMode('code', this)">
-          <span>&lt;/&gt;</span> CODE (Python, SQL &amp; Debug)
-        </button>
         <button type="button" class="mode-tab-btn active" id="tab_study" onclick="setGranthMode('study', this)">
           <span>📖</span> STUDY (Concept &amp; Exams)
         </button>
@@ -827,6 +824,9 @@
         </button>
         <button type="button" class="mode-tab-btn" id="tab_write" onclick="setGranthMode('write', this)">
           <span>✍️</span> WRITE (Essays &amp; Prose)
+        </button>
+        <button type="button" class="mode-tab-btn" id="tab_code" onclick="setGranthMode('code', this)">
+          <span>&lt;/&gt;</span> CODE (Python, SQL &amp; Debug)
         </button>
         <button type="button" class="mode-tab-btn" id="tab_create" onclick="setGranthMode('create', this)">
           <span>💡</span> CREATE (Ideas &amp; Outlines)
@@ -1471,7 +1471,7 @@
         }
       } catch(e) {}
 
-      setGranthMode('code');
+      setGranthMode('study');
       const sessions = getSessions();
       if (sessions.length > 0) {
         loadSession(sessions[0].id);
