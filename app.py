@@ -5384,6 +5384,151 @@ def cancel_password_change():
     return redirect(url_for('dashboard'))
 
 # ======================================================================
+# EDIT / CHANGE EMAIL ADDRESS WITH OTP & PASSWORD VERIFICATION
+# ======================================================================
+@app.route('/send_change_email_otp', methods=['POST'])
+def send_change_email_otp():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    current_password = request.form.get('current_password', '').strip()
+    new_email = request.form.get('new_email', '').strip().lower()
+
+    if not new_email or '@' not in new_email or '.' not in new_email:
+        flash("Please enter a valid new email address.", "error")
+        return redirect(url_for('dashboard'))
+
+    if not current_password:
+        flash("Please enter your current account password to authorize email change.", "error")
+        return redirect(url_for('dashboard'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+
+        # 1. Verify user's current password
+        cursor.execute("SELECT email, password_hash FROM users WHERE id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        if not user or not check_password_hash(user['password_hash'], current_password):
+            flash("Incorrect current password. Email update rejected.", "error")
+            return redirect(url_for('dashboard'))
+
+        if user['email'] and user['email'].lower() == new_email:
+            flash("This is already your current registered email address.", "error")
+            return redirect(url_for('dashboard'))
+
+        # 2. Check if new email is already in use
+        cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, session['user_id']))
+        existing = cursor.fetchone()
+        if existing:
+            flash("This email address is already registered with another account.", "error")
+            return redirect(url_for('dashboard'))
+
+        # 3. Generate 6-digit OTP and store in session
+        otp = str(random.randint(100000, 999999))
+        session['change_email_data'] = {
+            'new_email': new_email,
+            'otp': otp,
+            'timestamp': time.time()
+        }
+
+        # 4. Dispatch OTP directly to the NEW email address
+        otp_subject = "Verify Your New Email Address - PustakVerse"
+        otp_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <h2 style="color: #0284c7; text-align: center;">Verify Your New Email Address</h2>
+            <p>You requested to update your PustakVerse account email to <strong>{new_email}</strong>.</p>
+            <p>Your 6-digit verification code is:</p>
+            <div style="text-align: center; margin: 25px 0;">
+                <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; background: #f0fdf4; border: 2px dashed #16a34a; padding: 12px 24px; border-radius: 8px; color: #166534;">{otp}</span>
+            </div>
+            <p style="color: #64748b; font-size: 13px;">This OTP is valid for 15 minutes. If you did not request this change, please ignore this email and ensure your account password is secure.</p>
+        </div>
+        """
+        if send_email_wrapper(new_email, otp_subject, otp_html, plain_text=f"Your PustakVerse Email Verification OTP is: {otp}"):
+            flash(f"A 6-digit verification code has been sent to your new email ({new_email}). Please enter the OTP to confirm.", "info")
+        else:
+            flash(f"OTP generated: {otp} (Notice: could not reach remote SMTP server). Please enter OTP to confirm.", "info")
+
+    except Exception as e:
+        logging.error(f"Error initiating email change: {e}")
+        flash("Database or server error. Please try again.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/verify_change_email_otp', methods=['POST'])
+def verify_change_email_otp():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_otp = (request.form.get('otp') or '').strip()
+    change_data = session.get('change_email_data')
+
+    if not change_data or not user_otp:
+        flash("No pending email verification found or session expired. Please try again.", "error")
+        return redirect(url_for('dashboard'))
+
+    # Check 15-min expiry
+    if time.time() - change_data.get('timestamp', 0) > 900:
+        session.pop('change_email_data', None)
+        flash("Verification code has expired. Please request a new one.", "error")
+        return redirect(url_for('dashboard'))
+
+    if user_otp != change_data.get('otp'):
+        flash("Invalid verification code. Please check your OTP and try again.", "error")
+        return redirect(url_for('dashboard'))
+
+    new_email = change_data['new_email']
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+
+        # Final collision check
+        cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, session['user_id']))
+        if cursor.fetchone():
+            session.pop('change_email_data', None)
+            flash("This email address was claimed by another user in the interim.", "error")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, session['user_id']))
+        db.commit()
+
+        session['email'] = new_email
+        session.pop('change_email_data', None)
+        fast_cache.clear_all()
+
+        try:
+            log_official_activity(session['user_id'], f"Account email updated to {new_email}")
+        except Exception: pass
+
+        flash(f"✓ Your email address has been successfully updated to {new_email}!", "success")
+    except Exception as e:
+        logging.error(f"Error confirming email update: {e}")
+        flash("Could not update email address. Please try again.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/cancel_email_change')
+def cancel_email_change():
+    session.pop('change_email_data', None)
+    flash("Email change request cancelled.", "info")
+    return redirect(url_for('dashboard'))
+
+
+
+# ======================================================================
 # E-COMMERCE: SINGLE ONE-TIME CHECKOUT (WITH CONVENIENCE FEE & DONATION SPLIT)
 # ======================================================================
 @app.route('/buy_book/<int:book_id>', methods=['GET', 'POST'])
