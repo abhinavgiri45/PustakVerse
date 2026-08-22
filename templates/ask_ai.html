@@ -201,34 +201,49 @@
     }
     .btn-nav-back:hover { background: rgba(255,255,255,0.15); color: white; }
 
-    /* Main Workspace Layout (Full Workplace Scaling) */
+    /* Main Workspace Layout (Universal Full-Screen Scaling) */
     .workspace {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      flex: 1;
-      height: calc(100vh - 60px);
+      display: flex !important;
+      flex-direction: row !important;
+      flex: 1 !important;
+      height: calc(100vh - 60px) !important;
+      width: 100% !important;
       overflow: hidden !important;
-      position: relative;
-      transition: grid-template-columns 0.2s ease-in-out;
+      position: relative !important;
     }
-    .workspace.sidebar-collapsed {
-      grid-template-columns: 0px 1fr !important;
+    .sidebar {
+      width: 280px !important;
+      min-width: 280px !important;
+      max-width: 280px !important;
+      background: var(--bg-surface) !important;
+      border-right: 1px solid var(--border-color) !important;
+      padding: 16px 14px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: 100% !important;
+      flex-shrink: 0 !important;
+      transition: all 0.2s ease !important;
     }
     .workspace.sidebar-collapsed .sidebar {
       display: none !important;
+      width: 0px !important;
+      min-width: 0px !important;
+      padding: 0 !important;
+      border-right: none !important;
     }
-
-    /* Sidebar */
-    .sidebar {
-      background: var(--bg-surface);
-      border-right: 1px solid var(--border-color);
-      padding: 16px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow-y: auto;
-      overflow-x: hidden;
-      height: 100%;
+    .chat-area {
+      flex: 1 !important;
+      min-width: 0 !important;
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100% !important;
+      background: var(--bg-dark) !important;
+      overflow: hidden !important;
+      position: relative !important;
     }
 
     .btn-new-chat {
@@ -1088,15 +1103,15 @@
       const container = document.getElementById('messagesContainer');
       const hero = document.getElementById('welcomeHero');
 
+      // Safely remove only message cards without destroying the welcome hero
+      container.querySelectorAll('.msg-card').forEach(el => el.remove());
+
       if (!messages || messages.length === 0) {
         if (hero) hero.style.display = 'block';
-        container.innerHTML = '';
-        if (hero) container.appendChild(hero);
         return;
       }
 
       if (hero) hero.style.display = 'none';
-      container.innerHTML = '';
 
       messages.forEach(msg => {
         const bubble = document.createElement('div');
@@ -1112,7 +1127,7 @@
               <span>${msg.time || ''}</span>
             </div>
             ${msg.image ? `<img src="${msg.image}" style="max-width: 280px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);">` : ''}
-            <div class="msg-content markdown-body">${marked.parse(msg.text)}</div>
+            <div class="msg-content markdown-body">${marked.parse(msg.text || '')}</div>
           </div>
         `;
         container.appendChild(bubble);
