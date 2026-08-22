@@ -3247,33 +3247,34 @@ def ask_ai():
 
     return render_template('ask_ai.html', book=book, question=question, answer='', chat_history=chat_history, available_models=available_models, selected_model_id=selected_model_id)
 
-@app.route('/clear_ai_chat', methods=['POST'])
+@app.route('/clear_ai_chat', methods=['GET', 'POST'])
 def clear_ai_chat():
-    if 'user_id' not in session:
-        return jsonify({'success': False}), 401
-
     book_id = request.args.get('book_id', type=int)
     if book_id == 0:
         book_id = None
-    db = None
-    try:
-        db = get_db_connection()
-        cursor = db.cursor()
-        cursor.execute(
-            "DELETE FROM ai_chat_messages WHERE user_id = %s AND book_id <=> %s",
-            (session['user_id'], book_id)
-        )
-        db.commit()
-    except Exception:
-        if db:
-            db.rollback()
-        logging.exception('Could not clear AI chat history.')
-        return jsonify({'success': False, 'message': 'Could not clear this chat. Please try again.'}), 500
-    finally:
-        if db:
-            try: db.close()
-            except: pass
-    return jsonify({'success': True})
+        
+    if session.get('user_id'):
+        db = None
+        try:
+            db = get_db_connection()
+            cursor = db.cursor()
+            cursor.execute(
+                "DELETE FROM ai_chat_messages WHERE user_id = %s AND book_id <=> %s",
+                (session['user_id'], book_id)
+            )
+            db.commit()
+        except Exception:
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                try: db.close()
+                except: pass
+
+    # Always redirect back to ask_ai cleanly without displaying raw JSON
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True})
+    return redirect(url_for('ask_ai', book_id=book_id if book_id else None))
 
 @app.route('/submit_review/<int:book_id>', methods=['POST'])
 def submit_review(book_id):
@@ -8335,8 +8336,19 @@ def api_verify_sbin():
 # ======================================================================
 @app.route('/api/granthmind/chat', methods=['POST'])
 def api_granthmind_chat():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Please log in to chat with GranthMind AI.'}), 401
+    is_guest = 'user_id' not in session
+    guest_remaining = 4
+
+    if is_guest:
+        count = session.get('guest_ai_count', 0)
+        if count >= 4:
+            return jsonify({
+                'success': False,
+                'need_auth': True,
+                'error': 'You have used all 4 free guest conversations. Please sign in or create a free account to continue unlimited chats!'
+            }), 403
+        session['guest_ai_count'] = count + 1
+        guest_remaining = max(0, 4 - session['guest_ai_count'])
 
     prompt = request.form.get('prompt', '').strip()
     book_id = request.form.get('book_id', type=int)
@@ -8402,6 +8414,8 @@ def api_granthmind_chat():
             'success': True,
             'answer': answer,
             'mode': mode,
+            'is_guest': is_guest,
+            'guest_remaining': guest_remaining if is_guest else 9999,
             'timestamp': datetime.now().strftime('%I:%M %p')
         })
     except Exception as e:

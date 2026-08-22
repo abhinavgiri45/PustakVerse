@@ -3,28 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GranthMind AI · All AI Models. One Platform.</title>
+  <title>GranthMind AI · All AI Models. One Platform.</title>
   <meta name="description" content="GranthMind AI: All AI Models in One Platform. Study, research, solve math, code, and write with ChatGPT, Gemini, Claude, Copilot, DeepSeek & Mistral on PustakVerse.">
   
-  <!-- OPEN GRAPH / SOCIAL LINK PREVIEWS -->
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="GranthMind AI · PustakVerse">
-  <meta property="og:url" content="https://pustakverse.onrender.com/granthmind">
-  <meta property="og:title" content="GranthMind AI · ALL AI MODELS. ONE PLATFORM.">
-  <meta property="og:description" content="Experience ChatGPT, Gemini, Claude, Copilot, Meta AI, Mistral & DeepSeek in one unified study & research workspace. Free on PustakVerse.">
-  <meta property="og:image" content="{{ url_for('static', filename='GranthMind.png', _external=True) }}">
-  <meta property="og:image:secure_url" content="{{ url_for('static', filename='GranthMind.png', _external=True) }}">
-  <meta property="og:image:type" content="image/png">
-  <meta property="og:image:width" content="1024">
-  <meta property="og:image:height" content="1024">
-  <meta property="og:image:alt" content="GranthMind AI - All AI Models. One Platform.">
-
-  <!-- TWITTER / X CARDS -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@PustakVerse">
-  <meta name="twitter:title" content="GranthMind AI · ALL AI MODELS. ONE PLATFORM.">
-  <meta name="twitter:description" content="Chat with all leading AI models. Learn, Create, Solve math, code, and study for free.">
-  <meta name="twitter:image" content="{{ url_for('static', filename='GranthMind.png', _external=True) }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='GranthMind.png') }}">
   
   <!-- Fonts & Libraries -->
@@ -38,6 +19,19 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
+  <!-- OPEN GRAPH / SOCIAL LINK PREVIEWS -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GranthMind AI · PustakVerse">
+  <meta property="og:url" content="https://pustakverse.onrender.com/granthmind">
+  <meta property="og:title" content="GranthMind AI · ALL AI MODELS. ONE PLATFORM.">
+  <meta property="og:description" content="Experience ChatGPT, Gemini, Claude, Copilot, Meta AI, Mistral & DeepSeek in one unified study & research workspace. Free on PustakVerse.">
+  <meta property="og:image" content="{{ url_for('static', filename='GranthMind.png', _external=True) }}">
+  <meta property="og:image:width" content="1024">
+  <meta property="og:image:height" content="1024">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GranthMind AI · ALL AI MODELS. ONE PLATFORM.">
+  <meta name="twitter:image" content="{{ url_for('static', filename='GranthMind.png', _external=True) }}">
+
   <style>
     :root {
       --bg-dark: #090d16;
@@ -48,7 +42,6 @@
       --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #3b82f6 50%, #06b6d4 100%);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --brand-orange: #ea580c;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,17 +78,12 @@
     }
 
     .brand-logo {
-      height: 44px;
-      width: 44px;
+      height: 42px;
+      width: 42px;
       border-radius: 10px;
       object-fit: cover;
       box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
       border: 1.5px solid rgba(139, 92, 246, 0.5);
-    }
-
-    .brand-text-wrap {
-      display: flex;
-      flex-direction: column;
     }
 
     .brand-title {
@@ -105,13 +93,10 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
     .brand-tagline {
-      font-size: 0.68rem;
+      font-size: 0.66rem;
       color: var(--text-muted);
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -124,6 +109,19 @@
       gap: 12px;
     }
 
+    .guest-counter-badge {
+      background: rgba(234, 88, 12, 0.15);
+      color: #fb923c;
+      border: 1px solid rgba(251, 146, 60, 0.4);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .model-selector {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
@@ -134,9 +132,6 @@
       border-radius: 20px;
       outline: none;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
     .btn-nav-back {
@@ -152,7 +147,7 @@
     }
     .btn-nav-back:hover { background: rgba(255,255,255,0.15); color: white; }
 
-    /* Main Workspace Layout */
+    /* Main Workspace */
     .workspace {
       display: grid;
       grid-template-columns: 280px 1fr;
@@ -161,14 +156,14 @@
       overflow: hidden;
     }
 
-    /* Sidebar */
+    /* Sidebar with 15-Day Auto-Expiring History (0 DB storage) */
     .sidebar {
       background: var(--bg-surface);
       border-right: 1px solid var(--border-color);
-      padding: 18px 14px;
+      padding: 16px 14px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       overflow-y: auto;
     }
 
@@ -197,29 +192,47 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    /* Supported Models Carousel Bar in Sidebar */
-    .models-grid-mini {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      flex: 1;
+      max-height: calc(100vh - 350px);
     }
 
-    .model-chip {
-      background: var(--bg-card);
+    .history-item {
+      background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: 8px;
       padding: 8px 10px;
-      font-size: 0.76rem;
-      font-weight: 700;
+      font-size: 0.8rem;
       color: #cbd5e1;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .history-item:hover, .history-item.active {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.4);
+      color: white;
+    }
+    .history-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
     }
 
-    /* Mode Tabs Header Bar */
+    /* Modes Bar */
     .modes-bar {
       background: #0b1120;
       border-bottom: 1px solid var(--border-color);
@@ -247,7 +260,6 @@
       white-space: nowrap;
       transition: all 0.2s;
     }
-
     .mode-tab-btn.active, .mode-tab-btn:hover {
       background: var(--accent-gradient);
       color: white;
@@ -311,10 +323,7 @@
       color: #f1f5f9;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
-    .msg-user .msg-body {
-      background: #1e1b4b;
-      border-color: #4338ca;
-    }
+    .msg-user .msg-body { background: #1e1b4b; border-color: #4338ca; }
 
     .msg-meta {
       display: flex;
@@ -348,7 +357,7 @@
     }
     .msg-content pre code { background: none; padding: 0; color: inherit; }
 
-    /* Welcome Hero Banner (Shown when no messages) */
+    /* Welcome Hero Banner */
     .welcome-hero {
       text-align: center;
       margin: 40px auto;
@@ -419,7 +428,7 @@
       border-radius: 18px;
       padding: 8px 14px;
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       gap: 10px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
       transition: border-color 0.2s;
@@ -442,20 +451,34 @@
     }
     .chat-textarea::placeholder { color: #64748b; }
 
-    .btn-action-icon {
-      background: none;
-      border: none;
-      color: #94a3b8;
-      cursor: pointer;
-      font-size: 1.2rem;
-      padding: 6px;
-      border-radius: 8px;
+    /* Google 4-Color Mic Button */
+    .google-mic-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.15s;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
     }
-    .btn-action-icon:hover { color: white; background: rgba(255,255,255,0.1); }
+    .google-mic-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.08);
+    }
+    .google-mic-btn.listening {
+      animation: pulseMic 1.2s infinite;
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+    }
+    @keyframes pulseMic {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
 
     .btn-send-chat {
       background: var(--accent-gradient);
@@ -484,6 +507,31 @@
       color: #64748b;
     }
 
+    /* Auth Prompt Modal (For Guests after 4 chats) */
+    .auth-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .auth-modal-box {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--accent-purple);
+      border-radius: 24px;
+      max-width: 460px;
+      width: 100%;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(124, 58, 237, 0.3);
+      animation: popIn 0.25s ease-out;
+    }
+    @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
     @media (max-width: 768px) {
       .workspace { grid-template-columns: 1fr; }
       .sidebar { display: none; }
@@ -497,13 +545,19 @@
   <header class="topbar">
     <a href="/" class="brand-group">
       <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind Logo" class="brand-logo" onerror="this.src='/static/PustakVerse.png'">
-      <div class="brand-text-wrap">
-        <div class="brand-title">GranthMind AI <span style="font-size: 0.65rem; background: rgba(139, 92, 246, 0.2); color: #c084fc; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.4);">v3.5 PRO</span></div>
+      <div>
+        <div class="brand-title">GranthMind AI</div>
         <div class="brand-tagline">ALL AI MODELS. ONE PLATFORM.</div>
       </div>
     </a>
 
     <div class="top-actions">
+      {% if not session.user_id %}
+      <div class="guest-counter-badge" id="guestBadge">
+        <span>🎁</span> <span id="guestCountText">4 Free Messages Left</span>
+      </div>
+      {% endif %}
+
       <select id="modelSelector" class="model-selector" title="Select AI Engine">
         <option value="gemini-2.0-flash" selected>✨ Gemini 2.0 Flash (Fast &amp; Smart)</option>
         <option value="chatgpt-4o">🟢 ChatGPT-4o (Deep Reasoning)</option>
@@ -520,9 +574,9 @@
   <!-- WORKSPACE -->
   <div class="workspace">
 
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR WITH 15-DAY AUTO-EXPIRING CLIENT HISTORY (0 DB STORAGE) -->
     <aside class="sidebar">
-      <button type="button" onclick="startFreshChat()" class="btn-new-chat">
+      <button type="button" onclick="createNewSession()" class="btn-new-chat">
         <span>✨</span> New GranthMind Session
       </button>
 
@@ -530,44 +584,38 @@
       <div style="background: rgba(234, 88, 12, 0.1); border: 1px solid rgba(234, 88, 12, 0.3); padding: 10px; border-radius: 10px;">
         <div style="font-size: 0.7rem; font-weight: 800; color: #ea580c; text-transform: uppercase;">Active Book Context</div>
         <div style="font-weight: 800; font-size: 0.88rem; color: white; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ book.title }}</div>
-        <div style="font-size: 0.75rem; color: #94a3b8;">Category: {{ book.catalog }}</div>
       </div>
       {% endif %}
 
+      <div class="sidebar-section-title">
+        <span>Recent Chats (15 Days)</span>
+        <button type="button" onclick="clearCurrentSession()" style="background: none; border: none; color: #ef4444; font-size: 0.72rem; cursor: pointer; font-weight: 700;">Clear</button>
+      </div>
+
+      <!-- History List from LocalStorage (Auto-Expires after 15 days) -->
+      <div class="history-list" id="historyListContainer">
+        <div style="font-size: 0.75rem; color: #64748b; text-align: center; padding: 12px 0;" id="emptyHistoryMsg">No recent sessions</div>
+      </div>
+
       <div class="sidebar-section-title">Integrated AI Engines</div>
-      <div class="models-grid-mini">
-        <div class="model-chip">🟢 ChatGPT</div>
-        <div class="model-chip">✨ Gemini</div>
-        <div class="model-chip">🟠 Claude</div>
-        <div class="model-chip">🔷 Copilot</div>
-        <div class="model-chip">♾️ Meta AI</div>
-        <div class="model-chip">🟡 Mistral</div>
-        <div class="model-chip">🐋 DeepSeek</div>
-        <div class="model-chip">🚀 &amp; More</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.74rem; color: #94a3b8; font-weight: 700;">
+        <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 6px;">🟢 ChatGPT</div>
+        <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 6px;">✨ Gemini</div>
+        <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 6px;">🟠 Claude</div>
+        <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 6px;">🔷 Copilot</div>
+        <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 6px;">♾️ Meta AI</div>
+        <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 6px;">🐋 DeepSeek</div>
       </div>
 
-      <div class="sidebar-section-title">AI Capabilities</div>
-      <div style="font-size: 0.78rem; color: #94a3b8; line-height: 1.6;">
-        <div>✓ 100% Free Lifetime Access</div>
-        <div>✓ Step-by-Step Math &amp; Physics Solver</div>
-        <div>✓ LaTeX Formulas &amp; Mermaid Diagrams</div>
-        <div>✓ Code Interpreter &amp; Explainer</div>
-        <div>✓ Multimodal Screenshot Analysis</div>
+      <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.7rem; color: #64748b; text-align: center;">
+        🔒 Chats stored securely in browser · Auto-cleaned after 15 days
       </div>
-
-      <form action="{{ url_for('clear_ai_chat') }}" method="POST" style="margin-top: auto;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% if book %}<input type="hidden" name="book_id" value="{{ book.id }}">{% endif %}
-        <button type="submit" onclick="return confirm('Clear chat history?');" style="width: 100%; background: none; border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 8px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
-          🗑️ Clear Conversation
-        </button>
-      </form>
     </aside>
 
     <!-- CHAT WORKSPACE -->
     <main class="chat-area">
 
-      <!-- MODES BAR (FROM USER BRANDING: STUDY | RESEARCH | WRITE | CODE | CREATE | SOLVE) -->
+      <!-- MODES BAR -->
       <div class="modes-bar">
         <button type="button" class="mode-tab-btn active" onclick="setGranthMode('study', this)">
           <span>📖</span> STUDY (Concept &amp; Exams)
@@ -592,51 +640,31 @@
       <!-- MESSAGES SCROLL -->
       <div class="messages-scroll" id="messagesContainer">
 
-        {% if chat_history and chat_history|length > 0 %}
-          {% for msg in chat_history %}
-          <div class="msg-card msg-{{ msg.role }}">
-            <div class="msg-avatar">
-              {{ '👤' if msg.role == 'user' else '🧠' }}
-            </div>
-            <div class="msg-body">
-              <div class="msg-meta">
-                <span>{{ 'You' if msg.role == 'user' else 'GranthMind AI' }}</span>
-                <span>{{ msg.created_at.strftime('%I:%M %p') if msg.created_at else '' }}</span>
-              </div>
-              {% if msg.screenshot %}
-              <img src="/static/uploads/ai_attachments/{{ msg.screenshot }}" style="max-width: 300px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);" alt="Attached Screenshot">
-              {% endif %}
-              <div class="msg-content markdown-body">{{ msg.message_text }}</div>
-            </div>
-          </div>
-          {% endfor %}
-        {% else %}
-          <!-- WELCOME HERO STATE -->
-          <div class="welcome-hero" id="welcomeHero">
-            <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind AI" class="welcome-logo" onerror="this.src='/static/PustakVerse.png'">
-            <h1 class="welcome-title">GranthMind AI</h1>
-            <p class="welcome-sub">All AI Models. One Platform. Your universal study, research, coding, and problem-solving intelligence.</p>
+        <!-- WELCOME HERO STATE -->
+        <div class="welcome-hero" id="welcomeHero">
+          <img src="{{ url_for('static', filename='GranthMind.png') }}" alt="GranthMind AI" class="welcome-logo" onerror="this.src='/static/PustakVerse.png'">
+          <h1 class="welcome-title">GranthMind AI</h1>
+          <p class="welcome-sub">All AI Models. One Platform. Your universal study, research, coding, and problem-solving intelligence.</p>
 
-            <div class="prompts-grid">
-              <div class="prompt-card" onclick="sendQuickPrompt('Explain this concept in simple terms with a real-world analogy.')">
-                <div class="prompt-card-title"><span>📖</span> Simple Concept Explainer</div>
-                <div class="prompt-card-desc">Break down any complex topic simply.</div>
-              </div>
-              <div class="prompt-card" onclick="sendQuickPrompt('Generate a 5-question practice quiz with detailed answers and hints.')">
-                <div class="prompt-card-title"><span>📝</span> Practice Exam &amp; Quiz</div>
-                <div class="prompt-card-desc">Test your understanding with solutions.</div>
-              </div>
-              <div class="prompt-card" onclick="sendQuickPrompt('Write a clean, optimized Python script with step-by-step logic comments.')">
-                <div class="prompt-card-title"><span>&lt;/&gt;</span> Code Generator &amp; Debugger</div>
-                <div class="prompt-card-desc">Generate robust code with explanations.</div>
-              </div>
-              <div class="prompt-card" onclick="sendQuickPrompt('Solve this problem step-by-step with mathematical proof and formulas.')">
-                <div class="prompt-card-title"><span>🧩</span> Step-by-Step Solver</div>
-                <div class="prompt-card-desc">Detailed mathematical &amp; logical steps.</div>
-              </div>
+          <div class="prompts-grid">
+            <div class="prompt-card" onclick="sendQuickPrompt('Explain this concept in simple terms with a real-world analogy.')">
+              <div class="prompt-card-title"><span>📖</span> Simple Concept Explainer</div>
+              <div class="prompt-card-desc">Break down any complex topic simply.</div>
+            </div>
+            <div class="prompt-card" onclick="sendQuickPrompt('Generate a 5-question practice quiz with detailed answers and hints.')">
+              <div class="prompt-card-title"><span>📝</span> Practice Exam &amp; Quiz</div>
+              <div class="prompt-card-desc">Test your understanding with solutions.</div>
+            </div>
+            <div class="prompt-card" onclick="sendQuickPrompt('Write a clean, optimized Python script with step-by-step logic comments.')">
+              <div class="prompt-card-title"><span>&lt;/&gt;</span> Code Generator &amp; Debugger</div>
+              <div class="prompt-card-desc">Generate robust code with explanations.</div>
+            </div>
+            <div class="prompt-card" onclick="sendQuickPrompt('Solve this problem step-by-step with mathematical proof and formulas.')">
+              <div class="prompt-card-title"><span>🧩</span> Step-by-Step Solver</div>
+              <div class="prompt-card-desc">Detailed mathematical &amp; logical steps.</div>
             </div>
           </div>
-        {% endif %}
+        </div>
 
       </div>
 
@@ -648,15 +676,21 @@
             {% if book %}<input type="hidden" id="bookIdInput" value="{{ book.id }}">{% endif %}
             
             <div class="input-box-wrapper">
-              <button type="button" class="btn-action-icon" onclick="document.getElementById('fileAttachment').click()" title="Attach Image or Diagram">
+              <button type="button" class="btn-action-icon" onclick="document.getElementById('fileAttachment').click()" title="Attach Image or Diagram" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">
                 📎
               </button>
               <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
 
               <textarea id="promptInput" class="chat-textarea" placeholder="Ask GranthMind anything... (Press Enter to Send, Shift+Enter for Newline)" rows="1" onkeydown="handleKeyInput(event)"></textarea>
 
-              <button type="button" class="btn-action-icon" id="micBtn" onclick="toggleVoiceInput()" title="Voice Input">
-                🎙️
+              <!-- GOOGLE 4-COLOR MICROPHONE BUTTON -->
+              <button type="button" class="google-mic-btn" id="micBtn" onclick="toggleVoiceInput()" title="Google Voice Search / Speak Question">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="#4285F4"/>
+                  <path d="M11 18.92V22H13V18.92C16.95 18.42 20 15.06 20 11H18C18 14.31 15.31 17 12 17C8.69 17 6 14.31 6 11H4C4 15.06 7.05 18.42 11 18.92Z" fill="#34A853"/>
+                  <path d="M7.05 10.95L5.64 9.54C4.62 10.56 4 11.96 4 13.5H6C6 12.56 6.39 11.66 7.05 10.95Z" fill="#FBBC05"/>
+                  <path d="M18.36 9.54L16.95 10.95C17.61 11.66 18 12.56 18 13.5H20C20 11.96 19.38 10.56 18.36 9.54Z" fill="#EA4335"/>
+                </svg>
               </button>
 
               <button type="submit" class="btn-send-chat" id="sendBtn" title="Send Message">
@@ -677,15 +711,159 @@
 
   </div>
 
-  <!-- SCRIPT LOGIC -->
+  <!-- AUTH REQUIRED POPUP MODAL (After 4 Guest Messages) -->
+  <div id="authPromptModal" class="auth-modal-overlay" onclick="closeAuthModal(event)">
+    <div class="auth-modal-box" onclick="event.stopPropagation()">
+      <div style="font-size: 2.8rem; margin-bottom: 12px;">🎉</div>
+      <h2 style="font-size: 1.45rem; font-weight: 900; color: white; margin-bottom: 8px;">Enjoying GranthMind AI?</h2>
+      <p style="color: #94a3b8; font-size: 0.92rem; line-height: 1.5; margin-bottom: 24px;">
+        You've used all 4 of your free guest messages! Sign in or create a free account to unlock <strong>Unlimited Lifetime Conversations</strong> across all AI models.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <a href="{{ url_for('login') }}" style="background: var(--accent-gradient); color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);">
+          🚀 Sign In to Continue
+        </a>
+        <a href="{{ url_for('register') }}" style="background: rgba(255,255,255,0.06); color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; border: 1px solid var(--border-color);">
+          ✨ Create a Free Account
+        </a>
+      </div>
+
+      <button type="button" onclick="document.getElementById('authPromptModal').style.display='none'" style="margin-top: 18px; background: none; border: none; color: #64748b; font-size: 0.82rem; cursor: pointer; font-weight: 700;">
+        Close for now
+      </button>
+    </div>
+  </div>
+
+  <!-- CLIENT-SIDE 15-DAY HISTORY SCRIPT (ZERO DATABASE STORAGE) -->
   <script>
+    const STORAGE_KEY = 'granthmind_sessions_v2';
+    const FIFTEEN_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
+    let currentSessionId = null;
     let activeMode = 'study';
 
+    // 1. Initialize & Prune Sessions Older than 15 Days
+    function getSessions() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        let list = raw ? JSON.parse(raw) : [];
+        const now = Date.now();
+        // Prune older than 15 days automatically
+        list = list.filter(s => (now - s.createdAt) < FIFTEEN_DAYS_MS);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        return list;
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveSessions(sessions) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        renderHistorySidebar();
+      } catch (e) {}
+    }
+
+    function createNewSession() {
+      currentSessionId = 'gm_' + Date.now();
+      const sessions = getSessions();
+      sessions.unshift({
+        id: currentSessionId,
+        title: 'New Session',
+        createdAt: Date.now(),
+        mode: activeMode,
+        messages: []
+      });
+      saveSessions(sessions);
+      renderMessages([]);
+    }
+
+    function renderHistorySidebar() {
+      const container = document.getElementById('historyListContainer');
+      const sessions = getSessions();
+      if (!sessions || sessions.length === 0) {
+        container.innerHTML = '<div style="font-size: 0.75rem; color: #64748b; text-align: center; padding: 12px 0;">No recent sessions</div>';
+        return;
+      }
+
+      container.innerHTML = sessions.map(s => `
+        <div class="history-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadSession('${s.id}')">
+          <span style="font-size: 0.85rem;">💬</span>
+          <span class="history-title" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</span>
+          <button type="button" onclick="deleteSession('${s.id}', event)" style="background:none; border:none; color:#64748b; font-size:0.8rem; cursor:pointer;" title="Delete">&times;</button>
+        </div>
+      `).join('');
+    }
+
+    function loadSession(id) {
+      currentSessionId = id;
+      const sessions = getSessions();
+      const s = sessions.find(x => x.id === id);
+      if (s) {
+        setGranthMode(s.mode || 'study', document.querySelector(`.mode-tab-btn[onclick*="${s.mode || 'study'}"]`));
+        renderMessages(s.messages || []);
+        renderHistorySidebar();
+      }
+    }
+
+    function deleteSession(id, e) {
+      if (e) e.stopPropagation();
+      let sessions = getSessions().filter(x => x.id !== id);
+      saveSessions(sessions);
+      if (currentSessionId === id) {
+        if (sessions.length > 0) loadSession(sessions[0].id);
+        else createNewSession();
+      }
+    }
+
+    function clearCurrentSession() {
+      if (confirm('Clear all conversation history from browser?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        createNewSession();
+      }
+    }
+
+    function renderMessages(messages) {
+      const container = document.getElementById('messagesContainer');
+      const hero = document.getElementById('welcomeHero');
+
+      if (!messages || messages.length === 0) {
+        if (hero) hero.style.display = 'block';
+        container.innerHTML = '';
+        if (hero) container.appendChild(hero);
+        return;
+      }
+
+      if (hero) hero.style.display = 'none';
+      container.innerHTML = '';
+
+      messages.forEach(msg => {
+        const bubble = document.createElement('div');
+        bubble.className = `msg-card msg-${msg.role}`;
+        bubble.innerHTML = `
+          <div class="msg-avatar">${msg.role === 'user' ? '👤' : '🧠'}</div>
+          <div class="msg-body">
+            <div class="msg-meta">
+              <span>${msg.role === 'user' ? 'You' : 'GranthMind AI'}</span>
+              <span>${msg.time || ''}</span>
+            </div>
+            ${msg.image ? `<img src="${msg.image}" style="max-width: 300px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);">` : ''}
+            <div class="msg-content markdown-body">${marked.parse(msg.text)}</div>
+          </div>
+        `;
+        container.appendChild(bubble);
+        renderKatexMath(bubble);
+      });
+      hljs.highlightAll();
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Mode Selector
     function setGranthMode(mode, btn) {
       activeMode = mode;
       document.getElementById('currentMode').value = mode;
       document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      if (btn) btn.classList.add('active');
 
       const placeholders = {
         'study': 'Ask any concept question, exam doubt, or request a summary...',
@@ -717,11 +895,7 @@
       }
     }
 
-    function startFreshChat() {
-      window.location.href = "{{ url_for('ask_ai') }}";
-    }
-
-    // Submit Async Message
+    // Submit Message
     function submitGranthMindMessage(e) {
       if (e) e.preventDefault();
       const input = document.getElementById('promptInput');
@@ -737,7 +911,7 @@
       const container = document.getElementById('messagesContainer');
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      // Append User Message Bubble
+      // Append User Bubble
       const userBubble = document.createElement('div');
       userBubble.className = 'msg-card msg-user';
       userBubble.innerHTML = `
@@ -750,15 +924,15 @@
       container.appendChild(userBubble);
       container.scrollTop = container.scrollHeight;
 
-      // Append Thinking Assistant Bubble
+      // Append Assistant Thinking Bubble
       const assistantBubble = document.createElement('div');
       assistantBubble.className = 'msg-card msg-assistant';
       assistantBubble.innerHTML = `
         <div class="msg-avatar">🧠</div>
         <div class="msg-body">
-          <div class="msg-meta"><span>GranthMind AI</span><span style="color: #c084fc;">● Generating...</span></div>
-          <div class="msg-content" id="activeGeneratingMsg">
-            <span style="color: #94a3b8; font-style: italic;">Thinking and synthesizing answer across AI models...</span>
+          <div class="msg-meta"><span>GranthMind AI</span><span style="color: #c084fc;">● Thinking...</span></div>
+          <div class="msg-content">
+            <span style="color: #94a3b8; font-style: italic;">Processing with Google AI Gateway...</span>
           </div>
         </div>
       `;
@@ -767,6 +941,19 @@
 
       input.value = '';
       input.style.height = 'auto';
+
+      // Save user message to current session
+      const sessions = getSessions();
+      let currentSession = sessions.find(x => x.id === currentSessionId);
+      if (!currentSession) {
+        currentSession = { id: currentSessionId, title: promptText.slice(0, 32) + '...', createdAt: Date.now(), mode: activeMode, messages: [] };
+        sessions.unshift(currentSession);
+      } else if (currentSession.messages.length === 0) {
+        currentSession.title = promptText.slice(0, 32) + '...';
+      }
+
+      currentSession.messages.push({ role: 'user', text: promptText, time: timeStr });
+      saveSessions(sessions);
 
       // Send to API
       const formData = new FormData();
@@ -779,29 +966,45 @@
 
       fetch('/api/granthmind/chat', {
         method: 'POST',
-        headers: {
-          'X-CSRFToken': '{{ csrf_token() }}'
-        },
+        headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
         body: formData
       })
-      .then(r => r.json())
-      .then(res => {
+      .then(r => r.json().then(data => ({ status: r.status, body: data })))
+      .then(({ status, body }) => {
         const msgEl = assistantBubble.querySelector('.msg-content');
-        if (res.success && res.answer) {
-          msgEl.innerHTML = marked.parse(res.answer);
+
+        if (status === 403 && body.need_auth) {
+          msgEl.innerHTML = `<span style="color: #fb923c;">⚠️ You have used your 4 free guest messages. Please sign in to continue!</span>`;
+          document.getElementById('authPromptModal').style.display = 'flex';
+          const badge = document.getElementById('guestCountText');
+          if (badge) badge.textContent = '0 Free Messages Left';
+          return;
+        }
+
+        if (body.success && body.answer) {
+          msgEl.innerHTML = marked.parse(body.answer);
           renderKatexMath(msgEl);
           hljs.highlightAll();
+
+          // Update guest counter badge if guest
+          if (body.is_guest && body.guest_remaining !== undefined) {
+            const badge = document.getElementById('guestCountText');
+            if (badge) badge.textContent = `${body.guest_remaining} Free Messages Left`;
+          }
+
+          // Save assistant message to current session
+          currentSession.messages.push({ role: 'assistant', text: body.answer, time: body.timestamp || timeStr });
+          saveSessions(sessions);
         } else {
-          msgEl.innerHTML = `<span style="color: #f87171;">⚠️ ${res.error || 'Could not generate response.'}</span>`;
+          msgEl.innerHTML = `<span style="color: #f87171;">⚠️ ${body.error || 'Could not generate response.'}</span>`;
         }
         container.scrollTop = container.scrollHeight;
       })
-      .catch(err => {
+      .catch(() => {
         const msgEl = assistantBubble.querySelector('.msg-content');
         msgEl.innerHTML = `<span style="color: #f87171;">⚠️ Network connection error. Please try again.</span>`;
       });
 
-      // Clear attachment
       fileInput.value = '';
       document.getElementById('fileBadge').style.display = 'none';
     }
@@ -823,38 +1026,44 @@
       return text.replace(/[&<>"']/g, m => map[m]);
     }
 
-    // Voice Input Support
+    // Google Voice Search Mic
     function toggleVoiceInput() {
       if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        alert("Voice recognition is not supported in this browser. Please use Google Chrome or Edge.");
+        alert("Google Voice Recognition is supported in Chrome, Edge, and Safari.");
         return;
       }
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       const mic = document.getElementById('micBtn');
-      mic.style.color = '#ef4444';
+      mic.classList.add('listening');
 
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
         const promptInput = document.getElementById('promptInput');
-        promptInput.value = promptInput.value + ' ' + transcript;
-        mic.style.color = '#94a3b8';
+        promptInput.value = (promptInput.value ? promptInput.value + ' ' : '') + transcript;
+        mic.classList.remove('listening');
       };
-      recognition.onerror = function() { mic.style.color = '#94a3b8'; };
-      recognition.onend = function() { mic.style.color = '#94a3b8'; };
+      recognition.onerror = function() { mic.classList.remove('listening'); };
+      recognition.onend = function() { mic.classList.remove('listening'); };
       recognition.start();
     }
 
-    // Initial Markdown Rendering on Load
+    function closeAuthModal(e) {
+      if (e.target.id === 'authPromptModal') {
+        document.getElementById('authPromptModal').style.display = 'none';
+      }
+    }
+
+    // Initialize Sessions on Load
     document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.msg-content.markdown-body').forEach(el => {
-        el.innerHTML = marked.parse(el.textContent);
-        renderKatexMath(el);
-      });
-      hljs.highlightAll();
-      const container = document.getElementById('messagesContainer');
-      if (container) container.scrollTop = container.scrollHeight;
+      const sessions = getSessions();
+      if (sessions.length > 0) {
+        loadSession(sessions[0].id);
+      } else {
+        createNewSession();
+      }
+      renderHistorySidebar();
     });
   </script>
 </body>
