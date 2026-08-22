@@ -960,13 +960,17 @@
       formData.append('prompt', promptText);
       formData.append('mode', activeMode);
       formData.append('model_id', document.getElementById('modelSelector').value);
+      formData.append('csrf_token', '{{ csrf_token() }}');
       const bookEl = document.getElementById('bookIdInput');
       if (bookEl) formData.append('book_id', bookEl.value);
       if (hasFile) formData.append('attachment', fileInput.files[0]);
 
       fetch('/api/granthmind/chat', {
         method: 'POST',
-        headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+        headers: { 
+          'X-CSRF-Token': '{{ csrf_token() }}',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
         body: formData
       })
       .then(r => r.json().then(data => ({ status: r.status, body: data })))

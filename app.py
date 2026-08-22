@@ -253,11 +253,11 @@ def csrf_protection():
 
     # Enforce CSRF token verification on state-modifying requests
     if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
-        # Exempt external webhook endpoints
-        if request.path.startswith('/payment/webhook'):
+        # Exempt external webhook and public AI chat endpoints
+        if request.path.startswith('/payment/webhook') or request.path.startswith('/api/granthmind/'):
             return None
 
-        submitted_token = request.headers.get('X-CSRF-Token')
+        submitted_token = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken') or request.headers.get('X-CSRF_Token')
         if not submitted_token and request.form:
             submitted_token = request.form.get('csrf_token')
         if not submitted_token and request.is_json and isinstance(request.json, dict):
@@ -8402,13 +8402,21 @@ def api_granthmind_chat():
 
     try:
         # Generate Answer with Selected AI Model Engine
-        answer = query_ai_model(full_prompt, attachment_path=attachment_path, model_id=selected_model_id)
+        answer = build_ai_free_response(
+            question=full_prompt,
+            attachment_path=attachment_path,
+            selected_model_id=selected_model_id
+        )
         if not answer or not answer.strip():
             answer = "I apologize, I am currently processing multiple complex requests. Please try your question again in a moment."
 
-        # Save to chat history
-        save_ai_chat_message(session['user_id'], book_id, 'user', prompt, attachment_path)
-        save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
+        # Save to chat history for authenticated users (guest history is handled in browser localStorage)
+        if session.get('user_id'):
+            try:
+                save_ai_chat_message(session['user_id'], book_id, 'user', prompt, attachment_path)
+                save_ai_chat_message(session['user_id'], book_id, 'assistant', answer)
+            except Exception as ex_save:
+                logging.debug("Could not save to DB chat history: %s", ex_save)
 
         return jsonify({
             'success': True,
