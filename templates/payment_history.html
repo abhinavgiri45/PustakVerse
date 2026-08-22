@@ -128,6 +128,7 @@
                             <th>Order ID</th>
                             <th>Amount Paid</th>
                             <th>Status</th>
+                            <th style="text-align: right;">Invoice / Receipt</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -143,6 +144,15 @@
                                 <span class="status-badge {% if payment.status == 'paid' %}status-paid{% elif payment.status == 'pending' %}status-pending{% else %}status-failed{% endif %}">
                                     {{ payment.status|capitalize }}
                                 </span>
+                            </td>
+                            <td style="text-align: right;">
+                                {% if payment.status == 'paid' %}
+                                <a href="/invoice/{{ payment.razorpay_order_id }}" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #0f172a; color: white; border-radius: 6px; font-size: 0.78rem; font-weight: 700; text-decoration: none;">
+                                    <span>📄</span> Invoice
+                                </a>
+                                {% else %}
+                                <span style="color: #94a3b8; font-size: 0.78rem;">Pending</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}

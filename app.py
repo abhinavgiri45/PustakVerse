@@ -4538,9 +4538,9 @@ def api_checkout_create_order(book_id):
         if not checkout_donation_active:
             donation_inr = 0
 
-        # Gateway Credentials (Developer primary, Author fallback)
-        gateway_key_id = fps.get('dev_key_id') or book.get('author_key_id')
-        gateway_key_secret = fps.get('dev_key_secret') or book.get('author_key_secret')
+        # Gateway Credentials: AUTHOR CREDENTIALS FIRST so funds deposit directly into author's bank account!
+        gateway_key_id = book.get('author_key_id') or fps.get('dev_key_id')
+        gateway_key_secret = book.get('author_key_secret') or fps.get('dev_key_secret')
 
         if not gateway_key_id or not gateway_key_secret:
             return jsonify({'success': False, 'error': 'Payment gateway credentials are not configured.'}), 400
@@ -7215,3 +7215,57 @@ def developer_delete_leadership(leader_id):
             except: pass
 
     return redirect(url_for('dashboard'))
+
+
+
+# ======================================================================
+# PRACTICAL FEATURE: TAX INVOICE & DIGITAL RECEIPT GENERATION
+# ======================================================================
+@app.route('/invoice/<string:order_id>')
+def view_invoice(order_id):
+    if 'user_id' not in session:
+        flash('Please log in to access your purchase receipts.', 'error')
+        return redirect(url_for('login'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT p.id, p.user_id, p.book_id, p.razorpay_order_id, p.razorpay_payment_id, 
+                   p.amount_paise, p.donation_paise, p.fee_paise, p.author_earning_paise, 
+                   p.status, p.paid_at, p.created_at
+            FROM purchases p
+            WHERE p.razorpay_order_id = %s
+        """, (order_id,))
+        purchase = cursor.fetchone()
+
+        if not purchase:
+            flash("Invoice not found.", "error")
+            return redirect(url_for('payment_history'))
+
+        # Security check: Only the buyer, the book's author, or developer can view the invoice
+        if purchase['user_id'] != session['user_id'] and session.get('role') not in ['developer', 'official']:
+            flash("Unauthorized access to invoice.", "error")
+            return redirect(url_for('my_library'))
+
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (purchase['user_id'],))
+        buyer = cursor.fetchone() or {'username': 'Reader', 'email': ''}
+
+        cursor.execute("""
+            SELECT b.id, b.title, b.catalog, b.price_paise, u.username as author_name, u.email as author_email
+            FROM books b
+            JOIN users u ON b.author_id = u.id
+            WHERE b.id = %s
+        """, (purchase['book_id'],))
+        book = cursor.fetchone()
+
+        return render_template('invoice.html', purchase=purchase, buyer=buyer, book=book)
+    except Exception as e:
+        logging.error(f"Error generating invoice for {order_id}: {e}")
+        flash("Could not generate invoice.", "error")
+        return redirect(url_for('payment_history'))
+    finally:
+        if db:
+            try: db.close()
+            except: pass

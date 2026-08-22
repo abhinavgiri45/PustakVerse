@@ -1005,6 +1005,74 @@
                     <div id="couponStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
                 </div>
 
+                
+                <!-- PRACTICAL FEATURE: AUTHOR DIRECT BANK SETTLEMENT & LIVE ROYALTY CALCULATOR -->
+                <div class="panel" style="border-left: 4px solid #16a34a; grid-column: span 2;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 15px;">
+                        <div>
+                            <h2 style="color: #16a34a; display: flex; align-items: center; gap: 8px; margin: 0;">
+                                <span>💳</span> Direct Author Bank Settlement & Live Royalty Calculator
+                            </h2>
+                            <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0;">
+                                When you configure your Razorpay Key ID & Secret on your paid books, <strong>100% of reader payments deposit directly into your linked bank account</strong> via Razorpay.
+                            </p>
+                        </div>
+                        <span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.78rem;">
+                            ✓ 0% Platform Commission
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 10px;">
+                        <!-- Calculator Card -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+                            <label style="font-size: 0.82rem; font-weight: 800; color: #334155; display: block; margin-bottom: 6px;">
+                                Test Your Retail Book Price (₹ INR)
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                                <span style="font-weight: 800; color: #64748b;">₹</span>
+                                <input type="number" id="calcPriceInput" value="99" min="1" max="10000" step="1" oninput="calculateAuthorRoyalties()" style="flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 1rem; font-weight: 800; color: #0f172a; outline: none;">
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.86rem; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; color: #475569;">
+                                    <span>Razorpay Gateway Fee (2% + GST):</span>
+                                    <span id="calcFeeDisplay" style="color: #991b1b; font-weight: 700;">-₹2.34</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.05rem; color: #166534; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                                    <span>Net Bank Deposit / Copy:</span>
+                                    <span id="calcNetDisplay">₹96.66</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Growth Forecast -->
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+                            <span style="font-size: 0.78rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em;">
+                                Projected Direct Earnings
+                            </span>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                                <div style="background: white; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid #dcfce7;">
+                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">50 Copies</span>
+                                    <div id="est50" style="font-weight: 800; font-size: 1.1rem; color: #166534;">₹4,833</div>
+                                </div>
+                                <div style="background: white; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid #dcfce7;">
+                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">100 Copies</span>
+                                    <div id="est100" style="font-weight: 800; font-size: 1.1rem; color: #166534;">₹9,666</div>
+                                </div>
+                                <div style="background: white; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid #dcfce7;">
+                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">500 Copies</span>
+                                    <div id="est500" style="font-weight: 800; font-size: 1.1rem; color: #166534;">₹48,330</div>
+                                </div>
+                                <div style="background: white; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid #dcfce7;">
+                                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">1,000 Copies</span>
+                                    <div id="est1000" style="font-weight: 800; font-size: 1.1rem; color: #ea580c;">₹96,660</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
                 <!-- 3. Author AI Book Synopsis & Blurb Generator -->
                 <div class="panel" style="border-left: 4px solid #8b5cf6; grid-column: span 2;">
                     <h2 style="color: #7c3aed; display: flex; align-items: center; gap: 8px;">
