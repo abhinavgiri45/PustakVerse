@@ -1498,14 +1498,9 @@ def get_active_ai_models():
             if get_provider_api_key('openrouter'):
                 key = get_provider_api_key('openrouter')
 
-        if key:
-            # LIVE DEVELOPER KEY SYNCED
-            display_name = f"🟢 {m['base_name']} · Live Connected"
-            is_live = True
-        else:
-            # ZERO-KEY FREE LIFETIME FALLBACK
-            display_name = f"✨ {m['base_name']} · Free Lifetime"
-            is_live = False
+        # Clean display name without trailing 'Live Connected' or 'Free Lifetime'
+        display_name = m['base_name']
+        is_live = bool(key)
 
         synced_models.append({
             'id': m['id'],
