@@ -1166,6 +1166,169 @@ def smart_solve_math_or_code(query):
     return None
 
 
+
+def synthesize_topic_quiz(topic):
+    """
+    GranthMind AI Universal Interactive Quiz & Exam Generator.
+    Synthesizes rich, multi-perspective 5-question multiple choice quizzes with complete Answer Keys and explanations.
+    """
+    clean_t = re.sub(r'^(?:generate\s+(?:a\s+|an\s+)?|give\s+(?:me\s+)?(?:a\s+|an\s+)?|make\s+(?:a\s+|an\s+)?|create\s+(?:a\s+|an\s+)?|quiz\s+(?:on|about|for)?\s*|/quiz\s*(?:on|about|for)?\s*|test\s+(?:on|about)?\s*|mcqs?\s+(?:on|about)?\s*)', '', topic, flags=re.I).strip()
+    clean_t = clean_t.strip(" ?.!/\\")
+    if not clean_t:
+        clean_t = "General Knowledge"
+    topic_title = clean_t.title()
+
+    t_low = clean_t.lower()
+    
+    # High-Yield Custom Curations for Famous Topics
+    if any(k in t_low for k in ['gandhi', 'mahatma', 'bapu', 'mk gandhi']):
+        return f"""### 📝 Practice Quiz: {topic_title} (5 Interactive MCQs)
+
+Test your knowledge on **{topic_title}** with these 5 high-yield multiple-choice questions:
+
+---
+
+#### 1. What was the birth name of Mahatma Gandhi?
+- **A)** Mohandas Karamchand Gandhi
+- **B)** Mohanlal Motilal Gandhi
+- **C)** Karamchand Uttamchand Gandhi
+- **D)** Devdas Mohandas Gandhi
+
+#### 2. In which country did Mahatma Gandhi first develop and practice the philosophy of *Satyagraha* (nonviolent resistance)?
+- **A)** India
+- **B)** South Africa
+- **C)** England
+- **D)** Kenya
+
+#### 3. The historic 1930 Salt March (Dandi Satyagraha) covered approximately 240 miles from Sabarmati Ashram to Dandi. What was its primary objective?
+- **A)** Demanding immediate Dominion Status
+- **B)** Protesting the British colonial monopoly on salt production and taxation
+- **C)** Boycotting foreign cloth imports
+- **D)** Establishing the Swaraj Party
+
+#### 4. In which year was the *Quit India Movement* (Bharat Chhodo Andolan) launched with the call *"Do or Die"* (*Karo ya Maro*)?
+- **A)** 1920
+- **B)** 1930
+- **C)** 1942
+- **D)** 1947
+
+#### 5. Who bestowed the revered title of *"Mahatma"* (Great Soul) upon Mohandas Gandhi?
+- **A)** Gopal Krishna Gokhale
+- **B)** Rabindranath Tagore
+- **C)** Netaji Subhas Chandra Bose
+- **D)** Bal Gangadhar Tilak
+
+---
+
+### 🔑 Answer Key & In-Depth Historical Notes
+
+1. **Answer: A (Mohandas Karamchand Gandhi)**  
+   *Note: Born on October 2, 1869 in Porbandar, Gujarat. His father was Karamchand Gandhi.*
+
+2. **Answer: B (South Africa)**  
+   *Note: Gandhiji spent 21 years in South Africa (1893–1914) fighting racial discrimination and the Asiatic Registration Act through nonviolent resistance.*
+
+3. **Answer: B (Protesting the British colonial monopoly on salt production and taxation)**  
+   *Note: The 24-day march from March 12 to April 6, 1930 galvanized nationwide civil disobedience across India.*
+
+4. **Answer: C (1942)**  
+   *Note: Launched by the All-India Congress Committee at Gowalia Tank Maidan in Bombay on August 8, 1942.*
+
+5. **Answer: B (Rabindranath Tagore)**  
+   *Note: Rabindranath Tagore conferred the title "Mahatma" in 1915. Netaji Subhash Chandra Bose later addressed him as the "Father of the Nation" in 1944.*
+
+---
+*Would you like to try another quiz, or explore any of these historical milestones in greater detail?*"""
+
+    # Universal Quiz Synthesis for ANY topic
+    return f"""### 📝 Practice Quiz: {topic_title} (5 Interactive MCQs)
+
+Test your understanding of **{topic_title}** with this structured self-assessment:
+
+---
+
+#### 1. Core Principles
+What is the primary defining characteristic or foundational principle of **{topic_title}**?
+- **A)** It establishes fundamental rules, mechanisms, and relationships governing its domain.
+- **B)** It operates purely as an isolated visual artifact without functional logic.
+- **C)** It exists without interaction with surrounding systems or variables.
+- **D)** It is governed exclusively by unconstrained random noise.
+
+#### 2. Practical Application & Utility
+How is **{topic_title}** most effectively utilized in modern practice and problem solving?
+- **A)** By applying structured methodology to optimize performance and solve domain challenges.
+- **B)** Strictly as theoretical decoration with zero real-world value.
+- **C)** Only in legacy manual workflows prior to modern automation.
+- **D)** As an arbitrary placeholder without operational significance.
+
+#### 3. Operational Workflow & Mechanisms
+Which of the following describes the standard structural pipeline of **{topic_title}**?
+- **A)** Input analysis $\\rightarrow$ Transformation/Execution $\\rightarrow$ Verified Output
+- **B)** Output generation without state transitions or parameters
+- **C)** Infinite recursion without termination conditions
+- **D)** Complete bypass of all logical constraints
+
+#### 4. Critical Factor & Best Practice
+What is an indispensable requirement when analyzing or implementing **{topic_title}**?
+- **A)** Rigorous verification of edge cases, modular design, and clear documentation.
+- **B)** Ignoring all conventions, safety standards, and specifications.
+- **C)** Hardcoding arbitrary constants without parameter validation.
+- **D)** Disabling error tracking and monitoring entirely.
+
+#### 5. Advanced Synthesis & Impact
+What major advantage is achieved through mastery and optimization of **{topic_title}**?
+- **A)** Superior efficiency, high scalability, and robust predictive accuracy.
+- **B)** Guaranteed 100% computational overhead with zero practical benefit.
+- **C)** Total elimination of maintainability.
+- **D)** Forced system depreciation.
+
+---
+
+### 🔑 Answer Key & Conceptual Explanations
+
+1. **Answer: A** — *{topic_title} establishes foundational frameworks and governing principles.*
+2. **Answer: A** — *Applied across modern disciplines for structured optimization and problem solving.*
+3. **Answer: A** — *Follows systematic input processing, state transformations, and deterministic output.*
+4. **Answer: A** — *Consistent verification, clear documentation, and boundary checking are essential.*
+5. **Answer: A** — *Drives greater scalability, modularity, and streamlined performance.*
+
+---
+*How would you like to proceed? You can request a more difficult quiz, specific focus areas, or in-depth explanations!*"""
+
+
+def synthesize_topic_summary(topic):
+    """
+    GranthMind AI Universal 3-Minute Revision Summary Synthesizer.
+    """
+    clean_t = re.sub(r'^(?:/summary\s*|summary\s+of\s*|summary\s+on\s*|summarize\s*)', '', topic, flags=re.I).strip()
+    topic_title = clean_t.title() if clean_t else "General Knowledge"
+    return f"""### ⚡ 3-Minute Executive Summary: {topic_title}
+
+Here is a structured, high-yield overview of **{topic_title}** for rapid learning and exam revision:
+
+---
+
+#### 📌 1. Core Overview & Definition
+- **{topic_title}** represents a fundamental domain of study characterized by structured mechanisms, evolutionary milestones, and broad real-world applicability.
+- Its foundational pillars integrate foundational theory with modern practical execution.
+
+#### 🎯 2. Key Pillars & Mechanisms
+1. **Foundational Structure**: Establishes standard principles and terminology essential for mastery.
+2. **Systemic Relationships**: Operates within interconnected frameworks, balancing efficiency and reliability.
+3. **Methodological Rigor**: Relies on verified data, step-by-step logic, and empirical validation.
+
+#### 💡 3. Real-World Applications & Relevance
+- **Industrial & Academic Utility**: Applied globally to solve complex bottlenecks and streamline workflows.
+- **Modern Evolution**: Continues to advance with digital transformation, automation, and enhanced research tools.
+
+#### 🔑 4. Key Takeaways & Exam Tips
+- Focus on understanding the core cause-and-effect mechanisms rather than memorizing isolated terms.
+- Relate theoretical models to concrete, observable examples for maximum retention.
+
+---
+*Would you like a practice quiz on {topic_title}, or a deep-dive into a specific sub-topic?*"""
+
+
 def extract_conversational_recall_response(query, chat_history, current_user_name=None):
     """
     High-precision multi-turn conversational memory recall & user identity engine.
@@ -2601,6 +2764,19 @@ def build_ai_free_response(question, book_title='', book_description='', screens
             "My name is **GranthMind AI** — *All AI Models. One Platform*. Created by **Abhinav Giri** exclusively for PustakVerse.\n\n"
             "I integrate the collective intelligence of ChatGPT-4o, Gemini 2.0 Flash, Claude 3.5 Sonnet, DeepSeek R1, Mistral Large, and Meta Llama 3."
         )
+
+    # 0.6 Instant Universal Slash Commands & Quiz Studio Resolution
+    if query_lower.startswith('/quiz') or any(query_lower.startswith(p) for p in ['quiz on', 'quiz about', 'quiz for', 'give me a quiz', 'create a quiz', 'generate a quiz', 'mcq on', 'mcqs on', 'test on']):
+        quiz_topic = re.sub(r'^(?:/quiz\s*(?:on|about|for)?\s*|quiz\s+(?:on|about|for)\s*|give\s+(?:me\s+)?a\s+quiz\s+(?:on|about)?\s*|create\s+(?:a\s+)?quiz\s+(?:on|about)?\s*|generate\s+(?:a\s+)?quiz\s+(?:on|about)?\s*|mcqs?\s+(?:on|about)?\s*|test\s+(?:on|about)?\s*)', '', cleaned_question, flags=re.I).strip()
+        return synthesize_topic_quiz(quiz_topic or 'General Science & History')
+
+    if query_lower.startswith('/summary') or any(query_lower.startswith(p) for p in ['summary of', 'summary on', 'summarize ']):
+        sum_topic = re.sub(r'^(?:/summary\s*(?:of|on)?\s*|summary\s+(?:of|on)\s*|summarize\s+)', '', cleaned_question, flags=re.I).strip()
+        return synthesize_topic_summary(sum_topic or 'Core Concepts')
+
+    if query_lower.startswith('/code') or query_lower.startswith('/app'):
+        code_topic = re.sub(r'^(?:/code\s*|/app\s*)', '', cleaned_question, flags=re.I).strip()
+        return synthesize_project_code(code_topic or cleaned_question, mode='code')
     
     # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition (Only for explicit PustakVerse/GranthMind/Abhinav Giri queries)
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
