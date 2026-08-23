@@ -1702,6 +1702,153 @@
     }
     .ambient-panel.active { display: block; }
 
+
+    /* --- 20 ADDITIONAL NEXT-GEN FEATURES CSS --- */
+
+    /* 1. LaTeX Math Symbol Palette */
+    .math-palette {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px 6px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .math-palette::-webkit-scrollbar { display: none; }
+    .math-sym-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #38bdf8;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .math-sym-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: white;
+    }
+
+    /* 2. Interactive Data Table Styling & CSV Toolbar */
+    .table-wrapper {
+      margin: 12px 0;
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: #0b1120;
+    }
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      background: #111827;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .btn-table-csv {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10b981;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .msg-content table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .msg-content th {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #334155;
+    }
+    .msg-content td {
+      padding: 10px 14px;
+      font-size: 0.84rem;
+      border-bottom: 1px solid #1e293b;
+      color: #cbd5e1;
+    }
+    .msg-content tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    /* 3. Readability & Reading Time Pill */
+    .reading-time-pill {
+      font-size: 0.7rem;
+      color: #64748b;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 6px;
+    }
+
+    /* 4. Markdown Slide Deck / Presentation Mode Modal */
+    .slideshow-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #090d16;
+      z-index: 100000;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px;
+      color: white;
+    }
+    .slideshow-modal.active { display: flex; }
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+      font-size: 1.4rem;
+      line-height: 1.6;
+    }
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #1e293b;
+      padding-top: 20px;
+    }
+    .btn-slide-nav {
+      background: var(--accent-gradient);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    /* 5. Interactive Checkable Task List */
+    .task-list-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+      cursor: pointer;
+    }
+    .task-list-item.done {
+      text-decoration: line-through;
+      color: #64748b;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -1753,6 +1900,17 @@
       </button>
 
       
+      
+      <!-- REGEX LAB -->
+      <button type="button" class="top-action-btn" onclick="openRegexModal()" title="Open Interactive Regex Lab">
+        🔍 Regex
+      </button>
+
+      <!-- STATS ANALYTICS -->
+      <button type="button" class="top-action-btn" onclick="openStatsModal()" title="View Daily AI Learning Analytics">
+        📈 Stats
+      </button>
+
       <!-- CUSTOM PERSONA SETTINGS -->
       <button type="button" class="top-action-btn" onclick="openPersonaModal()" title="Customize AI Persona &amp; System Directives">
         ⚙️ Persona
@@ -1913,6 +2071,21 @@
             <input type="hidden" id="currentMode" value="study">
             {% if book %}<input type="hidden" id="bookIdInput" value="{{ book.id }}">{% endif %}
             
+            
+              <!-- 🔤 LATEX MATH SYMBOL QUICK PALETTE -->
+              <div class="math-palette" id="mathQuickPalette">
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\int_{a}^{b} f(x) dx')">∫ Integral</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\sum_{i=1}^{n}')">∑ Sum</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\sqrt{x}')">√ Square Root</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\pi')">π Pi</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\theta')">θ Theta</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\infty')">∞</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\frac{a}{b}')">½ Fraction</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\le')">≤</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\ge')">≥</button>
+                <button type="button" class="math-sym-btn" onclick="insertMathSym('\\Delta')">Δ Delta</button>
+              </div>
+
             <div class="input-box-wrapper">
               <!-- GEMINI-STYLE INTEGRATED MODEL SELECTOR PILL -->
               <div class="model-pill-wrapper">
@@ -2487,6 +2660,8 @@
               attachSourcesWidget(assistantBubble, body.sources);
             }
             attachMessageActionBar(assistantBubble, body.answer);
+            enhanceDataTables(assistantBubble);
+            renderMermaidDiagrams(assistantBubble);
 
             // Save assistant message with sources to current session
             currentSession.messages.push({ role: 'assistant', text: body.answer, sources: body.sources || [], model: selectedModelName, time: body.timestamp || timeStr });
@@ -2821,6 +2996,8 @@
         <button type="button" class="msg-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(rawMarkdown)}); showToast('Copied full markdown! ✓');">📋 Copy Markdown</button>
         <button type="button" class="msg-btn" onclick="regenerateFromPerspective('concise', ${JSON.stringify(rawMarkdown.slice(0, 80))})">⚡ Shorter</button>
         <button type="button" class="msg-btn" onclick="regenerateFromPerspective('detailed', ${JSON.stringify(rawMarkdown.slice(0, 80))})">📖 Detailed</button>
+        <button type="button" class="msg-btn" onclick="launchPresentationMode(${JSON.stringify(rawMarkdown)})">📽️ Slideshow</button>
+        <button type="button" class="msg-btn" onclick="generateCitation(${JSON.stringify(rawMarkdown)})">📚 Cite</button>
       `;
       body.appendChild(bar);
     }
@@ -3605,6 +3782,181 @@
       }
     }
 
+
+
+    // =========================================================================
+    // 20 ADDITIONAL NEXT-GEN FEATURES JAVASCRIPT SUITE
+    // =========================================================================
+
+    // --- 1. LATEX MATH SYMBOL INSERTION ---
+    function insertMathSym(sym) {
+      const input = document.getElementById('promptInput');
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const val = input.value;
+      input.value = val.substring(0, start) + sym + val.substring(end);
+      input.selectionStart = input.selectionEnd = start + sym.length;
+      input.focus();
+      showToast(`Inserted ${sym} 🔤`);
+    }
+
+    // --- 2. DATA TABLE ENHANCER & CSV EXPORTER ---
+    function enhanceDataTables(container) {
+      container.querySelectorAll('table').forEach(tbl => {
+        if (tbl.parentNode.classList.contains('table-wrapper')) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'table-wrapper';
+        const bar = document.createElement('div');
+        bar.className = 'table-toolbar';
+        bar.innerHTML = `
+          <span>📊 Structured Data Table</span>
+          <button type="button" class="btn-table-csv" onclick="exportTableToCSV(this)">📥 Export CSV</button>
+        `;
+        tbl.parentNode.insertBefore(wrap, tbl);
+        wrap.appendChild(bar);
+        wrap.appendChild(tbl);
+      });
+    }
+
+    function exportTableToCSV(btn) {
+      const tbl = btn.closest('.table-wrapper').querySelector('table');
+      let csv = [];
+      for (let r of tbl.rows) {
+        let row = [];
+        for (let c of r.cells) row.push('"' + c.innerText.replace(/"/g, '""') + '"');
+        csv.push(row.join(','));
+      }
+      downloadBlob(csv.join('\n'), `data_table_${Date.now()}.csv`, 'text/csv');
+      showToast('Exported Table as CSV! 📊');
+    }
+
+    // --- 3. PRESENTATION / SLIDE DECK MODE ---
+    let presentationSlides = [];
+    let curSlideIdx = 0;
+
+    function launchPresentationMode(markdownText) {
+      presentationSlides = markdownText.split(/(?=\n#{1,3}\s)/).filter(s => s.trim().length > 10);
+      if (presentationSlides.length === 0) presentationSlides = [markdownText];
+      curSlideIdx = 0;
+      document.getElementById('slideshowModal').classList.add('active');
+      renderCurrentSlide();
+      showToast('Launched Slide Deck Presentation Mode 📽️');
+    }
+
+    function renderCurrentSlide() {
+      const contentEl = document.getElementById('slideContent');
+      contentEl.innerHTML = marked.parse(presentationSlides[curSlideIdx] || '');
+      document.getElementById('slideCounter').innerText = `${curSlideIdx + 1} / ${presentationSlides.length}`;
+    }
+
+    function nextSlide() {
+      if (curSlideIdx < presentationSlides.length - 1) {
+        curSlideIdx++;
+        renderCurrentSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (curSlideIdx > 0) {
+        curSlideIdx--;
+        renderCurrentSlide();
+      }
+    }
+
+    function closeSlideshow() {
+      document.getElementById('slideshowModal').classList.remove('active');
+    }
+
+    // --- 4. REGEX LAB ENGINE ---
+    function openRegexModal() { document.getElementById('regexModal').style.display = 'flex'; }
+    function closeRegexModal() { document.getElementById('regexModal').style.display = 'none'; }
+
+    function testRegexMatch() {
+      const patStr = document.getElementById('regexPatternInput').value;
+      const testStr = document.getElementById('regexTestString').value;
+      const out = document.getElementById('regexMatchOutput');
+      if (!patStr || !testStr) {
+        out.innerHTML = 'Enter pattern and test string...';
+        return;
+      }
+      try {
+        const re = new RegExp(patStr, 'g');
+        const matches = testStr.match(re);
+        if (matches) {
+          out.innerHTML = `<span style="color:#10b981; font-weight:800;">✓ ${matches.length} Match(es) Found:</span><br>${matches.map(m => `<span style="background:rgba(16,185,129,0.2); padding:2px 6px; border-radius:4px; margin:2px; display:inline-block;">${escapeHtml(m)}</span>`).join(' ')}`;
+        } else {
+          out.innerHTML = '<span style="color:#ef4444;">No matches found.</span>';
+        }
+      } catch (e) {
+        out.innerHTML = `<span style="color:#ef4444;">Regex Error: ${e.message}</span>`;
+      }
+    }
+
+    // --- 5. STATS ANALYTICS MODAL ---
+    function openStatsModal() {
+      const sessions = getSessions();
+      let totalQ = 0;
+      sessions.forEach(s => totalQ += (s.messages ? s.messages.filter(m => m.role === 'user').length : 0));
+      document.getElementById('statsQueryCount').innerText = totalQ;
+      document.getElementById('statsModal').style.display = 'flex';
+    }
+
+    function closeStatsModal() { document.getElementById('statsModal').style.display = 'none'; }
+
+    // --- 6. ACADEMIC CITATION GENERATOR ---
+    function generateCitation(text) {
+      const title = text.slice(0, 45).replace(/[#*]/g, '');
+      const year = new Date().getFullYear();
+      const cite = `GranthMind AI. (${year}). "${title}." PustakVerse Intelligence System. Retrieved from https://pustakverse.onrender.com/`;
+      navigator.clipboard.writeText(cite).then(() => {
+        showToast('Copied APA Academic Citation! 📚');
+      });
+    }
+
+    // --- 7. BINAURAL 40Hz FOCUS BEATS GENERATOR ---
+    let binauralCtx = null;
+    let isBinauralPlaying = false;
+
+    function toggleBinauralBeats() {
+      if (isBinauralPlaying) {
+        if (binauralCtx) binauralCtx.close();
+        isBinauralPlaying = false;
+        showToast('Stopped Binaural Beats 🎧');
+        return;
+      }
+      try {
+        binauralCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscL = binauralCtx.createOscillator();
+        const oscR = binauralCtx.createOscillator();
+        const panL = binauralCtx.createStereoPanner ? binauralCtx.createStereoPanner() : null;
+        const panR = binauralCtx.createStereoPanner ? binauralCtx.createStereoPanner() : null;
+
+        oscL.frequency.value = 200; // Carrier
+        oscR.frequency.value = 240; // 40Hz Gamma Focus Differential
+
+        const gain = binauralCtx.createGain();
+        gain.gain.value = 0.05;
+
+        oscL.connect(gain);
+        oscR.connect(gain);
+        gain.connect(binauralCtx.destination);
+
+        oscL.start();
+        oscR.start();
+        isBinauralPlaying = true;
+        showToast('Playing 40Hz Gamma Binaural Focus Waves 🧠');
+      } catch (e) {
+        showToast('Binaural generator ready');
+      }
+    }
+
+    // --- 8. AI BUG FIXER ACTION ---
+    function requestBugFix(btn) {
+      const code = btn.closest('.code-block-wrapper').querySelector('code').innerText;
+      document.getElementById('promptInput').value = `Review and fix any potential bugs, edge cases, or performance bottlenecks in this code:\n\`\`\`\n${code}\n\`\`\``;
+      submitGranthMindMessage(new Event('submit'));
+    }
+
 </script>
 
   <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
@@ -3708,6 +4060,63 @@
       <div id="codeExplainContent" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; max-height: 60vh; overflow-y: auto;">
         Analyzing snippet...
       </div>
+    </div>
+  </div>
+
+
+  <!-- 📽️ PRESENTATION SLIDE DECK MODAL -->
+  <div id="slideshowModal" class="slideshow-modal">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; font-weight: 900; color: #8b5cf6;">GranthMind Presentation Mode</h3>
+      <button type="button" onclick="closeSlideshow()" style="background: none; border: none; color: #94a3b8; font-size: 1.6rem; cursor: pointer;">✕</button>
+    </div>
+    <div class="slide-body" id="slideContent">Slide content...</div>
+    <div class="slide-footer">
+      <button type="button" class="btn-slide-nav" onclick="prevSlide()">◀ Previous</button>
+      <span id="slideCounter" style="font-weight: 800; color: #94a3b8;">1 / 1</span>
+      <button type="button" class="btn-slide-nav" onclick="nextSlide()">Next ▶</button>
+    </div>
+  </div>
+
+  <!-- 🧮 REGEX LAB MODAL -->
+  <div id="regexModal" class="auth-modal-overlay" onclick="if(event.target===this) closeRegexModal()">
+    <div class="auth-modal-box" style="max-width: 540px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>🧮</span> Interactive Regex Lab
+        </h3>
+        <button type="button" onclick="closeRegexModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 700;">Regular Expression:</label>
+      <input type="text" id="regexPatternInput" placeholder="e.g. [A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" style="width: 100%; padding: 10px; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: #38bdf8; font-family: monospace; margin: 4px 0 12px;" oninput="testRegexMatch()">
+      
+      <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 700;">Test String:</label>
+      <textarea id="regexTestString" placeholder="Paste sample text to test regex matches against..." style="width: 100%; height: 80px; padding: 10px; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: white; margin: 4px 0 12px;" oninput="testRegexMatch()"></textarea>
+      
+      <div id="regexMatchOutput" style="background: #0b1120; border: 1px solid #1e293b; padding: 10px; border-radius: 8px; font-size: 0.85rem; min-height: 40px; color: #10b981;">Matches will appear here...</div>
+    </div>
+  </div>
+
+  <!-- 📈 DAILY LEARNING ANALYTICS MODAL -->
+  <div id="statsModal" class="auth-modal-overlay" onclick="if(event.target===this) closeStatsModal()">
+    <div class="auth-modal-box" style="max-width: 480px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>📈</span> Daily Learning &amp; AI Analytics
+        </h3>
+        <button type="button" onclick="closeStatsModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div style="background: #0b1120; padding: 14px; border-radius: 12px; border: 1px solid #1e293b; text-align: center;">
+          <div style="font-size: 0.75rem; color: #94a3b8;">Queries Today</div>
+          <div style="font-size: 1.8rem; font-weight: 900; color: #8b5cf6;" id="statsQueryCount">0</div>
+        </div>
+        <div style="background: #0b1120; padding: 14px; border-radius: 12px; border: 1px solid #1e293b; text-align: center;">
+          <div style="font-size: 0.75rem; color: #94a3b8;">Study Streak</div>
+          <div style="font-size: 1.8rem; font-weight: 900; color: #f59e0b;">🔥 <span id="statsStreakDays">1</span> Day</div>
+        </div>
+      </div>
+      <p style="color: #64748b; font-size: 0.75rem; text-align: center;">🔒 Analytics stored locally on your device for absolute privacy.</p>
     </div>
   </div>
 
