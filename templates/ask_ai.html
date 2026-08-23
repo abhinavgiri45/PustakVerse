@@ -2469,6 +2469,90 @@
     }
     .msg-body { width: 100%; }
 
+
+    /* --- ULTRA-MODERN FLOATING MODEL PICKER POPUP (GEMINI / CLAUDE / CHATGPT STYLE) --- */
+    .model-picker-floating-menu {
+      display: none;
+      position: absolute;
+      bottom: 75px;
+      left: 55px;
+      width: 340px;
+      background: #1e1f20;
+      border: 1px solid #3c4043;
+      border-radius: 18px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.85);
+      padding: 8px;
+      z-index: 10005;
+      animation: fadeInUp 0.18s ease-out;
+    }
+    .model-picker-floating-menu.show { display: block; }
+    .model-picker-header {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #8e918f;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 6px;
+    }
+    .model-option-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 2px;
+    }
+    .model-option-card:hover {
+      background: #2a2b2d;
+    }
+    .model-option-card.active {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .model-option-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .model-option-icon {
+      font-size: 1.25rem;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .model-option-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+    .model-option-name {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #ececf1;
+    }
+    .model-option-card.active .model-option-name {
+      color: #38bdf8;
+    }
+    .model-option-desc {
+      font-size: 0.72rem;
+      color: #8e918f;
+    }
+    .model-option-check {
+      color: #38bdf8;
+      font-weight: 800;
+      font-size: 1rem;
+      display: none;
+    }
+    .model-option-card.active .model-option-check {
+      display: block;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -2671,6 +2755,88 @@
       <footer class="input-dock">
         <div class="input-container">
           
+                    <!-- 🤖 ULTRA-MODERN FLOATING MODEL PICKER POPUP -->
+          <div class="model-picker-floating-menu" id="modelPickerFloatingMenu">
+            <div class="model-picker-header">Select AI Engine</div>
+            
+            <div class="model-option-card active" data-model="gemini-2.0-flash" onclick="selectModelEngine('gemini-2.0-flash', 'GranthMind Pro', 'Flash', '⚡')">
+              <div class="model-option-left">
+                <span class="model-option-icon">✨</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind Pro</span>
+                  <span class="model-option-desc">Gemini 2.0 / 3.7 Flash · High-Speed</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+
+            <div class="model-option-card" data-model="deepseek-r1" onclick="selectModelEngine('deepseek-r1', 'GranthMind DeepThink', 'R1', '🧠')">
+              <div class="model-option-left">
+                <span class="model-option-icon">🧠</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind DeepThink</span>
+                  <span class="model-option-desc">DeepSeek R1 · Deep STEM &amp; Math</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+
+            <div class="model-option-card" data-model="claude-3-5-sonnet" onclick="selectModelEngine('claude-3-5-sonnet', 'GranthMind Logic', 'Claude', '📐')">
+              <div class="model-option-left">
+                <span class="model-option-icon">📐</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind Logic</span>
+                  <span class="model-option-desc">Claude 3.5 Sonnet · Architecture &amp; Prose</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+
+            <div class="model-option-card" data-model="gpt-4o" onclick="selectModelEngine('gpt-4o', 'GranthMind Scholar', 'Omni', '🌟')">
+              <div class="model-option-left">
+                <span class="model-option-icon">🌟</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind Scholar</span>
+                  <span class="model-option-desc">GPT-4o Omni · Multimodal Synthesis</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+
+            <div class="model-option-card" data-model="qwen-coder-32b" onclick="selectModelEngine('qwen-coder-32b', 'GranthMind Code', 'Coder', '💻')">
+              <div class="model-option-left">
+                <span class="model-option-icon">💻</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind Code</span>
+                  <span class="model-option-desc">Qwen 2.5 Coder · Full-Stack Software</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+
+            <div class="model-option-card" data-model="groq-llama-3-3" onclick="selectModelEngine('groq-llama-3-3', 'GranthMind Turbo', 'LLaMA', '🚀')">
+              <div class="model-option-left">
+                <span class="model-option-icon">🚀</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind Turbo</span>
+                  <span class="model-option-desc">Groq LLaMA 3.3 70B · 500+ Tokens/Sec</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+
+            <div class="model-option-card" data-model="mistral-large" onclick="selectModelEngine('mistral-large', 'GranthMind Mistral', 'Large', '🌍')">
+              <div class="model-option-left">
+                <span class="model-option-icon">🌍</span>
+                <div class="model-option-info">
+                  <span class="model-option-name">GranthMind Mistral</span>
+                  <span class="model-option-desc">Mistral Large · Multilingual Reasoning</span>
+                </div>
+              </div>
+              <span class="model-option-check">✓</span>
+            </div>
+          </div>
+
           <!-- 🛠️ SEARCH BAR DOCKED AI STUDIOS MENU POPUP -->
           <div class="search-dock-tools-menu" id="searchDockToolsMenu">
             <div class="tools-dropdown-header">GranthMind AI Studios</div>
@@ -2780,10 +2946,10 @@
                     +
                   </button>
 
-                  <div class="model-selector-custom-pill" onclick="openModelPickerDropdown()" title="Select AI Model">
-                    <span class="model-name-cyan" id="selectedModelLabel">Gemini 3.7 Flash</span>
-                    <span class="model-mode-dim">High</span>
-                    <span class="model-icon-gauge">⚡</span>
+                  <div class="model-selector-custom-pill" id="btnModelSelectorPill" onclick="toggleModelPickerMenu(event)" title="Select AI Model Engine">
+                    <span class="model-name-cyan" id="selectedModelLabel">GranthMind Pro</span>
+                    <span class="model-mode-dim" id="selectedModelMode">Flash</span>
+                    <span class="model-icon-gauge" id="selectedModelIcon">⚡</span>
                     <span class="model-caret-up">^</span>
                   </div>
 
@@ -4786,29 +4952,55 @@ function toggleSourcesDrawer(btn) {
       textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
     }
 
-    function openModelPickerDropdown() {
+    function toggleModelPickerMenu(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('modelPickerFloatingMenu');
+      const toolsMenu = document.getElementById('searchDockToolsMenu');
+      if (toolsMenu) toolsMenu.classList.remove('show');
+      if (menu) menu.classList.toggle('show');
+    }
+
+    function closeModelPickerMenu() {
+      const menu = document.getElementById('modelPickerFloatingMenu');
+      if (menu) menu.classList.remove('show');
+    }
+
+    function selectModelEngine(modelId, displayName, modeLabel, icon) {
       const select = document.getElementById('modelSelector');
-      if (!select) return;
-      const curVal = select.value;
-      const models = [
-        { id: 'gemini-2.0-flash', label: 'Gemini 3.7 Flash High' },
-        { id: 'deepseek-r1', label: 'DeepSeek R1 High' },
-        { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' },
-        { id: 'gpt-4o', label: 'GPT-4o Omni' },
-        { id: 'qwen-coder-32b', label: 'Qwen 2.5 Coder' },
-        { id: 'groq-llama-3-3', label: 'LLaMA 3.3 Turbo' }
-      ];
+      if (select) {
+        select.value = modelId;
+      }
       
-      const choice = prompt(`Select AI Model Engine:\n` + models.map((m, idx) => `${idx + 1}. ${m.label}`).join('\n') + `\n\nEnter number (1-${models.length}):`);
-      if (choice) {
-        const num = parseInt(choice.trim());
-        if (num >= 1 && num <= models.length) {
-          select.value = models[num - 1].id;
-          updateModelDisplay(select);
-          showToast(`Switched model to ${models[num - 1].label} ✨`);
+      const lblName = document.getElementById('selectedModelLabel');
+      const lblMode = document.getElementById('selectedModelMode');
+      const lblIcon = document.getElementById('selectedModelIcon');
+      
+      if (lblName) lblName.innerText = displayName;
+      if (lblMode) lblMode.innerText = modeLabel;
+      if (lblIcon) lblIcon.innerText = icon;
+
+      // Update active highlight in menu
+      document.querySelectorAll('.model-option-card').forEach(card => {
+        if (card.getAttribute('data-model') === modelId) {
+          card.classList.add('active');
+        } else {
+          card.classList.remove('active');
         }
+      });
+
+      closeModelPickerMenu();
+      if (typeof showToast === 'function') {
+        showToast(`AI Model switched to ${displayName} ✨`);
       }
     }
+
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('modelPickerFloatingMenu');
+      const pill = document.getElementById('btnModelSelectorPill');
+      if (menu && pill && !pill.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('show');
+      }
+    });
 
     function updateModelDisplay(select) {
       const lbl = document.getElementById('selectedModelLabel');
