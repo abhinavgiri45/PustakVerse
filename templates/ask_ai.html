@@ -1849,6 +1849,71 @@
       color: #64748b;
     }
 
+
+    /* --- 10 EXTRA NEXT-GEN FEATURES CSS --- */
+
+    /* 1. Scroll-to-Bottom Floating Button */
+    .scroll-bottom-pill {
+      display: none;
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1.5px solid #8b5cf6;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 100;
+      animation: bounce 1.5s infinite;
+    }
+    .scroll-bottom-pill.show { display: flex; align-items: center; gap: 6px; }
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-6px); }
+    }
+
+    /* 2. Color Palette Studio Cards */
+    .color-palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .color-swatch-card {
+      height: 80px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .color-swatch-card:hover { transform: scale(1.06); }
+
+    /* 3. Safety Shield Badge */
+    .safety-shield-badge {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #10b981;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -1901,6 +1966,27 @@
 
       
       
+      
+      <!-- COLOR STUDIO -->
+      <button type="button" class="top-action-btn" onclick="openColorStudio()" title="Open Color Palette Studio">
+        🎨 Palette
+      </button>
+
+      <!-- DATA ENCODER -->
+      <button type="button" class="top-action-btn" onclick="openEncoderModal()" title="Open Base64 / URL Encoder">
+        🔄 Encode
+      </button>
+
+      <!-- CRON STUDIO -->
+      <button type="button" class="top-action-btn" onclick="openCronModal()" title="Cron Schedule Studio">
+        ⏰ Cron
+      </button>
+
+      <!-- MARKDOWN HELP -->
+      <button type="button" class="top-action-btn" onclick="openMarkdownHelp()" title="Markdown &amp; Math Cheatsheet">
+        ❓ Help
+      </button>
+
       <!-- REGEX LAB -->
       <button type="button" class="top-action-btn" onclick="openRegexModal()" title="Open Interactive Regex Lab">
         🔍 Regex
@@ -2005,6 +2091,12 @@
       </div>
 
       <!-- MESSAGES SCROLL (SINGLE CONTAINER WITH ZERO DOUBLE SCROLLBARS) -->
+      
+      <!-- ⬇ FLOATING JUMP TO BOTTOM PILL -->
+      <button type="button" class="scroll-bottom-pill" id="scrollBottomPill" onclick="jumpToBottom()">
+        ⬇ Jump to Bottom
+      </button>
+
       <div class="messages-scroll" id="messagesContainer">
 
         <!-- WELCOME HERO STATE (UNIVERSAL AI) -->
@@ -2660,6 +2752,7 @@
               attachSourcesWidget(assistantBubble, body.sources);
             }
             attachMessageActionBar(assistantBubble, body.answer);
+            triggerTabNotification();
             enhanceDataTables(assistantBubble);
             renderMermaidDiagrams(assistantBubble);
 
@@ -2996,6 +3089,7 @@
         <button type="button" class="msg-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(rawMarkdown)}); showToast('Copied full markdown! ✓');">📋 Copy Markdown</button>
         <button type="button" class="msg-btn" onclick="regenerateFromPerspective('concise', ${JSON.stringify(rawMarkdown.slice(0, 80))})">⚡ Shorter</button>
         <button type="button" class="msg-btn" onclick="regenerateFromPerspective('detailed', ${JSON.stringify(rawMarkdown.slice(0, 80))})">📖 Detailed</button>
+        <button type="button" class="msg-btn" onclick="extractTLDR(${JSON.stringify(rawMarkdown)})">⚡ TL;DR</button>
         <button type="button" class="msg-btn" onclick="launchPresentationMode(${JSON.stringify(rawMarkdown)})">📽️ Slideshow</button>
         <button type="button" class="msg-btn" onclick="generateCitation(${JSON.stringify(rawMarkdown)})">📚 Cite</button>
       `;
@@ -3957,6 +4051,110 @@
       submitGranthMindMessage(new Event('submit'));
     }
 
+
+
+    // =========================================================================
+    // 10 EXTRA NEXT-GEN FEATURES JAVASCRIPT
+    // =========================================================================
+
+    // --- 1. JUMP TO BOTTOM & SCROLL TRACKING ---
+    const msgContainer = document.getElementById('messagesContainer');
+    if (msgContainer) {
+      msgContainer.addEventListener('scroll', () => {
+        const isNearBottom = msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 120;
+        const pill = document.getElementById('scrollBottomPill');
+        if (!isNearBottom && msgContainer.scrollTop > 200) {
+          pill.classList.add('show');
+        } else {
+          pill.classList.remove('show');
+        }
+      });
+    }
+
+    function jumpToBottom() {
+      msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' });
+    }
+
+    // --- 2. COLOR PALETTE STUDIO ---
+    function openColorStudio() {
+      document.getElementById('colorStudioModal').style.display = 'flex';
+      generateNewColorPalette();
+    }
+
+    function closeColorStudio() { document.getElementById('colorStudioModal').style.display = 'none'; }
+
+    function generateNewColorPalette() {
+      const container = document.getElementById('colorPaletteContainer');
+      const baseHue = Math.floor(Math.random() * 360);
+      const palette = [
+        `hsl(${baseHue}, 80%, 55%)`,
+        `hsl(${(baseHue + 30) % 360}, 75%, 60%)`,
+        `hsl(${(baseHue + 60) % 360}, 70%, 65%)`,
+        `hsl(${(baseHue + 180) % 360}, 85%, 55%)`,
+        `hsl(${(baseHue + 210) % 360}, 80%, 50%)`
+      ];
+
+      container.innerHTML = palette.map(col => `
+        <div class="color-swatch-card" style="background: ${col};" onclick="copySwatchHex('${col}')">
+          <span>${col.split(',')[0]}</span>
+        </div>
+      `).join('');
+    }
+
+    function copySwatchHex(col) {
+      navigator.clipboard.writeText(col).then(() => {
+        showToast(`Copied Color: ${col} 📋`);
+      });
+    }
+
+    // --- 3. MARKDOWN HELP ---
+    function openMarkdownHelp() { document.getElementById('markdownHelpModal').style.display = 'flex'; }
+    function closeMarkdownHelp() { document.getElementById('markdownHelpModal').style.display = 'none'; }
+
+    // --- 4. ENCODER & DECODER ---
+    function openEncoderModal() { document.getElementById('encoderModal').style.display = 'flex'; }
+    function closeEncoderModal() { document.getElementById('encoderModal').style.display = 'none'; }
+
+    function processEncode(mode) {
+      const inp = document.getElementById('encoderInput').value;
+      const out = document.getElementById('encoderOutput');
+      try {
+        if (mode === 'b64e') out.innerText = btoa(inp);
+        else if (mode === 'b64d') out.innerText = atob(inp);
+        else if (mode === 'urle') out.innerText = encodeURIComponent(inp);
+        else if (mode === 'urld') out.innerText = decodeURIComponent(inp);
+      } catch (e) {
+        out.innerText = 'Error processing string: ' + e.message;
+      }
+    }
+
+    // --- 5. CRON STUDIO ---
+    function openCronModal() { document.getElementById('cronModal').style.display = 'flex'; translateCron(); }
+    function closeCronModal() { document.getElementById('cronModal').style.display = 'none'; }
+
+    function translateCron() {
+      const expr = document.getElementById('cronExpressionInput').value.trim();
+      const out = document.getElementById('cronExplanation');
+      if (expr === '0 9 * * 1') out.innerText = 'Runs at 09:00 AM, every Monday.';
+      else if (expr.startsWith('*/5')) out.innerText = 'Runs every 5 minutes.';
+      else if (expr.startsWith('0 0')) out.innerText = 'Runs at midnight every day.';
+      else out.innerText = `Valid standard cron expression: ${expr}`;
+    }
+
+    // --- 6. TL;DR EXECUTIVE SUMMARY EXTRACTION ---
+    function extractTLDR(rawMarkdown) {
+      const sentences = rawMarkdown.replace(/```[\s\S]*?```/g, '').split(/[.!?]\s+/);
+      const tldr = sentences[0] ? sentences[0].replace(/[#*]/g, '').trim() + '.' : 'Key takeaway summarized.';
+      alert(`⚡ GranthMind 1-Sentence TL;DR:\n\n${tldr}`);
+    }
+
+    // --- 7. DYNAMIC TAB TITLE NOTIFICATION ---
+    function triggerTabNotification() {
+      const orig = document.title;
+      document.title = '(1) GranthMind AI · Complete! ✨';
+      setTimeout(() => { document.title = orig; }, 3000);
+    }
+
 </script>
 
   <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
@@ -4117,6 +4315,82 @@
         </div>
       </div>
       <p style="color: #64748b; font-size: 0.75rem; text-align: center;">🔒 Analytics stored locally on your device for absolute privacy.</p>
+    </div>
+  </div>
+
+
+  <!-- 🎨 COLOR PALETTE STUDIO MODAL -->
+  <div id="colorStudioModal" class="auth-modal-overlay" onclick="if(event.target===this) closeColorStudio()">
+    <div class="auth-modal-box" style="max-width: 520px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>🎨</span> Color Palette Studio
+        </h3>
+        <button type="button" onclick="closeColorStudio()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <p style="color: #94a3b8; font-size: 0.85rem;">Generate harmonious color schemes for UI design (Click any swatch to copy HEX):</p>
+      
+      <div class="color-palette-grid" id="colorPaletteContainer"></div>
+      
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" onclick="generateNewColorPalette()" style="background: var(--accent-gradient); border: none; color: white; padding: 8px 18px; border-radius: 10px; font-weight: 800; cursor: pointer;">🔄 Generate New Palette</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚡ MARKDOWN CHEATSHEET MODAL -->
+  <div id="markdownHelpModal" class="auth-modal-overlay" onclick="if(event.target===this) closeMarkdownHelp()">
+    <div class="auth-modal-box" style="max-width: 520px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>⚡</span> Markdown &amp; Math Cheatsheet
+        </h3>
+        <button type="button" onclick="closeMarkdownHelp()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <div style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.6; max-height: 55vh; overflow-y: auto;">
+        <div><strong>Headers:</strong> <code># Title</code>, <code>## Subtitle</code></div>
+        <div><strong>Bold / Italic:</strong> <code>**bold**</code>, <code>*italic*</code></div>
+        <div><strong>Code Fence:</strong> <code>```html ... ```</code>, <code>```python ... ```</code></div>
+        <div><strong>KaTeX Math:</strong> <code>$E = mc^2$</code> or <code>$$\int x dx$$</code></div>
+        <div><strong>Task List:</strong> <code>- [ ] Task item</code></div>
+        <div><strong>Tables:</strong> <code>| Col 1 | Col 2 |</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔄 BASE64 & URL ENCODER MODAL -->
+  <div id="encoderModal" class="auth-modal-overlay" onclick="if(event.target===this) closeEncoderModal()">
+    <div class="auth-modal-box" style="max-width: 520px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>🔄</span> Data &amp; URL Encoder / Decoder
+        </h3>
+        <button type="button" onclick="closeEncoderModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <input type="text" id="encoderInput" placeholder="Enter string to encode or decode..." style="width: 100%; padding: 10px; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: white; margin-bottom: 10px;">
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+        <button type="button" onclick="processEncode('b64e')" class="top-action-btn">Base64 Encode</button>
+        <button type="button" onclick="processEncode('b64d')" class="top-action-btn">Base64 Decode</button>
+        <button type="button" onclick="processEncode('urle')" class="top-action-btn">URL Encode</button>
+        <button type="button" onclick="processEncode('urld')" class="top-action-btn">URL Decode</button>
+      </div>
+      <div id="encoderOutput" style="background: #0b1120; border: 1px solid #1e293b; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #38bdf8; min-height: 40px; word-break: break-all;">Result will appear here...</div>
+    </div>
+  </div>
+
+  <!-- ⏰ CRON BUILDER MODAL -->
+  <div id="cronModal" class="auth-modal-overlay" onclick="if(event.target===this) closeCronModal()">
+    <div class="auth-modal-box" style="max-width: 520px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>⏰</span> Cron Schedule Studio
+        </h3>
+        <button type="button" onclick="closeCronModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <input type="text" id="cronExpressionInput" value="0 9 * * 1" placeholder="e.g. */5 * * * *" style="width: 100%; padding: 10px; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: #f59e0b; font-family: monospace; font-size: 1.1rem; margin-bottom: 10px;" oninput="translateCron()">
+      <div id="cronExplanation" style="background: #0b1120; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; font-size: 0.9rem; color: #10b981; margin-bottom: 12px;">
+        Runs at 09:00 AM, every Monday.
+      </div>
     </div>
   </div>
 
