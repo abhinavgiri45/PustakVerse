@@ -1331,87 +1331,104 @@ Here is a structured, high-yield overview of **{topic_title}** for rapid learnin
 
 def extract_conversational_recall_response(query, chat_history, current_user_name=None):
     """
-    High-precision multi-turn conversational memory recall & user identity engine.
-    Extracts facts, user preferences, names, locations, prior code snippets, and topics from earlier turns.
+    State-of-the-Art Multi-Turn Conversational Memory & Fact Extraction Engine.
+    Seamlessly extracts user identity, location, preferences, code snippets, and multi-fact compound questions.
     """
     q_clean = (query or '').lower().strip()
     norm_q = re.sub(r'[^a-z0-9\s]', '', q_clean)
 
-    # 1. Direct User Name / Identity Questions
-    if any(norm_q == p or norm_q.startswith(p + ' ') or ('my name' in norm_q and any(w in norm_q for w in ['what', 'who', 'tell', 'know', 'remember', 'is'])) for p in ['what is my name', 'whats my name', 'who am i', 'do you know my name', 'tell me my name', 'what am i called', 'my name']):
-        # Check if user is logged in
-        if current_user_name and current_user_name.strip() and current_user_name.lower() != 'guest':
-            return f"Your name is **{current_user_name.strip()}** (you are signed in to PustakVerse) 😊."
-        
-        # Check chat history
-        if chat_history and isinstance(chat_history, list):
-            prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
-            all_user_str = "\n".join(prev_user_msgs)
-            m = re.search(r'(?:my name is|i am|call me)\s+([A-Za-z]+)', all_user_str, re.I)
-            if m:
-                return f"You told me earlier that your name is **{m.group(1).strip()}** 😊."
-        
-        return "I don't know your name yet because you haven't introduced yourself, and you're currently chatting as a guest. Feel free to tell me your name or what you'd like me to call you! 😊"
-
-    # 2. Location Questions ("Where do I live", "Where am I from")
-    if any(norm_q == p or ('where' in norm_q and any(w in norm_q for w in ['i live', 'am i from', 'do i live', 'my city', 'my country', 'my location'])) for p in ['where do i live', 'where am i from', 'where i live', 'what is my city', 'what is my country']):
-        if chat_history and isinstance(chat_history, list):
-            prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
-            all_user_str = "\n".join(prev_user_msgs)
-            m = re.search(r'(?:i live in|i am from|located in|my city is)\s+([A-Za-z\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', all_user_str, re.I)
-            if m:
-                return f"You mentioned earlier that you live in / are from **{m.group(1).strip()}** 📍."
-        return "You haven't shared your location with me yet! Feel free to tell me where you're from if you'd like me to remember it."
-
-    if not chat_history or not isinstance(chat_history, list) or len(chat_history) == 0:
-        return None
-
-    prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
-    prev_asst_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'assistant']
-    all_user_str = "\n".join(prev_user_msgs)
-    all_prev_str = "\n".join(prev_user_msgs + prev_asst_msgs)
-
-    if len(all_prev_str.strip()) < 3:
-        return None
+    # If chat history exists, extract prior messages
+    prev_user_msgs = []
+    prev_asst_msgs = []
+    all_user_str = ""
+    all_prev_str = ""
+    
+    if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
+        prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
+        prev_asst_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'assistant']
+        all_user_str = "\n".join(prev_user_msgs)
+        all_prev_str = "\n".join(prev_user_msgs + prev_asst_msgs)
 
     findings = []
 
-    # 3. Programming language Recall
+    # 1. User Name Extraction (Prioritizes Introduced Conversation Name & Account Identity)
+    if any(k in q_clean for k in ['my name', 'who am i', 'what is my name', 'whats my name', 'do you know my name', 'tell me my name', 'call me']):
+        if all_user_str:
+            m = re.search(r'(?:my name is|i am|call me)\s+([A-Za-z]+)', all_user_str, re.I)
+            if m:
+                findings.append(f"- **Your Name**: **{m.group(1).strip()}**")
+            elif current_user_name and current_user_name.strip() and current_user_name.lower() != 'guest':
+                findings.append(f"- **Your Name**: **{current_user_name.strip()}** (signed in to PustakVerse)")
+            elif len(q_clean.split()) <= 5 and not any(k in q_clean for k in ['live', 'city', 'country', 'favorite', 'food', 'language', 'app', 'dog', 'pet']):
+                return "I don't know your name yet because you haven't introduced yourself, and you're currently chatting as a guest. Feel free to tell me your name or what you'd like me to call you! 😊"
+        elif current_user_name and current_user_name.strip() and current_user_name.lower() != 'guest':
+            findings.append(f"- **Your Name**: **{current_user_name.strip()}** (signed in to PustakVerse)")
+        else:
+            return "I don't know your name yet because you haven't introduced yourself, and you're currently chatting as a guest. Feel free to tell me your name or what you'd like me to call you! 😊"
+
+    # 2. Location Extraction
+    if any(k in q_clean for k in ['where do i live', 'where am i from', 'where i live', 'my city', 'my country', 'my location', 'live in']):
+        if all_user_str:
+            m = re.search(r'(?:i live in|i am from|located in|my city is)\s+([A-Za-z\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', all_user_str, re.I)
+            if m:
+                findings.append(f"- **Your Location**: **{m.group(1).strip()}**")
+            elif not findings:
+                return "You haven't shared your location with me yet! Feel free to tell me where you're from if you'd like me to remember it."
+        elif not findings:
+            return "You haven't shared your location with me yet! Feel free to tell me where you're from if you'd like me to remember it."
+
+    # 3. Programming Language Extraction
     if 'language' in q_clean:
-        m = re.search(r'(?:language\s+is|programming\s+in|code\s+in|using)\s+([A-Za-z\+\#\d]+)', all_user_str, re.I)
-        if m:
-            findings.append(f"- **Favorite Programming Language**: `{m.group(1).strip()}`")
+        if all_user_str:
+            m = re.search(r'(?:language\s+is|programming\s+in|code\s+in|using)\s+([A-Za-z\+\#\d]+)', all_user_str, re.I)
+            if m:
+                findings.append(f"- **Favorite Programming Language**: `{m.group(1).strip()}`")
 
-    # 4. App / Project / What is being built
+    # 4. App / Project Extraction
     if any(k in q_clean for k in ['app', 'project', 'building', 'working on', 'software']):
-        m = re.search(r'(?:building|creating|developing|working on)\s+(?:an?\s+)?([^\.,;!\n]+)', all_user_str, re.I)
-        if m:
-            app_desc = re.split(r'\b(and|with|for|using)\b', m.group(1).strip(), flags=re.I)[0].strip()
-            findings.append(f"- **Current Project**: Building **{app_desc}**")
+        if all_user_str:
+            m = re.search(r'(?:building|creating|developing|working on)\s+(?:an?\s+)?([^\.,;!\n]+)', all_user_str, re.I)
+            if m:
+                app_desc = re.split(r'\b(and|with|for|using)\b', m.group(1).strip(), flags=re.I)[0].strip()
+                findings.append(f"- **Current Project**: Building **{app_desc}**")
 
-    # 5. Dog / Pet
+    # 5. Pet Extraction
     if 'dog' in q_clean or 'pet' in q_clean or 'cat' in q_clean:
-        m = re.search(r"(?:dog|cat|pet)(?:'s)?\s+(?:name\s+)?(?:is|=)\s+([A-Za-z]+)", all_user_str, re.I)
-        if m:
-            findings.append(f"- **Pet's Name**: **{m.group(1).strip()}**")
+        if all_user_str:
+            m = re.search(r"(?:dog|cat|pet)(?:'s)?\s+(?:name\s+)?(?:is|=)\s+([A-Za-z]+)", all_user_str, re.I)
+            if m:
+                findings.append(f"- **Pet's Name**: **{m.group(1).strip()}**")
 
     # 6. Favorite Food / General Favorites
     if 'favorite' in q_clean or 'favourite' in q_clean or 'food' in q_clean:
-        matches = re.findall(r'(?:my\s+)?favorite\s+([A-Za-z\s]+?)\s+(?:is|=)\s+([A-Za-z0-9\s\-]+?)(?:\.|\sand\s|\,|$)', all_user_str, re.I)
-        for cat, val in matches:
-            cat_clean = cat.strip()
-            val_clean = val.strip()
-            if cat_clean and val_clean and len(val_clean) > 1 and 'language' not in cat_clean.lower():
-                item_str = f"- **Favorite {cat_clean.title()}**: **{val_clean}**"
-                if item_str not in findings:
-                    findings.append(item_str)
+        if all_user_str:
+            matches = re.findall(r'(?:my\s+)?favorite\s+([A-Za-z\s]+?)\s+(?:is|=)\s+([A-Za-z0-9\s\-]+?)(?:\.|\sand\s|\,|$)', all_user_str, re.I)
+            for cat, val in matches:
+                cat_clean = cat.strip()
+                val_clean = val.strip()
+                if cat_clean and val_clean and len(val_clean) > 1 and 'language' not in cat_clean.lower():
+                    item_str = f"- **Favorite {cat_clean.title()}**: **{val_clean}**"
+                    if item_str not in findings:
+                        findings.append(item_str)
+
+    # If structured findings were gathered:
+    if findings:
+        if len(findings) == 1 and ('Your Name' in findings[0] or 'Your Location' in findings[0]):
+            return findings[0].replace('- **', '').replace('**: **', ': **') + " 😊"
+        return (
+            "### 🧠 Active Memory Recall & Context\n\n"
+            "Based on our earlier conversation, here is what you shared:\n\n"
+            + "\n".join(findings) + "\n\n"
+            + "---\n*How would you like to build on this next?*"
+        )
 
     # 7. General Conversation Summary / Recall
     if any(k in q_clean for k in ['summarize our conversation', 'what did we discuss', 'what were we talking about', 'remind me what i asked', 'what was my previous question', 'what did i ask']):
-        summary_points = []
-        for i, u_msg in enumerate(prev_user_msgs[-6:]):
-            summary_points.append(f"{i+1}. *\"{u_msg[:80]}...\"*")
-        findings.append("### 📝 Recent Conversation Topics:\n" + "\n".join(summary_points))
+        if prev_user_msgs:
+            summary_points = []
+            for i, u_msg in enumerate(prev_user_msgs[-6:]):
+                summary_points.append(f"{i+1}. *\"{u_msg[:80]}...\"*")
+            return "### 📝 Recent Conversation Topics:\n\n" + "\n".join(summary_points)
 
     # 8. Follow-up Code Translation (e.g. "convert to javascript / C++ / Python")
     if prev_asst_msgs:
@@ -1449,14 +1466,6 @@ def extract_conversational_recall_response(query, chat_history, current_user_nam
                 f"> *\"{last_asst[:220].replace('#', '').strip()}...\"*\n\n"
                 f"---\n*What specific aspect would you like to explore deeper?*"
             )
-
-    if findings:
-        return (
-            "### 🧠 Active Memory Recall & Context\n\n"
-            "Based on our earlier conversation, here is what you shared:\n\n"
-            + "\n".join(findings) + "\n\n"
-            + "---\n*How would you like to build on this next?*"
-        )
 
     return None
 
