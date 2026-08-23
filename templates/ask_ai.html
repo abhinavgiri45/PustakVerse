@@ -3078,15 +3078,7 @@
             <div class="tool-grid-item" onclick="cycleTheme(); closeToolsDropdown();">
               <span class="tool-item-icon">🎭</span>
               <div class="tool-item-text"><strong>Theme Switcher</strong><small>OLED / Dark / Cyber</small></div>
-            
-          <!-- 💡 PRO TIP: SLASH COMMAND INSTRUCTION BANNER -->
-          <div style="display: flex; justify-content: center; margin-top: 18px;">
-            <div class="slash-instruction-chip" onclick="triggerSlashStudioHint()">
-              <span class="slash-key-badge">/</span>
-              <span>Type <strong style="color: #38bdf8;">/</strong> in the search bar for quick access to <strong>GranthMind AI Studios</strong> &amp; tools</span>
             </div>
-          </div>
-          </div>
           </div>
         </div>
       </div>
@@ -3185,6 +3177,14 @@
               <div class="gemini-card-icon">💡</div>
               <div class="gemini-card-title">Study &amp; Deep Concepts</div>
               <div class="gemini-card-desc">Intuitive breakdown with key takeaways</div>
+            </div>
+          </div>
+
+          <!-- 💡 PRO TIP: CLEAN CENTERED SLASH COMMAND INSTRUCTION BANNER -->
+          <div style="display: flex; justify-content: center; margin-top: 20px;">
+            <div class="slash-instruction-chip" onclick="triggerSlashStudioHint()" title="Click to try / commands">
+              <span class="slash-key-badge">/</span>
+              <span>Type <strong style="color: #38bdf8;">/</strong> in the search bar for quick access to <strong>GranthMind AI Studios</strong> &amp; tools</span>
             </div>
           </div>
         </div>
@@ -5473,14 +5473,43 @@ function toggleSourcesDrawer(btn) {
     function handleInputState(textarea) {
       updateCharWordCount();
       const sendBtn = document.getElementById('sendBtn');
-      if (textarea.value.trim().length > 0) {
+      const val = textarea.value;
+
+      if (val.trim().length > 0) {
         sendBtn.classList.add('active');
       } else {
         sendBtn.classList.remove('active');
       }
+
       // Auto-expand textarea
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+
+      // Live Slash Commands Autocomplete Filter
+      const slashMenu = document.getElementById('slashCommandMenu');
+      if (slashMenu) {
+        if (val.startsWith('/')) {
+          slashMenu.classList.add('show');
+          slashMenu.style.display = 'block';
+          const filter = val.toLowerCase().trim();
+          
+          let visibleCount = 0;
+          slashMenu.querySelectorAll('.slash-item').forEach(item => {
+            const cmd = (item.querySelector('.slash-cmd')?.textContent || '').toLowerCase();
+            const desc = (item.querySelector('.slash-desc')?.textContent || '').toLowerCase();
+            if (filter === '/' || cmd.startsWith(filter) || desc.includes(filter.replace('/', ''))) {
+              item.style.display = 'flex';
+              visibleCount++;
+            } else {
+              item.style.display = 'none';
+            }
+          });
+          if (visibleCount === 0) slashMenu.style.display = 'none';
+        } else {
+          slashMenu.classList.remove('show');
+          slashMenu.style.display = 'none';
+        }
+      }
     }
 
     function toggleModelPickerMenu(e) {
@@ -5788,6 +5817,81 @@ function toggleSourcesDrawer(btn) {
       });
     }
 
+
+    function insertSlashCommand(cmd) {
+      const input = document.getElementById('promptInput');
+      const menu = document.getElementById('slashCommandMenu');
+      if (menu) {
+        menu.classList.remove('show');
+        menu.style.display = 'none';
+      }
+
+      // Check if command is a direct studio opener
+      const c = cmd.trim().toLowerCase();
+      if (c === '/image' || c === '/art') { launchSlashStudio('image'); return; }
+      if (c === '/palette') { launchSlashStudio('palette'); return; }
+      if (c === '/regex') { launchSlashStudio('regex'); return; }
+      if (c === '/cron') { launchSlashStudio('cron'); return; }
+      if (c === '/export') { launchSlashStudio('export'); return; }
+      if (c === '/persona') { launchSlashStudio('persona'); return; }
+      if (c === '/stats') { launchSlashStudio('stats'); return; }
+
+      if (input) {
+        input.value = cmd;
+        input.focus();
+        handleInputState(input);
+      }
+    }
+
+    function triggerSlashStudioHint() {
+      const input = document.getElementById('promptInput');
+      if (input) {
+        input.value = '/';
+        input.focus();
+        handleInputState(input);
+      }
+    }
+
+    function launchSlashStudio(action) {
+      const menu = document.getElementById('slashCommandMenu');
+      if (menu) {
+        menu.classList.remove('show');
+        menu.style.display = 'none';
+      }
+      const input = document.getElementById('promptInput');
+      if (input) {
+        input.value = '';
+        handleInputState(input);
+      }
+
+      if (action === 'image' || action === 'art') openArtStudioModal();
+      else if (action === 'palette') openColorStudio();
+      else if (action === 'regex') openRegexModal();
+      else if (action === 'cron') openCronModal();
+      else if (action === 'export') openChatExportModal();
+      else if (action === 'persona') openPersonaModal();
+      else if (action === 'stats') openStatsModal();
+    }
+
+    // Close slash menu on outside click or escape key
+    document.addEventListener('click', function(e) {
+      const slashMenu = document.getElementById('slashCommandMenu');
+      const input = document.getElementById('promptInput');
+      if (slashMenu && input && !input.contains(e.target) && !slashMenu.contains(e.target)) {
+        slashMenu.classList.remove('show');
+        slashMenu.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const slashMenu = document.getElementById('slashCommandMenu');
+        if (slashMenu) {
+          slashMenu.classList.remove('show');
+          slashMenu.style.display = 'none';
+        }
+      }
+    });
 </script>
 
   <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
