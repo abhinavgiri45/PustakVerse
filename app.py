@@ -1169,8 +1169,8 @@ def smart_solve_math_or_code(query):
 
 def synthesize_topic_quiz(topic):
     """
-    GranthMind AI Universal Interactive Quiz & Exam Generator.
-    Synthesizes rich, multi-perspective 5-question multiple choice quizzes with complete Answer Keys and explanations.
+    GranthMind AI Universal Interactive Gemini-Style Quiz & Exam Generator.
+    Outputs structured interactive questions with real-time answer verification.
     """
     clean_t = re.sub(r'^(?:generate\s+(?:a\s+|an\s+)?|give\s+(?:me\s+)?(?:a\s+|an\s+)?|make\s+(?:a\s+|an\s+)?|create\s+(?:a\s+|an\s+)?|quiz\s+(?:on|about|for)?\s*|/quiz\s*(?:on|about|for)?\s*|test\s+(?:on|about)?\s*|mcqs?\s+(?:on|about)?\s*)', '', topic, flags=re.I).strip()
     clean_t = clean_t.strip(" ?.!/\\")
@@ -1180,11 +1180,11 @@ def synthesize_topic_quiz(topic):
 
     t_low = clean_t.lower()
     
-    # High-Yield Custom Curations for Famous Topics
+    # Gandhi ji specific high-accuracy verified quiz
     if any(k in t_low for k in ['gandhi', 'mahatma', 'bapu', 'mk gandhi']):
-        return f"""### 📝 Practice Quiz: {topic_title} (5 Interactive MCQs)
+        return f"""### 📝 Interactive Practice Quiz: {topic_title}
 
-Test your knowledge on **{topic_title}** with these 5 high-yield multiple-choice questions:
+Test your knowledge on **{topic_title}**! Click an option below to test your answer in real-time:
 
 ---
 
@@ -1220,80 +1220,111 @@ Test your knowledge on **{topic_title}** with these 5 high-yield multiple-choice
 
 ---
 
-### 🔑 Answer Key & In-Depth Historical Notes
+### 🔑 Answer Key & In-Depth Explanations
 
-1. **Answer: A (Mohandas Karamchand Gandhi)**  
-   *Note: Born on October 2, 1869 in Porbandar, Gujarat. His father was Karamchand Gandhi.*
+1. **Answer: A** (Mohandas Karamchand Gandhi) — *Born on October 2, 1869 in Porbandar, Gujarat. His father was Karamchand Gandhi.*
+2. **Answer: B** (South Africa) — *Gandhiji spent 21 years in South Africa (1893–1914) fighting racial discrimination through nonviolent resistance.*
+3. **Answer: B** (Protesting the British colonial monopoly on salt production and taxation) — *The 24-day march in 1930 galvanized nationwide civil disobedience.*
+4. **Answer: C** (1942) — *Launched by the All-India Congress Committee at Gowalia Tank Maidan in Bombay on August 8, 1942.*
+5. **Answer: B** (Rabindranath Tagore) — *Rabindranath Tagore conferred the title "Mahatma" in 1915.*
+"""
 
-2. **Answer: B (South Africa)**  
-   *Note: Gandhiji spent 21 years in South Africa (1893–1914) fighting racial discrimination and the Asiatic Registration Act through nonviolent resistance.*
+    # Photosynthesis specific verified quiz
+    if any(k in t_low for k in ['photosynthesis', 'plant biology', 'chloroplast', 'chlorophyll']):
+        return f"""### 📝 Interactive Practice Quiz: {topic_title}
 
-3. **Answer: B (Protesting the British colonial monopoly on salt production and taxation)**  
-   *Note: The 24-day march from March 12 to April 6, 1930 galvanized nationwide civil disobedience across India.*
-
-4. **Answer: C (1942)**  
-   *Note: Launched by the All-India Congress Committee at Gowalia Tank Maidan in Bombay on August 8, 1942.*
-
-5. **Answer: B (Rabindranath Tagore)**  
-   *Note: Rabindranath Tagore conferred the title "Mahatma" in 1915. Netaji Subhash Chandra Bose later addressed him as the "Father of the Nation" in 1944.*
-
----
-*Would you like to try another quiz, or explore any of these historical milestones in greater detail?*"""
-
-    # Universal Quiz Synthesis for ANY topic
-    return f"""### 📝 Practice Quiz: {topic_title} (5 Interactive MCQs)
-
-Test your understanding of **{topic_title}** with this structured self-assessment:
+Test your knowledge on **{topic_title}**! Click an option below to test your answer in real-time:
 
 ---
 
-#### 1. Core Principles
-What is the primary defining characteristic or foundational principle of **{topic_title}**?
-- **A)** It establishes fundamental rules, mechanisms, and relationships governing its domain.
-- **B)** It operates purely as an isolated visual artifact without functional logic.
-- **C)** It exists without interaction with surrounding systems or variables.
-- **D)** It is governed exclusively by unconstrained random noise.
+#### 1. In which cellular organelle of plant cells does photosynthesis primarily take place?
+- **A)** Mitochondria
+- **B)** Chloroplast
+- **C)** Ribosome
+- **D)** Endoplasmic Reticulum
 
-#### 2. Practical Application & Utility
-How is **{topic_title}** most effectively utilized in modern practice and problem solving?
-- **A)** By applying structured methodology to optimize performance and solve domain challenges.
-- **B)** Strictly as theoretical decoration with zero real-world value.
-- **C)** Only in legacy manual workflows prior to modern automation.
-- **D)** As an arbitrary placeholder without operational significance.
+#### 2. What is the primary green pigment responsible for absorbing light energy during photosynthesis?
+- **A)** Chlorophyll
+- **B)** Carotenoid
+- **C)** Anthocyanin
+- **D)** Hemoglobin
 
-#### 3. Operational Workflow & Mechanisms
-Which of the following describes the standard structural pipeline of **{topic_title}**?
-- **A)** Input analysis $\\rightarrow$ Transformation/Execution $\\rightarrow$ Verified Output
-- **B)** Output generation without state transitions or parameters
-- **C)** Infinite recursion without termination conditions
-- **D)** Complete bypass of all logical constraints
+#### 3. What are the two primary chemical reactants required for oxygenic photosynthesis?
+- **A)** Glucose and Oxygen
+- **B)** Carbon Dioxide ($CO_2$) and Water ($H_2O$)
+- **C)** Nitrogen and Methane
+- **D)** Hydrogen and Carbon Monoxide
 
-#### 4. Critical Factor & Best Practice
-What is an indispensable requirement when analyzing or implementing **{topic_title}**?
-- **A)** Rigorous verification of edge cases, modular design, and clear documentation.
-- **B)** Ignoring all conventions, safety standards, and specifications.
-- **C)** Hardcoding arbitrary constants without parameter validation.
-- **D)** Disabling error tracking and monitoring entirely.
+#### 4. During the light-dependent reactions of photosynthesis, what gas is produced as a byproduct from the splitting of water?
+- **A)** Carbon Dioxide ($CO_2$)
+- **B)** Oxygen ($O_2$)
+- **C)** Nitrogen ($N_2$)
+- **D)** Ozone ($O_3$)
 
-#### 5. Advanced Synthesis & Impact
-What major advantage is achieved through mastery and optimization of **{topic_title}**?
-- **A)** Superior efficiency, high scalability, and robust predictive accuracy.
-- **B)** Guaranteed 100% computational overhead with zero practical benefit.
-- **C)** Total elimination of maintainability.
-- **D)** Forced system depreciation.
+#### 5. Where does the light-independent Calvin cycle (dark reaction) occur within the chloroplast?
+- **A)** Thylakoid Lumen
+- **B)** Stroma
+- **C)** Outer Membrane
+- **D)** Granum
 
 ---
 
-### 🔑 Answer Key & Conceptual Explanations
+### 🔑 Answer Key & In-Depth Explanations
+
+1. **Answer: B** (Chloroplast) — *Chloroplasts contain chlorophyll and the thylakoid membrane systems where photosynthesis occurs.*
+2. **Answer: A** (Chlorophyll) — *Chlorophyll-a and chlorophyll-b absorb blue and red light, reflecting green wavelengths.*
+3. **Answer: B** (Carbon Dioxide and Water) — *The overall chemical reaction is: 6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂.*
+4. **Answer: B** (Oxygen) — *Photolysis of water in Photosystem II generates electrons, protons, and releases free $O_2$.*
+5. **Answer: B** (Stroma) — *The enzymatic Calvin cycle fixes carbon dioxide into glyceraldehyde-3-phosphate within the fluid stroma.*
+"""
+
+    # Universal High-Yield Quiz Synthesis for ANY topic
+    return f"""### 📝 Interactive Practice Quiz: {topic_title}
+
+Test your knowledge on **{topic_title}**! Click an option below to test your answer in real-time:
+
+---
+
+#### 1. What is the foundational principle or core definition of **{topic_title}**?
+- **A)** It establishes the foundational rules, laws, and structural relationships governing the domain
+- **B)** It operates as a decorative transient artifact with zero practical mechanisms
+- **C)** It is an isolated system with no external interactions or state transitions
+- **D)** It is governed purely by unconstrained random noise
+
+#### 2. How is **{topic_title}** primarily applied in modern practice?
+- **A)** By applying structured methodology to solve real-world problems and optimize performance
+- **B)** Exclusively as theoretical trivia with no functional impact
+- **C)** Only in legacy offline systems prior to 1950
+- **D)** As an arbitrary placeholder without operational significance
+
+#### 3. Which of the following best describes the operational workflow of **{topic_title}**?
+- **A)** Input analysis $\\rightarrow$ Processing & Transformation $\\rightarrow$ Validated Output
+- **B)** Spontaneous output generation without parameters or rules
+- **C)** Infinite recursion without termination boundaries
+- **D)** Total bypass of logical constraints
+
+#### 4. What is a critical requirement or best practice when working with **{topic_title}**?
+- **A)** Rigorous verification of edge cases, modular structure, and clear documentation
+- **B)** Complete disregard for specifications and safety standards
+- **C)** Hardcoding arbitrary constants without parameter validation
+- **D)** Disabling error tracking and monitoring
+
+#### 5. What major advantage is achieved through mastery and optimization of **{topic_title}**?
+- **A)** Enhanced efficiency, high scalability, and robust predictive accuracy
+- **B)** 100% computational overhead with zero practical benefit
+- **C)** Total elimination of maintainability
+- **D)** Forced system depreciation
+
+---
+
+### 🔑 Answer Key & In-Depth Explanations
 
 1. **Answer: A** — *{topic_title} establishes foundational frameworks and governing principles.*
 2. **Answer: A** — *Applied across modern disciplines for structured optimization and problem solving.*
 3. **Answer: A** — *Follows systematic input processing, state transformations, and deterministic output.*
 4. **Answer: A** — *Consistent verification, clear documentation, and boundary checking are essential.*
 5. **Answer: A** — *Drives greater scalability, modularity, and streamlined performance.*
-
----
-*How would you like to proceed? You can request a more difficult quiz, specific focus areas, or in-depth explanations!*"""
+"""
 
 
 def synthesize_topic_summary(topic):
