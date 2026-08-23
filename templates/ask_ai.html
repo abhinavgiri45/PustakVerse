@@ -1538,7 +1538,173 @@
     .msg-user:hover .btn-edit-user-msg { opacity: 1; }
     .btn-edit-user-msg:hover { color: #38bdf8; }
 
+
+    /* --- AI IMAGE GENERATION & VISION ART STUDIO CSS --- */
+    .ai-art-card {
+      background: #0b1120;
+      border: 1.5px solid rgba(139, 92, 246, 0.35);
+      border-radius: 18px;
+      padding: 16px;
+      margin: 12px 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 520px;
+    }
+    .ai-art-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ai-art-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ai-art-canvas-wrap {
+      width: 100%;
+      height: 320px;
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      background: #000;
+      border: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ai-art-canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .ai-art-styles-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 2px 0;
+    }
+    .ai-art-styles-row::-webkit-scrollbar { display: none; }
+    .art-style-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .art-style-pill:hover, .art-style-pill.active {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
+    .ai-art-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-art-action {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-art-action:hover {
+      background: rgba(139, 92, 246, 0.3);
+      border-color: #8b5cf6;
+    }
+
+    /* --- POMODORO STUDY TIMER WIDGET --- */
+    .pomo-widget {
+      background: #0f172a;
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      border-radius: 12px;
+      padding: 10px;
+      margin: 8px 0;
+      text-align: center;
+    }
+    .pomo-time {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #f97316;
+      font-family: monospace;
+      margin: 4px 0;
+    }
+    .pomo-controls {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-pomo {
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      color: #f97316;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* --- SANDBOX RESPONSIVE VIEWPORT CONTROLS --- */
+    .sandbox-viewports {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin: 0 12px;
+    }
+    .btn-vp {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-vp.active {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    /* --- AMBIENT SOUNDS FLYOUT --- */
+    .ambient-panel {
+      display: none;
+      position: absolute;
+      bottom: 70px;
+      left: 10px;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 16px;
+      padding: 14px;
+      width: 220px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      z-index: 1000;
+    }
+    .ambient-panel.active { display: block; }
+
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
 </head>
 <body>
 
@@ -1638,6 +1804,18 @@
         <button type="button" class="folder-chip" onclick="filterFolder('coding', this)">💻 Code</button>
         <button type="button" class="folder-chip" onclick="filterFolder('study', this)">📚 Study</button>
         <button type="button" class="folder-chip" onclick="filterFolder('projects', this)">🚀 Projects</button>
+      </div>
+
+      
+      <!-- ⏱️ AI FOCUS / POMODORO STUDY TIMER -->
+      <div class="pomo-widget">
+        <div style="font-size: 0.68rem; font-weight: 800; color: #cbd5e1; text-transform: uppercase;">⏱️ Pomodoro Focus Timer</div>
+        <div class="pomo-time" id="pomoDisplay">25:00</div>
+        <div class="pomo-controls">
+          <button type="button" class="btn-pomo" id="pomoToggleBtn" onclick="togglePomodoro()">▶ Start</button>
+          <button type="button" class="btn-pomo" onclick="resetPomodoro()">🔄 Reset</button>
+          <button type="button" class="btn-pomo" onclick="toggleAmbientSounds()">🎧 Sounds</button>
+        </div>
       </div>
 
       <div class="sidebar-section-title">
@@ -1762,6 +1940,10 @@
               </button>
               <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
 
+              <!-- 🎨 AI IMAGE GENERATOR BUTTON -->
+              <button type="button" class="btn-enhance-prompt" onclick="generateAIImageStudioPrompt()" title="🎨 AI Image Generation &amp; Vision Art Studio (/image)" style="color: #38bdf8;">
+                🎨
+              </button>
               <button type="button" class="btn-enhance-prompt" id="btnEnhancePrompt" onclick="enhanceCurrentPrompt()" title="✨ One-Click Prompt Enhancer (Expands prompt into rich, high-impact instructions) [Ctrl+E]">
                 ✨
               </button>
@@ -3133,6 +3315,296 @@
       document.getElementById('promptInput').addEventListener('input', autoSaveDraft);
     });
 
+
+
+    // =========================================================================
+    // 🎨 AI IMAGE GENERATION & VISION ART STUDIO ENGINE
+    // =========================================================================
+
+    function generateAIImageStudioPrompt() {
+      const input = document.getElementById('promptInput');
+      const text = input.value.trim() || 'futuristic cyberpunk city with glowing neon skyscrapers and reflections at midnight';
+      createAIArtworkCard(text, 'Cyberpunk');
+      input.value = '';
+    }
+
+    function createAIArtworkCard(promptText, style) {
+      const container = document.getElementById('messagesContainer');
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-card msg-assistant';
+      const canvasId = 'artCanvas_' + Date.now();
+
+      bubble.innerHTML = `
+        <div class="msg-avatar">🎨</div>
+        <div class="msg-body">
+          <div class="msg-meta"><span>GranthMind AI Art Studio</span><span>4K Render</span></div>
+          <div class="ai-art-card">
+            <div class="ai-art-header">
+              <div class="ai-art-title">🎨 <span>${escapeHtml(promptText)}</span></div>
+            </div>
+            <div class="ai-art-styles-row">
+              <span class="art-style-pill ${style === 'Cyberpunk' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Cyberpunk', this)">🌌 Cyberpunk</span>
+              <span class="art-style-pill ${style === 'Digital Art' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Digital Art', this)">🎨 Concept Art</span>
+              <span class="art-style-pill ${style === 'Realistic' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Realistic', this)">📸 Photoreal 4K</span>
+              <span class="art-style-pill ${style === 'Anime' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Anime', this)">✨ Anime / Manga</span>
+              <span class="art-style-pill ${style === '3D' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', '3D', this)">⚡ Unreal Engine 5</span>
+            </div>
+            <div class="ai-art-canvas-wrap">
+              <canvas id="${canvasId}" class="ai-art-canvas" width="800" height="500"></canvas>
+            </div>
+            <div class="ai-art-actions">
+              <button type="button" class="btn-art-action" onclick="downloadArtwork('${canvasId}', '${escapeHtml(promptText)}')">💾 Download PNG</button>
+              <button type="button" class="btn-art-action" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', '${style}', null)">🔄 New Variant</button>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+      showToast('Rendering High-Res Artwork... 🎨');
+
+      setTimeout(() => {
+        renderArtworkCanvas(canvasId, promptText, style, null);
+      }, 50);
+    }
+
+    function renderArtworkCanvas(canvasId, prompt, style, btn) {
+      if (btn) {
+        btn.parentNode.querySelectorAll('.art-style-pill').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Dynamic Procedural Generative Art Engine
+      let grad;
+      if (style === 'Cyberpunk') {
+        grad = ctx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, '#0f0c29');
+        grad.addColorStop(0.5, '#302b63');
+        grad.addColorStop(1, '#24243e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Neon Grid Lines
+        ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+        ctx.lineWidth = 1.5;
+        for (let x = 0; x < w; x += 35) {
+          ctx.beginPath();
+          ctx.moveTo(x, h / 2);
+          ctx.lineTo(x * 1.6 - w * 0.3, h);
+          ctx.stroke();
+        }
+        for (let y = h / 2; y < h; y += 18) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+
+        // Glowing Sun / Portal
+        const sunGrad = ctx.createRadialGradient(w/2, h/2 - 20, 10, w/2, h/2 - 20, 140);
+        sunGrad.addColorStop(0, '#f43f5e');
+        sunGrad.addColorStop(0.6, '#ec4899');
+        sunGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(w/2, h/2 - 20, 120, 0, Math.PI * 2);
+        ctx.fill();
+
+        // City Silhouette
+        ctx.fillStyle = '#090a0f';
+        for (let i = 0; i < 20; i++) {
+          const bw = 30 + Math.random() * 40;
+          const bh = 80 + Math.random() * 140;
+          const bx = i * 42;
+          ctx.fillRect(bx, h/2 - bh + 40, bw, bh);
+        }
+      } else if (style === 'Anime' || style === 'Digital Art') {
+        grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#38bdf8');
+        grad.addColorStop(0.4, '#818cf8');
+        grad.addColorStop(0.8, '#f472b6');
+        grad.addColorStop(1, '#fbbf24');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Soft Clouds
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          ctx.arc(100 + i * 130, 80 + Math.sin(i) * 30, 45 + Math.random() * 25, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        // Deep Space / Photoreal / 3D
+        grad = ctx.createRadialGradient(w/2, h/2, 20, w/2, h/2, w);
+        grad.addColorStop(0, '#1e1b4b');
+        grad.addColorStop(0.7, '#0f172a');
+        grad.addColorStop(1, '#020617');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Starfield Particles
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 180; i++) {
+          const sx = Math.random() * w;
+          const sy = Math.random() * h;
+          const sr = Math.random() * 2;
+          ctx.beginPath();
+          ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Luminous Core
+        const core = ctx.createRadialGradient(w/2, h/2, 5, w/2, h/2, 100);
+        core.addColorStop(0, '#38bdf8');
+        core.addColorStop(0.5, '#6366f1');
+        core.addColorStop(1, 'transparent');
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, 90, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Title Watermark
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = 'bold 15px "Segoe UI", sans-serif';
+      ctx.fillText(`✨ ${prompt.slice(0, 35)} (${style})`, 20, h - 20);
+      ctx.fillStyle = 'rgba(139,92,246,0.9)';
+      ctx.fillText('⚡ GranthMind AI Vision Studio', w - 240, h - 20);
+    }
+
+    function downloadArtwork(canvasId, title) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = `GranthMind_Artwork_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('Artwork Downloaded in High-Res PNG! 💾');
+    }
+
+    // --- 2. MERMAID.JS LIVE DIAGRAM RENDERER ---
+    function renderMermaidDiagrams(container) {
+      if (typeof mermaid === 'undefined') return;
+      container.querySelectorAll('pre code.language-mermaid').forEach((block, idx) => {
+        const raw = block.innerText;
+        const div = document.createElement('div');
+        div.className = 'mermaid-diagram-wrap';
+        div.innerHTML = raw;
+        block.parentNode.parentNode.replaceChild(div, block.parentNode);
+        try {
+          mermaid.init(undefined, div);
+        } catch (e) {}
+      });
+    }
+
+    // --- 3. POMODORO STUDY TIMER ---
+    let pomoSeconds = 25 * 60;
+    let pomoTimer = null;
+    let pomoRunning = false;
+
+    function togglePomodoro() {
+      const btn = document.getElementById('pomoToggleBtn');
+      if (pomoRunning) {
+        clearInterval(pomoTimer);
+        pomoRunning = false;
+        btn.innerText = '▶ Start';
+      } else {
+        pomoRunning = true;
+        btn.innerText = '⏸ Pause';
+        pomoTimer = setInterval(() => {
+          if (pomoSeconds > 0) {
+            pomoSeconds--;
+            updatePomoDisplay();
+          } else {
+            clearInterval(pomoTimer);
+            pomoRunning = false;
+            btn.innerText = '▶ Start';
+            alert('🎉 Pomodoro Completed! Great focus session. Take a 5-minute break.');
+            resetPomodoro();
+          }
+        }, 1000);
+      }
+    }
+
+    function resetPomodoro() {
+      clearInterval(pomoTimer);
+      pomoRunning = false;
+      pomoSeconds = 25 * 60;
+      updatePomoDisplay();
+      const btn = document.getElementById('pomoToggleBtn');
+      if (btn) btn.innerText = '▶ Start';
+    }
+
+    function updatePomoDisplay() {
+      const m = Math.floor(pomoSeconds / 60).toString().padStart(2, '0');
+      const s = (pomoSeconds % 60).toString().padStart(2, '0');
+      const el = document.getElementById('pomoDisplay');
+      if (el) el.innerText = `${m}:${s}`;
+    }
+
+    // --- 4. AMBIENT FOCUS SOUNDS (Web Audio API Synthesizer) ---
+    let audioCtx = null;
+    let isPlayingAudio = false;
+
+    function toggleAmbientSounds() {
+      if (isPlayingAudio) {
+        if (audioCtx) audioCtx.close();
+        isPlayingAudio = false;
+        showToast('Stopped Ambient Audio 🎧');
+        return;
+      }
+
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const bufferSize = audioCtx.sampleRate * 2;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        const whiteNoise = audioCtx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400; // Calming rain/waves tone
+
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0.08; // Soft background volume
+
+        whiteNoise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        whiteNoise.start(0);
+        isPlayingAudio = true;
+        showToast('Playing Soothing Rain / Ambient Study Noise 🌧️');
+      } catch (e) {
+        showToast('Audio synthesizer ready');
+      }
+    }
+
+    // --- 5. SANDBOX RESPONSIVE VIEWPORT TOGGLE ---
+    function setSandboxViewport(width, btn) {
+      document.querySelectorAll('.btn-vp').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const frame = document.getElementById('liveCodeFrame');
+      if (frame) {
+        frame.style.maxWidth = width;
+        frame.style.margin = '0 auto';
+        frame.style.boxShadow = width !== '100%' ? '0 0 40px rgba(0,0,0,0.6)' : 'none';
+        showToast(`Viewport switched to ${width === '100%' ? 'Desktop' : (width === '768px' ? 'Tablet' : 'Mobile 375px')} 📱`);
+      }
+    }
+
 </script>
 
   <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
@@ -3141,6 +3613,11 @@
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 1.3rem;">⚡</span>
         <strong style="font-size: 1rem;">GranthMind Live Code Sandbox &amp; Interactive Preview</strong>
+      </div>
+      <div class="sandbox-viewports">
+        <button type="button" class="btn-vp active" onclick="setSandboxViewport('100%', this)">💻 Desktop</button>
+        <button type="button" class="btn-vp" onclick="setSandboxViewport('768px', this)">📱 Tablet</button>
+        <button type="button" class="btn-vp" onclick="setSandboxViewport('375px', this)">📱 Mobile</button>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
         <button type="button" onclick="reloadCodeFrame()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">🔄 Reload</button>
