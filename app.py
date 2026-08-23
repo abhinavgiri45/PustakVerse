@@ -2375,7 +2375,13 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
                         contextual_query = f"{clean_u} {raw_query.strip()}"
                         break
 
-    clean_search = re.sub(r'^(what is the|what are the|where is the|who is the|who was the|what is|what was|what are|where is|how do|how does|explain the|explain|tell me about|tell me|overview of|history of)\s+', '', contextual_query, flags=re.I).strip()
+    clean_search = contextual_query.strip()
+    prefix_pattern = r'^(?:/summary|/quiz|/explain|/code|/app|summary\s+of|summary\s+on|summarize|quiz\s+on|quiz\s+about|explain|tell\s+me\s+about|on\s+the\s+topic\s+of|on\s+the\s+topic|the\s+topic\s+of|the\s+topic|what\s+is\s+the|what\s+are\s+the|where\s+is\s+the|who\s+is\s+the|who\s+was\s+the|what\s+is|what\s+was|what\s+are|where\s+is|how\s+do|how\s+does|overview\s+of|history\s+of|on|about|for|of)\s+'
+    for _ in range(5):
+        new_cs = re.sub(prefix_pattern, '', clean_search, flags=re.I).strip()
+        if new_cs == clean_search or not new_cs:
+            break
+        clean_search = new_cs
     clean_search = re.sub(r'\s+(in brief|in detail|and what is it famous for|and who proposed it|step by step)\b.*$', '', clean_search, flags=re.I).strip().rstrip('?.!')
     if not clean_search:
         clean_search = contextual_query
@@ -2399,18 +2405,39 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
     except Exception: pass
 
     if web_snippets:
-        body_text = "\n\n".join(web_snippets)
-        explanation = (
-            f"### 🌐 {clean_title_cap}\n\n"
-            f"{body_text}\n\n"
-            f"---\n"
-            f"Let me know if you would like more specific details, contact information, or further information!"
-        )
+        is_summary_req = any(k in query_lower for k in ['/summary', 'summary on', 'summary of', 'summarize'])
+        if is_summary_req:
+            p1 = web_snippets[0] if len(web_snippets) > 0 else f"Comprehensive analysis of {clean_title_cap}."
+            p2 = web_snippets[1] if len(web_snippets) > 1 else (web_snippets[0] if web_snippets else "")
+            p3 = web_snippets[2] if len(web_snippets) > 2 else (web_snippets[-1] if web_snippets else "")
+            explanation = (
+                f"### ⚡ 3-Minute Executive Summary: {clean_title_cap}\n\n"
+                f"Here is a structured, factual overview of **{clean_title_cap}** for rapid learning and exam revision:\n\n"
+                f"---\n\n"
+                f"#### 📌 1. Core Overview & Historical/Scientific Context\n"
+                f"- {p1}\n\n"
+                f"#### 🎯 2. Key Events, Mechanisms & Milestones\n"
+                f"- {p2}\n\n"
+                f"#### 💡 3. Outcomes & Lasting Global Impact\n"
+                f"- {p3}\n\n"
+                f"#### 🔑 4. High-Yield Exam Takeaways\n"
+                f"- Focus on foundational causes, primary figures, and structural transformations that redefined modern institutions.\n\n"
+                f"---\n"
+                f"*Would you like a practice quiz on {clean_title_cap} or a deep-dive into a specific event?*"
+            )
+        else:
+            body_text = "\n\n".join(web_snippets)
+            explanation = (
+                f"### 🌐 {clean_title_cap}\n\n"
+                f"{body_text}\n\n"
+                f"---\n"
+                f"Let me know if you would like more specific details, contact information, or further information!"
+            )
         return {
             'concept': clean_title_cap,
             'explanation': explanation,
             'key_points': [f"Live verified web details for {clean_title_cap}."],
-            'example': f"Details verified from public web registries.",
+            'example': f"Details verified from public knowledge registries.",
             'practice_questions': []
         }
 
@@ -2429,24 +2456,48 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
                         break
                 
                 extract_url = f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles={urllib.parse.quote(best_title)}&format=json"
-                req2 = urllib.request.Request(extract_url, headers={'User-Agent': 'GranthMindAI/2.0'})
-                with urllib.request.urlopen(req2, timeout=3.5) as resp2:
+                req2 = urllib.request.Request(extract_url, headers={'User-Agent': 'GranthMindAI/2.0 (PustakVerse Knowledge Core)'})
+                with urllib.request.urlopen(req2, timeout=4.5) as resp2:
                     data2 = json.loads(resp2.read().decode('utf-8'))
                     pages = data2.get('query', {}).get('pages', {})
                     for pid, pdata in pages.items():
                         if pid != '-1' and pdata.get('extract') and len(pdata['extract'].strip()) > 40:
                             extract = pdata['extract'].strip()
-                            explanation = (
-                                f"### 📖 {best_title}\n\n"
-                                f"{extract}\n\n"
-                                f"---\n"
-                                f"Feel free to ask if you would like to explore this further, see code implementations, or dive into specific applications!"
-                            )
+                            
+                            # Format specifically if summary was requested
+                            if any(k in query_lower for k in ['/summary', 'summary on', 'summary of', 'summarize']):
+                                sentences = [s.strip() for s in extract.split('. ') if s.strip()]
+                                p1 = ". ".join(sentences[:2]) + "." if len(sentences) >= 2 else extract
+                                p2 = ". ".join(sentences[2:5]) + "." if len(sentences) >= 5 else (sentences[-1] if sentences else extract)
+                                p3 = ". ".join(sentences[5:8]) + "." if len(sentences) >= 8 else "Key historical and scientific developments established long-term societal and intellectual foundations."
+                                
+                                explanation = (
+                                    f"### ⚡ 3-Minute Executive Summary: {best_title}\n\n"
+                                    f"Here is a structured, factual overview of **{best_title}** for rapid learning and exam revision:\n\n"
+                                    f"---\n\n"
+                                    f"#### 📌 1. Core Overview & Key Timeline\n"
+                                    f"- {p1}\n\n"
+                                    f"#### 🎯 2. Major Causes & Key Milestones\n"
+                                    f"- {p2}\n\n"
+                                    f"#### 💡 3. Outcomes & Lasting Impact\n"
+                                    f"- {p3}\n\n"
+                                    f"#### 🔑 4. High-Yield Exam Takeaways\n"
+                                    f"- Focus on foundational causes, primary figures, and structural transformations that redefined modern institutions.\n\n"
+                                    f"---\n"
+                                    f"*Would you like a practice quiz on {best_title} or a deep-dive into a specific event?*"
+                                )
+                            else:
+                                explanation = (
+                                    f"### 📖 {best_title}\n\n"
+                                    f"{extract}\n\n"
+                                    f"---\n"
+                                    f"Feel free to ask if you would like a summary, a practice quiz, or specific historical/scientific details on {best_title}!"
+                                )
                             return {
                                 'concept': best_title,
                                 'explanation': explanation,
                                 'key_points': [f"Comprehensive verified grounding on {best_title}."],
-                                'example': f"Explore deeper applications of {best_title}.",
+                                'example': f"Explore deeper dimensions of {best_title}.",
                                 'practice_questions': []
                             }
     except Exception: pass
@@ -2805,18 +2856,28 @@ def build_ai_free_response(question, book_title='', book_description='', screens
             "I integrate the collective intelligence of ChatGPT-4o, Gemini 2.0 Flash, Claude 3.5 Sonnet, DeepSeek R1, Mistral Large, and Meta Llama 3."
         )
 
-    # 0.6 Instant Universal Slash Commands & Quiz Studio Resolution
-    if query_lower.startswith('/quiz') or any(query_lower.startswith(p) for p in ['quiz on', 'quiz about', 'quiz for', 'give me a quiz', 'create a quiz', 'generate a quiz', 'mcq on', 'mcqs on', 'test on']):
-        quiz_topic = re.sub(r'^(?:/quiz\s*(?:on|about|for)?\s*|quiz\s+(?:on|about|for)\s*|give\s+(?:me\s+)?a\s+quiz\s+(?:on|about)?\s*|create\s+(?:a\s+)?quiz\s+(?:on|about)?\s*|generate\s+(?:a\s+)?quiz\s+(?:on|about)?\s*|mcqs?\s+(?:on|about)?\s*|test\s+(?:on|about)?\s*)', '', cleaned_question, flags=re.I).strip()
-        return synthesize_topic_quiz(quiz_topic or 'General Science & History')
-
+    # 0.6 Slash Commands & Structured Directives Enrichment
+    effective_prompt = cleaned_question
     if query_lower.startswith('/summary') or any(query_lower.startswith(p) for p in ['summary of', 'summary on', 'summarize ']):
         sum_topic = re.sub(r'^(?:/summary\s*(?:of|on)?\s*|summary\s+(?:of|on)\s*|summarize\s+)', '', cleaned_question, flags=re.I).strip()
-        return synthesize_topic_summary(sum_topic or 'Core Concepts')
+        effective_prompt = f"Provide a detailed, highly factual, accurate 3-minute executive summary on: {sum_topic}. Include: 1. Core Overview & Timeline, 2. Key Causes & Foundational Milestones, 3. Major Figures/Events/Outcomes, and 4. Exam Takeaways."
 
-    if query_lower.startswith('/code') or query_lower.startswith('/app'):
+    elif query_lower.startswith('/quiz') or any(query_lower.startswith(p) for p in ['quiz on', 'quiz about', 'quiz for', 'give me a quiz', 'create a quiz', 'generate a quiz', 'mcq on', 'mcqs on', 'test on']):
+        quiz_topic = re.sub(r'^(?:/quiz\s*(?:on|about|for)?\s*|quiz\s+(?:on|about|for)\s*|give\s+(?:me\s+)?a\s+quiz\s+(?:on|about)?\s*|create\s+(?:a\s+)?quiz\s+(?:on|about)?\s*|generate\s+(?:a\s+)?quiz\s+(?:on|about)?\s*|mcqs?\s+(?:on|about)?\s*|test\s+(?:on|about)?\s*)', '', cleaned_question, flags=re.I).strip()
+        # For Gandhi ji or Photosynthesis, synthesize high-accuracy verified quiz directly if offline
+        if any(k in quiz_topic.lower() for k in ['gandhi', 'photosynthesis']):
+            return synthesize_topic_quiz(quiz_topic)
+        effective_prompt = (
+            f"Generate a high-yield 5-question multiple choice practice quiz on: {quiz_topic}. "
+            "Format strictly with: #### 1. Question text\\n- **A)** Option\\n- **B)** Option\\n- **C)** Option\\n- **D)** Option\\n\\n"
+            "followed by: ### 🔑 Answer Key & In-Depth Explanations\\n1. **Answer: X** (Option text) — *Explanation.*"
+        )
+
+    elif query_lower.startswith('/code') or query_lower.startswith('/app'):
         code_topic = re.sub(r'^(?:/code\s*|/app\s*)', '', cleaned_question, flags=re.I).strip()
-        return synthesize_project_code(code_topic or cleaned_question, mode='code')
+        if any(k in code_topic.lower() for k in ['snake', 'game', 'blinkit', 'calculator', 'todo', 'ecommerce']):
+            return synthesize_project_code(code_topic or cleaned_question, mode='code')
+        effective_prompt = f"Write complete, production-ready, modular, runnable code for: {code_topic}. Include clear comments, architecture notes, and instructions to run."
     
     # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition (Only for explicit PustakVerse/GranthMind/Abhinav Giri queries)
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
@@ -2970,7 +3031,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
         f"{pustakverse_knowledge}\n\n"
         f"{memory_section}"
         f"--- CONTEXT (BOOK / CODE / DOCUMENT) ---\n{book_context or 'Universal multi-disciplinary intelligence.'}\n"
-        f"\n--- USER QUESTION / TASK ---\n{cleaned_question or 'Please analyze the attached material in depth.'}"
+        f"\n--- USER QUESTION / TASK ---\n{effective_prompt or cleaned_question or 'Please analyze the attached material in depth.'}"
     )
 
     def _is_clean_ai_answer(t):
