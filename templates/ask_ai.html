@@ -3257,7 +3257,7 @@
       formData.append('csrf_token', '{{ csrf_token() }}');
       
       if (currentSession && currentSession.messages && currentSession.messages.length > 0) {
-        const recentHistory = currentSession.messages.slice(-10);
+        const recentHistory = currentSession.messages.slice(-30);
         formData.append('chat_history', JSON.stringify(recentHistory));
       }
 

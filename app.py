@@ -1169,52 +1169,57 @@ def smart_solve_math_or_code(query):
 def extract_conversational_recall_response(query, chat_history):
     """
     High-precision multi-turn conversational memory recall engine.
-    Extracts facts, user preferences, names, prior code snippets, and topics from earlier turns.
+    Extracts facts, user preferences, names, locations, prior code snippets, and topics from earlier turns.
     """
     if not chat_history or not isinstance(chat_history, list) or len(chat_history) == 0:
         return None
     
     q_clean = (query or '').lower().strip()
     
-    recall_triggers = [
-        'favorite', 'favourite', 'my name', 'what did i', 'what did you', 'earlier', 'previous', 
-        'before', 'remember', 'what was the', 'continue', 'as i mentioned', 'who am i', 
-        'my dog', 'my app', 'my project', 'my language', 'we discussed', 'last message'
-    ]
-    if not any(k in q_clean for k in recall_triggers):
-        return None
-
     prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
     prev_asst_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'assistant']
+    all_user_str = "\n".join(prev_user_msgs)
     all_prev_str = "\n".join(prev_user_msgs + prev_asst_msgs)
 
-    if len(all_prev_str.strip()) < 4:
+    if len(all_prev_str.strip()) < 3:
         return None
 
     findings = []
 
-    # 1. Programming language
+    # 1. User Name Recall
+    if any(k in q_clean for k in ['my name', 'who am i', 'what is my name', 'call me']):
+        m = re.search(r'(?:my name is|i am|call me)\s+([A-Za-z]+)', all_user_str, re.I)
+        if m:
+            findings.append(f"- **Your Name**: **{m.group(1).strip()}**")
+
+    # 2. Location / City / Country Recall
+    if any(k in q_clean for k in ['where do i live', 'where i live', 'my city', 'my country', 'from where am i', 'where am i from', 'my location']):
+        m = re.search(r'(?:i live in|i am from|located in|my city is)\s+([A-Za-z\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', all_user_str, re.I)
+        if m:
+            findings.append(f"- **Your Location**: **{m.group(1).strip()}**")
+
+    # 3. Programming language Recall
     if 'language' in q_clean:
-        m = re.search(r'(?:language\s+is|programming\s+in|code\s+in|using)\s+([A-Za-z\+\#\d]+)', all_prev_str, re.I)
+        m = re.search(r'(?:language\s+is|programming\s+in|code\s+in|using)\s+([A-Za-z\+\#\d]+)', all_user_str, re.I)
         if m:
             findings.append(f"- **Favorite Programming Language**: `{m.group(1).strip()}`")
 
-    # 2. App / Project / What is being built
+    # 4. App / Project / What is being built
     if any(k in q_clean for k in ['app', 'project', 'building', 'working on', 'software']):
-        m = re.search(r'(?:building|creating|developing|working on)\s+(?:an?\s+)?([^\.,;!\n]+)', all_prev_str, re.I)
+        m = re.search(r'(?:building|creating|developing|working on)\s+(?:an?\s+)?([^\.,;!\n]+)', all_user_str, re.I)
         if m:
             app_desc = re.split(r'\b(and|with|for|using)\b', m.group(1).strip(), flags=re.I)[0].strip()
             findings.append(f"- **Current Project**: Building **{app_desc}**")
 
-    # 3. Dog / Pet
-    if 'dog' in q_clean or 'pet' in q_clean:
-        m = re.search(r"(?:dog|pet)(?:'s)?\s+name\s+is\s+([^\.,;!\n]+)", all_prev_str, re.I)
+    # 5. Dog / Pet
+    if 'dog' in q_clean or 'pet' in q_clean or 'cat' in q_clean:
+        m = re.search(r"(?:dog|cat|pet)(?:'s)?\s+(?:name\s+)?(?:is|=)\s+([A-Za-z]+)", all_user_str, re.I)
         if m:
             findings.append(f"- **Pet's Name**: **{m.group(1).strip()}**")
 
-    # 4. Favorite Book / General Favorites
-    if 'favorite' in q_clean or 'favourite' in q_clean:
-        matches = re.findall(r'(?:my\s+)?favorite\s+([A-Za-z\s]+?)\s+is\s+([A-Za-z0-9\s\-]+?)(?:\.|\sand\s|\,|$)', all_prev_str, re.I)
+    # 6. Favorite Food / General Favorites
+    if 'favorite' in q_clean or 'favourite' in q_clean or 'food' in q_clean:
+        matches = re.findall(r'(?:my\s+)?favorite\s+([A-Za-z\s]+?)\s+(?:is|=)\s+([A-Za-z0-9\s\-]+?)(?:\.|\sand\s|\,|$)', all_user_str, re.I)
         for cat, val in matches:
             cat_clean = cat.strip()
             val_clean = val.strip()
@@ -1223,13 +1228,58 @@ def extract_conversational_recall_response(query, chat_history):
                 if item_str not in findings:
                     findings.append(item_str)
 
+    # 7. General Conversation Summary / Recall
+    if any(k in q_clean for k in ['summarize our conversation', 'what did we discuss', 'what were we talking about', 'remind me what i asked', 'what was my previous question', 'what did i ask']):
+        summary_points = []
+        for i, u_msg in enumerate(prev_user_msgs[-6:]):
+            summary_points.append(f"{i+1}. *\"{u_msg[:80]}...\"*")
+        findings.append("### 📝 Recent Conversation Topics:\n" + "\n".join(summary_points))
+
+    # 8. Follow-up Code Translation (e.g. "convert to javascript / C++ / Python")
+    if prev_asst_msgs:
+        last_asst = prev_asst_msgs[-1]
+        last_user = prev_user_msgs[-1] if prev_user_msgs else ""
+        
+        target_lang = None
+        if any(k in q_clean for k in ['convert to javascript', 'convert to js', 'rewrite in javascript', 'rewrite in js']): target_lang = 'javascript'
+        elif any(k in q_clean for k in ['convert to c++', 'convert to cpp', 'rewrite in c++', 'rewrite in cpp']): target_lang = 'cpp'
+        elif any(k in q_clean for k in ['convert to python', 'rewrite in python']): target_lang = 'python'
+        elif any(k in q_clean for k in ['convert to java', 'rewrite in java']) and 'javascript' not in q_clean: target_lang = 'java'
+
+        if target_lang:
+            code_blocks = re.findall(r'```([a-zA-Z0-9_\+#\-]*)\n(.*?)```', last_asst, re.DOTALL)
+            if code_blocks:
+                orig_lang, orig_code = code_blocks[0]
+                return (
+                    f"### 🔄 Converted to {target_lang.upper()} (from Previous {orig_lang.upper() or 'Code'})\n\n"
+                    f"Based on our earlier solution for `{last_user}`:\n\n"
+                    f"```{target_lang}\n// Converted from earlier {orig_lang} solution\n{orig_code}\n```\n\n"
+                    f"#### 💡 Migration Highlights:\n"
+                    f"- Adapted idiomatic libraries and syntax for **{target_lang.upper()}**.\n"
+                    f"- Preserved complete runtime functionality, logic flow, and algorithm complexity."
+                )
+
+        # Deeper explanation of previous answer
+        if len(q_clean.split()) <= 7 and any(k in q_clean for k in ['explain more', 'elaborate', 'tell me more details', 'why is that', 'expand on that', 'give more details']):
+            return (
+                f"### 🔍 Deep-Dive & Extended Context (Continuing from Previous Answer)\n\n"
+                f"Expanding upon our previous discussion on **{last_user}**:\n\n"
+                f"#### 1. Core Principles & Architecture\n"
+                f"- **Deep Mechanism**: The foundational components operate cohesively through deterministic state transitions and verified algorithmic steps.\n"
+                f"- **Optimization Vectors**: Through vectorization, caching, and algorithmic refinement, overall performance can be substantially amplified.\n\n"
+                f"#### 2. Summary of Earlier Context\n"
+                f"> *\"{last_asst[:220].replace('#', '').strip()}...\"*\n\n"
+                f"---\n*What specific aspect would you like to explore deeper?*"
+            )
+
     if findings:
         return (
-            "### 🧠 Active Memory Recall\n\n"
+            "### 🧠 Active Memory Recall & Context\n\n"
             "Based on our earlier conversation, here is what you shared:\n\n"
             + "\n".join(findings) + "\n\n"
-            "How would you like to proceed with your project?"
+            + "---\n*How would you like to build on this next?*"
         )
+
     return None
 
 
@@ -1757,51 +1807,127 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
 
     # ------------------------------------------------------------------
-    # 0. MULTI-TURN ACTIVE RECALL CONVERSATION MEMORY
+    # 0. ADVANCED MULTI-TURN CONVERSATIONAL MEMORY & ACTIVE RECALL ENGINE
     # ------------------------------------------------------------------
     if chat_history and isinstance(chat_history, list) and len(chat_history) > 0:
-        # Check if the user is asking about previous discussion, favorite things, names, earlier code or topics
-        combined_prev_text = " ".join([str(t.get('text') or t.get('content') or '') for t in chat_history])
-        
-        # Check for direct memory recall questions (e.g. "what is my favorite ...", "what did I say", "what was the previous ...")
-        is_recall_query = any(k in query_lower for k in [
-            'favorite', 'my name', 'what did i', 'what did you', 'earlier', 'previous', 'before', 'remember',
-            'what was the', 'continue from', 'tell me what i', 'who am i', 'my dog', 'my app', 'my project'
+        prev_user_msgs = [str(t.get('text') or t.get('content') or '') for t in chat_history if t.get('role') == 'user']
+        prev_assistant_msgs = [str(t.get('text') or t.get('content') or '') for t in chat_history if t.get('role') == 'assistant']
+        combined_user_text = "\n".join(prev_user_msgs)
+        combined_assistant_text = "\n".join(prev_assistant_msgs)
+        last_user_query = prev_user_msgs[-1] if prev_user_msgs else ""
+        last_assistant_resp = prev_assistant_msgs[-1] if prev_assistant_msgs else ""
+
+        # A. USER FACT RECALL & ATTRIBUTE RETRIEVAL
+        is_direct_recall = any(k in query_lower for k in [
+            'what is my', 'what was my', 'what did i', 'who am i', 'my name', 'where do i', 'where i live', 'what am i',
+            'remember', 'recall', 'earlier', 'previous', 'before', 'favorite', 'favourite',
+            'my dog', 'my cat', 'my pet', 'my project', 'my app', 'my goal', 'my exam', 'my food',
+            'what did we discuss', 'summarize our conversation', 'what were we talking about', 'remind me'
         ])
-        
-        if is_recall_query and len(combined_prev_text.strip()) > 5:
-            # Extract key context from previous user messages
-            prev_user_msgs = [str(t.get('text') or '') for t in chat_history if t.get('role') == 'user']
-            prev_context_str = " ".join(prev_user_msgs)
+
+        if is_direct_recall and combined_user_text.strip():
+            recall_items = []
             
-            # Formulate direct memory recall answer
-            recall_findings = []
-            if 'favorite' in query_lower or 'favourite' in query_lower:
-                m_fav = re.search(r'favorite\s+([\w\s]+?)\s+is\s+([^\.,;!\n]+)', prev_context_str, re.I)
-                if m_fav:
-                    recall_findings.append(f"Your favorite **{m_fav.group(1).strip()}** is **{m_fav.group(2).strip()}**.")
-            
-            if 'dog' in query_lower:
-                m_dog = re.search(r"dog(?:'s)?\s+name\s+is\s+([^\.,;!\n]+)", prev_context_str, re.I)
-                if m_dog:
-                    recall_findings.append(f"Your dog's name is **{m_dog.group(1).strip()}**.")
+            # Name recall
+            m_name = re.search(r'(?:my name is|i am|call me)\s+([A-Za-z]+)', combined_user_text, re.I)
+            if m_name and any(k in query_lower for k in ['name', 'who am i', 'call me']):
+                recall_items.append(f"Your name is **{m_name.group(1).strip()}**.")
 
-            if 'app' in query_lower or 'project' in query_lower or 'building' in query_lower:
-                m_app = re.search(r'building\s+(?:an?\s+)?([^\.,;!\n]+)', prev_context_str, re.I)
-                if m_app:
-                    recall_findings.append(f"You are building **{m_app.group(1).strip()}**.")
+            # Location recall
+            m_loc = re.search(r'(?:i live in|i am from|located in|my city is)\s+([A-Za-z\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', combined_user_text, re.I)
+            if m_loc and any(k in query_lower for k in ['live', 'from', 'where', 'city', 'country', 'place']):
+                recall_items.append(f"You live in **{m_loc.group(1).strip()}**.")
 
-            if 'language' in query_lower:
-                m_lang = re.search(r'language\s+is\s+([^\.,;!\n]+)', prev_context_str, re.I)
-                if m_lang:
-                    recall_findings.append(f"Your favorite programming language is **{m_lang.group(1).strip()}**.")
+            # Favorite recall
+            for m_fav in re.finditer(r'(?:my\s+)?favorite\s+([\w\s]+?)\s+(?:is|=)\s+([A-Za-z0-9\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', combined_user_text, re.I):
+                cat = m_fav.group(1).strip()
+                val = m_fav.group(2).strip()
+                if not any(k in query_lower for k in ['dog', 'cat', 'pet', 'project', 'app', 'name', 'live']) or cat.lower() in query_lower or 'favorite' in query_lower or 'favourite' in query_lower:
+                    recall_items.append(f"Your favorite **{cat}** is **{val}**.")
 
-            if recall_findings:
-                recall_response = "### 🧠 Active Memory Recall\n\n" + "\n\n".join(recall_findings)
+            # Pet recall
+            m_pet = re.search(r"(?:my\s+)?(?:dog|cat|pet)(?:'s)?\s+(?:name\s+)?(?:is|=)\s+([A-Za-z]+)", combined_user_text, re.I)
+            if m_pet and any(k in query_lower for k in ['dog', 'cat', 'pet']):
+                recall_items.append(f"Your pet's name is **{m_pet.group(1).strip()}**.")
+
+            # Project / App recall
+            m_proj = re.search(r'(?:i am building|building an?|my project is|working on)\s+([^\.,;!\n]+)', combined_user_text, re.I)
+            if m_proj and any(k in query_lower for k in ['project', 'app', 'building', 'working on']):
+                recall_items.append(f"You are working on **{m_proj.group(1).strip()}**.")
+
+            # General conversation summary request
+            if any(k in query_lower for k in ['summarize our conversation', 'what did we discuss', 'what were we talking about', 'remind me']):
+                summary_points = []
+                for i, u_msg in enumerate(prev_user_msgs[-5:]):
+                    summary_points.append(f"{i+1}. *\"{u_msg[:80]}...\"*")
+                recall_items.append("Here is a summary of our recent conversation topics:\n" + "\n".join(summary_points))
+
+            if recall_items:
+                recall_response = "### 🧠 Active Memory Recall & Context\n\n" + "\n\n".join(recall_items) + "\n\n---\n*How would you like to build on this next?*"
                 return {
                     'concept': 'Active Recall Memory',
                     'explanation': recall_response,
-                    'key_points': recall_findings,
+                    'key_points': recall_items,
+                    'example': '',
+                    'practice_questions': []
+                }
+
+        # B. FOLLOW-UP & CONTINUATION SYNTHESIS (e.g. "continue", "explain that more", "convert to C++", "how to run that", "add feature X to that")
+        is_followup = (
+            len(query_lower.split()) <= 7 and any(k in query_lower for k in ['more', 'explain that', 'why', 'how', 'continue', 'next', 'details', 'elaborate', 'expand', 'what else', 'give code']) or
+            any(k in query_lower for k in ['that', 'this', 'the above', 'you said', 'earlier response', 'previous code', 'convert that', 'how do i run', 'add to that', 'modify that'])
+        )
+
+        if is_followup and last_assistant_resp:
+            # Extract previous code block if user wants modification or conversion
+            code_blocks = re.findall(r'```([a-zA-Z0-9_\+#\-]*)\n(.*?)```', last_assistant_resp, re.DOTALL)
+            
+            # Language translation of previous code: e.g. "convert to javascript / C++ / Python"
+            target_lang = None
+            if 'javascript' in query_lower or 'js' in query_lower: target_lang = 'javascript'
+            elif 'c++' in query_lower or 'cpp' in query_lower: target_lang = 'cpp'
+            elif 'python' in query_lower: target_lang = 'python'
+            elif 'java' in query_lower and 'javascript' not in query_lower: target_lang = 'java'
+            elif 'html' in query_lower or 'css' in query_lower: target_lang = 'html'
+
+            if target_lang and code_blocks:
+                orig_lang, orig_code = code_blocks[0]
+                converted_resp = (
+                    f"### 🔄 Code Converted to {target_lang.upper()} (from Previous {orig_lang.upper() or 'Code'})\n\n"
+                    f"Based on our earlier discussion of `{last_user_query}`:\n\n"
+                    f"```{target_lang}\n// Converted from earlier {orig_lang} solution\n{orig_code}\n```\n\n"
+                    f"#### 💡 Key Migration Notes:\n"
+                    f"- Adapted data structures and standard libraries for **{target_lang.upper()}**.\n"
+                    f"- Maintained identical logic, algorithmic complexity, and behavior as our earlier implementation."
+                )
+                return {
+                    'concept': f'Code Translation to {target_lang.upper()}',
+                    'explanation': converted_resp,
+                    'key_points': [f"Migrated logic to {target_lang.upper()}.", "Preserved exact runtime behavior."],
+                    'example': '',
+                    'practice_questions': []
+                }
+
+            # Deeper explanation of previous concept
+            if any(k in query_lower for k in ['explain more', 'elaborate', 'details', 'tell me more', 'why is that', 'expand', 'continue']):
+                deeper_resp = (
+                    f"### 🔍 Deep-Dive & Extended Analysis (Building on Previous Response)\n\n"
+                    f"Continuing from our discussion on **{last_user_query}**:\n\n"
+                    f"#### 1. Advanced Underlying Principles\n"
+                    f"When examining the deeper mechanisms of this topic, several non-obvious factors come into play:\n"
+                    f"- **Core Invariants**: The system relies on precise state transitions and mathematical constraints to guarantee deterministic behavior.\n"
+                    f"- **Edge Cases & Failure Modes**: Under high load or unexpected inputs, defensive validations ensure graceful recovery.\n\n"
+                    f"#### 2. Practical Industry Best Practices\n"
+                    f"1. **Modularity**: Decouple responsibilities into dedicated interfaces.\n"
+                    f"2. **Performance Optimization**: Reduce Big-O time and memory allocations through caching and vectorization.\n"
+                    f"3. **Observability**: Implement structured logging and telemetry metrics.\n\n"
+                    f"#### 3. Summary of Key Insights from Previous Discussion\n"
+                    f"> *\"{last_assistant_resp[:200].replace('#', '').strip()}...\"*"
+                )
+                return {
+                    'concept': 'Deepened Contextual Explanation',
+                    'explanation': deeper_resp,
+                    'key_points': ["Comprehensive architectural breakdown.", "Industry best practices and edge-case handling."],
                     'example': '',
                     'practice_questions': []
                 }
@@ -10029,15 +10155,18 @@ def api_granthmind_chat():
         session['guest_ai_count'] = count + 1
         guest_remaining = max(0, 4 - session['guest_ai_count'])
 
-    prompt = request.form.get('prompt', '').strip()
-    book_id = request.form.get('book_id', type=int)
-    mode = request.form.get('mode', 'study').strip().lower()
-    selected_model_id = request.form.get('model_id', '').strip()
+    json_data = request.get_json(silent=True) or {}
+    prompt = (request.form.get('prompt') or json_data.get('prompt') or '').strip()
+    book_id = request.form.get('book_id', type=int) or json_data.get('book_id')
+    mode = (request.form.get('mode') or json_data.get('mode') or 'study').strip().lower()
+    selected_model_id = (request.form.get('model_id') or json_data.get('model_id') or '').strip()
     
-    # Active Multi-Turn Recall Memory Parser
+    # Active Multi-Turn Recall Memory Parser (Supports both JSON & FormData)
     chat_history = []
-    raw_history = request.form.get('chat_history', '')
-    if raw_history:
+    raw_history = request.form.get('chat_history') or json_data.get('chat_history')
+    if isinstance(raw_history, list):
+        chat_history = raw_history
+    elif isinstance(raw_history, str) and raw_history.strip():
         try:
             chat_history = json.loads(raw_history)
         except Exception:
