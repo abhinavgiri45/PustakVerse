@@ -1236,8 +1236,13 @@ def synthesize_project_code(query, mode='study'):
     """
     Generates complete, runnable, production-ready code for apps, games, algorithms,
     APIs, scripts, and software engineering projects in Python, JavaScript/HTML/CSS, C++, Java, and SQL.
+    Dynamically adapts brand names, themes, and feature sets to the user's specific prompt.
     """
     q = query.lower().strip()
+
+    # 1. Dynamic Custom Brand Name Extraction (e.g., "name it City", "named QuickGrocer", "called TechZone")
+    m_name = re.search(r'\b(?:name\s+it|named|called|brand(?:ed)?|titled?)\s+([A-Za-z0-9_\-]+)', query, re.I)
+    custom_name = m_name.group(1).strip() if m_name else ""
 
     # Determine requested language accurately
     lang = 'python'
@@ -1256,18 +1261,234 @@ def synthesize_project_code(query, mode='study'):
 
     topic = re.sub(r'^(write|create|make|build|give me|generate|implement)\s+(a\s+|an\s+|the\s+)?(code|program|script|app|game|project|website)?\s*(for\s+|in\s+|to\s+|using\s+)?', '', q, flags=re.I).strip()
     topic = re.sub(r'\s+(in python|in javascript|in html|in css|in cpp|in c\+\+|in java|in js|using html|using python|using css|using javascript)\b.*$', '', topic, flags=re.I).strip()
-    topic_cap = topic.title() if topic else "Software Project"
+    topic_cap = custom_name.capitalize() if custom_name else (topic.title() if topic else "Software Project")
 
-    # 1. E-Commerce Store / Shop Website
-    if any(k in q for k in ['ecommerce', 'e-commerce', 'shopping', 'store', 'shop', 'cart', 'buy products']):
-        code = """<!DOCTYPE html>
+    # 1. E-Commerce & Quick-Commerce (Blinkit / Zepto / Grocery / Store)
+    if any(k in q for k in ['ecommerce', 'e-commerce', 'shopping', 'store', 'shop', 'cart', 'buy products', 'blinkit', 'zepto', 'instamart', 'grocery', 'quick commerce']):
+        is_quick_commerce = any(k in q for k in ['blinkit', 'zepto', 'instamart', 'grocery', 'quick commerce', '10 min', 'supermarket', 'vegetable', 'fruit', 'milk', 'delivery'])
+        app_title = custom_name if custom_name else ("BlinkCity" if is_quick_commerce else "NexusMart")
+
+        if is_quick_commerce:
+            code = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexusMart - Modern E-Commerce Store</title>
+  <title>{app_title} - 10-Minute Instant Grocery Delivery</title>
   <style>
-    :root {
+    :root {{
+      --primary: #f59e0b; /* Blinkit Yellow */
+      --primary-hover: #d97706;
+      --accent: #10b981;  /* Fresh Green */
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+    }}
+    * {{ margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }}
+    body {{ background: var(--bg); color: var(--text); padding-bottom: 80px; }}
+
+    /* Header */
+    header {{ background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; padding: 14px 20px; }}
+    .header-top {{ max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 16px; }}
+    .brand {{ display: flex; align-items: center; gap: 8px; font-size: 1.6rem; font-weight: 900; color: #fff; text-decoration: none; }}
+    .brand span {{ color: var(--primary); }}
+    .delivery-pill {{ background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--primary); padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }}
+    .cart-btn {{ background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.15s; }}
+    .cart-btn:hover {{ transform: scale(1.03); }}
+
+    /* Search Bar */
+    .search-wrapper {{ max-width: 1200px; margin: 16px auto 0; }}
+    .search-input {{ width: 100%; padding: 12px 18px; border-radius: 12px; border: 1px solid var(--border); background: #0b1120; color: white; font-size: 1rem; outline: none; }}
+    .search-input:focus {{ border-color: var(--primary); }}
+
+    /* Category Chips */
+    .categories {{ max-width: 1200px; margin: 24px auto 0; padding: 0 20px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }}
+    .cat-chip {{ background: var(--card-bg); border: 1px solid var(--border); padding: 8px 18px; border-radius: 999px; font-size: 0.9rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: all 0.2s; }}
+    .cat-chip.active, .cat-chip:hover {{ background: var(--primary); color: #000; font-weight: 700; border-color: var(--primary); }}
+
+    /* Products Grid */
+    .container {{ max-width: 1200px; margin: 30px auto 0; padding: 0 20px; }}
+    .section-title {{ font-size: 1.5rem; font-weight: 800; margin-bottom: 20px; }}
+    .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }}
+    .card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; padding: 16px; display: flex; flex-direction: column; transition: transform 0.2s; position: relative; }}
+    .card:hover {{ transform: translateY(-4px); border-color: var(--primary); }}
+    .eta-badge {{ position: absolute; top: 12px; left: 12px; background: rgba(16, 185, 129, 0.2); color: var(--accent); font-size: 0.75rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; }}
+    .item-icon {{ font-size: 3.5rem; text-align: center; margin: 20px 0 10px; }}
+    .item-title {{ font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }}
+    .item-weight {{ color: var(--muted); font-size: 0.85rem; margin-bottom: 14px; }}
+    .card-bottom {{ display: flex; justify-content: space-between; align-items: center; margin-top: auto; }}
+    .item-price {{ font-size: 1.25rem; font-weight: 800; color: #fff; }}
+    .add-action {{ background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent); color: var(--accent); font-weight: 800; padding: 6px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }}
+    .add-action:hover {{ background: var(--accent); color: #fff; }}
+
+    /* Cart Modal */
+    .cart-drawer {{ position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; justify-content: flex-end; z-index: 100; }}
+    .cart-drawer.active {{ display: flex; }}
+    .cart-content {{ width: 100%; max-width: 400px; background: #1e293b; height: 100vh; padding: 24px; display: flex; flex-direction: column; }}
+    .cart-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; }}
+    .cart-items {{ flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin: 20px 0; }}
+    .cart-item {{ display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 12px; border: 1px solid var(--border); }}
+    .checkout-btn {{ width: 100%; background: var(--primary); color: #000; font-size: 1.05rem; font-weight: 800; padding: 14px; border: none; border-radius: 12px; cursor: pointer; }}
+  </style>
+</head>
+<body>
+
+  <!-- Top Delivery Header -->
+  <header>
+    <div class="header-top">
+      <a href="#" class="brand">⚡ {app_title}<span>.10m</span></a>
+      <div class="delivery-pill">⏱️ Delivery in 10 mins</div>
+      <button class="cart-btn" onclick="toggleCart()">🛒 Cart (<span id="cartCount">0</span>)</button>
+    </div>
+    <div class="search-wrapper">
+      <input type="text" class="search-input" placeholder="Search 'milk, bread, chips, veggies, drinks'..." oninput="handleSearch(this.value)">
+    </div>
+  </header>
+
+  <!-- Category Filter Chips -->
+  <div class="categories">
+    <div class="cat-chip active" onclick="filterCat('all')">All Items</div>
+    <div class="cat-chip" onclick="filterCat('dairy')">🥛 Dairy &amp; Bread</div>
+    <div class="cat-chip" onclick="filterCat('veggies')">🥦 Fresh Produce</div>
+    <div class="cat-chip" onclick="filterCat('snacks')">🍟 Snacks &amp; Munchies</div>
+    <div class="cat-chip" onclick="filterCat('drinks')">🥤 Cold Drinks &amp; Juices</div>
+  </div>
+
+  <!-- Products Section -->
+  <main class="container">
+    <h2 class="section-title">⚡ Instant Essentials (10-Min Delivery)</h2>
+    <div class="grid" id="productGrid"></div>
+  </main>
+
+  <!-- Slide-Over Cart Drawer -->
+  <div class="cart-drawer" id="cartModal" onclick="if(event.target === this) toggleCart()">
+    <div class="cart-content">
+      <div class="cart-header">
+        <h3>🛒 My Order ({app_title})</h3>
+        <button style="background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer;" onclick="toggleCart()">✕</button>
+      </div>
+      <div class="cart-items" id="cartList">
+        <p style="color: var(--muted); text-align: center; margin-top: 50px;">Your cart is empty.</p>
+      </div>
+      <div style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; margin-bottom: 16px;">
+          <span>To Pay:</span>
+          <span id="cartTotal" style="color: var(--primary);">₹0</span>
+        </div>
+        <button class="checkout-btn" onclick="placeOrder()">Place Order (10-Min Delivery) 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inventory = [
+      {{ id: 1, name: "Amul Taaza Toned Milk", cat: "dairy", weight: "500 ml", price: 27, icon: "🥛" }},
+      {{ id: 2, name: "Harvest Gold White Bread", cat: "dairy", weight: "400 g", price: 45, icon: "🍞" }},
+      {{ id: 3, name: "Fresh Hybrid Tomatoes", cat: "veggies", weight: "500 g", price: 22, icon: "🍅" }},
+      {{ id: 4, name: "Fresh Alphonso Mangoes", cat: "veggies", weight: "1 kg", price: 149, icon: "🥭" }},
+      {{ id: 5, name: "Lay's Classic Salted Chips", cat: "snacks", weight: "50 g", price: 20, icon: "🥔" }},
+      {{ id: 6, name: "Coca-Cola Can", cat: "drinks", weight: "300 ml", price: 40, icon: "🥤" }},
+      {{ id: 7, name: "Maggi 2-Minute Noodles", cat: "snacks", weight: "4-Pack", price: 56, icon: "🍜" }},
+      {{ id: 8, name: "Epigamia Greek Yogurt", cat: "dairy", weight: "100 g", price: 35, icon: "🥣" }}
+    ];
+
+    let cart = [];
+
+    function renderItems(items) {{
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = items.map(item => `
+        <div class="card">
+          <div class="eta-badge">⚡ 10 MINS</div>
+          <div class="item-icon">${{item.icon}}</div>
+          <div class="item-title">${{item.name}}</div>
+          <div class="item-weight">${{item.weight}}</div>
+          <div class="card-bottom">
+            <div class="item-price">₹${{item.price}}</div>
+            <button class="add-action" onclick="addToCart(${{item.id}})">+ ADD</button>
+          </div>
+        </div>
+      `).join('');
+    }}
+
+    function addToCart(id) {{
+      const item = inventory.find(x => x.id === id);
+      cart.push(item);
+      updateCart();
+    }}
+
+    function removeFromCart(idx) {{
+      cart.splice(idx, 1);
+      updateCart();
+    }}
+
+    function updateCart() {{
+      document.getElementById('cartCount').innerText = cart.length;
+      const list = document.getElementById('cartList');
+      const totalEl = document.getElementById('cartTotal');
+
+      if (cart.length === 0) {{
+        list.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 50px;">Your cart is empty.</p>';
+        totalEl.innerText = '₹0';
+        return;
+      }}
+
+      list.innerHTML = cart.map((item, i) => `
+        <div class="cart-item">
+          <div>
+            <div style="font-weight: 700;">${{item.icon}} ${{item.name}}</div>
+            <div style="color: var(--primary); font-weight: 700; font-size: 0.9rem;">₹${{item.price}}</div>
+          </div>
+          <button style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;" onclick="removeFromCart(${{i}})">🗑️</button>
+        </div>
+      `).join('');
+
+      const total = cart.reduce((sum, item) => sum + item.price, 0);
+      totalEl.innerText = `₹${{total}}`;
+    }}
+
+    function toggleCart() {{
+      document.getElementById('cartModal').classList.toggle('active');
+    }}
+
+    function filterCat(cat) {{
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      if (cat === 'all') renderItems(inventory);
+      else renderItems(inventory.filter(x => x.cat === cat));
+    }}
+
+    function handleSearch(query) {{
+      const q = query.toLowerCase();
+      renderItems(inventory.filter(x => x.name.toLowerCase().includes(q) || x.cat.toLowerCase().includes(q)));
+    }}
+
+    function placeOrder() {{
+      if (cart.length === 0) {{
+        alert("Please add items to your cart first!");
+        return;
+      }}
+      alert(`🚀 Order Placed with {app_title}!\\nYour delivery is on its way and will arrive in 10 minutes.`);
+      cart = [];
+      updateCart();
+      toggleCart();
+    }}
+
+    renderItems(inventory);
+  </script>
+</body>
+</html>"""
+            return f"### ⚡ Complete Quick-Commerce App ({app_title}) in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save the code into `{app_title.lower()}.html`.\n2. Open `{app_title.lower()}.html` directly in any web browser!\n\n### 💡 Key Features of {app_title}:\n- **10-Minute Delivery Experience**: Modeled with Blinkit/Zepto quick-commerce speed badge and delivery address pill.\n- **Dynamic Grocery Inventory**: Instant product cards with ₹ pricing, weights, and quantity management.\n- **Interactive Slide-over Cart**: Instant real-time subtotal calculation and checkout simulation."
+        else:
+            code = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{app_title} - Modern E-Commerce Store</title>
+  <style>
+    :root {{
       --primary: #6366f1;
       --primary-hover: #4f46e5;
       --bg: #0f172a;
@@ -1276,52 +1497,52 @@ def synthesize_project_code(query, mode='study'):
       --text-muted: #94a3b8;
       --border: #334155;
       --accent: #10b981;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body { background: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 60px; }
+    }}
+    * {{ margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }}
+    body {{ background: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 60px; }}
 
     /* Navbar */
-    header { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
-    .nav-container { max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 1.5rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
-    .logo span { color: var(--primary); }
-    .cart-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 999px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
-    .cart-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    header {{ background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }}
+    .nav-container {{ max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }}
+    .logo {{ font-size: 1.5rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }}
+    .logo span {{ color: var(--primary); }}
+    .cart-btn {{ background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 999px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }}
+    .cart-btn:hover {{ background: var(--primary-hover); transform: translateY(-1px); }}
 
     /* Hero */
-    .hero { max-width: 1200px; margin: 30px auto; padding: 40px 24px; text-align: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(16, 185, 129, 0.1)); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); }
-    .hero h1 { font-size: 2.8rem; font-weight: 900; margin-bottom: 12px; }
-    .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 24px; }
+    .hero {{ max-width: 1200px; margin: 30px auto; padding: 40px 24px; text-align: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(16, 185, 129, 0.1)); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); }}
+    .hero h1 {{ font-size: 2.8rem; font-weight: 900; margin-bottom: 12px; }}
+    .hero p {{ color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 24px; }}
 
     /* Product Grid */
-    .products-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-    .section-title { font-size: 1.8rem; margin-bottom: 24px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
-    .product-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; transition: all 0.25s; }
-    .product-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 24px rgba(0,0,0,0.3); }
-    .product-img { width: 100%; height: 180px; background: #0b1120; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
-    .product-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
-    .product-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
-    .product-desc { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px; flex-grow: 1; }
-    .product-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
-    .product-price { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
-    .add-btn { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .add-btn:hover { background: var(--primary); color: white; }
+    .products-container {{ max-width: 1200px; margin: 0 auto; padding: 0 24px; }}
+    .section-title {{ font-size: 1.8rem; margin-bottom: 24px; }}
+    .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }}
+    .product-card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; transition: all 0.25s; }}
+    .product-card:hover {{ transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 24px rgba(0,0,0,0.3); }}
+    .product-img {{ width: 100%; height: 180px; background: #0b1120; display: flex; align-items: center; justify-content: center; font-size: 4rem; }}
+    .product-info {{ padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }}
+    .product-title {{ font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }}
+    .product-desc {{ color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px; flex-grow: 1; }}
+    .product-bottom {{ display: flex; justify-content: space-between; align-items: center; margin-top: auto; }}
+    .product-price {{ font-size: 1.3rem; font-weight: 800; color: var(--accent); }}
+    .add-btn {{ background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }}
+    .add-btn:hover {{ background: var(--primary); color: white; }}
 
     /* Cart Modal / Drawer */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; justify-content: flex-end; z-index: 100; }
-    .modal-overlay.active { display: flex; }
-    .cart-drawer { width: 100%; max-width: 420px; background: #1e293b; height: 100vh; padding: 24px; display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
-    .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
-    .close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
-    .cart-items { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-    .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); }
-    .cart-item-title { font-weight: 700; font-size: 0.95rem; }
-    .cart-item-price { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
-    .cart-footer { margin-top: auto; border-top: 1px solid var(--border); padding-top: 20px; }
-    .cart-total-row { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 16px; }
-    .checkout-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s; }
-    .checkout-btn:hover { opacity: 0.9; }
+    .modal-overlay {{ position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; justify-content: flex-end; z-index: 100; }}
+    .modal-overlay.active {{ display: flex; }}
+    .cart-drawer {{ width: 100%; max-width: 420px; background: #1e293b; height: 100vh; padding: 24px; display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5); }}
+    .cart-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }}
+    .close-btn {{ background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }}
+    .cart-items {{ flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }}
+    .cart-item {{ display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); }}
+    .cart-item-title {{ font-weight: 700; font-size: 0.95rem; }}
+    .cart-item-price {{ color: var(--accent); font-weight: 700; font-size: 0.9rem; }}
+    .cart-footer {{ margin-top: auto; border-top: 1px solid var(--border); padding-top: 20px; }}
+    .cart-total-row {{ display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 16px; }}
+    .checkout-btn {{ width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s; }}
+    .checkout-btn:hover {{ opacity: 0.9; }}
   </style>
 </head>
 <body>
@@ -1329,7 +1550,7 @@ def synthesize_project_code(query, mode='study'):
   <!-- Navbar -->
   <header>
     <div class="nav-container">
-      <div class="logo">⚡ Nexus<span>Mart</span></div>
+      <div class="logo">⚡ {app_title}<span>Store</span></div>
       <button class="cart-btn" onclick="toggleCart()">
         🛒 Cart (<span id="cartCount">0</span>)
       </button>
@@ -1338,8 +1559,8 @@ def synthesize_project_code(query, mode='study'):
 
   <!-- Hero Section -->
   <section class="hero">
-    <h1>Next-Gen Tech &amp; Gadgets</h1>
-    <p>Discover hand-picked, premium electronics and developer gear with instant checkout.</p>
+    <h1>Welcome to {app_title}</h1>
+    <p>Discover hand-picked, premium products with instant checkout and global delivery.</p>
   </section>
 
   <!-- Products Section -->
@@ -1370,90 +1591,91 @@ def synthesize_project_code(query, mode='study'):
 
   <script>
     const products = [
-      { id: 1, name: "Noise-Cancelling Headphones", price: 199.99, icon: "🎧", desc: "Studio-grade wireless acoustics with 40h battery." },
-      { id: 2, name: "Mechanical RGB Keyboard", price: 129.50, icon: "⌨️", desc: "Hot-swappable tactile switches with custom keycaps." },
-      { id: 3, name: "Ultra-Wide Gaming Monitor", price: 449.00, icon: "🖥️", desc: "34-inch 144Hz curved display with HDR support." },
-      { id: 4, name: "Smart Fitness Watch", price: 89.99, icon: "⌚", desc: "Waterproof health tracker with GPS and OLED display." },
-      { id: 5, name: "Ergonomic Desk Chair", price: 299.00, icon: "🪑", desc: "Breathable mesh with dynamic lumbar support." },
-      { id: 6, name: "Anodized Aluminum Laptop Stand", price: 49.99, icon: "💻", desc: "Foldable 360-degree rotation for improved posture." }
+      {{ id: 1, name: "Noise-Cancelling Headphones", price: 199.99, icon: "🎧", desc: "Studio-grade wireless acoustics with 40h battery." }},
+      {{ id: 2, name: "Mechanical RGB Keyboard", price: 129.50, icon: "⌨️", desc: "Hot-swappable tactile switches with custom keycaps." }},
+      {{ id: 3, name: "Ultra-Wide Gaming Monitor", price: 449.00, icon: "🖥️", desc: "34-inch 144Hz curved display with HDR support." }},
+      {{ id: 4, name: "Smart Fitness Watch", price: 89.99, icon: "⌚", desc: "Waterproof health tracker with GPS and OLED display." }},
+      {{ id: 5, name: "Ergonomic Desk Chair", price: 299.00, icon: "🪑", desc: "Breathable mesh with dynamic lumbar support." }},
+      {{ id: 6, name: "Anodized Aluminum Laptop Stand", price: 49.99, icon: "💻", desc: "Foldable 360-degree rotation for improved posture." }}
     ];
 
     let cart = [];
 
-    function renderProducts() {
+    function renderProducts() {{
       const grid = document.getElementById('productGrid');
       grid.innerHTML = products.map(p => `
         <div class="product-card">
-          <div class="product-img">${p.icon}</div>
+          <div class="product-img">${{p.icon}}</div>
           <div class="product-info">
-            <div class="product-title">${p.name}</div>
-            <div class="product-desc">${p.desc}</div>
+            <div class="product-title">${{p.name}}</div>
+            <div class="product-desc">${{p.desc}}</div>
             <div class="product-bottom">
-              <div class="product-price">$${p.price.toFixed(2)}</div>
-              <button class="add-btn" onclick="addToCart(${p.id})">+ Add to Cart</button>
+              <div class="product-price">$${{p.price.toFixed(2)}}</div>
+              <button class="add-btn" onclick="addToCart(${{p.id}})">+ Add to Cart</button>
             </div>
           </div>
         </div>
       `).join('');
-    }
+    }}
 
-    function addToCart(productId) {
+    function addToCart(productId) {{
       const product = products.find(p => p.id === productId);
       cart.push(product);
       updateCartUI();
-    }
+    }}
 
-    function removeFromCart(index) {
+    function removeFromCart(index) {{
       cart.splice(index, 1);
       updateCartUI();
-    }
+    }}
 
-    function updateCartUI() {
+    function updateCartUI() {{
       document.getElementById('cartCount').innerText = cart.length;
       const cartItemsEl = document.getElementById('cartItems');
       const cartTotalEl = document.getElementById('cartTotal');
 
-      if (cart.length === 0) {
+      if (cart.length === 0) {{
         cartItemsEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 40px;">Your cart is empty.</p>';
         cartTotalEl.innerText = '$0.00';
         return;
-      }
+      }}
 
       cartItemsEl.innerHTML = cart.map((item, idx) => `
         <div class="cart-item">
           <div>
-            <div class="cart-item-title">${item.icon} ${item.name}</div>
-            <div class="cart-item-price">$${item.price.toFixed(2)}</div>
+            <div class="cart-item-title">${{item.icon}} ${{item.name}}</div>
+            <div class="cart-item-price">$${{item.price.toFixed(2)}}</div>
           </div>
-          <button style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;" onclick="removeFromCart(${idx})">🗑️</button>
+          <button style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;" onclick="removeFromCart(${{idx}})">🗑️</button>
         </div>
       `).join('');
 
       const total = cart.reduce((acc, item) => acc + item.price, 0);
-      cartTotalEl.innerText = `$${total.toFixed(2)}`;
-    }
+      cartTotalEl.innerText = `$${{total.toFixed(2)}}`;
+    }}
 
-    function toggleCart() {
+    function toggleCart() {{
       const overlay = document.getElementById('cartOverlay');
       overlay.classList.toggle('active');
-    }
+    }}
 
-    function handleCheckout() {
-      if (cart.length === 0) {
+    function handleCheckout() {{
+      if (cart.length === 0) {{
         alert("Your cart is empty! Add some items before checkout.");
         return;
-      }
-      alert(`🎉 Order Placed Successfully! Total: ${document.getElementById('cartTotal').innerText}\\nThank you for shopping at NexusMart.`);
+      }}
+      alert(`🎉 Order Placed Successfully at {app_title}! Total: ${{document.getElementById('cartTotal').innerText}}\\nThank you for shopping.`);
       cart = [];
       updateCartUI();
       toggleCart();
-    }
+    }}
 
     renderProducts();
   </script>
 </body>
 </html>"""
-        return f"### 🛍️ Complete Modern E-Commerce Store in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save the code into an `ecommerce.html` file.\n2. Open `ecommerce.html` directly in any web browser!\n\n### 💡 Features Included:\n- **Interactive Product Catalog**: Real-time product cards with icons, prices, and descriptions.\n- **Slide-over Cart Drawer**: Dynamic item adding, item removal, live count badge, and automated subtotal calculation.\n- **Checkout Workflow**: One-click checkout with interactive feedback."
+            return f"### 🛍️ Complete Modern E-Commerce Store ({app_title}) in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save the code into `{app_title.lower()}.html`.\n2. Open `{app_title.lower()}.html` directly in any web browser!\n\n### 💡 Features Included:\n- **Interactive Product Catalog**: Real-time product cards with icons, prices, and descriptions.\n- **Slide-over Cart Drawer**: Dynamic item adding, item removal, live count badge, and automated subtotal calculation.\n- **Checkout Workflow**: One-click checkout with interactive feedback."
+
 
     # 2. Portfolio / Resume Website
     if any(k in q for k in ['portfolio', 'resume website', 'personal website', 'developer portfolio', 'cv website']):
