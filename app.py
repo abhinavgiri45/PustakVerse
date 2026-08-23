@@ -1239,20 +1239,445 @@ def synthesize_project_code(query, mode='study'):
     """
     q = query.lower().strip()
 
-    # Determine requested language
+    # Determine requested language accurately
     lang = 'python'
-    if 'javascript' in q or ' js' in q or 'node' in q: lang = 'javascript'
-    elif 'html' in q or 'css' in q or 'frontend' in q or 'website' in q: lang = 'html'
-    elif 'c++' in q or 'cpp' in q: lang = 'cpp'
-    elif 'java' in q and 'javascript' not in q: lang = 'java'
-    elif 'sql' in q: lang = 'sql'
-    elif 'rust' in q: lang = 'rust'
+    if 'html' in q or 'css' in q or 'frontend' in q or 'website' in q or 'web page' in q or 'webpage' in q or 'landing page' in q:
+        lang = 'html'
+    elif 'javascript' in q or ' js' in q or 'node' in q:
+        lang = 'javascript'
+    elif 'c++' in q or 'cpp' in q:
+        lang = 'cpp'
+    elif 'java' in q and 'javascript' not in q:
+        lang = 'java'
+    elif 'sql' in q or 'database' in q or 'table' in q or 'query' in q:
+        lang = 'sql'
+    elif 'rust' in q:
+        lang = 'rust'
 
-    topic = re.sub(r'^(write|create|make|build|give me|generate|implement)\s+(a\s+|an\s+|the\s+)?(code|program|script|app|game|project)?\s*(for\s+|in\s+|to\s+)?', '', q, flags=re.I).strip()
-    topic = re.sub(r'\s+(in python|in javascript|in html|in cpp|in c\+\+|in java|in js)\b.*$', '', topic, flags=re.I).strip()
-    topic_cap = topic.title() if topic else "Software Implementation"
+    topic = re.sub(r'^(write|create|make|build|give me|generate|implement)\s+(a\s+|an\s+|the\s+)?(code|program|script|app|game|project|website)?\s*(for\s+|in\s+|to\s+|using\s+)?', '', q, flags=re.I).strip()
+    topic = re.sub(r'\s+(in python|in javascript|in html|in css|in cpp|in c\+\+|in java|in js|using html|using python|using css|using javascript)\b.*$', '', topic, flags=re.I).strip()
+    topic_cap = topic.title() if topic else "Software Project"
 
-    # 1. XO Game / Tic-Tac-Toe
+    # 1. E-Commerce Store / Shop Website
+    if any(k in q for k in ['ecommerce', 'e-commerce', 'shopping', 'store', 'shop', 'cart', 'buy products']):
+        code = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusMart - Modern E-Commerce Store</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --accent: #10b981;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 60px; }
+
+    /* Navbar */
+    header { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+    .nav-container { max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 1.5rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .logo span { color: var(--primary); }
+    .cart-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 999px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .cart-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+    /* Hero */
+    .hero { max-width: 1200px; margin: 30px auto; padding: 40px 24px; text-align: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(16, 185, 129, 0.1)); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); }
+    .hero h1 { font-size: 2.8rem; font-weight: 900; margin-bottom: 12px; }
+    .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 24px; }
+
+    /* Product Grid */
+    .products-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section-title { font-size: 1.8rem; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+    .product-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; transition: all 0.25s; }
+    .product-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 24px rgba(0,0,0,0.3); }
+    .product-img { width: 100%; height: 180px; background: #0b1120; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
+    .product-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+    .product-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+    .product-desc { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px; flex-grow: 1; }
+    .product-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+    .product-price { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+    .add-btn { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .add-btn:hover { background: var(--primary); color: white; }
+
+    /* Cart Modal / Drawer */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; justify-content: flex-end; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .cart-drawer { width: 100%; max-width: 420px; background: #1e293b; height: 100vh; padding: 24px; display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
+    .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+    .close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    .cart-items { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); }
+    .cart-item-title { font-weight: 700; font-size: 0.95rem; }
+    .cart-item-price { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+    .cart-footer { margin-top: auto; border-top: 1px solid var(--border); padding-top: 20px; }
+    .cart-total-row { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 16px; }
+    .checkout-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s; }
+    .checkout-btn:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header>
+    <div class="nav-container">
+      <div class="logo">⚡ Nexus<span>Mart</span></div>
+      <button class="cart-btn" onclick="toggleCart()">
+        🛒 Cart (<span id="cartCount">0</span>)
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <h1>Next-Gen Tech &amp; Gadgets</h1>
+    <p>Discover hand-picked, premium electronics and developer gear with instant checkout.</p>
+  </section>
+
+  <!-- Products Section -->
+  <main class="products-container">
+    <h2 class="section-title">🔥 Featured Products</h2>
+    <div class="grid" id="productGrid"></div>
+  </main>
+
+  <!-- Cart Modal Drawer -->
+  <div class="modal-overlay" id="cartOverlay" onclick="if(event.target === this) toggleCart()">
+    <div class="cart-drawer">
+      <div class="cart-header">
+        <h2>Your Shopping Cart 🛒</h2>
+        <button class="close-btn" onclick="toggleCart()">✕</button>
+      </div>
+      <div class="cart-items" id="cartItems">
+        <p style="color: var(--text-muted); text-align: center; margin-top: 40px;">Your cart is currently empty.</p>
+      </div>
+      <div class="cart-footer">
+        <div class="cart-total-row">
+          <span>Subtotal:</span>
+          <span id="cartTotal" style="color: var(--accent);">$0.00</span>
+        </div>
+        <button class="checkout-btn" onclick="handleCheckout()">Proceed to Checkout 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const products = [
+      { id: 1, name: "Noise-Cancelling Headphones", price: 199.99, icon: "🎧", desc: "Studio-grade wireless acoustics with 40h battery." },
+      { id: 2, name: "Mechanical RGB Keyboard", price: 129.50, icon: "⌨️", desc: "Hot-swappable tactile switches with custom keycaps." },
+      { id: 3, name: "Ultra-Wide Gaming Monitor", price: 449.00, icon: "🖥️", desc: "34-inch 144Hz curved display with HDR support." },
+      { id: 4, name: "Smart Fitness Watch", price: 89.99, icon: "⌚", desc: "Waterproof health tracker with GPS and OLED display." },
+      { id: 5, name: "Ergonomic Desk Chair", price: 299.00, icon: "🪑", desc: "Breathable mesh with dynamic lumbar support." },
+      { id: 6, name: "Anodized Aluminum Laptop Stand", price: 49.99, icon: "💻", desc: "Foldable 360-degree rotation for improved posture." }
+    ];
+
+    let cart = [];
+
+    function renderProducts() {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = products.map(p => `
+        <div class="product-card">
+          <div class="product-img">${p.icon}</div>
+          <div class="product-info">
+            <div class="product-title">${p.name}</div>
+            <div class="product-desc">${p.desc}</div>
+            <div class="product-bottom">
+              <div class="product-price">$${p.price.toFixed(2)}</div>
+              <button class="add-btn" onclick="addToCart(${p.id})">+ Add to Cart</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      cart.push(product);
+      updateCartUI();
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      updateCartUI();
+    }
+
+    function updateCartUI() {
+      document.getElementById('cartCount').innerText = cart.length;
+      const cartItemsEl = document.getElementById('cartItems');
+      const cartTotalEl = document.getElementById('cartTotal');
+
+      if (cart.length === 0) {
+        cartItemsEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 40px;">Your cart is empty.</p>';
+        cartTotalEl.innerText = '$0.00';
+        return;
+      }
+
+      cartItemsEl.innerHTML = cart.map((item, idx) => `
+        <div class="cart-item">
+          <div>
+            <div class="cart-item-title">${item.icon} ${item.name}</div>
+            <div class="cart-item-price">$${item.price.toFixed(2)}</div>
+          </div>
+          <button style="background: none; border: none; color: #ef4444; font-size: 1.1rem; cursor: pointer;" onclick="removeFromCart(${idx})">🗑️</button>
+        </div>
+      `).join('');
+
+      const total = cart.reduce((acc, item) => acc + item.price, 0);
+      cartTotalEl.innerText = `$${total.toFixed(2)}`;
+    }
+
+    function toggleCart() {
+      const overlay = document.getElementById('cartOverlay');
+      overlay.classList.toggle('active');
+    }
+
+    function handleCheckout() {
+      if (cart.length === 0) {
+        alert("Your cart is empty! Add some items before checkout.");
+        return;
+      }
+      alert(`🎉 Order Placed Successfully! Total: ${document.getElementById('cartTotal').innerText}\\nThank you for shopping at NexusMart.`);
+      cart = [];
+      updateCartUI();
+      toggleCart();
+    }
+
+    renderProducts();
+  </script>
+</body>
+</html>"""
+        return f"### 🛍️ Complete Modern E-Commerce Store in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save the code into an `ecommerce.html` file.\n2. Open `ecommerce.html` directly in any web browser!\n\n### 💡 Features Included:\n- **Interactive Product Catalog**: Real-time product cards with icons, prices, and descriptions.\n- **Slide-over Cart Drawer**: Dynamic item adding, item removal, live count badge, and automated subtotal calculation.\n- **Checkout Workflow**: One-click checkout with interactive feedback."
+
+    # 2. Portfolio / Resume Website
+    if any(k in q for k in ['portfolio', 'resume website', 'personal website', 'developer portfolio', 'cv website']):
+        code = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alex Morgan - Senior Full-Stack Developer</title>
+  <style>
+    :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --muted: #94a3b8; --border: #334155; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); line-height: 1.6; }
+    nav { max-width: 1100px; margin: 0 auto; padding: 24px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+    .nav-links { display: flex; gap: 20px; list-style: none; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-weight: 600; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--primary); }
+    .hero { max-width: 1100px; margin: 60px auto; padding: 0 24px; text-align: center; }
+    .hero h1 { font-size: 3.2rem; font-weight: 900; margin-bottom: 16px; }
+    .hero h1 span { color: var(--primary); }
+    .hero p { color: var(--muted); font-size: 1.2rem; max-width: 650px; margin: 0 auto 30px; }
+    .btn { background: var(--primary); color: #0f172a; padding: 12px 28px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-block; transition: transform 0.2s; }
+    .btn:hover { transform: scale(1.05); }
+    .section { max-width: 1100px; margin: 80px auto; padding: 0 24px; }
+    .section-title { font-size: 2rem; margin-bottom: 30px; border-left: 4px solid var(--primary); padding-left: 14px; }
+    .skills-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .skill-tag { background: var(--card); border: 1px solid var(--border); padding: 8px 18px; border-radius: 999px; font-weight: 600; color: var(--primary); }
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .project-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: transform 0.2s; }
+    .project-card:hover { transform: translateY(-6px); border-color: var(--primary); }
+    .project-card h3 { margin-bottom: 10px; font-size: 1.3rem; }
+    .project-card p { color: var(--muted); font-size: 0.95rem; margin-bottom: 16px; }
+    footer { text-align: center; padding: 40px; border-top: 1px solid var(--border); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo">&lt;AlexDev /&gt;</div>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="#projects">Projects</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero">
+    <h1>Building Scalable Web Apps with <span>Next-Gen AI</span></h1>
+    <p>Hi, I'm Alex. A full-stack engineer specializing in Python, TypeScript, React, and cloud architectures.</p>
+    <a href="#projects" class="btn">View Featured Work 🚀</a>
+  </header>
+
+  <section class="section" id="skills">
+    <h2 class="section-title">⚡ Tech Stack &amp; Skills</h2>
+    <div class="skills-grid">
+      <span class="skill-tag">Python (FastAPI / Django)</span>
+      <span class="skill-tag">TypeScript &amp; React</span>
+      <span class="skill-tag">Node.js &amp; Express</span>
+      <span class="skill-tag">PostgreSQL &amp; Redis</span>
+      <span class="skill-tag">Docker &amp; Kubernetes</span>
+      <span class="skill-tag">Tailwind CSS</span>
+    </div>
+  </section>
+
+  <section class="section" id="projects">
+    <h2 class="section-title">💼 Featured Projects</h2>
+    <div class="projects-grid">
+      <div class="project-card">
+        <h3>🧠 AI Workflow Automator</h3>
+        <p>A distributed task orchestrator built with FastAPI and Celery handling 100k+ daily inference tasks.</p>
+      </div>
+      <div class="project-card">
+        <h3>⚡ Real-Time Crypto Terminal</h3>
+        <p>High-frequency WebSocket dashboard rendering candlestick charts with 60 FPS performance.</p>
+      </div>
+      <div class="project-card">
+        <h3>🛡️ Secure Auth &amp; RBAC Portal</h3>
+        <p>Enterprise identity management system with biometric WebAuthn and JWT tokens.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Alex Morgan. Built with clean HTML, CSS &amp; JS.</p>
+  </footer>
+</body>
+</html>"""
+        return f"### 💼 Modern Developer Portfolio in HTML & CSS\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save as `portfolio.html`.\n2. Open in your browser!"
+
+    # 3. Login / Signup Authentication Portal
+    if any(k in q for k in ['login', 'signup', 'auth', 'sign in', 'register', 'login page']):
+        code = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Authentication</title>
+  <style>
+    :root { --primary: #8b5cf6; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --muted: #94a3b8; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .auth-card { background: var(--card); border: 1px solid #334155; width: 100%; max-width: 400px; padding: 36px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; background: #0f172a; padding: 4px; border-radius: 12px; }
+    .tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; color: var(--muted); border: none; background: none; transition: all 0.2s; }
+    .tab.active { background: var(--primary); color: white; }
+    .input-field { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    input { width: 100%; padding: 12px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 10px; color: white; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: var(--primary); }
+    .submit-btn { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+    .submit-btn:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="tabs">
+      <button class="tab active" id="loginTab" onclick="setTab('login')">Sign In</button>
+      <button class="tab" id="signupTab" onclick="setTab('signup')">Sign Up</button>
+    </div>
+
+    <form id="authForm" onsubmit="handleSubmit(event)">
+      <div class="input-field" id="nameField" style="display: none;">
+        <label>Full Name</label>
+        <input type="text" id="nameInput" placeholder="John Doe">
+      </div>
+      <div class="input-field">
+        <label>Email Address</label>
+        <input type="email" id="emailInput" placeholder="user@example.com" required>
+      </div>
+      <div class="input-field">
+        <label>Password</label>
+        <input type="password" id="passInput" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    let mode = 'login';
+    function setTab(newMode) {
+      mode = newMode;
+      document.getElementById('loginTab').classList.toggle('active', mode === 'login');
+      document.getElementById('signupTab').classList.toggle('active', mode === 'signup');
+      document.getElementById('nameField').style.display = mode === 'signup' ? 'block' : 'none';
+      document.getElementById('submitBtn').innerText = mode === 'login' ? 'Sign In' : 'Create Account';
+    }
+    function handleSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('emailInput').value;
+      alert(`🎉 Authenticated successfully as ${email} (${mode === 'login' ? 'Sign In' : 'Registered'})!`);
+    }
+  </script>
+</body>
+</html>"""
+        return f"### 🔐 Modern Login & Sign Up Authentication Portal in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save into `auth.html`.\n2. Open directly in any web browser!"
+
+    # 4. Weather App
+    if any(k in q for k in ['weather', 'weather app', 'forecast']):
+        code = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyPulse - Weather Dashboard</title>
+  <style>
+    :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .weather-card { background: var(--card); border: 1px solid #334155; width: 100%; max-width: 380px; padding: 32px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
+    .search-box { display: flex; gap: 8px; margin-bottom: 24px; }
+    input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 1rem; outline: none; }
+    button { background: var(--primary); color: #0f172a; border: none; padding: 12px 18px; border-radius: 12px; font-weight: 800; cursor: pointer; }
+    .weather-icon { font-size: 4.5rem; margin: 10px 0; }
+    .temp { font-size: 3.5rem; font-weight: 900; color: var(--primary); }
+    .city { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+    .condition { color: #94a3b8; font-size: 1.1rem; margin-bottom: 24px; }
+    .details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #0f172a; padding: 16px; border-radius: 16px; border: 1px solid #334155; }
+    .detail-item { font-size: 0.9rem; color: #94a3b8; }
+    .detail-val { font-size: 1.1rem; font-weight: 700; color: white; }
+  </style>
+</head>
+<body>
+  <div class="weather-card">
+    <div class="search-box">
+      <input type="text" id="cityInput" placeholder="Enter city (e.g. London, Tokyo)..." onkeypress="if(event.key==='Enter') searchWeather()">
+      <button onclick="searchWeather()">🔍</button>
+    </div>
+
+    <div class="city" id="cityName">San Francisco, US</div>
+    <div class="weather-icon" id="weatherIcon">☀️</div>
+    <div class="temp" id="tempDisplay">22°C</div>
+    <div class="condition" id="conditionDisplay">Sunny &amp; Clear Sky</div>
+
+    <div class="details">
+      <div class="detail-item">Humidity<div class="detail-val" id="humidity">58%</div></div>
+      <div class="detail-item">Wind Speed<div class="detail-val" id="wind">14 km/h</div></div>
+    </div>
+  </div>
+
+  <script>
+    const sampleData = {
+      "london": { city: "London, UK", temp: "16°C", icon: "🌧️", condition: "Light Rain", humidity: "82%", wind: "18 km/h" },
+      "tokyo": { city: "Tokyo, JP", temp: "26°C", icon: "⛅", condition: "Partly Cloudy", humidity: "65%", wind: "10 km/h" },
+      "new york": { city: "New York, US", temp: "20°C", icon: "☀️", condition: "Sunny", humidity: "45%", wind: "12 km/h" },
+      "delhi": { city: "New Delhi, IN", temp: "31°C", icon: "🌤️", condition: "Haze & Warm", humidity: "50%", wind: "8 km/h" }
+    };
+
+    function searchWeather() {
+      const city = document.getElementById('cityInput').value.trim().toLowerCase();
+      if (!city) return;
+      const data = sampleData[city] || { city: city.toUpperCase(), temp: "24°C", icon: "☀️", condition: "Clear & Pleasant", humidity: "52%", wind: "11 km/h" };
+      document.getElementById('cityName').innerText = data.city;
+      document.getElementById('tempDisplay').innerText = data.temp;
+      document.getElementById('weatherIcon').innerText = data.icon;
+      document.getElementById('conditionDisplay').innerText = data.condition;
+      document.getElementById('humidity').innerText = data.humidity;
+      document.getElementById('wind').innerText = data.wind;
+    }
+  </script>
+</body>
+</html>"""
+        return f"### ⛅ Modern Weather Dashboard in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save into `weather.html`.\n2. Open directly in your web browser!"
+
+    # 5. Interactive XO (Tic-Tac-Toe) Game
     if any(k in q for k in ['xo game', 'xo', 'tic tac toe', 'tictactoe', 'tic-tac-toe']):
         if lang == 'html':
             code = """<!DOCTYPE html>
@@ -1351,7 +1776,6 @@ def synthesize_project_code(query, mode='study'):
 
 class TicTacToe:
     def __init__(self):
-        # 3x3 Board initialized with blank spaces
         self.board = [[' ' for _ in range(3)] for _ in range(3)]
         self.current_player = 'X'
 
@@ -1369,14 +1793,14 @@ class TicTacToe:
         return False
 
     def check_winner(self):
-        # Check rows & columns
+        # Rows and Columns
         for i in range(3):
             if self.board[i][0] == self.board[i][1] == self.board[i][2] != ' ':
                 return self.board[i][0]
             if self.board[0][i] == self.board[1][i] == self.board[2][i] != ' ':
                 return self.board[0][i]
 
-        # Check diagonals
+        # Diagonals
         if self.board[0][0] == self.board[1][1] == self.board[2][2] != ' ':
             return self.board[0][0]
         if self.board[0][2] == self.board[1][1] == self.board[2][0] != ' ':
@@ -1426,9 +1850,9 @@ class TicTacToe:
 if __name__ == '__main__':
     game = TicTacToe()
     game.play()"""
-            return f"### 🎮 Complete XO (Tic-Tac-Toe) Game in Python\n\n```python\n{code}\n```\n\n### 🚀 How to Run:\n1. Save into `xo_game.py`.\n2. Run in terminal: `python xo_game.py`.\n3. Enter coordinates like `1 1` to play!"
+            return f"### 🎮 Complete XO (Tic-Tac-Toe) Game in Python\n\n```python\n{code}\n```\n\n### 🚀 How to Run:\n1. Save into `xo_game.py`.\n2. Run in terminal: `python xo_game.py`."
 
-    # 2. Snake Game
+    # 6. Snake Game
     if 'snake' in q:
         code = """import turtle
 import time
@@ -1547,7 +1971,7 @@ while True:
     time.sleep(delay)"""
         return f"### 🐍 Classic Snake Game in Python\n\n```python\n{code}\n```\n\n### 🚀 How to Run:\n1. Save as `snake_game.py`.\n2. Run in terminal: `python snake_game.py`.\n3. Control using **W/A/S/D** or **Arrow Keys**!"
 
-    # 3. Calculator
+    # 7. Modern Calculator
     if 'calculator' in q:
         code = """<!DOCTYPE html>
 <html lang="en">
@@ -1607,7 +2031,7 @@ while True:
 </html>"""
         return f"### 🧮 Modern Glassmorphic Calculator in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save into `calculator.html`.\n2. Open in your web browser."
 
-    # 4. Todo App
+    # 8. Todo Task Master App
     if 'todo' in q:
         code = """<!DOCTYPE html>
 <html lang="en">
@@ -1669,33 +2093,178 @@ while True:
 </html>"""
         return f"### 📝 Modern Todo Application with LocalStorage Persistence\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save into `todo.html`.\n2. Open in your web browser."
 
-    # 5. General Clean Modular Implementation
+    # 9. Language-Accurate Dynamic Fallbacks (HTML, JavaScript, C++, Java, SQL, Python)
+    if lang == 'html':
+        code = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{topic_cap}</title>
+  <style>
+    :root {{ --primary: #6366f1; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --muted: #94a3b8; }}
+    * {{ margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }}
+    body {{ background: var(--bg); color: var(--text); padding: 40px 20px; display: flex; justify-content: center; }}
+    .app-container {{ background: var(--card); border: 1px solid #334155; border-radius: 20px; padding: 32px; width: 100%; max-width: 600px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }}
+    h1 {{ font-size: 1.8rem; margin-bottom: 12px; color: var(--primary); text-align: center; }}
+    p.desc {{ color: var(--muted); text-align: center; margin-bottom: 24px; }}
+    .action-box {{ display: flex; gap: 10px; margin-bottom: 20px; }}
+    input {{ flex: 1; padding: 12px 16px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }}
+    button {{ background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; }}
+    .output-card {{ background: #0f172a; padding: 16px; border-radius: 12px; border: 1px solid #334155; min-height: 80px; }}
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <h1>{topic_cap}</h1>
+    <p class="desc">Interactive single-page implementation with embedded CSS and JavaScript.</p>
+    <div class="action-box">
+      <input type="text" id="userInput" placeholder="Enter input data...">
+      <button onclick="processApp()">Run</button>
+    </div>
+    <div class="output-card" id="output">Output will appear here...</div>
+  </div>
+
+  <script>
+    function processApp() {{
+      const val = document.getElementById('userInput').value;
+      if (!val) return;
+      document.getElementById('output').innerHTML = `<strong>Processed Result:</strong> ${{val}} (Ready)`;
+    }}
+  </script>
+</body>
+</html>"""
+        return f"### 🌐 {topic_cap} in HTML, CSS & JavaScript\n\n```html\n{code}\n```\n\n### 🚀 How to Run:\n1. Save as `app.html`.\n2. Open in your web browser!"
+
+    elif lang == 'javascript':
+        code = f"""// =====================================================================
+// Complete Implementation: {topic_cap} (JavaScript / ES6+)
+// =====================================================================
+
+class {re.sub(r'[^a-zA-Z0-9]', '', topic_cap) or 'Solution'} {{
+  constructor(options = {{}}) {{
+    this.options = options;
+    this.state = [];
+  }}
+
+  execute(inputData) {{
+    if (!inputData) return null;
+    
+    // Core transformation logic
+    const result = Array.isArray(inputData) 
+      ? inputData.map(x => (typeof x === 'number' ? x * 2 : x))
+      : [inputData];
+
+    return {{
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    }};
+  }}
+}}
+
+// Execution & Test Cases
+const runner = new {re.sub(r'[^a-zA-Z0-9]', '', topic_cap) or 'Solution'}();
+console.log("Output Result:", runner.execute([10, 20, 30, 40]));"""
+        return f"### ⚡ {topic_cap} in JavaScript (ES6+)\n\n```javascript\n{code}\n```\n\n### 🚀 How to Run:\n1. Run in Node.js: `node index.js` or in browser devtools."
+
+    elif lang == 'cpp':
+        code = f"""#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+class {re.sub(r'[^a-zA-Z0-9]', '', topic_cap) or 'Solution'} {{
+public:
+    void execute() {{
+        std::cout << "Executing {topic_cap} with optimal C++ efficiency..." << std::endl;
+        std::vector<int> numbers = {{5, 2, 8, 1, 9, 3}};
+        std::sort(numbers.begin(), numbers.end());
+        
+        std::cout << "Sorted Output: ";
+        for (int num : numbers) {{
+            std::cout << num << " ";
+        }}
+        std::cout << std::endl;
+    }}
+}};
+
+int main() {{
+    {re.sub(r'[^a-zA-Z0-9]', '', topic_cap) or 'Solution'} app;
+    app.execute();
+    return 0;
+}}"""
+        return f"### 💻 {topic_cap} Implementation in C++ (C++20)\n\n```cpp\n{code}\n```\n\n### 🚀 How to Compile & Run:\n```bash\ng++ -std=c++20 main.cpp -o main\n./main\n```"
+
+    elif lang == 'java':
+        code = f"""import java.util.*;
+
+public class Main {{
+    public static void main(String[] args) {{
+        System.out.println("=== {topic_cap} (Java Enterprise) ===");
+        List<String> items = Arrays.asList("Alpha", "Beta", "Gamma", "Delta");
+        
+        System.out.println("Processing data items:");
+        items.forEach(item -> System.out.println(" -> " + item));
+    }}
+}}"""
+        return f"### ☕ {topic_cap} in Java\n\n```java\n{code}\n```\n\n### 🚀 How to Compile & Run:\n```bash\njavac Main.java\njava Main\n```"
+
+    elif lang == 'sql':
+        code = f"""-- =====================================================================
+-- Database Schema & Queries for: {topic_cap}
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS items (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for high-speed queries
+CREATE INDEX idx_items_category ON items(category);
+
+-- Sample Data Ingestion
+INSERT INTO items (title, category) VALUES 
+('First Record', 'Tech'),
+('Second Record', 'Science');
+
+-- Query Transformation
+SELECT id, title, category, created_at 
+FROM items 
+WHERE status = 'active'
+ORDER BY created_at DESC;"""
+        return f"### 🗄️ {topic_cap} Database Schema in SQL\n\n```sql\n{code}\n```"
+
+    # Default Python implementation
     code = f"""# =====================================================================
 # Complete Implementation: {topic_cap}
-# Language: {lang.upper()}
+# Language: PYTHON (3.11+)
 # =====================================================================
 
-def execute_solution(data):
+class {re.sub(r'[^a-zA-Z0-9]', '', topic_cap) or 'Solution'}:
     \"\"\"
-    Processes input with optimal time complexity O(n) and minimal memory overhead.
+    Object-oriented architecture with optimal runtime and error resilience.
     \"\"\"
-    if not data:
-        return []
-    
-    # Core transformation & business logic
-    result = []
-    for item in data:
-        if item is not None:
-            result.append(item)
-    return result
+    def __init__(self):
+        self.data_store = []
+
+    def execute(self, payload):
+        if not payload:
+            return None
+        
+        # Business logic execution
+        result = [x for x in payload if x is not None]
+        return result
 
 if __name__ == '__main__':
-    # Test suite and sample execution
-    sample_data = [10, 20, 30, 40, 50]
-    output = execute_solution(sample_data)
+    app = {re.sub(r'[^a-zA-Z0-9]', '', topic_cap) or 'Solution'}()
+    test_input = [10, 20, 30, 40, 50]
+    output = app.execute(test_input)
     print(f"[{topic_cap}] Output Result:", output)"""
-
-    return f"### 💻 {topic_cap} Implementation in {lang.capitalize()}\n\n```python\n{code}\n```\n\n### 💡 Highlights:\n- **Modular Design**: Clean function signature with typing and docstrings.\n- **Error Resilient**: Handles edge cases including empty inputs and invalid values."
+    return f"### 🐍 {topic_cap} in Python\n\n```python\n{code}\n```\n\n### 🚀 How to Run:\n```bash\npython main.py\n```"
 
 
 def build_ai_learning_response(book_title='Universal Knowledge', book_description='', concept_query='', book_text='', mode='study', selected_model_id='gemini-2.0-flash', chat_history=None):
@@ -1934,13 +2503,15 @@ def build_ai_learning_response(book_title='Universal Knowledge', book_descriptio
         mode == 'code' or
         bool(re.search(r'^(write|create|make|build|give me|generate|implement|code|program)\b.*(code|app|game|program|script|function|project|website|api|page|algorithm|class)', query_lower)) or
         any(k in query_lower for k in [
-            'write code', 'write a code', 'write a program', 'write a script', 'write a function', 'write a python',
-            'code for', 'program for', 'script for', 'game in python', 'app in html', 'website in html',
-            'todo app', 'calculator', 'snake game', 'xo game', 'tic tac toe', 'tictactoe', 'weather app',
-            'scraper', 'binary search', 'merge sort', 'bubble sort', 'quick sort', 'linked list',
-            'palindrome', 'fibonacci', 'prime number', 'login page', 'rest api', 'crud', 'flappy bird',
-            'rock paper scissors', 'guess the number', 'portfolio'
-        ])
+            'ecommerce', 'e-commerce', 'portfolio', 'calculator', 'todo', 'login page', 'weather app',
+            'xo game', 'tic tac toe', 'tictactoe', 'snake game', 'flappy bird', 'pong', 'quiz app',
+            'chat app', 'rest api', 'scraper', 'binary search', 'merge sort', 'quick sort', 'bubble sort',
+            'website in', 'website using', 'app in', 'app using', 'code in', 'code for', 'program in',
+            'script in', 'write code', 'write a code', 'write a program', 'write a script', 'write a function',
+            'write a python', 'write an app', 'make a game', 'make an app', 'create an app', 'build a website',
+            'build an app', 'palindrome', 'fibonacci', 'prime number', 'crud', 'rock paper scissors'
+        ]) or
+        (bool(re.search(r'\b(html|css|javascript|python|java|c\+\+|cpp|sql|rust)\b', query_lower)) and any(w in query_lower for w in ['code', 'app', 'website', 'script', 'program', 'function', 'class', 'game', 'page', 'api', 'using', 'in']))
     )
     if is_coding_request:
         code_resp = synthesize_project_code(raw_query, mode=mode)
