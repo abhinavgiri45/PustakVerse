@@ -2443,6 +2443,32 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+
+    .msg-avatar { display: none !important; }
+    .msg-card {
+      display: flex;
+      flex-direction: column;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      border-radius: 18px;
+      width: 100%;
+    }
+    .msg-user {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      align-self: flex-end;
+      max-width: 85%;
+    }
+    .msg-assistant {
+      background: transparent;
+      border: none;
+      align-self: flex-start;
+      max-width: 100%;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    .msg-body { width: 100%; }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -3063,7 +3089,7 @@
         const bubble = document.createElement('div');
         bubble.className = `msg-card msg-${msg.role}`;
         bubble.innerHTML = `
-          <div class="msg-avatar">${msg.role === 'user' ? '👤' : '🧠'}</div>
+          
           <div class="msg-body">
             <div class="msg-meta">
               <span style="display: flex; align-items: center; gap: 6px;">
@@ -3175,7 +3201,7 @@
       const userBubble = document.createElement('div');
       userBubble.className = 'msg-card msg-user';
       userBubble.innerHTML = `
-        <div class="msg-avatar">👤</div>
+        
         <div class="msg-body">
           <div class="msg-meta"><span>You</span><span>${timeStr} <button type="button" class="btn-edit-user-msg" onclick="editUserMessage(this)" title="Edit and Fork Prompt">✏️ Edit</button></span></div>
           <div class="msg-content">${escapeHtml(promptText)}</div>
@@ -3192,7 +3218,7 @@
       const assistantBubble = document.createElement('div');
       assistantBubble.className = 'msg-card msg-assistant';
       assistantBubble.innerHTML = `
-        <div class="msg-avatar">🧠</div>
+        
         <div class="msg-body">
           <div class="msg-meta">
             <span style="display: flex; align-items: center; gap: 6px;">

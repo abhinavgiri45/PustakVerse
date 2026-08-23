@@ -2590,10 +2590,17 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 
     query_lower = cleaned_question.lower()
 
-    # 0. High-Priority Multi-Turn Contextual Recall & Identity Resolution
+    # 0. High-Priority Multi-Turn Contextual Recall & User Identity Resolution
     recall_direct = extract_conversational_recall_response(cleaned_question, chat_history, current_user_name=current_user_name)
     if recall_direct:
         return recall_direct
+
+    # 0.5 Instant AI Identity Recognition (Zero-Latency Direct Answer)
+    if any(kw in query_lower for kw in ["which model", "what model", "model name", "what ai are you", "who are you", "what is your name", "what is granthmind"]):
+        return (
+            "My name is **GranthMind AI** — *All AI Models. One Platform*. Created by **Abhinav Giri** exclusively for PustakVerse.\n\n"
+            "I integrate the collective intelligence of ChatGPT-4o, Gemini 2.0 Flash, Claude 3.5 Sonnet, DeepSeek R1, Mistral Large, and Meta Llama 3."
+        )
     
     # 1. Comprehensive Creator, Founder & PustakVerse Vision Recognition (Only for explicit PustakVerse/GranthMind/Abhinav Giri queries)
     norm_q = re.sub(r'[^a-z0-9]', '', query_lower)
@@ -2758,7 +2765,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
             return False
         return True
 
-    # 1. Target Model Live Execution with Graceful Multi-Provider Fallback
+    # 1. Target Model Live Execution with Lightning-Fast Timeout (< 3.0s)
     sel_mid = (selected_model_id or 'gemini-2.0-flash').lower().strip()
     
     provider_map = {
@@ -2772,19 +2779,19 @@ def build_ai_free_response(question, book_title='', book_description='', screens
     }
     target_provider = provider_map.get(sel_mid, 'gemini')
     
-    # Try chosen provider first
-    if target_provider:
-        target_resp = call_provider_live_api(target_provider, sel_mid, prompt, attachment_path=attachment_path)
+    # Try chosen provider first with strict 2.8s timeout
+    if target_provider and get_provider_api_key(target_provider):
+        target_resp = call_provider_live_api(target_provider, sel_mid, prompt, attachment_path=attachment_path, timeout=2.8)
         if _is_clean_ai_answer(target_resp):
             return target_resp
 
-    # Fallback to ANY other active provider configured in the system (preserving model persona)
-    fallback_providers = ['gemini', 'groq', 'openai', 'deepseek', 'anthropic', 'mistral', 'openrouter']
-    for alt_p in fallback_providers:
+    # If target has no key or timed out, try fastest alternative if key exists
+    for alt_p in ['groq', 'gemini', 'openrouter']:
         if alt_p != target_provider and get_provider_api_key(alt_p):
-            alt_resp = call_provider_live_api(alt_p, sel_mid, prompt, attachment_path=attachment_path)
+            alt_resp = call_provider_live_api(alt_p, sel_mid, prompt, attachment_path=attachment_path, timeout=2.5)
             if _is_clean_ai_answer(alt_resp):
                 return alt_resp
+            break
 
     # 2. Native GranthMind High-Precision Intelligent Engine (Tailored specifically for the selected model persona)
     fallback = build_ai_learning_response(
