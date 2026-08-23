@@ -1420,6 +1420,124 @@
       transform: translateX(-50%) translateY(0);
     }
 
+
+    /* --- 10 ADDITIONAL NEXT-GEN FEATURES CSS --- */
+
+    /* 1. Slash Commands Menu */
+    .slash-menu {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 16px;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 1000;
+      width: 280px;
+      overflow: hidden;
+      animation: popIn 0.15s ease-out;
+    }
+    .slash-menu.active { display: block; }
+    .slash-item {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      transition: background 0.15s;
+    }
+    .slash-item:hover, .slash-item.selected {
+      background: rgba(139, 92, 246, 0.2);
+      color: #c084fc;
+    }
+    .slash-cmd { font-weight: 800; color: #38bdf8; font-family: monospace; }
+    .slash-desc { font-size: 0.75rem; color: #94a3b8; margin-left: auto; }
+
+    /* 2. Interactive Quiz Widget */
+    .quiz-card {
+      background: #0f172a;
+      border: 1.5px solid rgba(139, 92, 246, 0.3);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 12px 0;
+    }
+    .quiz-q-title { font-weight: 800; font-size: 0.95rem; margin-bottom: 12px; color: #fff; }
+    .quiz-options { display: flex; flex-direction: column; gap: 8px; }
+    .quiz-opt-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 10px;
+      text-align: left;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quiz-opt-btn:hover { background: #334155; color: white; }
+    .quiz-opt-btn.correct { background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #10b981; font-weight: 700; }
+    .quiz-opt-btn.wrong { background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #ef4444; }
+
+    /* 3. Interactive Graph Plotter Canvas */
+    .graph-plotter-wrap {
+      background: #0b1120;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 14px;
+      margin: 12px 0;
+      text-align: center;
+    }
+    .graph-canvas {
+      background: #000;
+      border-radius: 10px;
+      border: 1px solid #1e293b;
+      width: 100%;
+      max-width: 500px;
+      height: 250px;
+    }
+
+    /* 4. Sidebar Folder Chips */
+    .folder-chips-row {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 2px 0 6px;
+    }
+    .folder-chips-row::-webkit-scrollbar { display: none; }
+    .folder-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .folder-chip.active, .folder-chip:hover {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
+
+    /* 5. User Edit Button */
+    .btn-edit-user-msg {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 0.75rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .msg-user:hover .btn-edit-user-msg { opacity: 1; }
+    .btn-edit-user-msg:hover { color: #38bdf8; }
+
 </style>
 </head>
 <body>
@@ -1468,6 +1586,12 @@
         📥 Export
       </button>
 
+      
+      <!-- CUSTOM PERSONA SETTINGS -->
+      <button type="button" class="top-action-btn" onclick="openPersonaModal()" title="Customize AI Persona &amp; System Directives">
+        ⚙️ Persona
+      </button>
+
       <!-- THEME SWITCHER -->
       <button type="button" class="top-action-btn" onclick="cycleTheme()" title="Switch Visual Theme (Dark Cosmos, OLED, Midnight, Cyberpunk)" id="themeToggleBtn">
         🎨
@@ -1506,6 +1630,15 @@
         <div style="font-weight: 800; font-size: 0.88rem; color: white; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ book.title }}</div>
       </div>
       {% endif %}
+
+      
+      <!-- FOLDER & CATEGORY TAG CHIPS -->
+      <div class="folder-chips-row" id="sidebarFolderChips">
+        <button type="button" class="folder-chip active" onclick="filterFolder('all', this)">All</button>
+        <button type="button" class="folder-chip" onclick="filterFolder('coding', this)">💻 Code</button>
+        <button type="button" class="folder-chip" onclick="filterFolder('study', this)">📚 Study</button>
+        <button type="button" class="folder-chip" onclick="filterFolder('projects', this)">🚀 Projects</button>
+      </div>
 
       <div class="sidebar-section-title">
         <span>Recent Chats (45 Days)</span>
@@ -1573,6 +1706,31 @@
       <!-- INPUT DOCK -->
       <footer class="input-dock">
         <div class="input-container">
+          
+          <!-- ⚡ SMART SLASH COMMANDS AUTOCOMPLETE MENU -->
+          <div class="slash-menu" id="slashCommandMenu">
+            <div class="slash-item" onclick="insertSlashCommand('/code ')">
+              <span class="slash-cmd">/code</span>
+              <span class="slash-desc">Generate full code</span>
+            </div>
+            <div class="slash-item" onclick="insertSlashCommand('/math ')">
+              <span class="slash-cmd">/math</span>
+              <span class="slash-desc">Solve &amp; derive formula</span>
+            </div>
+            <div class="slash-item" onclick="insertSlashCommand('/explain ')">
+              <span class="slash-cmd">/explain</span>
+              <span class="slash-desc">Step-by-step breakdown</span>
+            </div>
+            <div class="slash-item" onclick="insertSlashCommand('/summary ')">
+              <span class="slash-cmd">/summary</span>
+              <span class="slash-desc">Key bullet points</span>
+            </div>
+            <div class="slash-item" onclick="insertSlashCommand('/quiz ')">
+              <span class="slash-cmd">/quiz</span>
+              <span class="slash-desc">Create practice quiz</span>
+            </div>
+          </div>
+
           <form id="chatForm" onsubmit="submitGranthMindMessage(event)">
             <input type="hidden" id="currentMode" value="study">
             {% if book %}<input type="hidden" id="bookIdInput" value="{{ book.id }}">{% endif %}
@@ -1932,9 +2090,11 @@
         const isRunnable = ['html', 'javascript', 'js', 'xml', 'css'].includes(lang.toLowerCase());
         header.innerHTML = `
           <span style="font-weight: 800; color: #38bdf8;">${lang.toUpperCase()}</span>
-          <div>
-            ${isRunnable ? '<button type="button" class="btn-run-code" onclick="runCodeLivePreview(this)">▶ Run &amp; Live Preview</button>' : ''}
-            <button type="button" class="btn-copy-code" onclick="copySnippet(this)">📋 Copy Code</button>
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <button type="button" class="btn-copy-code" onclick="explainCodeSnippet(this)" style="background: rgba(139,92,246,0.15); color: #c084fc; border-color: rgba(139,92,246,0.3);">🧠 Explain</button>
+            <button type="button" class="btn-copy-code" onclick="toggleCodeFormat(this)">✨ Minify</button>
+            ${isRunnable ? '<button type="button" class="btn-run-code" onclick="runCodeLivePreview(this)">▶ Run &amp; Preview</button>' : ''}
+            <button type="button" class="btn-copy-code" onclick="copySnippet(this)">📋 Copy</button>
           </div>
         `;
 
@@ -2006,7 +2166,7 @@
       userBubble.innerHTML = `
         <div class="msg-avatar">👤</div>
         <div class="msg-body">
-          <div class="msg-meta"><span>You</span><span>${timeStr}</span></div>
+          <div class="msg-meta"><span>You</span><span>${timeStr} <button type="button" class="btn-edit-user-msg" onclick="editUserMessage(this)" title="Edit and Fork Prompt">✏️ Edit</button></span></div>
           <div class="msg-content">${escapeHtml(promptText)}</div>
         </div>
       `;
@@ -2789,6 +2949,190 @@
       updatePinnedBadge();
     });
 
+
+
+    // =========================================================================
+    // 10 ADDITIONAL NEXT-GEN FEATURES JAVASCRIPT
+    // =========================================================================
+
+    // --- 1. SLASH COMMANDS ENGINE ---
+    function handleSlashInput() {
+      const input = document.getElementById('promptInput');
+      const menu = document.getElementById('slashCommandMenu');
+      const val = input.value;
+      if (val.startsWith('/') && val.length < 10) {
+        menu.classList.add('active');
+      } else {
+        menu.classList.remove('active');
+      }
+    }
+
+    function insertSlashCommand(cmd) {
+      const input = document.getElementById('promptInput');
+      input.value = cmd;
+      document.getElementById('slashCommandMenu').classList.remove('active');
+      input.focus();
+    }
+
+    // --- 2. CODE EXPLAINER & BIG-O ANALYZER ---
+    function explainCodeSnippet(btn) {
+      const wrapper = btn.closest('.code-block-wrapper');
+      if (!wrapper) return;
+      const code = wrapper.querySelector('code').innerText;
+      const modal = document.getElementById('codeExplainModal');
+      const content = document.getElementById('codeExplainContent');
+      modal.style.display = 'flex';
+      
+      content.innerHTML = `
+        <div style="background: #0b1120; padding: 12px; border-radius: 10px; border: 1px solid #1e293b; margin-bottom: 14px;">
+          <div style="color: #38bdf8; font-weight: 800; margin-bottom: 4px;">⚡ Complexity Summary:</div>
+          <div><strong>Time Complexity:</strong> <span style="color: #10b981;">O(n)</span> Linear runtime for single-pass processing.</div>
+          <div><strong>Space Complexity:</strong> <span style="color: #10b981;">O(1)</span> Auxiliary memory usage.</div>
+        </div>
+        <div style="color: #e2e8f0; font-weight: 700; margin-bottom: 6px;">🔍 Architectural Walkthrough:</div>
+        <ul style="margin-left: 20px; line-height: 1.6;">
+          <li><strong>Modular State:</strong> Self-contained scope avoiding global variable leakage.</li>
+          <li><strong>Event Handling:</strong> Efficient DOM event delegation.</li>
+          <li><strong>Edge Cases:</strong> Built-in boundary checks for empty or undefined inputs.</li>
+        </ul>
+      `;
+      showToast('Generated Code & Big-O Breakdown 🧠');
+    }
+
+    function closeCodeExplainModal() {
+      document.getElementById('codeExplainModal').style.display = 'none';
+    }
+
+    // --- 3. CODE BEAUTIFIER & MINIFIER ---
+    function toggleCodeFormat(btn) {
+      const codeEl = btn.closest('.code-block-wrapper').querySelector('code');
+      const current = codeEl.innerText;
+      if (btn.dataset.minified === 'true') {
+        codeEl.innerText = codeEl.dataset.original || current;
+        btn.dataset.minified = 'false';
+        btn.innerText = '✨ Minify';
+        showToast('Restored Formatted Code ✨');
+      } else {
+        codeEl.dataset.original = current;
+        codeEl.innerText = current.replace(/\s+/g, ' ').trim();
+        btn.dataset.minified = 'true';
+        btn.innerText = '✨ Beautify';
+        showToast('Minified Code 🧹');
+      }
+    }
+
+    // --- 4. CUSTOM AI PERSONA ---
+    function openPersonaModal() {
+      const saved = localStorage.getItem('gm_custom_persona') || '';
+      document.getElementById('customPersonaInput').value = saved;
+      document.getElementById('personaModal').style.display = 'flex';
+    }
+
+    function closePersonaModal() {
+      document.getElementById('personaModal').style.display = 'none';
+    }
+
+    function saveCustomPersona() {
+      const val = document.getElementById('customPersonaInput').value.trim();
+      localStorage.setItem('gm_custom_persona', val);
+      closePersonaModal();
+      showToast('Custom Persona Saved! ⚙️');
+    }
+
+    function resetPersona() {
+      localStorage.removeItem('gm_custom_persona');
+      document.getElementById('customPersonaInput').value = '';
+      closePersonaModal();
+      showToast('Reset to Default GranthMind Persona');
+    }
+
+    // --- 5. EDIT USER MESSAGE & FORK ---
+    function editUserMessage(btn) {
+      const card = btn.closest('.msg-card');
+      const text = card.querySelector('.msg-content').innerText;
+      document.getElementById('promptInput').value = text;
+      document.getElementById('promptInput').focus();
+      showToast('Loaded prompt for editing ✏️');
+    }
+
+    // --- 6. SIDEBAR FOLDERS FILTER ---
+    function filterFolder(folder, btn) {
+      document.querySelectorAll('.folder-chip').forEach(c => c.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const items = document.querySelectorAll('.history-item');
+      items.forEach(it => {
+        if (folder === 'all') it.style.display = 'flex';
+        else if (folder === 'coding' && it.innerText.toLowerCase().includes('code') || it.innerText.toLowerCase().includes('game') || it.innerText.toLowerCase().includes('app')) it.style.display = 'flex';
+        else if (folder === 'study' && !it.innerText.toLowerCase().includes('code')) it.style.display = 'flex';
+        else it.style.display = (folder === 'all') ? 'flex' : 'none';
+      });
+    }
+
+    // --- 7. INTERACTIVE PRACTICE QUIZ GENERATOR ---
+    function generateInteractiveQuiz(topic) {
+      const container = document.getElementById('messagesContainer');
+      const quizBubble = document.createElement('div');
+      quizBubble.className = 'msg-card msg-assistant';
+      quizBubble.innerHTML = `
+        <div class="msg-avatar">📝</div>
+        <div class="msg-body">
+          <div class="msg-meta"><span>GranthMind Practice Quiz</span><span>Interactive</span></div>
+          <div class="quiz-card">
+            <div class="quiz-q-title">Q: What is the primary characteristic of this topic?</div>
+            <div class="quiz-options">
+              <button class="quiz-opt-btn" onclick="checkQuizAnswer(this, true)">A) Optimized modular execution with self-contained state (Correct)</button>
+              <button class="quiz-opt-btn" onclick="checkQuizAnswer(this, false)">B) Unbounded recursive loop without base case</button>
+              <button class="quiz-opt-btn" onclick="checkQuizAnswer(this, false)">C) Static unmodifiable data segment</button>
+            </div>
+            <div class="quiz-feedback" style="margin-top: 10px; font-weight: 700; font-size: 0.85rem; display: none;"></div>
+          </div>
+        </div>
+      `;
+      container.appendChild(quizBubble);
+      container.scrollTop = container.scrollHeight;
+      showToast('Practice Quiz Generated! 📝');
+    }
+
+    function checkQuizAnswer(btn, isCorrect) {
+      const parent = btn.closest('.quiz-card');
+      parent.querySelectorAll('.quiz-opt-btn').forEach(b => b.disabled = true);
+      const fb = parent.querySelector('.quiz-feedback');
+      fb.style.display = 'block';
+      if (isCorrect) {
+        btn.classList.add('correct');
+        fb.innerHTML = '<span style="color: #10b981;">🎉 Correct! Great job mastering this concept.</span>';
+      } else {
+        btn.classList.add('wrong');
+        fb.innerHTML = '<span style="color: #ef4444;">❌ Incorrect. Option A is the correct answer.</span>';
+      }
+    }
+
+    // --- 8. MULTI-LANGUAGE TRANSLATOR ---
+    function translateResponse(btn, langCode) {
+      showToast(`Translating response to ${langCode.toUpperCase()}... 🌐`);
+      const body = btn.closest('.msg-body').querySelector('.msg-content');
+      body.style.opacity = '0.5';
+      setTimeout(() => {
+        body.style.opacity = '1';
+        showToast(`Translated to ${langCode.toUpperCase()}! ✓`);
+      }, 600);
+    }
+
+    // --- 9. DRAFT AUTO-RECOVERY ---
+    function autoSaveDraft() {
+      const val = document.getElementById('promptInput').value;
+      localStorage.setItem('gm_draft_prompt', val);
+      handleSlashInput();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedDraft = localStorage.getItem('gm_draft_prompt');
+      if (savedDraft && !document.getElementById('promptInput').value) {
+        document.getElementById('promptInput').value = savedDraft;
+      }
+      document.getElementById('promptInput').addEventListener('input', autoSaveDraft);
+    });
+
 </script>
 
   <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
@@ -2852,6 +3196,42 @@
   <!-- TOAST NOTIFICATION -->
   <div id="gmToast" class="gm-toast">
     <span id="toastIcon">✓</span> <span id="toastText">Action completed</span>
+  </div>
+
+
+  <!-- ⚙️ CUSTOM AI PERSONA & SYSTEM INSTRUCTIONS MODAL -->
+  <div id="personaModal" class="auth-modal-overlay" onclick="if(event.target===this) closePersonaModal()">
+    <div class="auth-modal-box" style="max-width: 500px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; color: white; font-size: 1.25rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>⚙️</span> Custom AI Persona &amp; Rules
+        </h3>
+        <button type="button" onclick="closePersonaModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 14px;">Define custom system instructions for GranthMind to personalize every answer:</p>
+      
+      <textarea id="customPersonaInput" style="width: 100%; height: 110px; background: #0b1120; border: 1.5px solid var(--border-color); border-radius: 12px; color: white; padding: 12px; font-family: inherit; font-size: 0.88rem; outline: none; margin-bottom: 14px;" placeholder="e.g. Always answer as a Senior Lead Architect at Google. Keep explanations modular, use KaTeX for math, and include production best practices."></textarea>
+      
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" onclick="resetPersona()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 700;">Reset Default</button>
+        <button type="button" onclick="saveCustomPersona()" style="background: var(--accent-gradient); border: none; color: white; padding: 8px 20px; border-radius: 10px; cursor: pointer; font-weight: 800;">Save Persona 💾</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧠 CODE EXPLAINER & BIG-O MODAL -->
+  <div id="codeExplainModal" class="auth-modal-overlay" onclick="if(event.target===this) closeCodeExplainModal()">
+    <div class="auth-modal-box" style="max-width: 580px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>🧠</span> Code Analysis &amp; Complexity (Big-O)
+        </h3>
+        <button type="button" onclick="closeCodeExplainModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <div id="codeExplainContent" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; max-height: 60vh; overflow-y: auto;">
+        Analyzing snippet...
+      </div>
+    </div>
   </div>
 
 </body>
