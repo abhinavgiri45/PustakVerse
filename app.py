@@ -9922,6 +9922,42 @@ def collect_knowledge_sources(query, chat_history=None):
     return deduped
 
 
+@app.route('/api/ai/enhance_prompt', methods=['POST'])
+def api_enhance_prompt():
+    """
+    GranthMind AI Prompt Enhancer:
+    Transforms simple, ambiguous, or short user prompts into rich, detailed,
+    professionally structured engineering and reasoning instructions.
+    """
+    data = request.get_json(silent=True) or {}
+    raw_prompt = data.get('prompt', '').strip()
+    mode = data.get('mode', 'general').lower()
+
+    if not raw_prompt:
+        return jsonify({'success': False, 'error': 'Empty prompt'}), 400
+
+    q_lower = raw_prompt.lower()
+
+    # Domain-specific prompt expansions
+    if any(k in q_lower for k in ['game', 'snake', 'tic tac toe', 'flappy', 'chess', 'pong']):
+        enhanced = f"Develop a complete, fully functional {raw_prompt} in single-file HTML5, CSS3, and JavaScript. Include smooth animations, keyboard/touch controls, live score tracking, high score persistence with LocalStorage, game over/restart modals, and a sleek dark retro UI."
+    elif any(k in q_lower for k in ['app', 'website', 'dashboard', 'store', 'tracker', 'player', 'calculator', 'editor']):
+        enhanced = f"Build a modern, production-grade {raw_prompt} using single-file HTML, CSS, and modern JavaScript. Ensure responsive glassmorphic UI, real interactive state management, input validation, dynamic list rendering, LocalStorage persistence, and clean modular code."
+    elif any(k in q_lower for k in ['explain', 'what is', 'how does', 'difference between', 'why']):
+        enhanced = f"Provide an in-depth, structured explanation of {raw_prompt}. Break down the core concepts with clear definitions, intuitive real-world analogies, step-by-step mechanisms, practical code/math examples, and key takeaways."
+    elif any(k in q_lower for k in ['write an essay', 'story', 'article', 'blog', 'poem', 'email', 'letter']):
+        enhanced = f"Write a polished, engaging, and well-structured {raw_prompt}. Use an authentic tone, compelling narrative hooks, well-developed paragraphs, professional transitions, and a powerful conclusion."
+    elif any(k in q_lower for k in ['algorithm', 'dsa', 'sort', 'tree', 'graph', 'dynamic programming', 'leetcode']):
+        enhanced = f"Provide a complete, optimal implementation for {raw_prompt} in Python and C++. Include time and space complexity analysis (Big-O), line-by-line comments, edge case handling, and step-by-step dry run walkthrough."
+    else:
+        enhanced = f"Provide a comprehensive, high-quality, step-by-step response for: '{raw_prompt}'. Include clear explanations, practical code/examples, best practices, and actionable insights."
+
+    return jsonify({
+        'success': True,
+        'original': raw_prompt,
+        'enhanced': enhanced
+    })
+
 @app.route('/api/granthmind/chat', methods=['POST'])
 def api_granthmind_chat():
     is_guest = 'user_id' not in session

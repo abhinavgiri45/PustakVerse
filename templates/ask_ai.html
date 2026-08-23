@@ -1121,7 +1121,306 @@
       .gemini-model-pill { max-width: 110px; font-size: 0.72rem; padding: 5px 22px 5px 8px; }
     }
 
-  </style>
+  
+    /* --- NEW GRANTHMIND NEXT-GEN FEATURES CSS --- */
+    
+    /* 1. Theme Variables & Switcher */
+    body.theme-oled {
+      --bg-dark: #000000;
+      --bg-surface: #0a0a0a;
+      --bg-card: #121212;
+      --border-color: rgba(255, 255, 255, 0.12);
+    }
+    body.theme-midnight {
+      --bg-dark: #070e1e;
+      --bg-surface: #0c1830;
+      --bg-card: #132448;
+      --border-color: #1e3a70;
+      --accent-gradient: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    }
+    body.theme-cyberpunk {
+      --bg-dark: #120722;
+      --bg-surface: #1d0c38;
+      --bg-card: #2c1254;
+      --border-color: #ec4899;
+      --accent-gradient: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    }
+
+    /* 2. Topbar Controls & Mode Pills */
+    .mode-pills-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px 0;
+    }
+    .mode-pills-scroll::-webkit-scrollbar { display: none; }
+    .mode-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .mode-pill.active, .mode-pill:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #8b5cf6;
+      color: #c084fc;
+    }
+
+    .top-action-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .top-action-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    /* 3. In-Chat Message Search Bar */
+    .in-chat-search-wrap {
+      display: none;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px 16px;
+      align-items: center;
+      gap: 10px;
+      animation: slideDown 0.2s ease-out;
+    }
+    .in-chat-search-wrap.active { display: flex; }
+    .in-chat-search-input {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 6px 12px;
+      color: white;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    /* 4. Action Bar on Assistant Messages (TTS, Pin, Copy, Regenerate) */
+    .msg-action-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      flex-wrap: wrap;
+    }
+    .msg-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      padding: 4px 9px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .msg-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .msg-btn.playing {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    /* 5. Dynamic Follow-Up Question Chips */
+    .followup-chips-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .followup-chip {
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      color: #c084fc;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .followup-chip:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #8b5cf6;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* 6. Live Code Preview & Sandbox Modal */
+    .live-code-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 99999;
+      flex-direction: column;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .live-code-modal.active { display: flex; }
+    .live-code-header {
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+    .live-code-frame-wrap {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      position: relative;
+    }
+    .live-code-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+    }
+
+    /* 7. Live Code Runner Button on Code Headers */
+    .btn-run-code {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-right: 6px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      transition: all 0.15s;
+    }
+    .btn-run-code:hover {
+      transform: scale(1.04);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+    }
+
+    /* 8. Pinned Answers Drawer */
+    .pinned-drawer {
+      display: none;
+      position: fixed;
+      top: 54px;
+      right: 0;
+      bottom: 0;
+      width: 320px;
+      max-width: 90vw;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-color);
+      z-index: 1000;
+      padding: 18px;
+      flex-direction: column;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+      animation: slideInRight 0.2s ease-out;
+    }
+    .pinned-drawer.active { display: flex; }
+    @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .pinned-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .pinned-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.8rem;
+    }
+
+    /* 9. Prompt Enhancer Wand Button */
+    .btn-enhance-prompt {
+      background: transparent;
+      border: none;
+      color: #c084fc;
+      font-size: 1.15rem;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, color 0.2s;
+    }
+    .btn-enhance-prompt:hover {
+      transform: rotate(15deg) scale(1.15);
+      color: #e879f9;
+    }
+
+    /* 10. Live Word & Char Counter */
+    .char-counter {
+      font-size: 0.68rem;
+      color: #64748b;
+      margin-left: auto;
+      padding-right: 4px;
+    }
+
+    /* Toast Notification */
+    .gm-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #8b5cf6;
+      color: white;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gm-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+</style>
 </head>
 <body>
 
@@ -1144,14 +1443,51 @@
       </a>
     </div>
 
-    <div class="top-actions">
+    <!-- AI SPECIALIST MODE PILLS -->
+    <div class="mode-pills-scroll" id="modePillsContainer">
+      <button type="button" class="mode-pill active" onclick="setSpecialistMode('study', this)">📚 Study &amp; Tutor</button>
+      <button type="button" class="mode-pill" onclick="setSpecialistMode('coding', this)">💻 Coding &amp; Architecture</button>
+      <button type="button" class="mode-pill" onclick="setSpecialistMode('writing', this)">✍️ Creative Writing</button>
+      <button type="button" class="mode-pill" onclick="setSpecialistMode('research', this)">🔬 Science &amp; Research</button>
+      <button type="button" class="mode-pill" onclick="setSpecialistMode('business', this)">💼 Business Advisor</button>
+    </div>
+
+    <div class="top-actions" style="display: flex; align-items: center; gap: 8px;">
+      <!-- IN-CHAT SEARCH -->
+      <button type="button" class="top-action-btn" onclick="toggleInChatSearch()" title="Search inside current chat [Ctrl+F]">
+        🔍 <span style="display:none; @media(min-width:600px){display:inline;}">Search</span>
+      </button>
+
+      <!-- PINNED DRAWER -->
+      <button type="button" class="top-action-btn" onclick="togglePinnedDrawer()" title="View Pinned &amp; Bookmarked Answers">
+        📌 <span id="pinnedCountBadge">0</span>
+      </button>
+
+      <!-- CHAT EXPORT -->
+      <button type="button" class="top-action-btn" onclick="openExportModal()" title="Export Chat (PDF, Markdown, Text, JSON)">
+        📥 Export
+      </button>
+
+      <!-- THEME SWITCHER -->
+      <button type="button" class="top-action-btn" onclick="cycleTheme()" title="Switch Visual Theme (Dark Cosmos, OLED, Midnight, Cyberpunk)" id="themeToggleBtn">
+        🎨
+      </button>
+
+      <!-- FONT RESIZER -->
+      <button type="button" class="top-action-btn" onclick="adjustFontSize(1)" title="Increase Font Size">
+        A+
+      </button>
+      <button type="button" class="top-action-btn" onclick="adjustFontSize(-1)" title="Decrease Font Size">
+        A-
+      </button>
+
       {% if not session.user_id %}
       <div class="guest-counter-badge" id="guestBadge">
-        <span>🎁</span> <span id="guestCountText">4 Free Messages Left</span>
+        <span>🎁</span> <span id="guestCountText">4 Free</span>
       </div>
       {% endif %}
 
-      <a href="/" class="btn-nav-back">🏠 PustakVerse</a>
+      <a href="/" class="btn-nav-back">🏠 Home</a>
     </div>
   </header>
 
@@ -1190,6 +1526,14 @@
     <main class="chat-area">
 
 
+
+      
+      <!-- IN-CHAT MESSAGE SEARCH DRAWER -->
+      <div class="in-chat-search-wrap" id="inChatSearchBar">
+        <span>🔍</span>
+        <input type="text" class="in-chat-search-input" id="inChatSearchInput" placeholder="Search keywords in this conversation..." oninput="filterInChatMessages(this.value)">
+        <button type="button" onclick="toggleInChatSearch()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
 
       <!-- MESSAGES SCROLL (SINGLE CONTAINER WITH ZERO DOUBLE SCROLLBARS) -->
       <div class="messages-scroll" id="messagesContainer">
@@ -1260,7 +1604,10 @@
               </button>
               <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
 
-              <textarea id="promptInput" class="chat-textarea" placeholder="Ask anything..." rows="1" onkeydown="handleKeyInput(event)"></textarea>
+              <button type="button" class="btn-enhance-prompt" id="btnEnhancePrompt" onclick="enhanceCurrentPrompt()" title="✨ One-Click Prompt Enhancer (Expands prompt into rich, high-impact instructions) [Ctrl+E]">
+                ✨
+              </button>
+              <textarea id="promptInput" class="chat-textarea" placeholder="Ask anything..." rows="1" onkeydown="handleKeyInput(event)" oninput="updateCharWordCount()"></textarea>
 
               <!-- GEMINI-STYLE VECTOR MICROPHONE BUTTON -->
               <button type="button" class="gemini-mic-btn" id="micBtn" onclick="toggleVoiceInput()" title="Gemini Voice / Speech-to-Text Search" aria-label="Use Microphone">
@@ -1279,6 +1626,7 @@
           <div class="input-footer">
             <span id="fileBadge" style="display: none; color: #38bdf8; font-weight: 700;">📎 Attached: <span id="fileName"></span></span>
             <span class="ai-disclaimer-text">GranthMind AI can make mistakes. Verify important info.</span>
+            <span class="char-counter" id="charCounter">0 words · 0 chars</span>
           </div>
         </div>
       </footer>
@@ -1581,9 +1929,13 @@
         
         const header = document.createElement('div');
         header.className = 'code-header';
+        const isRunnable = ['html', 'javascript', 'js', 'xml', 'css'].includes(lang.toLowerCase());
         header.innerHTML = `
-          <span>${lang.toUpperCase()}</span>
-          <button type="button" class="btn-copy-code" onclick="copySnippet(this)">📋 Copy Code</button>
+          <span style="font-weight: 800; color: #38bdf8;">${lang.toUpperCase()}</span>
+          <div>
+            ${isRunnable ? '<button type="button" class="btn-run-code" onclick="runCodeLivePreview(this)">▶ Run &amp; Live Preview</button>' : ''}
+            <button type="button" class="btn-copy-code" onclick="copySnippet(this)">📋 Copy Code</button>
+          </div>
         `;
 
         pre.parentNode.insertBefore(wrapper, pre);
@@ -1792,6 +2144,7 @@
             if (body.sources && body.sources.length) {
               attachSourcesWidget(assistantBubble, body.sources);
             }
+            attachMessageActionBar(assistantBubble, body.answer);
 
             // Save assistant message with sources to current session
             currentSession.messages.push({ role: 'assistant', text: body.answer, sources: body.sources || [], model: selectedModelName, time: body.timestamp || timeStr });
@@ -2111,6 +2464,395 @@
       }
       renderHistorySidebar();
     });
-  </script>
+  
+
+    function attachMessageActionBar(bubble, rawMarkdown) {
+      if (bubble.querySelector('.msg-action-bar')) return;
+      const body = bubble.querySelector('.msg-body');
+      if (!body) return;
+
+      const bar = document.createElement('div');
+      bar.className = 'msg-action-bar';
+      bar.innerHTML = `
+        <button type="button" class="msg-btn msg-btn-tts" onclick="toggleSpeakMessage(this, ${JSON.stringify(rawMarkdown)})">🔊 Listen</button>
+        <button type="button" class="msg-btn" onclick="pinAnswer(${JSON.stringify(rawMarkdown)})">📌 Pin</button>
+        <button type="button" class="msg-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(rawMarkdown)}); showToast('Copied full markdown! ✓');">📋 Copy Markdown</button>
+        <button type="button" class="msg-btn" onclick="regenerateFromPerspective('concise', ${JSON.stringify(rawMarkdown.slice(0, 80))})">⚡ Shorter</button>
+        <button type="button" class="msg-btn" onclick="regenerateFromPerspective('detailed', ${JSON.stringify(rawMarkdown.slice(0, 80))})">📖 Detailed</button>
+      `;
+      body.appendChild(bar);
+    }
+
+
+    // =========================================================================
+    // GRANTHMIND AI NEXT-GEN FEATURES SUITE (10 NEW FEATURES & 20 IMPROVEMENTS)
+    // =========================================================================
+
+    let activeThemeIdx = 0;
+    const themes = ['theme-default', 'theme-oled', 'theme-midnight', 'theme-cyberpunk'];
+    let currentFontSize = 15;
+    let synth = window.speechSynthesis;
+    let activeUtterance = null;
+    let isSpeaking = false;
+
+    // --- 1. SPECIALIST AI MODE SELECTOR ---
+    function setSpecialistMode(mode, btn) {
+      activeMode = mode || 'study';
+      document.querySelectorAll('.mode-pill').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const modeInp = document.getElementById('currentMode');
+      if (modeInp) modeInp.value = activeMode;
+      showToast(`Switched to ${mode.toUpperCase()} Specialist Mode 🎯`);
+    }
+
+    // --- 2. LIVE CODE RUNNER & SANDBOX ---
+    function runCodeLivePreview(btn) {
+      const codeWrapper = btn.closest('.code-block-wrapper');
+      if (!codeWrapper) return;
+      const code = codeWrapper.querySelector('code').innerText;
+      const modal = document.getElementById('liveCodeModal');
+      const frame = document.getElementById('liveCodeFrame');
+      
+      modal.classList.add('active');
+      frame.srcdoc = code;
+      showToast('Launching Live Code Sandbox... ⚡');
+    }
+
+    function closeLiveCodeModal() {
+      const modal = document.getElementById('liveCodeModal');
+      modal.classList.remove('active');
+      const frame = document.getElementById('liveCodeFrame');
+      frame.srcdoc = '';
+    }
+
+    function reloadCodeFrame() {
+      const frame = document.getElementById('liveCodeFrame');
+      const doc = frame.srcdoc;
+      frame.srcdoc = '';
+      setTimeout(() => { frame.srcdoc = doc; showToast('Reloaded Sandbox 🔄'); }, 50);
+    }
+
+    // --- 3. TEXT-TO-SPEECH (TTS) NATURAL VOICE READER ---
+    function toggleSpeakMessage(btn, text) {
+      if (!synth) {
+        showToast('Speech synthesis not supported on this browser ⚠️');
+        return;
+      }
+
+      if (isSpeaking) {
+        synth.cancel();
+        isSpeaking = false;
+        document.querySelectorAll('.msg-btn-tts').forEach(b => {
+          b.classList.remove('playing');
+          b.innerHTML = '🔊 Listen';
+        });
+        return;
+      }
+
+      // Strip markdown syntax for natural voice reading
+      const plainText = text.replace(/```[\s\S]*?```/g, 'Code block omitted.')
+                            .replace(/[*_#`~\[\]]/g, '')
+                            .replace(/<[^>]*>/g, '');
+
+      activeUtterance = new SpeechSynthesisUtterance(plainText);
+      activeUtterance.rate = 1.0;
+      activeUtterance.pitch = 1.0;
+
+      activeUtterance.onstart = () => {
+        isSpeaking = true;
+        btn.classList.add('playing');
+        btn.innerHTML = '⏹ Stop Audio';
+      };
+
+      activeUtterance.onend = activeUtterance.onerror = () => {
+        isSpeaking = false;
+        btn.classList.remove('playing');
+        btn.innerHTML = '🔊 Listen';
+      };
+
+      synth.speak(activeUtterance);
+    }
+
+    // --- 4. PINNED & BOOKMARKED ANSWERS DRAWER ---
+    function pinAnswer(text) {
+      try {
+        let pinned = JSON.parse(localStorage.getItem('gm_pinned_items') || '[]');
+        const preview = text.replace(/```[\s\S]*?```/g, '').slice(0, 160) + '...';
+        pinned.unshift({ text, preview, date: new Date().toLocaleDateString() });
+        localStorage.setItem('gm_pinned_items', JSON.stringify(pinned));
+        updatePinnedBadge();
+        showToast('Saved to Pinned Answers! 📌');
+      } catch (e) {}
+    }
+
+    function togglePinnedDrawer() {
+      const drawer = document.getElementById('pinnedDrawer');
+      drawer.classList.toggle('active');
+      renderPinnedItems();
+    }
+
+    function renderPinnedItems() {
+      const container = document.getElementById('pinnedListContainer');
+      const pinned = JSON.parse(localStorage.getItem('gm_pinned_items') || '[]');
+      if (pinned.length === 0) {
+        container.innerHTML = '<p style="color: #64748b; font-size: 0.82rem; text-align: center; margin-top: 30px;">No pinned answers yet.<br>Click "📌 Pin" on any message to save it here.</p>';
+        return;
+      }
+      container.innerHTML = pinned.map((p, i) => `
+        <div class="pinned-card">
+          <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.72rem; margin-bottom: 4px;">
+            <span>📌 ${p.date}</span>
+            <button onclick="delPinned(${i})" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+          </div>
+          <div style="color: #f1f5f9; font-size: 0.8rem; line-height: 1.4;">${escapeHtml(p.preview)}</div>
+        </div>
+      `).join('');
+    }
+
+    function delPinned(i) {
+      let pinned = JSON.parse(localStorage.getItem('gm_pinned_items') || '[]');
+      pinned.splice(i, 1);
+      localStorage.setItem('gm_pinned_items', JSON.stringify(pinned));
+      renderPinnedItems();
+      updatePinnedBadge();
+      showToast('Removed item from pinned list');
+    }
+
+    function updatePinnedBadge() {
+      const pinned = JSON.parse(localStorage.getItem('gm_pinned_items') || '[]');
+      const badge = document.getElementById('pinnedCountBadge');
+      if (badge) badge.innerText = pinned.length;
+    }
+
+    // --- 5. ONE-CLICK PROMPT ENHANCER ---
+    function enhanceCurrentPrompt() {
+      const input = document.getElementById('promptInput');
+      const val = input.value.trim();
+      if (!val) {
+        showToast('Type a prompt first to enhance it! ✨');
+        return;
+      }
+
+      showToast('✨ Enhancing prompt with AI...');
+      fetch('/api/ai/enhance_prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
+        body: JSON.stringify({ prompt: val, mode: activeMode })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.enhanced) {
+          input.value = data.enhanced;
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+          updateCharWordCount();
+          showToast('✨ Prompt Enhanced Successfully!');
+        }
+      })
+      .catch(() => showToast('Could not enhance prompt right now.'));
+    }
+
+    // --- 6. IN-CHAT MESSAGE SEARCH & FILTER ---
+    function toggleInChatSearch() {
+      const bar = document.getElementById('inChatSearchBar');
+      bar.classList.toggle('active');
+      if (bar.classList.contains('active')) {
+        document.getElementById('inChatSearchInput').focus();
+      } else {
+        filterInChatMessages('');
+      }
+    }
+
+    function filterInChatMessages(keyword) {
+      const q = keyword.toLowerCase().trim();
+      document.querySelectorAll('.msg-card').forEach(card => {
+        if (!q || card.innerText.toLowerCase().includes(q)) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // --- 7. CHAT EXPORT SUITE ---
+    function openExportModal() {
+      document.getElementById('chatExportModal').style.display = 'flex';
+    }
+
+    function closeExportModal() {
+      document.getElementById('chatExportModal').style.display = 'none';
+    }
+
+    function exportChatAs(format) {
+      closeExportModal();
+      const sessions = getSessions();
+      const s = sessions.find(x => x.id === currentSessionId);
+      if (!s || !s.messages || s.messages.length === 0) {
+        showToast('No messages in this chat to export! ⚠️');
+        return;
+      }
+
+      if (format === 'markdown') {
+        let md = `# GranthMind AI - Conversation Export\n**Date:** ${new Date().toLocaleString()}\n\n---\n\n`;
+        s.messages.forEach(m => {
+          md += `### ${m.role === 'user' ? '👤 User' : '🧠 GranthMind AI'}\n\n${m.text}\n\n---\n\n`;
+        });
+        downloadBlob(md, `granthmind_${Date.now()}.md`, 'text/markdown');
+        showToast('Exported as Markdown (.md) 📝');
+      } else if (format === 'text') {
+        let txt = `GRANTHMIND AI - TRANSCRIPT\nDate: ${new Date().toLocaleString()}\n\n========================================\n\n`;
+        s.messages.forEach(m => {
+          txt += `[${m.role === 'user' ? 'USER' : 'GRANTHMIND'}] (${m.time || ''}):\n${m.text}\n\n----------------------------------------\n\n`;
+        });
+        downloadBlob(txt, `granthmind_${Date.now()}.txt`, 'text/plain');
+        showToast('Exported as Plain Text (.txt) 📄');
+      } else if (format === 'json') {
+        downloadBlob(JSON.stringify(s, null, 2), `granthmind_${Date.now()}.json`, 'application/json');
+        showToast('Exported as JSON Data (.json) 💾');
+      } else if (format === 'pdf') {
+        window.print();
+      }
+    }
+
+    function downloadBlob(content, filename, contentType) {
+      const a = document.createElement('a');
+      const file = new Blob([content], { type: contentType });
+      a.href = URL.createObjectURL(file);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // --- 8. THEME TOGGLER ---
+    function cycleTheme() {
+      activeThemeIdx = (activeThemeIdx + 1) % themes.length;
+      document.body.className = themes[activeThemeIdx];
+      localStorage.setItem('gm_theme', themes[activeThemeIdx]);
+      showToast(`Visual Theme: ${themes[activeThemeIdx].replace('theme-', '').toUpperCase()} 🎨`);
+    }
+
+    // --- 9. IN-CHAT FONT RESIZER ---
+    function adjustFontSize(delta) {
+      currentFontSize = Math.max(12, Math.min(22, currentFontSize + delta));
+      document.documentElement.style.setProperty('--chat-font-size', currentFontSize + 'px');
+      document.querySelectorAll('.msg-body').forEach(b => b.style.fontSize = currentFontSize + 'px');
+      showToast(`Font Size: ${currentFontSize}px 🔤`);
+    }
+
+    // --- 10. REGENERATE RESPONSE ---
+    function regenerateFromPerspective(perspective, origPrompt) {
+      let prompt = origPrompt;
+      if (perspective === 'concise') prompt = `${origPrompt} (Provide a very concise, brief, straight-to-the-point answer)`;
+      else if (perspective === 'detailed') prompt = `${origPrompt} (Provide an in-depth, thorough, and exhaustive explanation with examples)`;
+      else if (perspective === 'code') prompt = `${origPrompt} (Provide an alternative modular implementation with step-by-step code walkthrough)`;
+
+      document.getElementById('promptInput').value = prompt;
+      submitGranthMindMessage(new Event('submit'));
+    }
+
+    // --- 11. WORD & CHAR COUNTER ---
+    function updateCharWordCount() {
+      const val = document.getElementById('promptInput').value;
+      const chars = val.length;
+      const words = val.trim() ? val.trim().split(/\s+/).length : 0;
+      const counter = document.getElementById('charCounter');
+      if (counter) counter.innerText = `${words} words · ${chars} chars`;
+    }
+
+    // --- 12. TOAST NOTIFIER ---
+    function showToast(msg) {
+      const toast = document.getElementById('gmToast');
+      if (!toast) return;
+      document.getElementById('toastText').innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => { toast.classList.remove('show'); }, 2200);
+    }
+
+    // --- 13. GLOBAL KEYBOARD SHORTCUTS ---
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        toggleInChatSearch();
+      } else if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        enhanceCurrentPrompt();
+      } else if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        createNewSession();
+      }
+    });
+
+    // Initialize Saved Preferences
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('gm_theme');
+      if (savedTheme) document.body.className = savedTheme;
+      updatePinnedBadge();
+    });
+
+</script>
+
+  <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
+  <div id="liveCodeModal" class="live-code-modal">
+    <div class="live-code-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">⚡</span>
+        <strong style="font-size: 1rem;">GranthMind Live Code Sandbox &amp; Interactive Preview</strong>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button type="button" onclick="reloadCodeFrame()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">🔄 Reload</button>
+        <button type="button" onclick="closeLiveCodeModal()" style="background: #ef4444; border: none; color: white; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.85rem;">✕ Close</button>
+      </div>
+    </div>
+    <div class="live-code-frame-wrap">
+      <iframe id="liveCodeFrame" class="live-code-frame" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+    </div>
+  </div>
+
+  <!-- 📌 PINNED ANSWERS SIDEBAR DRAWER -->
+  <div id="pinnedDrawer" class="pinned-drawer">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: white; display: flex; align-items: center; gap: 6px;">
+        <span>📌</span> Pinned Answers
+      </h3>
+      <button type="button" onclick="togglePinnedDrawer()" style="background: none; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer;">✕</button>
+    </div>
+    <div class="pinned-list" id="pinnedListContainer">
+      <p style="color: #64748b; font-size: 0.82rem; text-align: center; margin-top: 30px;">No pinned answers yet.<br>Click "📌 Pin" on any message to save it here.</p>
+    </div>
+  </div>
+
+  <!-- 📥 MULTI-FORMAT CHAT EXPORT MODAL -->
+  <div id="chatExportModal" class="auth-modal-overlay" onclick="if(event.target===this) closeExportModal()">
+    <div class="auth-modal-box" style="max-width: 480px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; color: white; font-size: 1.25rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>📥</span> Export Conversation
+        </h3>
+        <button type="button" onclick="closeExportModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      <p style="color: #94a3b8; font-size: 0.86rem; margin-bottom: 18px;">Download your full GranthMind AI conversation in your preferred format:</p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+        <button type="button" onclick="exportChatAs('markdown')" class="top-action-btn" style="padding: 14px; justify-content: center; border-radius: 12px; font-size: 0.9rem;">
+          📝 Markdown (.md)
+        </button>
+        <button type="button" onclick="exportChatAs('text')" class="top-action-btn" style="padding: 14px; justify-content: center; border-radius: 12px; font-size: 0.9rem;">
+          📄 Plain Text (.txt)
+        </button>
+        <button type="button" onclick="exportChatAs('pdf')" class="top-action-btn" style="padding: 14px; justify-content: center; border-radius: 12px; font-size: 0.9rem;">
+          🖨️ PDF Print View
+        </button>
+        <button type="button" onclick="exportChatAs('json')" class="top-action-btn" style="padding: 14px; justify-content: center; border-radius: 12px; font-size: 0.9rem;">
+          💾 JSON Data (.json)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="gmToast" class="gm-toast">
+    <span id="toastIcon">✓</span> <span id="toastText">Action completed</span>
+  </div>
+
 </body>
 </html>
