@@ -2553,6 +2553,81 @@
       display: block;
     }
 
+
+    /* --- SLASH COMMAND INSTRUCTION BANNER & ENHANCED STUDIO MENU --- */
+    .slash-instruction-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-top: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+    }
+    .slash-instruction-chip:hover {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #e2e8f0;
+      transform: translateY(-1px);
+    }
+    .slash-key-badge {
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      color: #38bdf8;
+      font-family: monospace;
+      font-weight: 800;
+      font-size: 0.82rem;
+      padding: 2px 7px;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    .slash-menu {
+      max-height: 280px;
+      overflow-y: auto;
+      width: 360px;
+      bottom: 80px;
+      left: 20px;
+      background: #1e1f20;
+      border: 1px solid #3c4043;
+      border-radius: 16px;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.85);
+      padding: 6px;
+    }
+    .slash-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .slash-item:hover, .slash-item.active {
+      background: #2a2b2d;
+    }
+    .slash-item-icon {
+      font-size: 1.1rem;
+      width: 24px;
+      text-align: center;
+    }
+    .slash-cmd {
+      color: #38bdf8;
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+    .slash-desc {
+      color: #94a3b8;
+      font-size: 0.74rem;
+      margin-left: auto;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -2646,7 +2721,15 @@
             <div class="tool-grid-item" onclick="cycleTheme(); closeToolsDropdown();">
               <span class="tool-item-icon">🎭</span>
               <div class="tool-item-text"><strong>Theme Switcher</strong><small>OLED / Dark / Cyber</small></div>
+            
+          <!-- 💡 PRO TIP: SLASH COMMAND INSTRUCTION BANNER -->
+          <div style="display: flex; justify-content: center; margin-top: 18px;">
+            <div class="slash-instruction-chip" onclick="triggerSlashStudioHint()">
+              <span class="slash-key-badge">/</span>
+              <span>Type <strong style="color: #38bdf8;">/</strong> in the search bar for quick access to <strong>GranthMind AI Studios</strong> &amp; tools</span>
             </div>
+          </div>
+          </div>
           </div>
         </div>
       </div>
@@ -2900,31 +2983,80 @@
             </div>
           </div>
           
-          <!-- ⚡ SMART SLASH COMMANDS AUTOCOMPLETE MENU -->
+                    <!-- ⚡ SMART SLASH COMMANDS AUTOCOMPLETE MENU (GRANTHMIND AI STUDIOS) -->
           <div class="slash-menu" id="slashCommandMenu">
-            <div class="slash-item" onclick="insertSlashCommand('/code ')">
-              <span class="slash-cmd">/code</span>
-              <span class="slash-desc">Generate full code</span>
-            </div>
-            <div class="slash-item" onclick="insertSlashCommand('/math ')">
-              <span class="slash-cmd">/math</span>
-              <span class="slash-desc">Solve &amp; derive formula</span>
-            </div>
-            <div class="slash-item" onclick="insertSlashCommand('/explain ')">
-              <span class="slash-cmd">/explain</span>
-              <span class="slash-desc">Step-by-step breakdown</span>
-            </div>
-            <div class="slash-item" onclick="insertSlashCommand('/summary ')">
-              <span class="slash-cmd">/summary</span>
-              <span class="slash-desc">Key bullet points</span>
-            </div>
-            <div class="slash-item" onclick="insertSlashCommand('/quiz ')">
-              <span class="slash-cmd">/quiz</span>
-              <span class="slash-desc">Create practice quiz</span>
-            </div>
-            <div class="slash-item" onclick="insertSlashCommand('/image ')">
+            <div class="model-picker-header">GranthMind AI Studios &amp; Quick Commands</div>
+
+            <div class="slash-item" onclick="launchSlashStudio('image')">
+              <span class="slash-item-icon">🎨</span>
               <span class="slash-cmd">/image</span>
-              <span class="slash-desc">Generate 4K AI artwork</span>
+              <span class="slash-desc">AI Art Studio (4K Generator)</span>
+            </div>
+
+            <div class="slash-item" onclick="insertSlashCommand('/code ')">
+              <span class="slash-item-icon">💻</span>
+              <span class="slash-cmd">/code</span>
+              <span class="slash-desc">Code &amp; App Builder</span>
+            </div>
+
+            <div class="slash-item" onclick="insertSlashCommand('/math ')">
+              <span class="slash-item-icon">📐</span>
+              <span class="slash-cmd">/math</span>
+              <span class="slash-desc">LaTeX Proofs &amp; Derivations</span>
+            </div>
+
+            <div class="slash-item" onclick="launchSlashStudio('palette')">
+              <span class="slash-item-icon">🌈</span>
+              <span class="slash-cmd">/palette</span>
+              <span class="slash-desc">Color Palette &amp; UI Harmony</span>
+            </div>
+
+            <div class="slash-item" onclick="launchSlashStudio('regex')">
+              <span class="slash-item-icon">🧮</span>
+              <span class="slash-cmd">/regex</span>
+              <span class="slash-desc">Interactive Regex Lab</span>
+            </div>
+
+            <div class="slash-item" onclick="launchSlashStudio('cron')">
+              <span class="slash-item-icon">⏰</span>
+              <span class="slash-cmd">/cron</span>
+              <span class="slash-desc">Cron Syntax Studio</span>
+            </div>
+
+            <div class="slash-item" onclick="insertSlashCommand('/quiz ')">
+              <span class="slash-item-icon">📝</span>
+              <span class="slash-cmd">/quiz</span>
+              <span class="slash-desc">Exam &amp; Practice Quiz</span>
+            </div>
+
+            <div class="slash-item" onclick="insertSlashCommand('/summary ')">
+              <span class="slash-item-icon">⚡</span>
+              <span class="slash-cmd">/summary</span>
+              <span class="slash-desc">3-Minute Quick Summary</span>
+            </div>
+
+            <div class="slash-item" onclick="insertSlashCommand('/explain ')">
+              <span class="slash-item-icon">💡</span>
+              <span class="slash-cmd">/explain</span>
+              <span class="slash-desc">Step-by-Step Deep Breakdown</span>
+            </div>
+
+            <div class="slash-item" onclick="launchSlashStudio('export')">
+              <span class="slash-item-icon">📥</span>
+              <span class="slash-cmd">/export</span>
+              <span class="slash-desc">Export Chat (PDF / MD / TXT)</span>
+            </div>
+
+            <div class="slash-item" onclick="launchSlashStudio('persona')">
+              <span class="slash-item-icon">⚙️</span>
+              <span class="slash-cmd">/persona</span>
+              <span class="slash-desc">Custom Directives</span>
+            </div>
+
+            <div class="slash-item" onclick="launchSlashStudio('stats')">
+              <span class="slash-item-icon">📈</span>
+              <span class="slash-cmd">/stats</span>
+              <span class="slash-desc">Learning Analytics</span>
             </div>
           </div>
 
@@ -5027,6 +5159,33 @@ function toggleSourcesDrawer(btn) {
         menu.classList.remove('show');
       }
     });
+
+
+
+    function triggerSlashStudioHint() {
+      const input = document.getElementById('promptInput');
+      if (input) {
+        input.value = '/';
+        input.focus();
+        const menu = document.getElementById('slashCommandMenu');
+        if (menu) menu.style.display = 'block';
+      }
+    }
+
+    function launchSlashStudio(action) {
+      const menu = document.getElementById('slashCommandMenu');
+      if (menu) menu.style.display = 'none';
+      const input = document.getElementById('promptInput');
+      if (input) input.value = '';
+
+      if (action === 'image') generateAIImageStudioPrompt();
+      else if (action === 'palette') openColorStudio();
+      else if (action === 'regex') openRegexModal();
+      else if (action === 'cron') openCronModal();
+      else if (action === 'export') openChatExportModal();
+      else if (action === 'persona') openPersonaModal();
+      else if (action === 'stats') openStatsModal();
+    }
 
 </script>
 
