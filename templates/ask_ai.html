@@ -5656,14 +5656,11 @@ function toggleSourcesDrawer(btn) {
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
 
-      // Live Slash Commands Autocomplete Filter
+      // Live Slash Commands Autocomplete Filter (Only shows while typing command prefix without space)
       const slashMenu = document.getElementById('slashCommandMenu');
       if (slashMenu) {
-        if (val.startsWith('/')) {
-          slashMenu.classList.add('show');
-          slashMenu.style.display = 'block';
+        if (val.startsWith('/') && !val.includes(' ') && val.length < 20) {
           const filter = val.toLowerCase().trim();
-          
           let visibleCount = 0;
           slashMenu.querySelectorAll('.slash-item').forEach(item => {
             const cmd = (item.querySelector('.slash-cmd')?.textContent || '').toLowerCase();
@@ -5675,7 +5672,13 @@ function toggleSourcesDrawer(btn) {
               item.style.display = 'none';
             }
           });
-          if (visibleCount === 0) slashMenu.style.display = 'none';
+          if (visibleCount > 0) {
+            slashMenu.classList.add('show');
+            slashMenu.style.display = 'block';
+          } else {
+            slashMenu.classList.remove('show');
+            slashMenu.style.display = 'none';
+          }
         } else {
           slashMenu.classList.remove('show');
           slashMenu.style.display = 'none';
@@ -6011,6 +6014,11 @@ function toggleSourcesDrawer(btn) {
         input.value = cmd;
         input.focus();
         handleInputState(input);
+        // Ensure menu is fully dismissed
+        if (menu) {
+          menu.classList.remove('show');
+          menu.style.display = 'none';
+        }
       }
     }
 
