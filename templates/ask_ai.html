@@ -2766,6 +2766,176 @@
       border-color: #38bdf8;
     }
 
+
+    /* =========================================================================
+       UNIVERSAL DEVICE RESPONSIVE OPTIMIZATION SUITE (MOBILE / TABLET / DESKTOP)
+       ========================================================================= */
+    :root {
+      --app-height: 100dvh;
+    }
+    
+    html, body {
+      height: 100%;
+      height: var(--app-height);
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+
+    .granthmind-body {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+      height: calc(100dvh - 60px);
+    }
+
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 20px 24px;
+      scroll-behavior: smooth;
+    }
+
+    .input-dock {
+      padding: 10px 16px max(14px, env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(9, 9, 11, 0) 0%, rgba(9, 9, 11, 0.95) 40%, #09090b 100%);
+      position: relative;
+      z-index: 100;
+    }
+
+    /* --- RESPONSIVE POPUPS & FLOATING MENUS --- */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 10010;
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 20px 0 50px rgba(0,0,0,0.85);
+        background: #141417;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      .model-picker-floating-menu,
+      .search-dock-tools-menu,
+      .slash-menu {
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        bottom: 68px !important;
+        border-radius: 16px !important;
+      }
+
+      .input-box-card {
+        padding: 8px 12px 8px !important;
+        border-radius: 18px !important;
+      }
+
+      .btn-plus-action {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1.2rem !important;
+      }
+
+      .model-selector-custom-pill {
+        padding: 4px 8px !important;
+        font-size: 0.74rem !important;
+        gap: 4px !important;
+      }
+
+      .model-name-cyan {
+        max-width: 110px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .gemini-prompt-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      .greeting-gradient-text {
+        font-size: 2.2rem !important;
+      }
+
+      .greeting-subtitle {
+        font-size: 0.95rem !important;
+      }
+
+      .slash-instruction-chip {
+        font-size: 0.72rem !important;
+        padding: 5px 10px !important;
+        text-align: center;
+      }
+
+      .msg-card {
+        padding: 12px 14px !important;
+        font-size: 0.92rem !important;
+      }
+
+      .auth-modal-box {
+        width: 94vw !important;
+        max-width: 94vw !important;
+        max-height: 88dvh !important;
+        overflow-y: auto !important;
+        padding: 18px 16px !important;
+        border-radius: 18px !important;
+      }
+
+      .tools-dropdown-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+      }
+
+      .ai-art-result-card {
+        max-width: 100% !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .brand-title {
+        font-size: 1.05rem !important;
+      }
+      .brand-subtitle {
+        display: none !important;
+      }
+      .model-mode-dim {
+        display: none !important;
+      }
+      .btn-mic-gemini {
+        display: none !important;
+      }
+      .tools-dropdown-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
