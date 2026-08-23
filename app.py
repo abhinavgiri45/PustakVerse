@@ -1,3 +1,4 @@
+import traceback
 
 
 def is_valid_isbn_format(code_str):
@@ -726,7 +727,7 @@ def fetch_live_knowledge(query):
                             return None
                         return {'title': found_title, 'extract': extract}
     except Exception as e_w:
-        print('WIKI EXCEPTION:', type(e_w), e_w); traceback.print_exc()
+        pass
     return None
 
 
@@ -756,7 +757,7 @@ def sync_ai_knowledge_memory():
                         new_cache[kw_clean] = r
         _learned_memory_cache = new_cache
     except Exception as e_w:
-        print('WIKI EXCEPTION:', type(e_w), e_w); traceback.print_exc()
+        pass
     finally:
         if db:
             try: db.close()
@@ -899,7 +900,7 @@ def search_learned_knowledge(query):
             _learned_memory_cache[q_lower] = res
             return res
     except Exception as e_w:
-        print('WIKI EXCEPTION:', type(e_w), e_w); traceback.print_exc()
+        pass
     finally:
         if db:
             try: db.close()
@@ -996,7 +997,7 @@ def fetch_live_encyclopedia(query):
                     'description': ''
                 }
     except Exception as e_w:
-        print('WIKI EXCEPTION:', type(e_w), e_w); traceback.print_exc()
+        pass
     return None
 
 
@@ -2723,7 +2724,7 @@ def inject_global_settings():
 
         return dict(site_settings=fetched_settings, site_catalogs=fetched_catalogs)
     except Exception as e_w:
-        print('WIKI EXCEPTION:', type(e_w), e_w); traceback.print_exc()
+        pass
     finally:
         if db:
             try: db.close()
