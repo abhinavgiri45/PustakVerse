@@ -5061,7 +5061,7 @@ function toggleSourcesDrawer(btn) {
     function generateAIImageStudioPrompt() {
       const input = document.getElementById('promptInput');
       const text = input.value.trim() || 'futuristic cyberpunk city with glowing neon skyscrapers and reflections at midnight';
-      createAIArtworkCard(text, 'Cyberpunk');
+      createAIArtworkCard(text, 'cyberpunk');
       input.value = '';
     }
 
@@ -5069,160 +5069,141 @@ function toggleSourcesDrawer(btn) {
       const container = document.getElementById('messagesContainer');
       const bubble = document.createElement('div');
       bubble.className = 'msg-card msg-assistant';
-      const canvasId = 'artCanvas_' + Date.now();
+      const cardId = 'artCard_' + Date.now();
+      const styleKey = (style || 'photorealistic').toLowerCase().replace(/\s+/g, '_');
 
       bubble.innerHTML = `
         <div class="msg-avatar">🎨</div>
         <div class="msg-body">
-          <div class="msg-meta"><span>GranthMind AI Art Studio</span><span>4K Render</span></div>
-          <div class="ai-art-card">
+          <div class="msg-meta">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>GranthMind Vision AI</span>
+              <span style="font-size:0.68rem; background:rgba(139,92,246,0.15); color:#c084fc; border:1px solid rgba(139,92,246,0.3); padding:1px 7px; border-radius:8px; font-weight:800;">Flux Ultra 4K</span>
+            </span>
+            <span style="color:#64748b; font-size:0.73rem;">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="ai-art-card" id="${cardId}">
             <div class="ai-art-header">
-              <div class="ai-art-title">🎨 <span>${escapeHtml(promptText)}</span></div>
+              <div class="ai-art-title">✨ <span>${escapeHtml(promptText)}</span></div>
             </div>
             <div class="ai-art-styles-row">
-              <span class="art-style-pill ${style === 'Cyberpunk' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Cyberpunk', this)">🌌 Cyberpunk</span>
-              <span class="art-style-pill ${style === 'Digital Art' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Digital Art', this)">🎨 Concept Art</span>
-              <span class="art-style-pill ${style === 'Realistic' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Realistic', this)">📸 Photoreal 4K</span>
-              <span class="art-style-pill ${style === 'Anime' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', 'Anime', this)">✨ Anime / Manga</span>
-              <span class="art-style-pill ${style === '3D' ? 'active' : ''}" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', '3D', this)">⚡ Unreal Engine 5</span>
+              <span class="art-style-pill ${styleKey === 'photorealistic' ? 'active' : ''}" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', 'photorealistic', this)">📸 Photoreal 4K</span>
+              <span class="art-style-pill ${styleKey === 'digital_art' ? 'active' : ''}" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', 'digital_art', this)">🎨 Concept Art</span>
+              <span class="art-style-pill ${styleKey === 'anime' ? 'active' : ''}" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', 'anime', this)">✨ Anime / Ghibli</span>
+              <span class="art-style-pill ${styleKey === 'cyberpunk' ? 'active' : ''}" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', 'cyberpunk', this)">🌌 Cyberpunk</span>
+              <span class="art-style-pill ${styleKey === '3d_render' ? 'active' : ''}" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', '3d_render', this)">⚡ 3D Pixar</span>
+              <span class="art-style-pill ${styleKey === 'watercolor' ? 'active' : ''}" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', 'watercolor', this)">🖌️ Watercolor</span>
             </div>
-            <div class="ai-art-canvas-wrap">
-              <canvas id="${canvasId}" class="ai-art-canvas" width="800" height="500"></canvas>
+            <div class="ai-art-canvas-wrap" id="${cardId}_wrap">
+              <div class="ai-art-loader" id="${cardId}_loader">
+                <div class="art-spinner-icon">🎨</div>
+                <div>Creating high-resolution masterpiece with GranthMind Vision (Flux Engine)...</div>
+                <div class="ai-shimmer-track" style="width: 240px; margin-top: 8px;"><div class="ai-shimmer-bar"></div></div>
+              </div>
+              <img id="${cardId}_img" class="ai-art-real-img" style="display:none;" onclick="openImageLightbox(this.src)" alt="${escapeHtml(promptText)}">
             </div>
-            <div class="ai-art-actions">
-              <button type="button" class="btn-art-action" onclick="downloadArtwork('${canvasId}', '${escapeHtml(promptText)}')">💾 Download PNG</button>
-              <button type="button" class="btn-art-action" onclick="renderArtworkCanvas('${canvasId}', '${escapeHtml(promptText)}', '${style}', null)">🔄 New Variant</button>
+            <div class="ai-art-actions" id="${cardId}_actions" style="display:none;">
+              <button type="button" class="btn-art-action" onclick="downloadAIImage('${cardId}_img', '${escapeHtml(promptText)}')">💾 Download PNG (4K)</button>
+              <button type="button" class="btn-art-action" onclick="openImageLightbox(document.getElementById('${cardId}_img').src)">🔍 Zoom / Fullscreen</button>
+              <button type="button" class="btn-art-action" onclick="copyImageUrl(document.getElementById('${cardId}_img').src)">🔗 Copy Link</button>
+              <button type="button" class="btn-art-action" onclick="renderArtworkImage('${cardId}', '${escapeHtml(promptText)}', '${styleKey}', null)">🔄 New Variant</button>
             </div>
           </div>
         </div>
       `;
       container.appendChild(bubble);
       container.scrollTop = container.scrollHeight;
-      showToast('Rendering High-Res Artwork... 🎨');
 
-      setTimeout(() => {
-        renderArtworkCanvas(canvasId, promptText, style, null);
-      }, 50);
+      renderArtworkImage(cardId, promptText, styleKey, null);
     }
 
-    function renderArtworkCanvas(canvasId, prompt, style, btn) {
+    function renderArtworkImage(cardId, promptText, style, btn) {
       if (btn) {
         btn.parentNode.querySelectorAll('.art-style-pill').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
       }
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
 
-      // Dynamic Procedural Generative Art Engine
-      let grad;
-      if (style === 'Cyberpunk') {
-        grad = ctx.createLinearGradient(0, 0, w, h);
-        grad.addColorStop(0, '#0f0c29');
-        grad.addColorStop(0.5, '#302b63');
-        grad.addColorStop(1, '#24243e');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
+      const loader = document.getElementById(`${cardId}_loader`);
+      const img = document.getElementById(`${cardId}_img`);
+      const actions = document.getElementById(`${cardId}_actions`);
 
-        // Neon Grid Lines
-        ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
-        ctx.lineWidth = 1.5;
-        for (let x = 0; x < w; x += 35) {
-          ctx.beginPath();
-          ctx.moveTo(x, h / 2);
-          ctx.lineTo(x * 1.6 - w * 0.3, h);
-          ctx.stroke();
+      if (loader) loader.style.display = 'flex';
+      if (img) img.style.display = 'none';
+      if (actions) actions.style.display = 'none';
+
+      fetch('/api/granthmind/generate_art', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '{{ csrf_token() }}',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+          prompt: promptText,
+          style: style,
+          aspect_ratio: '16:9'
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.image_url) {
+          const preloader = new Image();
+          preloader.onload = () => {
+            if (loader) loader.style.display = 'none';
+            if (img) {
+              img.src = data.image_url;
+              img.style.display = 'block';
+            }
+            if (actions) actions.style.display = 'flex';
+            const c = document.getElementById('messagesContainer');
+            if (c) c.scrollTop = c.scrollHeight;
+          };
+          preloader.onerror = () => {
+            if (loader) loader.innerHTML = `<span style="color:#ef4444;">⚠️ Network error rendering image. Please click New Variant to retry.</span>`;
+          };
+          preloader.src = data.image_url;
+        } else {
+          if (loader) loader.innerHTML = `<span style="color:#ef4444;">⚠️ Could not generate image: ${data.error || 'Unknown error'}</span>`;
         }
-        for (let y = h / 2; y < h; y += 18) {
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(w, y);
-          ctx.stroke();
-        }
-
-        // Glowing Sun / Portal
-        const sunGrad = ctx.createRadialGradient(w/2, h/2 - 20, 10, w/2, h/2 - 20, 140);
-        sunGrad.addColorStop(0, '#f43f5e');
-        sunGrad.addColorStop(0.6, '#ec4899');
-        sunGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = sunGrad;
-        ctx.beginPath();
-        ctx.arc(w/2, h/2 - 20, 120, 0, Math.PI * 2);
-        ctx.fill();
-
-        // City Silhouette
-        ctx.fillStyle = '#090a0f';
-        for (let i = 0; i < 20; i++) {
-          const bw = 30 + Math.random() * 40;
-          const bh = 80 + Math.random() * 140;
-          const bx = i * 42;
-          ctx.fillRect(bx, h/2 - bh + 40, bw, bh);
-        }
-      } else if (style === 'Anime' || style === 'Digital Art') {
-        grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, '#38bdf8');
-        grad.addColorStop(0.4, '#818cf8');
-        grad.addColorStop(0.8, '#f472b6');
-        grad.addColorStop(1, '#fbbf24');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-
-        // Soft Clouds
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        for (let i = 0; i < 6; i++) {
-          ctx.beginPath();
-          ctx.arc(100 + i * 130, 80 + Math.sin(i) * 30, 45 + Math.random() * 25, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else {
-        // Deep Space / Photoreal / 3D
-        grad = ctx.createRadialGradient(w/2, h/2, 20, w/2, h/2, w);
-        grad.addColorStop(0, '#1e1b4b');
-        grad.addColorStop(0.7, '#0f172a');
-        grad.addColorStop(1, '#020617');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-
-        // Starfield Particles
-        ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 180; i++) {
-          const sx = Math.random() * w;
-          const sy = Math.random() * h;
-          const sr = Math.random() * 2;
-          ctx.beginPath();
-          ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Luminous Core
-        const core = ctx.createRadialGradient(w/2, h/2, 5, w/2, h/2, 100);
-        core.addColorStop(0, '#38bdf8');
-        core.addColorStop(0.5, '#6366f1');
-        core.addColorStop(1, 'transparent');
-        ctx.fillStyle = core;
-        ctx.beginPath();
-        ctx.arc(w/2, h/2, 90, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Title Watermark
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.font = 'bold 15px "Segoe UI", sans-serif';
-      ctx.fillText(`✨ ${prompt.slice(0, 35)} (${style})`, 20, h - 20);
-      ctx.fillStyle = 'rgba(139,92,246,0.9)';
-      ctx.fillText('⚡ GranthMind AI Vision Studio', w - 240, h - 20);
+      })
+      .catch(err => {
+        if (loader) loader.innerHTML = `<span style="color:#ef4444;">⚠️ Art Studio request failed. Please check connection.</span>`;
+      });
     }
 
-    function downloadArtwork(canvasId, title) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
-      const link = document.createElement('a');
-      link.download = `GranthMind_Artwork_${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      showToast('Artwork Downloaded in High-Res PNG! 💾');
+    function downloadAIImage(imgId, title) {
+      const img = document.getElementById(imgId);
+      if (!img || !img.src) return;
+      const a = document.createElement('a');
+      a.href = img.src;
+      a.download = `GranthMind_Art_${Date.now()}.png`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Downloading 4K Masterpiece PNG! 🎨');
+    }
+
+    function copyImageUrl(url) {
+      if (!url) return;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Copied High-Res Image Link! 🔗');
+      });
+    }
+
+    function openImageLightbox(url) {
+      if (!url) return;
+      let modal = document.getElementById('artLightboxModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'artLightboxModal';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px; cursor:zoom-out;';
+        modal.onclick = () => modal.style.display = 'none';
+        modal.innerHTML = `<img id="lightboxImg" style="max-width:95vw; max-height:92vh; border-radius:12px; box-shadow:0 0 50px rgba(0,0,0,0.8); object-fit:contain;">`;
+        document.body.appendChild(modal);
+      }
+      document.getElementById('lightboxImg').src = url;
+      modal.style.display = 'flex';
     }
 
     // --- 2. MERMAID.JS LIVE DIAGRAM RENDERER ---
