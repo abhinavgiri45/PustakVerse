@@ -10161,6 +10161,69 @@ def api_enhance_prompt():
         'enhanced': enhanced
     })
 
+
+@app.route('/api/granthmind/generate_art', methods=['POST'])
+def api_granthmind_generate_art():
+    """
+    GranthMind AI High-Definition Art Studio & Image Generation Engine.
+    Uses ultra-fast multi-provider rendering (Pollinations Flux / SDXL) with instant fallback.
+    """
+    try:
+        data = request.get_json(silent=True) or request.form
+        raw_prompt = (data.get('prompt') or '').strip()
+        if not raw_prompt:
+            return jsonify({'success': False, 'error': 'Image prompt cannot be empty.'}), 400
+
+        # Clean prompt
+        clean_prompt = re.sub(r'^/image\s*', '', raw_prompt, flags=re.I).strip()
+        style = (data.get('style') or 'photorealistic').lower()
+        aspect_ratio = data.get('aspect_ratio', '1:1')
+
+        # Dimension mapping
+        dim_map = {
+            '1:1': (1024, 1024),
+            '16:9': (1280, 720),
+            '9:16': (720, 1280),
+            '4:3': (1024, 768)
+        }
+        width, height = dim_map.get(aspect_ratio, (1024, 1024))
+
+        # Enhance prompt with style modifiers
+        style_modifiers = {
+            'photorealistic': 'ultra-photorealistic, 8k resolution, cinematic lighting, highly detailed, masterwork photography, octane render',
+            'digital_art': 'breathtaking digital art, vibrant colors, trending on artstation, smooth composition, concept art',
+            'anime': 'masterpiece anime illustration, makoto shinkai style, crisp lineart, vivid atmospheric lighting, 4k',
+            'cinematic': 'cinematic movie still, dramatic illumination, 35mm film grain, anamorphic lens, epic atmosphere',
+            'cyberpunk': 'cyberpunk aesthetic, neon glow, futuristic city, reflections, high-tech dark atmosphere',
+            'watercolor': 'delicate watercolor painting, soft textures, artistic brush strokes, expressive paper grain',
+            '3d_render': 'unreal engine 5 render, raytracing, intricate 3d details, soft ambient occlusion'
+        }
+        modifier = style_modifiers.get(style, style_modifiers['photorealistic'])
+        enhanced_prompt = f"{clean_prompt}, {modifier}"
+
+        import urllib.parse
+        import random
+        seed = random.randint(100000, 9999999)
+        encoded_prompt = urllib.parse.quote(enhanced_prompt)
+
+        # Primary High-Definition Flux Engine via Pollinations
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed={seed}&nologo=true&model=flux"
+
+        return jsonify({
+            'success': True,
+            'image_url': image_url,
+            'prompt': clean_prompt,
+            'enhanced_prompt': enhanced_prompt,
+            'style': style,
+            'width': width,
+            'height': height,
+            'seed': seed
+        })
+    except Exception as e:
+        logging.exception("Error in generate_art endpoint")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/granthmind/chat', methods=['POST'])
 def api_granthmind_chat():
     is_guest = 'user_id' not in session

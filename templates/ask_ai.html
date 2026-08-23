@@ -2628,6 +2628,144 @@
       margin-left: auto;
     }
 
+
+    /* --- CHATGPT STYLE IMAGE CREATION & ART STUDIO STYLES --- */
+    .chatgpt-image-generating-card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 18px;
+      padding: 16px 20px;
+      max-width: 540px;
+      width: 100%;
+      margin: 10px 0;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+    .gen-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .gen-card-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(56, 189, 248, 0.2);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .gen-card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .gen-card-stage {
+      font-size: 0.76rem;
+      color: #94a3b8;
+    }
+    .gen-canvas-placeholder {
+      width: 100%;
+      height: 280px;
+      background: linear-gradient(135deg, #1e1f24 0%, #27272a 50%, #1e1f24 100%);
+      background-size: 200% 200%;
+      animation: shimmerBg 2s ease infinite;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    @keyframes shimmerBg {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .gen-canvas-prompt-tag {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ai-art-result-card {
+      max-width: 580px;
+      width: 100%;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 18px;
+      overflow: hidden;
+      margin: 10px 0;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+      animation: fadeInUp 0.3s ease-out;
+    }
+    .ai-art-img-wrap {
+      position: relative;
+      width: 100%;
+      background: #000;
+      cursor: zoom-in;
+    }
+    .ai-art-img-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.2s ease;
+    }
+    .ai-art-img-wrap:hover img {
+      opacity: 0.96;
+    }
+    .ai-art-footer {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #141417;
+      border-top: 1px solid #27272a;
+      flex-wrap: wrap;
+    }
+    .ai-art-prompt-text {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ai-art-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-art-action {
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      color: #f1f5f9;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-art-action:hover {
+      background: #3f3f46;
+      color: #38bdf8;
+      border-color: #38bdf8;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -5187,6 +5325,208 @@ function toggleSourcesDrawer(btn) {
       else if (action === 'stats') openStatsModal();
     }
 
+
+
+    // --- CHATGPT-STYLE AI ART STUDIO ENGINE ---
+    function isImageGenerationQuery(promptText) {
+      const p = promptText.trim().toLowerCase();
+      if (p.startsWith('/image') || p.startsWith('/art')) return true;
+      return /\b(generate (?:an? )?image|create (?:an? )?image|draw (?:an? )?(?:image|picture|photo|illustration|art)|render (?:an? )?image|generate (?:an? )?art|make (?:an? )?image|generate a picture|draw a )\b/i.test(p);
+    }
+
+    function extractCleanArtPrompt(promptText) {
+      return promptText
+        .replace(/^(\/image|\/art)\s*/i, '')
+        .replace(/\b(generate (?:an? )?image of|create (?:an? )?image of|draw (?:an? )?(?:image|picture|photo|art) of|render (?:an? )?image of|make (?:an? )?image of|draw a |draw |generate an image |generate a picture of)\b/i, '')
+        .trim();
+    }
+
+    function generateAIImageStudioPrompt() {
+      openArtStudioModal();
+    }
+
+    function openArtStudioModal() {
+      const modal = document.getElementById('artStudioModal');
+      if (modal) modal.style.display = 'flex';
+      const input = document.getElementById('artStudioPromptInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function closeArtStudioModal() {
+      const modal = document.getElementById('artStudioModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function generateRandomArtPrompt() {
+      const ideas = [
+        "A cyberpunk bookstore at midnight in Neo-Tokyo with neon rain and holographic book shelves",
+        "A mystical glowing ancient library hidden inside a giant enchanted redwood tree, cinematic lighting",
+        "An astronaut reading an ancient leather-bound book while floating near Jupiter's Great Red Spot, 8k",
+        "A cozy steampunk study room with brass telescope, warm fireplace, velvet chairs and starry night window",
+        "A surreal origami world where origami dragons fly around paper castles under a cherry blossom sky",
+        "An underwater futuristic research academy with bioluminescent jellyfish lighting and coral gardens"
+      ];
+      const randomPrompt = ideas[Math.floor(Math.random() * ideas.length)];
+      const input = document.getElementById('artStudioPromptInput');
+      if (input) input.value = randomPrompt;
+    }
+
+    function submitArtStudioModal() {
+      const input = document.getElementById('artStudioPromptInput');
+      const promptVal = input ? input.value.trim() : '';
+      if (!promptVal) {
+        showToast('Please enter an art description! 🎨');
+        return;
+      }
+      const style = document.getElementById('artStudioStyleSelect').value;
+      const aspect = document.getElementById('artStudioAspectSelect').value;
+      closeArtStudioModal();
+
+      // Trigger image generation in chat
+      executeImageCreationFlow(promptVal, style, aspect);
+    }
+
+    function executeImageCreationFlow(promptText, style = 'photorealistic', aspect = '1:1') {
+      const container = document.getElementById('messagesContainer');
+      const hero = document.getElementById('welcomeHero');
+      if (hero) hero.style.display = 'none';
+
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Append User Card
+      const userBubble = document.createElement('div');
+      userBubble.className = 'msg-card msg-user';
+      userBubble.innerHTML = `
+        <div class="msg-body">
+          <div class="msg-meta"><span>You</span><span>${timeStr}</span></div>
+          <div class="msg-content">🎨 Generate Image: <em>"${escapeHtml(promptText)}"</em></div>
+        </div>
+      `;
+      container.appendChild(userBubble);
+      container.scrollTop = container.scrollHeight;
+
+      // Append ChatGPT-style Creating Image Card
+      const asstBubble = document.createElement('div');
+      asstBubble.className = 'msg-card msg-assistant';
+      asstBubble.innerHTML = `
+        <div class="msg-body">
+          <div class="msg-meta">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <span>GranthMind AI Art Studio</span>
+              <span style="font-size: 0.68rem; background: rgba(236,72,153,0.15); color: #f472b6; border: 1px solid #ec4899; padding: 1px 7px; border-radius: 8px; font-weight: 800;">4K Flux</span>
+            </span>
+            <span style="color: #ec4899; font-weight: 700; font-size: 0.75rem;">● Creating art...</span>
+          </div>
+          <div class="msg-content">
+            <div class="chatgpt-image-generating-card">
+              <div class="gen-card-header">
+                <div class="gen-card-spinner"></div>
+                <div>
+                  <div class="gen-card-title">Creating image...</div>
+                  <div class="gen-card-stage" id="genStageLabel">Designing composition &amp; aesthetic palette...</div>
+                </div>
+              </div>
+              <div class="gen-canvas-placeholder">
+                <span style="font-size: 2.2rem; opacity: 0.8; animation: pulse 1.5s infinite;">🎨</span>
+                <div class="gen-canvas-prompt-tag">"${escapeHtml(promptText)}"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(asstBubble);
+      container.scrollTop = container.scrollHeight;
+
+      // Cycle stage text
+      const stages = [
+        "Designing composition & aesthetic palette...",
+        "Rendering lighting, depth & textures...",
+        "Applying 4K high-resolution details...",
+        "Finalizing artwork..."
+      ];
+      let sIdx = 0;
+      const stageInt = setInterval(() => {
+        sIdx = (sIdx + 1) % stages.length;
+        const stageEl = asstBubble.querySelector('#genStageLabel');
+        if (stageEl) stageEl.textContent = stages[sIdx];
+      }, 1500);
+
+      // Call Backend Generate Art API
+      fetch('/api/granthmind/generate_art', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptText, style: style, aspect_ratio: aspect })
+      })
+      .then(res => res.json())
+      .then(data => {
+        clearInterval(stageInt);
+        if (data.success && data.image_url) {
+          const img = new Image();
+          img.src = data.image_url;
+          img.onload = () => {
+            renderFinalArtCard(asstBubble, data, promptText);
+          };
+          img.onerror = () => {
+            renderFinalArtCard(asstBubble, data, promptText);
+          };
+        } else {
+          asstBubble.querySelector('.msg-content').innerHTML = `<span style="color: #f87171;">⚠️ Could not generate image. Please try again with a descriptive prompt.</span>`;
+        }
+      })
+      .catch(err => {
+        clearInterval(stageInt);
+        asstBubble.querySelector('.msg-content').innerHTML = `<span style="color: #f87171;">⚠️ Network error while creating image.</span>`;
+      });
+    }
+
+    function renderFinalArtCard(bubbleEl, data, promptText) {
+      const msgContent = bubbleEl.querySelector('.msg-content');
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      msgContent.innerHTML = `
+        <div class="ai-art-result-card">
+          <div class="ai-art-img-wrap" onclick="window.open('${data.image_url}', '_blank')">
+            <img src="${data.image_url}" alt="${escapeHtml(promptText)}" loading="lazy">
+          </div>
+          <div class="ai-art-footer">
+            <div class="ai-art-prompt-text" title="${escapeHtml(promptText)}">🎨 "${escapeHtml(promptText)}"</div>
+            <div class="ai-art-actions">
+              <a href="${data.image_url}" target="_blank" download="granthmind-art-${Date.now()}.jpg" class="btn-art-action">
+                📥 Download HD
+              </a>
+              <button type="button" class="btn-art-action" onclick="copyArtUrl('${data.image_url}')">
+                🔗 Copy Link
+              </button>
+              <button type="button" class="btn-art-action" onclick="executeImageCreationFlow('${escapeHtml(promptText).replace(/'/g, "\\'")}', '${data.style || 'photorealistic'}')">
+                🔄 Variations
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Save to sessions
+      const sessions = getSessions();
+      if (sessions.length > 0) {
+        sessions[0].messages.push({
+          role: 'assistant',
+          text: `![${promptText}](${data.image_url})\n\n🎨 **AI Art Generated**: *"${promptText}"*`,
+          time: timeStr
+        });
+        saveSessions(sessions);
+      }
+      triggerTabNotification();
+    }
+
+    function copyArtUrl(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Image URL copied to clipboard! 📋');
+      });
+    }
+
 </script>
 
   <!-- ⚡ LIVE CODE PREVIEW & SANDBOX MODAL -->
@@ -5422,6 +5762,56 @@ function toggleSourcesDrawer(btn) {
       <input type="text" id="cronExpressionInput" value="0 9 * * 1" placeholder="e.g. */5 * * * *" style="width: 100%; padding: 10px; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: #f59e0b; font-family: monospace; font-size: 1.1rem; margin-bottom: 10px;" oninput="translateCron()">
       <div id="cronExplanation" style="background: #0b1120; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; font-size: 0.9rem; color: #10b981; margin-bottom: 12px;">
         Runs at 09:00 AM, every Monday.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 🎨 FULL GRANTHMIND AI ART STUDIO MODAL -->
+  <div id="artStudioModal" class="auth-modal-overlay" onclick="if(event.target===this) closeArtStudioModal()">
+    <div class="auth-modal-box" style="max-width: 620px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: white; font-size: 1.25rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>🎨</span> GranthMind AI Art Studio
+        </h3>
+        <button type="button" onclick="closeArtStudioModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+      
+      <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 12px;">Describe any scene, concept, or visual idea to generate 4K high-definition artwork:</p>
+      
+      <div style="position: relative; margin-bottom: 12px;">
+        <textarea id="artStudioPromptInput" style="width: 100%; height: 90px; background: #0b1120; border: 1.5px solid var(--border-color); border-radius: 12px; color: white; padding: 12px; font-family: inherit; font-size: 0.9rem; outline: none;" placeholder="e.g. A futuristic cyber library floating in space with glowing holographic books and cosmic nebulas..."></textarea>
+        <button type="button" onclick="generateRandomArtPrompt()" style="position: absolute; bottom: 10px; right: 10px; background: #1e293b; border: 1px solid #334155; color: #38bdf8; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; cursor: pointer;">🎲 Random Idea</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Artistic Style</label>
+          <select id="artStudioStyleSelect" style="width: 100%; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: white; padding: 8px 10px; font-size: 0.85rem; outline: none;">
+            <option value="photorealistic" selected>📸 Photorealistic (8K Octane)</option>
+            <option value="digital_art">🎨 Digital Art &amp; Concept</option>
+            <option value="anime">🌸 Anime &amp; Manga Illustration</option>
+            <option value="cinematic">🎬 Cinematic Movie Still</option>
+            <option value="cyberpunk">🌃 Cyberpunk &amp; Neon Glow</option>
+            <option value="watercolor">🖌️ Watercolor Painting</option>
+            <option value="3d_render">🧊 3D Isometric &amp; Unreal 5</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Aspect Ratio</label>
+          <select id="artStudioAspectSelect" style="width: 100%; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; color: white; padding: 8px 10px; font-size: 0.85rem; outline: none;">
+            <option value="1:1" selected>Square (1:1 · 1024x1024)</option>
+            <option value="16:9">Landscape (16:9 · 1280x720)</option>
+            <option value="9:16">Portrait (9:16 · 720x1280)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" onclick="closeArtStudioModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 700;">Cancel</button>
+        <button type="button" onclick="submitArtStudioModal()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 8px 22px; border-radius: 10px; cursor: pointer; font-weight: 800; display: flex; align-items: center; gap: 6px;">
+          <span>🎨</span> Generate 4K Art
+        </button>
       </div>
     </div>
   </div>
