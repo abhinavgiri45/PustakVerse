@@ -2421,6 +2421,28 @@
       font-weight: 400;
     }
 
+
+    /* --- SEARCH DOCKED AI STUDIOS MENU --- */
+    .search-dock-tools-menu {
+      display: none;
+      position: absolute;
+      bottom: 75px;
+      left: 24px;
+      width: 320px;
+      background: #1e1f20;
+      border: 1px solid #3c4043;
+      border-radius: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+      padding: 12px;
+      z-index: 10000;
+      animation: fadeInUp 0.18s ease-out;
+    }
+    .search-dock-tools-menu.show { display: block; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -2619,9 +2641,72 @@
 
       </div>
 
-            <!-- INPUT DOCK -->
+                  <!-- INPUT DOCK -->
       <footer class="input-dock">
         <div class="input-container">
+          
+          <!-- 🛠️ SEARCH BAR DOCKED AI STUDIOS MENU POPUP -->
+          <div class="search-dock-tools-menu" id="searchDockToolsMenu">
+            <div class="tools-dropdown-header">GranthMind AI Studios</div>
+            <div class="tools-dropdown-grid">
+              <div class="tool-grid-item" onclick="generateAIImageStudioPrompt(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🎨</span>
+                <div class="tool-item-text"><strong>Art Studio</strong><small>Generate 4K AI Art</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openColorStudio(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🌈</span>
+                <div class="tool-item-text"><strong>Color Palette</strong><small>UI Design Harmonies</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openRegexModal(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🧮</span>
+                <div class="tool-item-text"><strong>Regex Lab</strong><small>Test Regular Expressions</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openCronModal(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">⏰</span>
+                <div class="tool-item-text"><strong>Cron Studio</strong><small>Translate Cron Syntax</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openEncoderModal(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🔄</span>
+                <div class="tool-item-text"><strong>Encoder</strong><small>Base64 &amp; URL Tool</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openPersonaModal(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">⚙️</span>
+                <div class="tool-item-text"><strong>Custom Persona</strong><small>Custom Directives</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openStatsModal(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">📈</span>
+                <div class="tool-item-text"><strong>Analytics</strong><small>Daily Learning Stats</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="openChatExportModal(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">📥</span>
+                <div class="tool-item-text"><strong>Export Chat</strong><small>PDF / MD / TXT</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="togglePinnedDrawer(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">📌</span>
+                <div class="tool-item-text"><strong>Pinned Answers</strong><small>Saved Answers</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="toggleAmbientSounds(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🎧</span>
+                <div class="tool-item-text"><strong>Focus Sounds</strong><small>Rain &amp; White Noise</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="toggleBinauralBeats(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🧠</span>
+                <div class="tool-item-text"><strong>40Hz Waves</strong><small>Binaural Gamma Focus</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="cycleTheme(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">🎭</span>
+                <div class="tool-item-text"><strong>Theme Switcher</strong><small>OLED / Dark / Cyber</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="document.getElementById('fileAttachment').click(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">📎</span>
+                <div class="tool-item-text"><strong>Attach File</strong><small>Images &amp; Documents</small></div>
+              </div>
+              <div class="tool-grid-item" onclick="enhanceCurrentPrompt(); closeSearchToolsMenu();">
+                <span class="tool-item-icon">✨</span>
+                <div class="tool-item-text"><strong>Enhance Prompt</strong><small>Expand Prompt [Ctrl+E]</small></div>
+              </div>
+            </div>
+          </div>
           
           <!-- ⚡ SMART SLASH COMMANDS AUTOCOMPLETE MENU -->
           <div class="slash-menu" id="slashCommandMenu">
@@ -2665,7 +2750,7 @@
               <div class="search-bottom-toolbar">
                 <!-- Left: Plus button + Model Selector Pill -->
                 <div class="toolbar-left-group">
-                  <button type="button" class="btn-plus-action" onclick="toggleToolsDropdown()" title="Add / Tools / Image Studio">
+                  <button type="button" class="btn-plus-action" id="btnSearchPlusAction" onclick="toggleSearchToolsMenu(event)" title="Add / Tools / Image Studio">
                     +
                   </button>
 
@@ -4705,6 +4790,25 @@ function toggleSourcesDrawer(btn) {
         lbl.innerText = select.options[select.selectedIndex].text.replace(' High', '').replace(' Turbo', '');
       }
     }
+
+
+
+    function toggleSearchToolsMenu(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('searchDockToolsMenu');
+      if (menu) menu.classList.toggle('show');
+    }
+    function closeSearchToolsMenu() {
+      const menu = document.getElementById('searchDockToolsMenu');
+      if (menu) menu.classList.remove('show');
+    }
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('searchDockToolsMenu');
+      const btn = document.getElementById('btnSearchPlusAction');
+      if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('show');
+      }
+    });
 
 </script>
 
