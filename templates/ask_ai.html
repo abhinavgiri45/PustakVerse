@@ -2936,6 +2936,55 @@
       }
     }
 
+
+    /* --- HIGH-CONTRAST CHATGPT & GEMINI STYLE SEND BUTTON & BUSY QUEUE --- */
+    .btn-send-round {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #27272a;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #71717a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: not-allowed;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .btn-send-round.active {
+      background: #ffffff !important;
+      border-color: #ffffff !important;
+      color: #09090b !important;
+      cursor: pointer !important;
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.35) !important;
+      transform: scale(1.05);
+    }
+    .btn-send-round.active svg {
+      stroke: #09090b !important;
+      stroke-width: 3 !important;
+    }
+    .btn-send-round.generating {
+      background: #27272a !important;
+      border-color: #38bdf8 !important;
+      color: #38bdf8 !important;
+      cursor: wait !important;
+      transform: scale(1.02);
+    }
+    .btn-send-round.generating svg {
+      display: none !important;
+    }
+    .btn-send-round.generating::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: #38bdf8;
+      border-radius: 2px;
+      display: block;
+      animation: pulse 1.2s infinite;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -3786,15 +3835,43 @@
       }
     }
 
-    // Submit Message
+    let isGeneratingResponse = false;
+
+    // Submit Message (Queues and ensures previous response finishes first)
     function submitGranthMindMessage(e) {
       if (e) e.preventDefault();
+
+      if (isGeneratingResponse) {
+        if (typeof showToast === 'function') {
+          showToast('Please wait for the current answer to finish... ⏳');
+        }
+        return;
+      }
+
       const input = document.getElementById('promptInput');
       const promptText = input.value.trim();
       const fileInput = document.getElementById('fileAttachment');
       const hasFile = fileInput.files && fileInput.files[0];
 
+      // Check if user is asking for Image Generation / Art Studio
+      if (isImageGenerationQuery(promptText)) {
+        const cleanPrompt = extractCleanArtPrompt(promptText);
+        input.value = '';
+        input.style.height = 'auto';
+        executeImageCreationFlow(cleanPrompt || promptText);
+        return;
+      }
+
       if (!promptText && !hasFile) return;
+
+      // Lock response state & update send button
+      isGeneratingResponse = true;
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) {
+        sendBtn.classList.remove('active');
+        sendBtn.classList.add('generating');
+        sendBtn.title = 'GranthMind is responding...';
+      }
 
       const hero = document.getElementById('welcomeHero');
       if (hero) hero.style.display = 'none';
@@ -3948,6 +4025,14 @@
               attachSourcesWidget(assistantBubble, body.sources);
             }
             attachMessageActionBar(assistantBubble, body.answer);
+
+            // Release generating state for the next prompt
+            isGeneratingResponse = false;
+            if (sendBtn) {
+              sendBtn.classList.remove('generating');
+              sendBtn.title = 'Send Message';
+              handleInputState(input);
+            }
             triggerTabNotification();
             enhanceDataTables(assistantBubble);
             renderMermaidDiagrams(assistantBubble);
@@ -3963,6 +4048,12 @@
       })
       .catch(() => {
         clearInterval(stageTimer);
+        isGeneratingResponse = false;
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn) {
+          sendBtn.classList.remove('generating');
+          handleInputState(input);
+        }
         const msgEl = assistantBubble.querySelector('.msg-content');
         const statusInd = assistantBubble.querySelector('.msg-status-indicator');
         if (statusInd) statusInd.innerHTML = `<span style="color: #ef4444; font-size: 0.75rem;">Error</span>`;
