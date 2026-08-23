@@ -5,7 +5,7 @@
 [![Security](https://img.shields.io/badge/security-Two--Step%20Verification-success.svg)](https://github.com/abhinavgiri45/PustakVerse)
 [![AI Integration](https://img.shields.io/badge/AI-GranthMind%2065%2B%20Features-orange.svg)](https://github.com/abhinavgiri45/PustakVerse)
 [![Payments](https://img.shields.io/badge/payments-Razorpay%20Direct-blueviolet.svg)](https://razorpay.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary%20%26%20Exclusive-red.svg)](LICENSE)
 
 **PustakVerse** is an enterprise-grade digital library ecosystem, creator publishing network, and universal AI intelligence workstation. Designed by **Abhinav Giri**, PustakVerse combines an immersive digital reading experience with autonomous AI reasoning (**GranthMind AI**), instant single-file app generation, high-precision topic citations, and creator monetization.
 
@@ -211,41 +211,37 @@ PustakVerse/
 
 ---
 
-## 📄 License
+## 📄 License & Terms of Use
 
-This project is licensed under the **MIT License**.
+This project is protected under a **Proprietary & Exclusive License**.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%26%20Exclusive-red.svg)](LICENSE)
 
 ```text
-MIT License
+Proprietary & Exclusive License
 
-Copyright (c) 2026 Abhinav Giri
+Copyright (c) 2026 Abhinav Giri (@abhinavgiri45). All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+NOTICE:
+This software and all associated source code, assets, documentation, and files
+belong exclusively to Abhinav Giri (@abhinavgiri45).
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+TERMS OF EXCLUSIVE USE:
+1. EXCLUSIVE AUTHORIZATION:
+   Permission is granted exclusively to Abhinav Giri (@abhinavgiri45) to use, run,
+   modify, merge, publish, distribute, sublicense, host, deploy, and/or sell copies
+   of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. STRICT PROHIBITION FOR ALL OTHER PARTIES:
+   No other individual, company, organization, or entity is permitted to use, copy,
+   modify, reverse engineer, reproduce, distribute, host, deploy, publicly display,
+   or create derivative works from this Software without explicit, prior written
+   permission from Abhinav Giri.
 ```
 
-### Summary of Permissions:
-- ✅ **Commercial use**: You can use this software for commercial purposes.
-- ✅ **Modification**: You can modify the source code freely.
-- ✅ **Distribution**: You can distribute original or modified copies.
-- ✅ **Private use**: You can use and modify the software privately.
-- ℹ️ **License and copyright notice**: You must include the original copyright notice and MIT license in all copies.
+### Terms & Restrictions Summary:
+- 🔒 **Exclusive Ownership**: Solely owned and authorized for use by **Abhinav Giri (@abhinavgiri45)**.
+- 🚫 **Strict Prohibition**: Unauthorized reproduction, modification, deployment, hosting, or distribution by any other person or organization is strictly prohibited.
+- 📜 **All Rights Reserved**: Full copyright and intellectual property rights remain with Abhinav Giri.
 
-For more details, see the full [LICENSE](LICENSE) file.
+For complete terms, see the official [LICENSE](LICENSE) file.
