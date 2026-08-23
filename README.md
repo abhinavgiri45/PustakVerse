@@ -2,16 +2,20 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/framework-Flask-black.svg)](https://flask.palletsprojects.com/)
-[![Security](https://img.shields.io/badge/security-Two--Step%20Verification-success.svg)](https://github.com/abhinavgiri45/PustakVerse)
+[![Security](https://img.shields.io/badge/security-Enterprise%20Grade%202FA-success.svg)](https://github.com/abhinavgiri45/PustakVerse)
 [![AI Integration](https://img.shields.io/badge/AI-GranthMind%2065%2B%20Features-orange.svg)](https://github.com/abhinavgiri45/PustakVerse)
-[![Payments](https://img.shields.io/badge/payments-Razorpay%20Direct-blueviolet.svg)](https://razorpay.com/)
-[![License](https://img.shields.io/badge/License-Proprietary%20%26%20Exclusive-red.svg)](LICENSE)
+[![Owner](https://img.shields.io/badge/Owner%20%26%20Architect-Abhinav%20Giri-blue.svg)](https://github.com/abhinavgiri45)
+[![License](https://img.shields.io/badge/License-Proprietary%20%26%20Exclusive%20(Abhinav%20Giri)-red.svg)](LICENSE)
 
-**PustakVerse** is an enterprise-grade digital library ecosystem, creator publishing network, and universal AI intelligence workstation. Designed by **Abhinav Giri**, PustakVerse combines an immersive digital reading experience with autonomous AI reasoning (**GranthMind AI**), instant single-file app generation, high-precision topic citations, and creator monetization.
+**PustakVerse** is an enterprise-grade digital library ecosystem, creator publishing network, and autonomous AI intelligence workstation (**GranthMind AI**). Designed, architected, and owned exclusively by **Abhinav Giri (@abhinavgiri45)**.
+
+> [!CAUTION]
+> **PROPRIETARY & EXCLUSIVE SOFTWARE NOTICE**
+> This project is protected under a **Proprietary & Exclusive License**. The software, source code, design systems, algorithms, and documentation are strictly authorized for use, modification, execution, and deployment **solely and exclusively by Abhinav Giri (@abhinavgiri45)**. All rights are reserved. No other person, organization, or entity is permitted to use, copy, distribute, host, deploy, or create derivative works.
 
 ---
 
-## 🌟 Key Highlights & Architecture
+## 🌟 Key Highlights & Platform Architecture
 
 ### 🧠 1. GranthMind™ AI Universal Intelligence Suite (65+ Features)
 - **🎨 AI Image Generation & Vision Art Studio**: Generate high-definition concept art, UI mockups, 3D renders, and illustrations with 1-click 4K PNG downloads.
@@ -79,9 +83,9 @@
 
 ---
 
-## 🏛️ Platform Roles & Permissions
+## 🏛️ Platform Roles & Access Matrix
 
-| Feature / Capability | Reader | Author | Official | Developer |
+| Feature / Capability | Reader | Author | Official | Lead Architect (Abhinav Giri) |
 | :--- | :---: | :---: | :---: | :---: |
 | Browse Global Library & Search | ✅ | ✅ | ✅ | ✅ |
 | GranthMind AI 65+ Features & Art Studio | ✅ | ✅ | ✅ | ✅ |
@@ -94,7 +98,7 @@
 | Author Application Review | ❌ | ❌ | ✅ | ✅ |
 | Content Moderation & Reporting | ❌ | ❌ | ✅ | ✅ |
 | Two-Step Verification Toggle | Optional | Optional | Enforced | Enforced |
-| Appoint Officials & System Config | ❌ | ❌ | ❌ | ✅ |
+| Full Administrative Control & System Config | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -114,15 +118,15 @@
 
 ---
 
-## 🚀 Quick Start & Installation
+## 🚀 Environment Setup (Owner / Authorized Development)
 
-### 1. Clone the Repository
+### 1. Repository Setup
 ```bash
 git clone https://github.com/abhinavgiri45/PustakVerse.git
 cd PustakVerse
 ```
 
-### 2. Create and Activate Virtual Environment
+### 2. Virtual Environment Configuration
 ```bash
 # Windows
 python -m venv venv
@@ -133,31 +137,31 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install Dependencies
+### 3. Dependencies Installation
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment Variables
-Create a `.env` file in the root directory:
+### 4. Environment Variables
+Configure `.env` in the root directory:
 ```env
 FLASK_SECRET_KEY="your-super-secret-key"
 EMAIL_ADDRESS="your-email@gmail.com"
 EMAIL_PASSWORD="your-gmail-app-password"
 
-# Google OAuth (Optional for Google Sign-In)
+# Google OAuth
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
-# Gemini AI (Optional for AI Tutor)
+# Gemini AI
 GEMINI_API_KEY="your-gemini-api-key"
 ```
 
-### 5. Run the Application
+### 5. Start Application
 ```bash
 python app.py
 ```
-Open your browser and navigate to: `http://127.0.0.1:5000`
+Access locally at: `http://127.0.0.1:5000`
 
 ---
 
@@ -168,7 +172,7 @@ PustakVerse/
 ├── app.py                     # Main application entry point & API controllers
 ├── database.db                # SQLite platform database
 ├── requirements.txt           # Python dependencies
-├── LICENSE                    # Official MIT License
+├── LICENSE                    # Proprietary & Exclusive License (Abhinav Giri)
 ├── static/
 │   ├── PustakVerse.png        # Official brand logo
 │   └── uploads/
@@ -200,20 +204,20 @@ PustakVerse/
 
 ---
 
-## 👨‍💻 Founder & Lead Architect
+## 👨‍💻 Founder, Lead Architect & Exclusive Owner
 
-**PustakVerse & GranthMind AI** are designed, architected, and maintained by:
+**PustakVerse & GranthMind AI** are designed, built, and exclusively owned by:
 
 - **Founder & CTO**: **Abhinav Giri**
-- **Email**: [abhinavgiri370@gmail.com](mailto:abhinavgiri370@gmail.com)
-- **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)
 - **GitHub**: [@abhinavgiri45](https://github.com/abhinavgiri45)
+- **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)
+- **Email**: [abhinavgiri370@gmail.com](mailto:abhinavgiri370@gmail.com)
 
 ---
 
-## 📄 License & Terms of Use
+## 📄 License & Legal Notice
 
-This project is protected under a **Proprietary & Exclusive License**.
+This software is protected under a **Proprietary & Exclusive License**.
 
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%26%20Exclusive-red.svg)](LICENSE)
 
@@ -237,11 +241,16 @@ TERMS OF EXCLUSIVE USE:
    modify, reverse engineer, reproduce, distribute, host, deploy, publicly display,
    or create derivative works from this Software without explicit, prior written
    permission from Abhinav Giri.
+
+3. INTELLECTUAL PROPERTY:
+   All intellectual property rights, trademarks, patents, and copyrights in and to
+   PustakVerse and GranthMind AI remain the sole and exclusive property of
+   Abhinav Giri (@abhinavgiri45).
 ```
 
-### Terms & Restrictions Summary:
-- 🔒 **Exclusive Ownership**: Solely owned and authorized for use by **Abhinav Giri (@abhinavgiri45)**.
-- 🚫 **Strict Prohibition**: Unauthorized reproduction, modification, deployment, hosting, or distribution by any other person or organization is strictly prohibited.
-- 📜 **All Rights Reserved**: Full copyright and intellectual property rights remain with Abhinav Giri.
+### Key Terms:
+- 🔒 **Exclusive Rights**: Solely authorized for use and deployment by **Abhinav Giri (@abhinavgiri45)**.
+- 🚫 **Third-Party Restriction**: Direct copying, unauthorized deployment, reproduction, or public hosting by any other party is strictly forbidden.
+- 📜 **All Rights Reserved**: Full copyright and IP protection under applicable intellectual property laws.
 
 For complete terms, see the official [LICENSE](LICENSE) file.
