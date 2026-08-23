@@ -1166,16 +1166,43 @@ def smart_solve_math_or_code(query):
     return None
 
 
-def extract_conversational_recall_response(query, chat_history):
+def extract_conversational_recall_response(query, chat_history, current_user_name=None):
     """
-    High-precision multi-turn conversational memory recall engine.
+    High-precision multi-turn conversational memory recall & user identity engine.
     Extracts facts, user preferences, names, locations, prior code snippets, and topics from earlier turns.
     """
+    q_clean = (query or '').lower().strip()
+    norm_q = re.sub(r'[^a-z0-9\s]', '', q_clean)
+
+    # 1. Direct User Name / Identity Questions
+    if any(norm_q == p or norm_q.startswith(p + ' ') or ('my name' in norm_q and any(w in norm_q for w in ['what', 'who', 'tell', 'know', 'remember', 'is'])) for p in ['what is my name', 'whats my name', 'who am i', 'do you know my name', 'tell me my name', 'what am i called', 'my name']):
+        # Check if user is logged in
+        if current_user_name and current_user_name.strip() and current_user_name.lower() != 'guest':
+            return f"Your name is **{current_user_name.strip()}** (you are signed in to PustakVerse) 😊."
+        
+        # Check chat history
+        if chat_history and isinstance(chat_history, list):
+            prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
+            all_user_str = "\n".join(prev_user_msgs)
+            m = re.search(r'(?:my name is|i am|call me)\s+([A-Za-z]+)', all_user_str, re.I)
+            if m:
+                return f"You told me earlier that your name is **{m.group(1).strip()}** 😊."
+        
+        return "I don't know your name yet because you haven't introduced yourself, and you're currently chatting as a guest. Feel free to tell me your name or what you'd like me to call you! 😊"
+
+    # 2. Location Questions ("Where do I live", "Where am I from")
+    if any(norm_q == p or ('where' in norm_q and any(w in norm_q for w in ['i live', 'am i from', 'do i live', 'my city', 'my country', 'my location'])) for p in ['where do i live', 'where am i from', 'where i live', 'what is my city', 'what is my country']):
+        if chat_history and isinstance(chat_history, list):
+            prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
+            all_user_str = "\n".join(prev_user_msgs)
+            m = re.search(r'(?:i live in|i am from|located in|my city is)\s+([A-Za-z\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', all_user_str, re.I)
+            if m:
+                return f"You mentioned earlier that you live in / are from **{m.group(1).strip()}** 📍."
+        return "You haven't shared your location with me yet! Feel free to tell me where you're from if you'd like me to remember it."
+
     if not chat_history or not isinstance(chat_history, list) or len(chat_history) == 0:
         return None
-    
-    q_clean = (query or '').lower().strip()
-    
+
     prev_user_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'user']
     prev_asst_msgs = [str(t.get('text') or t.get('content') or '').strip() for t in chat_history if t.get('role') == 'assistant']
     all_user_str = "\n".join(prev_user_msgs)
@@ -1185,18 +1212,6 @@ def extract_conversational_recall_response(query, chat_history):
         return None
 
     findings = []
-
-    # 1. User Name Recall
-    if any(k in q_clean for k in ['my name', 'who am i', 'what is my name', 'call me']):
-        m = re.search(r'(?:my name is|i am|call me)\s+([A-Za-z]+)', all_user_str, re.I)
-        if m:
-            findings.append(f"- **Your Name**: **{m.group(1).strip()}**")
-
-    # 2. Location / City / Country Recall
-    if any(k in q_clean for k in ['where do i live', 'where i live', 'my city', 'my country', 'from where am i', 'where am i from', 'my location']):
-        m = re.search(r'(?:i live in|i am from|located in|my city is)\s+([A-Za-z\s]+?)(?:\s+and|\s+with|\s+my|\.|\,|$)', all_user_str, re.I)
-        if m:
-            findings.append(f"- **Your Location**: **{m.group(1).strip()}**")
 
     # 3. Programming language Recall
     if 'language' in q_clean:
@@ -2568,15 +2583,15 @@ def call_provider_live_api(provider, model_id, prompt, attachment_path='', timeo
     return ''
 
 
-def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None, attachment_text='', attachment_path='', selected_model_id=None, mode='study', system_instruction=''):
+def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None, attachment_text='', attachment_path='', selected_model_id=None, mode='study', system_instruction='', current_user_name=None):
     cleaned_question = (question or '').strip()
     if not cleaned_question and not screenshot_text and not attachment_text and not attachment_path:
         return 'Please ask a question, paste an excerpt, or attach an image/PDF for GranthMind to analyze.'
 
     query_lower = cleaned_question.lower()
 
-    # 0. High-Priority Multi-Turn Contextual Recall Resolution
-    recall_direct = extract_conversational_recall_response(cleaned_question, chat_history)
+    # 0. High-Priority Multi-Turn Contextual Recall & Identity Resolution
+    recall_direct = extract_conversational_recall_response(cleaned_question, chat_history, current_user_name=current_user_name)
     if recall_direct:
         return recall_direct
     
@@ -10220,6 +10235,18 @@ def api_granthmind_chat():
 
     try:
         # Generate Answer with Selected AI Model Engine
+        user_name_val = session.get('user_name') or session.get('username')
+        if not user_name_val and session.get('user_id'):
+            try:
+                db_u = get_db_connection()
+                cur_u = db_u.cursor(dictionary=True)
+                cur_u.execute("SELECT name, username FROM users WHERE id = %s", (session['user_id'],))
+                urow = cur_u.fetchone()
+                if urow:
+                    user_name_val = urow.get('name') or urow.get('username')
+                db_u.close()
+            except Exception: pass
+
         answer = build_ai_free_response(
             question=prompt.strip(),
             mode=mode,
@@ -10228,7 +10255,8 @@ def api_granthmind_chat():
             book_description=book_description,
             attachment_path=attachment_path,
             selected_model_id=selected_model_id,
-            chat_history=chat_history
+            chat_history=chat_history,
+            current_user_name=user_name_val
         )
         if not answer or not answer.strip():
             answer = "I apologize, I am currently processing multiple complex requests. Please try your question again in a moment."
