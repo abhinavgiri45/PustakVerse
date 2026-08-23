@@ -2256,6 +2256,171 @@
       .gemini-prompt-grid { grid-template-columns: 1fr 1fr; }
     }
 
+
+    /* =========================================================================
+       PIXEL-PERFECT GEMINI 3.7 / CLAUDE MINIMALIST SEARCH BAR
+       ========================================================================= */
+    .input-dock {
+      background: transparent;
+      padding: 10px 24px 20px;
+      max-width: 860px;
+      margin: 0 auto;
+      width: 100%;
+      position: relative;
+    }
+    .input-box-card {
+      background: #1c1c1f;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 20px;
+      padding: 14px 18px 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .input-box-card:focus-within {
+      border-color: rgba(139, 92, 246, 0.5);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 92, 246, 0.3);
+      background: #1f1f23;
+    }
+    .prompt-textarea-gemini {
+      width: 100%;
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
+      color: #ececf1 !important;
+      font-size: 0.96rem !important;
+      font-family: inherit !important;
+      line-height: 1.5 !important;
+      resize: none !important;
+      max-height: 200px;
+      min-height: 26px;
+      padding: 0 2px !important;
+    }
+    .prompt-textarea-gemini::placeholder {
+      color: #71717a !important;
+      font-weight: 400 !important;
+    }
+    .search-bottom-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 2px;
+    }
+    .toolbar-left-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-plus-action {
+      background: transparent;
+      border: none;
+      color: #71717a;
+      font-size: 1.3rem;
+      font-weight: 400;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
+      padding: 0;
+      line-height: 1;
+    }
+    .btn-plus-action:hover {
+      color: #e4e4e7;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .model-selector-custom-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.15s;
+      font-size: 0.85rem;
+    }
+    .model-selector-custom-pill:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .model-name-cyan {
+      color: #38bdf8;
+      font-weight: 600;
+      font-size: 0.86rem;
+    }
+    .model-mode-dim {
+      color: #71717a;
+      font-size: 0.8rem;
+    }
+    .model-icon-gauge {
+      color: #eab308;
+      font-size: 0.82rem;
+    }
+    .model-caret-up {
+      color: #71717a;
+      font-size: 0.72rem;
+      margin-left: 2px;
+    }
+    .toolbar-right-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-mic-minimal {
+      background: transparent;
+      border: none;
+      color: #71717a;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: all 0.15s;
+    }
+    .btn-mic-minimal:hover {
+      color: #e4e4e7;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .btn-mic-minimal.recording {
+      color: #ef4444;
+      animation: pulseRecord 1s infinite;
+    }
+    .btn-send-round {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #27272a;
+      border: none;
+      color: #52525b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0;
+    }
+    .btn-send-round.active, .btn-send-round:hover {
+      background: #38bdf8;
+      color: #09090b;
+      transform: scale(1.05);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+    }
+    .input-disclaimer-center {
+      text-align: center;
+      color: #71717a;
+      font-size: 0.73rem;
+      margin-top: 10px;
+      font-weight: 400;
+    }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
@@ -2463,7 +2628,7 @@
 
       </div>
 
-      <!-- INPUT DOCK -->
+            <!-- INPUT DOCK -->
       <footer class="input-dock">
         <div class="input-container">
           
@@ -2489,67 +2654,72 @@
               <span class="slash-cmd">/quiz</span>
               <span class="slash-desc">Create practice quiz</span>
             </div>
+            <div class="slash-item" onclick="insertSlashCommand('/image ')">
+              <span class="slash-cmd">/image</span>
+              <span class="slash-desc">Generate 4K AI artwork</span>
+            </div>
           </div>
+
+          <!-- Hidden inputs and file upload -->
+          <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
 
           <form id="chatForm" onsubmit="submitGranthMindMessage(event)">
             <input type="hidden" id="currentMode" value="study">
             {% if book %}<input type="hidden" id="bookIdInput" value="{{ book.id }}">{% endif %}
-            
-            
-            <div class="input-box-wrapper">
-              <!-- GEMINI-STYLE INTEGRATED MODEL SELECTOR PILL -->
-              <div class="model-pill-wrapper">
-                <select id="modelSelector" class="gemini-model-pill" title="Select AI Engine (Gemini Style)">
-                  {% if available_models and available_models|length > 0 %}
-                    {% for m in available_models %}
-                      <option value="{{ m.model_id }}" {% if m.is_default or loop.first %}selected{% endif %}>
-                        {{ m.display_name }}
-                      </option>
-                    {% endfor %}
-                  {% else %}
-                    <option value="gemini-2.0-flash" selected>GranthMind Pro (Gemini 2.0 Flash)</option>
-                    <option value="deepseek-r1">GranthMind DeepThink (DeepSeek R1)</option>
-                    <option value="groq-llama-3-3">GranthMind Turbo (Groq LLaMA 3.3 70B)</option>
-                    <option value="gpt-4o-mini">GranthMind Vision & Scholar (GPT-4o Mini)</option>
-                    <option value="qwen-coder-32b">GranthMind Code & Logic (Qwen 2.5 Coder)</option>
-                    <option value="claude-3-5-sonnet">GranthMind Logic (Claude 3.5 Sonnet)</option>
-                    <option value="mistral-large">GranthMind Mistral (Mistral Large)</option>
-                  {% endif %}
-                </select>
+
+            <!-- EXACT GEMINI 3.7 / CLAUDE MINIMAL SEARCH BOX -->
+            <div class="input-box-card">
+              <textarea id="promptInput" class="prompt-textarea-gemini" placeholder="Ask anything, @ to mention, / for actions" rows="1" onkeydown="handleKeyInput(event)" oninput="handleInputState(this)"></textarea>
+              
+              <div class="search-bottom-toolbar">
+                <!-- Left: Plus button + Model Selector Pill -->
+                <div class="toolbar-left-group">
+                  <button type="button" class="btn-plus-action" onclick="toggleToolsDropdown()" title="Add / Tools / Image Studio">
+                    +
+                  </button>
+
+                  <div class="model-selector-custom-pill" onclick="openModelPickerDropdown()" title="Select AI Model">
+                    <span class="model-name-cyan" id="selectedModelLabel">Gemini 3.7 Flash</span>
+                    <span class="model-mode-dim">High</span>
+                    <span class="model-icon-gauge">⚡</span>
+                    <span class="model-caret-up">^</span>
+                  </div>
+
+                  <!-- Real Model Selector (Select Element) -->
+                  <select id="modelSelector" style="display: none;" onchange="updateModelDisplay(this)">
+                    <option value="gemini-2.0-flash" selected>Gemini 3.7 Flash High</option>
+                    <option value="deepseek-r1">DeepSeek R1 High</option>
+                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                    <option value="gpt-4o">GPT-4o Omni</option>
+                    <option value="qwen-coder-32b">Qwen 2.5 Coder</option>
+                    <option value="groq-llama-3-3">LLaMA 3.3 Turbo</option>
+                  </select>
+                </div>
+
+                <!-- Right: Mic + Arrow Send Button -->
+                <div class="toolbar-right-group">
+                  <button type="button" class="btn-mic-minimal" id="micBtn" onclick="toggleVoiceInput()" title="Voice Search" aria-label="Use Microphone">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                      <line x1="12" y1="19" x2="12" y2="23"></line>
+                      <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                  </button>
+
+                  <button type="submit" class="btn-send-round" id="sendBtn" title="Send Message">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </button>
+                </div>
               </div>
-
-              <button type="button" class="btn-action-icon" onclick="document.getElementById('fileAttachment').click()" title="Attach Image or Diagram" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 4px; display: flex; align-items: center;">
-                📎
-              </button>
-              <input type="file" id="fileAttachment" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
-
-              <!-- 🎨 AI IMAGE GENERATOR BUTTON -->
-              <button type="button" class="btn-enhance-prompt" onclick="generateAIImageStudioPrompt()" title="🎨 AI Image Generation &amp; Vision Art Studio (/image)" style="color: #38bdf8;">
-                🎨
-              </button>
-              <button type="button" class="btn-enhance-prompt" id="btnEnhancePrompt" onclick="enhanceCurrentPrompt()" title="✨ One-Click Prompt Enhancer (Expands prompt into rich, high-impact instructions) [Ctrl+E]">
-                ✨
-              </button>
-              <textarea id="promptInput" class="chat-textarea" placeholder="Ask anything..." rows="1" onkeydown="handleKeyInput(event)" oninput="updateCharWordCount()"></textarea>
-
-              <!-- GEMINI-STYLE VECTOR MICROPHONE BUTTON -->
-              <button type="button" class="gemini-mic-btn" id="micBtn" onclick="toggleVoiceInput()" title="Gemini Voice / Speech-to-Text Search" aria-label="Use Microphone">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                </svg>
-              </button>
-
-              <button type="submit" class="btn-send-chat" id="sendBtn" title="Send Message">
-                ➤
-              </button>
             </div>
           </form>
 
-          <div class="input-footer">
-            <span id="fileBadge" style="display: none; color: #38bdf8; font-weight: 700;">📎 Attached: <span id="fileName"></span></span>
-            <span class="ai-disclaimer-text">GranthMind AI can make mistakes. Verify important info.</span>
-            <span class="char-counter" id="charCounter">0 words · 0 chars</span>
+          <div class="input-disclaimer-center">
+            GranthMind can make mistakes. Verify important info.
           </div>
         </div>
       </footer>
@@ -4498,6 +4668,52 @@ function toggleSourcesDrawer(btn) {
         dd.classList.remove('show');
       }
     });
+
+
+
+    function handleInputState(textarea) {
+      updateCharWordCount();
+      const sendBtn = document.getElementById('sendBtn');
+      if (textarea.value.trim().length > 0) {
+        sendBtn.classList.add('active');
+      } else {
+        sendBtn.classList.remove('active');
+      }
+      // Auto-expand textarea
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    }
+
+    function openModelPickerDropdown() {
+      const select = document.getElementById('modelSelector');
+      if (!select) return;
+      const curVal = select.value;
+      const models = [
+        { id: 'gemini-2.0-flash', label: 'Gemini 3.7 Flash High' },
+        { id: 'deepseek-r1', label: 'DeepSeek R1 High' },
+        { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' },
+        { id: 'gpt-4o', label: 'GPT-4o Omni' },
+        { id: 'qwen-coder-32b', label: 'Qwen 2.5 Coder' },
+        { id: 'groq-llama-3-3', label: 'LLaMA 3.3 Turbo' }
+      ];
+      
+      const choice = prompt(`Select AI Model Engine:\n` + models.map((m, idx) => `${idx + 1}. ${m.label}`).join('\n') + `\n\nEnter number (1-${models.length}):`);
+      if (choice) {
+        const num = parseInt(choice.trim());
+        if (num >= 1 && num <= models.length) {
+          select.value = models[num - 1].id;
+          updateModelDisplay(select);
+          showToast(`Switched model to ${models[num - 1].label} ✨`);
+        }
+      }
+    }
+
+    function updateModelDisplay(select) {
+      const lbl = document.getElementById('selectedModelLabel');
+      if (lbl && select.options[select.selectedIndex]) {
+        lbl.innerText = select.options[select.selectedIndex].text.replace(' High', '').replace(' Turbo', '');
+      }
+    }
 
 </script>
 
