@@ -2415,7 +2415,7 @@ def get_provider_api_key(provider_name):
         'anthropic': ['ANTHROPIC_API_KEY', 'CLAUDE_API_KEY', 'ANTHROPIC_KEY'],
         'groq': ['GROQ_API_KEY', 'GROQ_KEY'],
         'deepseek': ['DEEPSEEK_API_KEY', 'DEEPSEEK_KEY'],
-        'openrouter': ['OPENROUTER_API_KEY', 'OPENROUTER_KEY'],
+        'openrouter': ['OPENROUTER_API_KEY', 'OPENROUTER_KEY', 'OPENROUTER_API_TOKEN'],
         'mistral': ['MISTRAL_API_KEY', 'MISTRAL_KEY'],
         'huggingface': ['HUGGINGFACE_API_KEY', 'HF_TOKEN', 'HUGGINGFACE_KEY'],
         'cohere': ['COHERE_API_KEY', 'COHERE_KEY'],
@@ -2657,8 +2657,8 @@ def call_provider_live_api(provider, model_id, prompt, attachment_path='', timeo
             except Exception: pass
 
         # 6. OpenRouter Official API
-        if p == 'openrouter' or get_provider_api_key('openrouter'):
-            or_key = api_key if p == 'openrouter' else get_provider_api_key('openrouter')
+        if p == 'openrouter' or get_provider_api_key('openrouter') or os.getenv('OPENROUTER_API_KEY'):
+            or_key = api_key if p == 'openrouter' else (get_provider_api_key('openrouter') or os.getenv('OPENROUTER_API_KEY'))
             try:
                 r = requests.post(
                     'https://openrouter.ai/api/v1/chat/completions',

@@ -5776,7 +5776,8 @@ function toggleSourcesDrawer(btn) {
     function isImageGenerationQuery(promptText) {
       const p = promptText.trim().toLowerCase();
       if (p.startsWith('/image') || p.startsWith('/art')) return true;
-      return /\b(generate (?:an? )?image|create (?:an? )?image|draw (?:an? )?(?:image|picture|photo|illustration|art)|render (?:an? )?image|generate (?:an? )?art|make (?:an? )?image|generate a picture|draw a )\b/i.test(p);
+      return /\b(generate (?:an? )?image|create (?:an? )?image|create an image|draw (?:an? )?(?:image|picture|photo|illustration|art)|render (?:an? )?image|generate (?:an? )?art|make (?:an? )?image|generate a picture|draw a |picture of|photo of|paint a |paint an? )\b/i.test(p) ||
+             /^(?:create|generate|draw|paint|make)\s+(?:an?\s+)?(?:image|art|photo|picture|wallpaper|illustration)/i.test(p);
     }
 
     function extractCleanArtPrompt(promptText) {
