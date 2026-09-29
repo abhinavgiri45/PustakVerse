@@ -54,9 +54,14 @@ export default {
 
     // 4. Dynamic Proxy to Backend Application
     const targetUrl = new URL(url.pathname + url.search, "https://pustakverse.onrender.com");
+    const modifiedHeaders = new Headers(request.headers);
+    modifiedHeaders.set("Host", "pustakverse.onrender.com");
+    modifiedHeaders.set("X-Forwarded-Host", url.hostname);
+    modifiedHeaders.set("X-Forwarded-Proto", "https");
+
     const modifiedRequest = new Request(targetUrl, {
       method: request.method,
-      headers: request.headers,
+      headers: modifiedHeaders,
       body: request.method !== "GET" && request.method !== "HEAD" ? request.body : null,
       redirect: "manual"
     });
