@@ -8,3 +8,8 @@ venv/
 ENV/
 .DS_Store
 Thumbs.db
+
+local_backup/
+
+d1_data_import.sql
+migrate_to_d1.py

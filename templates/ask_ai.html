@@ -22,7 +22,7 @@
   <!-- OPEN GRAPH / SOCIAL PREVIEWS -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="GranthMind AI · PustakVerse">
-  <meta property="og:url" content="https://pustakverse.onrender.com/granthmind">
+  <meta property="og:url" content="https://pustakverse.pages.dev/granthmind">
   <meta property="og:title" content="GranthMind AI · ALL AI MODELS. ONE PLATFORM.">
   <meta property="og:description" content="Experience ChatGPT, Gemini, Claude, Copilot, Meta AI, Mistral & DeepSeek in one unified study & research workspace. Free on PustakVerse.">
   <meta property="og:image" content="{{ url_for('static', filename='GranthMind.png', _external=True) }}">
@@ -5448,7 +5448,7 @@ function toggleSourcesDrawer(btn) {
     function generateCitation(text) {
       const title = text.slice(0, 45).replace(/[#*]/g, '');
       const year = new Date().getFullYear();
-      const cite = `GranthMind AI. (${year}). "${title}." PustakVerse Intelligence System. Retrieved from https://pustakverse.onrender.com/`;
+      const cite = `GranthMind AI. (${year}). "${title}." PustakVerse Intelligence System. Retrieved from https://pustakverse.pages.dev/`;
       navigator.clipboard.writeText(cite).then(() => {
         showToast('Copied APA Academic Citation! 📚');
       });

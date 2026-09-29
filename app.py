@@ -2662,7 +2662,7 @@ def call_provider_live_api(provider, model_id, prompt, attachment_path='', timeo
             try:
                 r = requests.post(
                     'https://openrouter.ai/api/v1/chat/completions',
-                    headers={'Authorization': f'Bearer {or_key}', 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pustakverse.onrender.com', 'X-Title': 'PustakVerse GranthMind'},
+                    headers={'Authorization': f'Bearer {or_key}', 'Content-Type': 'application/json', 'HTTP-Referer': os.environ.get('BASE_URL', 'https://pustakverse.pages.dev'), 'X-Title': 'PustakVerse GranthMind'},
                     json={'model': model_id if '/' in model_id else 'deepseek/deepseek-r1:free', 'messages': [{'role': 'user', 'content': prompt}], 'temperature': 0.3, 'max_tokens': 3500},
                     timeout=timeout
                 )
@@ -2764,7 +2764,7 @@ def build_ai_free_response(question, book_title='', book_description='', screens
 - **Contact & Socials**:
   - 📧 **Official Email**: `abhinavgiri370@gmail.com`
   - 📸 **Instagram**: [@abhinavgiri45](https://www.instagram.com/abhinavgiri45/)
-  - 💼 **Founder Desk & Support**: [PustakVerse Contact Desk](https://pustakverse.onrender.com/contact)
+  - 💼 **Founder Desk & Support**: [PustakVerse Contact Desk](https://pustakverse.pages.dev/contact)
 
 ---
 
