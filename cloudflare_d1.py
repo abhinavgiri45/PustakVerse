@@ -1,17 +1,22 @@
 """
 Cloudflare D1 Database Adapter for PustakVerse (DB-API 2.0 Compatible)
-Connects Python Flask to Cloudflare D1 Serverless SQL via Cloudflare REST API.
+Connects Python Flask directly to Cloudflare D1 Serverless SQL via Cloudflare REST API.
+Automatically captures and persists all new rows created via the website interface.
 """
 
 import os
 import re
 import json
 import logging
+import datetime
 import requests
 
 logger = logging.getLogger("cloudflare_d1")
 
 class D1Error(Exception):
+    pass
+
+class IntegrityError(D1Error):
     pass
 
 class D1Cursor:
@@ -25,7 +30,6 @@ class D1Cursor:
         self.description = None
 
     def _convert_sql(self, sql):
-        # Convert MySQL syntax to SQLite / D1 syntax
         converted = sql
         
         # 1. SHOW COLUMNS FROM <table> LIKE '<col>' -> SELECT name FROM pragma_table_info('<table>') WHERE name LIKE '<col>'
@@ -38,11 +42,13 @@ class D1Cursor:
         # 2. INSERT IGNORE INTO -> INSERT OR IGNORE INTO
         converted = re.sub(r"\bINSERT\s+IGNORE\s+INTO\b", "INSERT OR IGNORE INTO", converted, flags=re.IGNORECASE)
 
-        # 3. Parameter placeholders: replace %s with ?
-        # Be careful not to replace % inside string literals
+        # 3. SELECT LAST_INSERT_ID() -> SELECT last_insert_rowid()
+        converted = re.sub(r"LAST_INSERT_ID\(\)", "last_insert_rowid()", converted, flags=re.IGNORECASE)
+
+        # 4. Parameter placeholders: replace %s with ?
         converted = re.sub(r"%s", "?", converted)
 
-        return converted
+        return converted, None
 
     def execute(self, sql, params=None):
         sql, alt_params = self._convert_sql(sql)
@@ -55,10 +61,18 @@ class D1Cursor:
                 for p in params:
                     if isinstance(p, bool):
                         param_list.append(1 if p else 0)
+                    elif hasattr(p, 'strftime'):
+                        param_list.append(p.strftime('%Y-%m-%d %H:%M:%S'))
                     else:
                         param_list.append(p)
             elif isinstance(params, dict):
-                param_list = list(params.values())
+                for p in params.values():
+                    if isinstance(p, bool):
+                        param_list.append(1 if p else 0)
+                    elif hasattr(p, 'strftime'):
+                        param_list.append(p.strftime('%Y-%m-%d %H:%M:%S'))
+                    else:
+                        param_list.append(p)
             else:
                 param_list = [params]
 
@@ -81,6 +95,8 @@ class D1Cursor:
                 errors = data.get("errors", [])
                 err_msg = errors[0].get("message", "Unknown D1 error") if errors else str(data)
                 logger.error(f"[D1 Query Error] {err_msg} | SQL: {sql[:150]}")
+                if "UNIQUE constraint failed" in err_msg or "constraint failed" in err_msg.lower():
+                    raise IntegrityError(f"Duplicate entry: {err_msg}")
                 raise D1Error(f"Cloudflare D1 Error: {err_msg}")
 
             result_obj = data.get("result", [{}])[0]
@@ -90,7 +106,7 @@ class D1Cursor:
             self._results = raw_results if self.dictionary else [list(r.values()) for r in raw_results]
             self._index = 0
             self.rowcount = meta.get("changes", len(self._results))
-            self.lastrowid = meta.get("last_row_id")
+            self.lastrowid = meta.get("last_row_id") or meta.get("lastrowid") or meta.get("last_insert_rowid")
 
             if raw_results:
                 cols = list(raw_results[0].keys())
@@ -126,7 +142,7 @@ class D1Cursor:
         self._results = []
 
 class D1Connection:
-    def __init__(self, account_id, database_id, api_token, timeout=10):
+    def __init__(self, account_id, database_id, api_token, timeout=12):
         self.account_id = account_id
         self.database_id = database_id
         self.api_token = api_token
@@ -136,7 +152,7 @@ class D1Connection:
         return D1Cursor(self, dictionary=dictionary)
 
     def commit(self):
-        pass  # D1 queries auto-commit per statement
+        pass  # Cloudflare D1 auto-commits each statement
 
     def rollback(self):
         pass

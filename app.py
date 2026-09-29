@@ -157,8 +157,15 @@ from decimal import Decimal, InvalidOperation
 
 try:
     import mysql.connector
-except ImportError:
+    MySQLIntegrityError = mysql.connector.IntegrityError
+except Exception:
     mysql = None
+    class MySQLIntegrityError(Exception): pass
+
+try:
+    from cloudflare_d1 import IntegrityError as D1IntegrityError
+except Exception:
+    class D1IntegrityError(Exception): pass
 
 from flask import Response, Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -5091,7 +5098,7 @@ def register():
                     'redirect': url_for('index')
                 })
                 
-            except mysql.connector.IntegrityError: 
+            except (MySQLIntegrityError, D1IntegrityError): 
                 return jsonify({'success': False, 'message': 'Email or Username was taken while verifying.'})
             except Exception as e: 
                 logging.exception(f"Registration DB error: {e}")
