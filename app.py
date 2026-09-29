@@ -5265,7 +5265,18 @@ def google_login():
     if request.path.startswith('/signup'):
         mode = 'signup'
     session['google_auth_mode'] = mode
-    return google.authorize_redirect(url_for('google_authorize', _external=True))
+    forwarded_host = request.headers.get('X-Forwarded-Host')
+    forwarded_proto = request.headers.get('X-Forwarded-Proto', 'https')
+    base_url = os.environ.get('BASE_URL', '').rstrip('/')
+
+    if base_url:
+        redirect_uri = f"{base_url}/login/google/callback"
+    elif forwarded_host:
+        redirect_uri = f"{forwarded_proto}://{forwarded_host}/login/google/callback"
+    else:
+        redirect_uri = url_for('google_authorize', _external=True)
+
+    return google.authorize_redirect(redirect_uri)
 
 @app.route('/login/google/callback')
 def google_authorize():
