@@ -3662,6 +3662,15 @@ def get_db_connection(retries=1, delay=0.1):
     global _last_db_fail_time
     last_exception = None
 
+    # Priority 1: Cloudflare D1 Serverless SQL Connection (if env vars set)
+    try:
+        from cloudflare_d1 import get_d1_connection
+        d1_conn = get_d1_connection()
+        if d1_conn:
+            return d1_conn
+    except Exception as e:
+        logging.debug("Cloudflare D1 check skipped: %s", e)
+
     # Circuit breaker: if DB failed recently, fail fast without waiting 10 seconds
     now = time.time()
     if now - _last_db_fail_time < _db_fail_cooldown:
