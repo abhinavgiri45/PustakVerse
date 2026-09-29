@@ -14,17 +14,14 @@ export default {
         if (assetResponse && assetResponse.status < 400) {
           return assetResponse;
         }
-      } catch (_) {
-        // Fall through to backend
-      }
+      } catch (_) {}
     }
 
     // 2. Health check endpoint
     if (url.pathname === "/api/edge-health") {
       return new Response(JSON.stringify({
         status: "online",
-        platform: "Cloudflare Pages",
-        url: request.url,
+        platform: "Cloudflare Pages Edge",
         timestamp: new Date().toISOString()
       }), {
         headers: { "Content-Type": "application/json" }
@@ -32,11 +29,14 @@ export default {
     }
 
     // 3. Proxy to the live backend application
-    const backendOrigin = "https://pustakverse.onrender.com";
-    const targetUrl = new URL(url.pathname + url.search, backendOrigin);
+    const backendUrl = "https://pustakverse.onrender.com" + url.pathname + url.search;
 
-    // Clean headers for backend proxy
-    const newHeaders = new Headers(request.headers);
+    const newHeaders = new Headers();
+    for (const [key, value] of request.headers.entries()) {
+      if (key.toLowerCase() !== "host") {
+        newHeaders.append(key, value);
+      }
+    }
     newHeaders.set("X-Forwarded-Host", url.host);
     newHeaders.set("X-Forwarded-Proto", "https");
 
@@ -46,14 +46,12 @@ export default {
       redirect: "manual"
     };
 
-    // Only attach body for POST/PUT/PATCH/DELETE
     if (request.method !== "GET" && request.method !== "HEAD") {
       fetchOptions.body = request.body;
     }
 
     try {
-      const response = await fetch(targetUrl.toString(), fetchOptions);
-      return response;
+      return await fetch(backendUrl, fetchOptions);
     } catch (err) {
       return new Response(
         `<!DOCTYPE html>
