@@ -10563,3 +10563,15 @@ def optimize_response_speed(response):
                 pass
 
     return response
+
+@app.route('/google8a9af3f8fe8a3567.html')
+def google_search_console_verification():
+    return Response("google-site-verification: google8a9af3f8fe8a3567.html", mimetype="text/html")
+
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    return send_from_directory('static', 'sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def serve_robots():
+    return send_from_directory('static', 'robots.txt', mimetype='text/plain')

@@ -17,7 +17,41 @@ export default {
       } catch (_) {}
     }
 
-    // 2. Health check endpoint
+    // 2. Google Search Console ownership verification file
+    if (url.pathname === "/google8a9af3f8fe8a3567.html") {
+      return new Response("google-site-verification: google8a9af3f8fe8a3567.html", {
+        headers: { "Content-Type": "text/html; charset=utf-8" }
+      });
+    }
+
+    // 3. Direct Sitemap and Robots response
+    if (url.pathname === "/sitemap.xml") {
+      const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://pustakverse.pages.dev/</loc><lastmod>2026-09-29</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://pustakverse.pages.dev/ask_ai/</loc><lastmod>2026-09-29</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pustakverse.pages.dev/granthmind</loc><lastmod>2026-09-29</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pustakverse.pages.dev/tools</loc><lastmod>2026-09-29</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://pustakverse.pages.dev/category/Educational</loc><lastmod>2026-09-29</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://pustakverse.pages.dev/category/Fiction</loc><lastmod>2026-09-29</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://pustakverse.pages.dev/category/Non-Fiction</loc><lastmod>2026-09-29</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://pustakverse.pages.dev/login</loc><lastmod>2026-09-29</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://pustakverse.pages.dev/signup</loc><lastmod>2026-09-29</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://pustakverse.pages.dev/contact</loc><lastmod>2026-09-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://pustakverse.pages.dev/terms</loc><lastmod>2026-09-29</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+</urlset>`;
+      return new Response(sitemapXml, {
+        headers: { "Content-Type": "application/xml; charset=utf-8" }
+      });
+    }
+
+    if (url.pathname === "/robots.txt") {
+      return new Response("User-agent: *\\nAllow: /\\n\\nSitemap: https://pustakverse.pages.dev/sitemap.xml\\n", {
+        headers: { "Content-Type": "text/plain; charset=utf-8" }
+      });
+    }
+
+    // 4. Health check endpoint
     if (url.pathname === "/api/edge-health") {
       return new Response(JSON.stringify({
         status: "online",
