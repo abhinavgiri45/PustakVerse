@@ -10075,6 +10075,143 @@ def tools_hub():
     return render_template('tools.html', user_role=user_role)
 
 
+# ======================================================================
+# ADMIN: USER ACTIVITY MONITOR (Officials & Developers Only)
+# ======================================================================
+@app.route('/admin/activity-monitor', methods=['GET', 'POST'])
+def activity_monitor():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    role = session.get('role')
+    if role not in ('developer', 'official'):
+        flash("Access denied. Activity Monitor is restricted to Officials and Developers.", "error")
+        return redirect(url_for('dashboard'))
+
+    # ── PIN verification (POST) ──
+    if request.method == 'POST':
+        pin_input = ''.join([request.form.get(f'pin_{i}', '') for i in range(1, 9)])
+        correct_pin = os.environ.get('ACTIVITY_MONITOR_PIN', '')
+
+        if pin_input == correct_pin and len(pin_input) == 8:
+            session['activity_monitor_verified'] = True
+            log_official_activity(session['user_id'], 'Accessed Activity Monitor dashboard')
+        else:
+            return render_template('activity_monitor.html', pin_verified=False, pin_error=True)
+
+    # ── Check PIN session ──
+    if not session.get('activity_monitor_verified'):
+        return render_template('activity_monitor.html', pin_verified=False, pin_error=False)
+
+    # ── Gather dashboard data ──
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+
+        stats = {}
+
+        # Total users
+        cursor.execute("SELECT COUNT(*) as total_users FROM users")
+        stats['total_users'] = cursor.fetchone()['total_users']
+
+        # Active in last 24h
+        try:
+            cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE last_activity >= DATE_SUB(NOW(), INTERVAL 24 HOUR)")
+            stats['active_today'] = cursor.fetchone()['cnt']
+        except Exception:
+            stats['active_today'] = 0
+
+        # Total books
+        cursor.execute("SELECT COUNT(*) as total_books FROM books")
+        stats['total_books'] = cursor.fetchone()['total_books']
+
+        # AI chats today
+        try:
+            cursor.execute("SELECT COUNT(*) as cnt FROM ai_chat_messages WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)")
+            stats['ai_chats_today'] = cursor.fetchone()['cnt']
+        except Exception:
+            stats['ai_chats_today'] = 0
+
+        # Role distribution
+        cursor.execute("SELECT role, COUNT(*) as count FROM users GROUP BY role")
+        stats['role_counts'] = cursor.fetchall()
+
+        # All users
+        cursor.execute("SELECT id, username, email, role, last_activity, created_at, is_verified, failed_attempts, locked_until FROM users ORDER BY last_activity DESC")
+        users_list = cursor.fetchall()
+
+        # Official activity logs
+        try:
+            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 200")
+            official_logs = cursor.fetchall()
+        except Exception:
+            official_logs = []
+
+        # Top readers
+        try:
+            cursor.execute("""
+                SELECT u.username, COUNT(DISTINCT rp.book_id) as books_read,
+                       SUM(rp.reading_seconds) as total_seconds,
+                       SUM(CASE WHEN rp.is_completed = 1 THEN 1 ELSE 0 END) as completed_books
+                FROM reading_progress rp JOIN users u ON rp.user_id = u.id
+                GROUP BY rp.user_id, u.username
+                ORDER BY total_seconds DESC LIMIT 20
+            """)
+            top_readers = cursor.fetchall()
+            for r in top_readers:
+                if r['total_seconds'] is None:
+                    r['total_seconds'] = 0
+        except Exception:
+            top_readers = []
+
+        # AI chat activity
+        try:
+            cursor.execute("""
+                SELECT u.username, COUNT(*) as message_count, MAX(acm.created_at) as last_chat
+                FROM ai_chat_messages acm JOIN users u ON acm.user_id = u.id
+                WHERE acm.role = 'user'
+                GROUP BY acm.user_id, u.username
+                ORDER BY last_chat DESC LIMIT 30
+            """)
+            ai_activity = cursor.fetchall()
+        except Exception:
+            ai_activity = []
+
+        # Recent registrations (last 30 days)
+        try:
+            cursor.execute("SELECT username, email, role, created_at FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY created_at DESC")
+            recent_registrations = cursor.fetchall()
+        except Exception:
+            recent_registrations = []
+
+        return render_template('activity_monitor.html',
+            pin_verified=True,
+            stats=stats,
+            users=users_list,
+            official_logs=official_logs,
+            top_readers=top_readers,
+            ai_activity=ai_activity,
+            recent_registrations=recent_registrations
+        )
+
+    except Exception as e:
+        logging.exception("Activity Monitor error")
+        flash("Error loading Activity Monitor.", "error")
+        return redirect(url_for('dashboard'))
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+@app.route('/admin/activity-monitor/logout')
+def activity_monitor_logout():
+    session.pop('activity_monitor_verified', None)
+    flash("Logged out from Activity Monitor.", "info")
+    return redirect(url_for('dashboard'))
+
+
 
 # ======================================================================
 # API: GENERATE FREE DIGITAL SBIN / ISBN-13
