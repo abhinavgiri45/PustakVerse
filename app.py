@@ -155,17 +155,7 @@ from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate, make_msgid
 from decimal import Decimal, InvalidOperation
 
-try:
-    import mysql.connector
-    MySQLIntegrityError = mysql.connector.IntegrityError
-except Exception:
-    mysql = None
-    class MySQLIntegrityError(Exception): pass
-
-try:
-    from cloudflare_d1 import IntegrityError as D1IntegrityError
-except Exception:
-    class D1IntegrityError(Exception): pass
+from cloudflare_d1 import get_d1_connection, IntegrityError as D1IntegrityError, D1Error
 
 from flask import Response, Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -390,7 +380,7 @@ def to_ist_filter(dt):
 # ULTRA-FAST IN-MEMORY CACHE ENGINE
 # ==========================================
 class FastMemoryCache:
-    """Thread-safe, sub-millisecond in-memory cache for TiDB/Render high-performance delivery."""
+    """Thread-safe, sub-millisecond in-memory cache for Cloudflare D1 high-performance delivery."""
     def __init__(self):
         self._cache = {}
         self._lock = threading.Lock()
@@ -3614,125 +3604,12 @@ def send_quarantine_notice_email(to_email, username, book_title, reason):
     return send_email_wrapper(to_email, f'Notice: Book Visibility Status - {book_title}', generate_html_email("Book Status Update", content))
 
 # ==========================================
-# HIGH-PERFORMANCE TiDB (MYSQL) CONNECTION POOL
+# CLOUDFLARE D1 DATABASE CONNECTION
 # ==========================================
-_db_pool = None
-_pool_lock = threading.Lock()
+def get_db_connection():
+    """Get a Cloudflare D1 database connection."""
+    return get_d1_connection()
 
-def get_db_pool():
-    global _db_pool
-    if _db_pool is None:
-        with _pool_lock:
-            if _db_pool is None:
-                db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST') or '127.0.0.1'
-                db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
-                db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
-                db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
-                db_name = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or os.environ.get('DATABASE_NAME')
-
-                db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('TIDB_URL') or os.environ.get('CLEARDB_DATABASE_URL') or os.environ.get('JAWSDB_URL')
-                if db_url and '://' in db_url:
-                    try:
-                        parsed = urllib.parse.urlparse(db_url)
-                        db_host = parsed.hostname
-                        db_port = parsed.port or (4000 if 'tidb' in str(db_host) else 3306)
-                        db_user = urllib.parse.unquote(parsed.username or '')
-                        db_pass = urllib.parse.unquote(parsed.password or '')
-                        db_name = parsed.path.lstrip('/')
-                    except Exception:
-                        pass
-                try:
-                    from mysql.connector import pooling
-                    _db_pool = pooling.MySQLConnectionPool(
-                        pool_name="pustakverse_tidb_pool",
-                        pool_size=15,
-                        pool_reset_session=True,
-                        host=db_host,
-                        port=db_port,
-                        user=db_user,
-                        password=db_pass,
-                        database=db_name,
-                        ssl_verify_cert=False,
-                        ssl_verify_identity=False,
-                        connection_timeout=4
-                    )
-                    logging.info("✓ [TiDB POOL] High-speed connection pool established (Size: 15)")
-                except Exception as e:
-                    logging.debug("Direct DB connection mode active: %s", e)
-                    _db_pool = None
-    return _db_pool
-
-_last_db_fail_time = 0
-_db_fail_cooldown = 10.0 # 10-second fast-fail circuit breaker if DB unreachable
-
-def get_db_connection(retries=1, delay=0.1):
-    global _last_db_fail_time
-    last_exception = None
-
-    # Priority 1: Cloudflare D1 Serverless SQL Connection (if env vars set)
-    try:
-        from cloudflare_d1 import get_d1_connection
-        d1_conn = get_d1_connection()
-        if d1_conn:
-            return d1_conn
-    except Exception as e:
-        logging.debug("Cloudflare D1 check skipped: %s", e)
-
-    # Circuit breaker: if DB failed recently, fail fast without waiting 10 seconds
-    now = time.time()
-    if now - _last_db_fail_time < _db_fail_cooldown:
-        raise mysql.connector.errors.DatabaseError("DB connection in circuit-breaker cooldown.")
-    
-    # Fast path: Fetch connection from high-speed connection pool
-    pool = get_db_pool()
-    if pool:
-        try:
-            conn = pool.get_connection()
-            if conn and conn.is_connected():
-                return conn
-        except Exception as e:
-            logging.debug("Pool connection busy, falling back to direct connection: %s", e)
-
-    # Fallback to direct connection
-    db_host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or os.environ.get('DATABASE_HOST') or '127.0.0.1'
-    db_port = int(os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT') or 4000)
-    db_user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or os.environ.get('DATABASE_USER')
-    db_pass = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or os.environ.get('DATABASE_PASSWORD')
-    db_name = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or os.environ.get('DATABASE_NAME')
-
-    db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or os.environ.get('TIDB_URL') or os.environ.get('CLEARDB_DATABASE_URL') or os.environ.get('JAWSDB_URL')
-    if db_url and '://' in db_url:
-        try:
-            parsed = urllib.parse.urlparse(db_url)
-            db_host = parsed.hostname
-            db_port = parsed.port or (4000 if 'tidb' in str(db_host) else 3306)
-            db_user = urllib.parse.unquote(parsed.username or '')
-            db_pass = urllib.parse.unquote(parsed.password or '')
-            db_name = parsed.path.lstrip('/')
-        except Exception:
-            pass
-
-    effective_timeout = 2 if (app and app.config.get('TESTING')) else 3
-
-    try:
-        conn = mysql.connector.connect(
-            host=db_host, 
-            port=db_port, 
-            user=db_user, 
-            password=db_pass, 
-            database=db_name, 
-            ssl_verify_cert=False, 
-            ssl_verify_identity=False, 
-            connection_timeout=effective_timeout
-        )
-        if conn.is_connected(): 
-            _last_db_fail_time = 0 # Reset circuit breaker on success
-            return conn
-    except Exception as err:
-        last_exception = err
-        _last_db_fail_time = time.time() # Trip circuit breaker
-
-    raise last_exception or mysql.connector.errors.DatabaseError("Unable to establish DB connection")
 
 def ensure_payment_schema():
     db = None
@@ -5098,7 +4975,7 @@ def register():
                     'redirect': url_for('index')
                 })
                 
-            except (MySQLIntegrityError, D1IntegrityError): 
+            except D1IntegrityError: 
                 return jsonify({'success': False, 'message': 'Email or Username was taken while verifying.'})
             except Exception as e: 
                 logging.exception(f"Registration DB error: {e}")

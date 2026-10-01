@@ -1,7 +1,7 @@
 """
 Cloudflare D1 Database Adapter for PustakVerse (DB-API 2.0 Compatible)
 Connects Python Flask directly to Cloudflare D1 Serverless SQL via Cloudflare REST API.
-Automatically captures and persists all new rows created via the website interface.
+Automatically translates MySQL syntax to SQLite for full compatibility.
 """
 
 import os
@@ -30,29 +30,148 @@ class D1Cursor:
         self.description = None
 
     def _convert_sql(self, sql):
-        converted = sql
-        
-        # 1. SHOW COLUMNS FROM <table> LIKE '<col>' -> SELECT name FROM pragma_table_info('<table>') WHERE name LIKE '<col>'
-        show_cols_match = re.search(r"SHOW\s+COLUMNS\s+FROM\s+([`\w]+)\s+LIKE\s+(['\"]\w+['\"])", converted, re.IGNORECASE)
+        """Translate MySQL SQL to SQLite-compatible SQL for Cloudflare D1."""
+        converted = sql.strip()
+
+        # ── SHOW COLUMNS FROM <table> LIKE '<col>' ──
+        show_cols_match = re.search(
+            r"SHOW\s+COLUMNS\s+FROM\s+([`\w]+)\s+LIKE\s+(['\"][\w%]+['\"])",
+            converted, re.IGNORECASE
+        )
         if show_cols_match:
             table = show_cols_match.group(1).replace('`', '')
-            col = show_cols_match.group(2)
-            return f"SELECT name FROM pragma_table_info('{table}') WHERE name LIKE {col}", []
+            col = show_cols_match.group(2).strip("'\"")
+            return f"SELECT name FROM pragma_table_info('{table}') WHERE name = '{col}'", []
 
-        # 2. INSERT IGNORE INTO -> INSERT OR IGNORE INTO
+        # ── Skip ALTER TABLE ... MODIFY COLUMN (not supported in SQLite) ──
+        if re.search(r"\bALTER\s+TABLE\s+\S+\s+MODIFY\s+COLUMN\b", converted, re.IGNORECASE):
+            return "SELECT 1", []
+
+        # ── ALTER TABLE ... ADD COLUMN: clean up MySQL types ──
+        alter_match = re.search(r"\bALTER\s+TABLE\s+(\S+)\s+ADD\s+COLUMN\s+(\S+)\s+(.*)", converted, re.IGNORECASE)
+        if alter_match:
+            col_def = alter_match.group(3)
+            col_def = self._convert_column_type(col_def)
+            converted = f"ALTER TABLE {alter_match.group(1)} ADD COLUMN {alter_match.group(2)} {col_def}"
+
+        # ── CREATE TABLE: convert MySQL DDL to SQLite ──
+        if re.match(r"\s*CREATE\s+TABLE", converted, re.IGNORECASE):
+            converted = self._convert_create_table(converted)
+
+        # ── INSERT IGNORE INTO → INSERT OR IGNORE INTO ──
         converted = re.sub(r"\bINSERT\s+IGNORE\s+INTO\b", "INSERT OR IGNORE INTO", converted, flags=re.IGNORECASE)
 
-        # 3. SELECT LAST_INSERT_ID() -> SELECT last_insert_rowid()
+        # ── LAST_INSERT_ID() → last_insert_rowid() ──
         converted = re.sub(r"LAST_INSERT_ID\(\)", "last_insert_rowid()", converted, flags=re.IGNORECASE)
 
-        # 4. Parameter placeholders: replace %s with ?
+        # ── DATE_SUB(NOW(), INTERVAL N HOUR) → datetime('now', '-N hours') ──
+        converted = re.sub(
+            r"DATE_SUB\s*\(\s*NOW\s*\(\s*\)\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)",
+            lambda m: f"datetime('now', '-{m.group(1)} hours')",
+            converted, flags=re.IGNORECASE
+        )
+
+        # ── DATE_SUB(NOW(), INTERVAL N DAY) → datetime('now', '-N days') ──
+        converted = re.sub(
+            r"DATE_SUB\s*\(\s*NOW\s*\(\s*\)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)",
+            lambda m: f"datetime('now', '-{m.group(1)} days')",
+            converted, flags=re.IGNORECASE
+        )
+
+        # ── NOW() → datetime('now') ──
+        converted = re.sub(r"\bNOW\s*\(\s*\)", "datetime('now')", converted, flags=re.IGNORECASE)
+
+        # ── CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP → CURRENT_TIMESTAMP ──
+        converted = re.sub(
+            r"CURRENT_TIMESTAMP\s+ON\s+UPDATE\s+CURRENT_TIMESTAMP",
+            "CURRENT_TIMESTAMP", converted, flags=re.IGNORECASE
+        )
+
+        # ── <=> (NULL-safe equality) → IS ──
+        converted = converted.replace('<=>', 'IS')
+
+        # ── Parameter placeholders: %s → ? ──
         converted = re.sub(r"%s", "?", converted)
 
         return converted, None
 
+    def _convert_column_type(self, col_def):
+        """Convert a MySQL column type definition to SQLite-compatible."""
+        # ENUM('a','b','c') → TEXT
+        col_def = re.sub(r"ENUM\s*\([^)]+\)", "TEXT", col_def, flags=re.IGNORECASE)
+        # BOOLEAN → INTEGER
+        col_def = re.sub(r"\bBOOLEAN\b", "INTEGER", col_def, flags=re.IGNORECASE)
+        # VARCHAR(N) → TEXT
+        col_def = re.sub(r"\bVARCHAR\s*\(\d+\)", "TEXT", col_def, flags=re.IGNORECASE)
+        # INT AUTO_INCREMENT → INTEGER
+        col_def = re.sub(r"\bINT\b\s*\bAUTO_INCREMENT\b", "INTEGER", col_def, flags=re.IGNORECASE)
+        col_def = re.sub(r"\bAUTO_INCREMENT\b", "", col_def, flags=re.IGNORECASE)
+        # FLOAT → REAL
+        col_def = re.sub(r"\bFLOAT\b", "REAL", col_def, flags=re.IGNORECASE)
+        # ON UPDATE CURRENT_TIMESTAMP → remove
+        col_def = re.sub(r"\bON\s+UPDATE\s+CURRENT_TIMESTAMP\b", "", col_def, flags=re.IGNORECASE)
+        return col_def.strip()
+
+    def _convert_create_table(self, sql):
+        """Convert a MySQL CREATE TABLE statement to SQLite-compatible DDL."""
+        converted = sql
+
+        # ENUM('a','b','c') → TEXT
+        converted = re.sub(r"ENUM\s*\([^)]+\)", "TEXT", converted, flags=re.IGNORECASE)
+
+        # BOOLEAN → INTEGER
+        converted = re.sub(r"\bBOOLEAN\b", "INTEGER", converted, flags=re.IGNORECASE)
+
+        # INT AUTO_INCREMENT PRIMARY KEY → INTEGER PRIMARY KEY AUTOINCREMENT
+        converted = re.sub(
+            r"\bINT\s+AUTO_INCREMENT\s+PRIMARY\s+KEY\b",
+            "INTEGER PRIMARY KEY AUTOINCREMENT",
+            converted, flags=re.IGNORECASE
+        )
+
+        # Remove standalone AUTO_INCREMENT
+        converted = re.sub(r"\bAUTO_INCREMENT\b", "", converted, flags=re.IGNORECASE)
+
+        # UNIQUE KEY name (cols) → UNIQUE(cols)
+        converted = re.sub(
+            r",?\s*UNIQUE\s+KEY\s+\w+\s*\(([^)]+)\)",
+            r", UNIQUE(\1)",
+            converted, flags=re.IGNORECASE
+        )
+
+        # Remove INDEX declarations (not supported inline in SQLite CREATE TABLE)
+        converted = re.sub(
+            r",?\s*INDEX\s+\w+\s*\([^)]+\)",
+            "",
+            converted, flags=re.IGNORECASE
+        )
+
+        # Remove KEY declarations (MySQL non-unique index)
+        converted = re.sub(
+            r",?\s*KEY\s+\w+\s*\([^)]+\)",
+            "",
+            converted, flags=re.IGNORECASE
+        )
+
+        # VARCHAR(N) → TEXT (optional, D1 doesn't strictly need this but safer)
+        # Keep VARCHAR as D1/SQLite handles it fine, but convert for consistency
+        converted = re.sub(r"\bVARCHAR\s*\(\d+\)", "TEXT", converted, flags=re.IGNORECASE)
+
+        # ON UPDATE CURRENT_TIMESTAMP → remove (not supported in SQLite)
+        converted = re.sub(
+            r"\bCURRENT_TIMESTAMP\s+ON\s+UPDATE\s+CURRENT_TIMESTAMP\b",
+            "CURRENT_TIMESTAMP",
+            converted, flags=re.IGNORECASE
+        )
+
+        # Clean up any trailing commas before closing paren
+        converted = re.sub(r",\s*\)", ")", converted)
+
+        return converted
+
     def execute(self, sql, params=None):
         sql, alt_params = self._convert_sql(sql)
-        if alt_params:
+        if alt_params is not None:
             params = alt_params
 
         param_list = []
@@ -63,6 +182,8 @@ class D1Cursor:
                         param_list.append(1 if p else 0)
                     elif hasattr(p, 'strftime'):
                         param_list.append(p.strftime('%Y-%m-%d %H:%M:%S'))
+                    elif isinstance(p, (Decimal_type,)):
+                        param_list.append(float(p))
                     else:
                         param_list.append(p)
             elif isinstance(params, dict):
@@ -94,9 +215,15 @@ class D1Cursor:
             if not data.get("success"):
                 errors = data.get("errors", [])
                 err_msg = errors[0].get("message", "Unknown D1 error") if errors else str(data)
-                logger.error(f"[D1 Query Error] {err_msg} | SQL: {sql[:150]}")
+                logger.error(f"[D1 Query Error] {err_msg} | SQL: {sql[:200]}")
                 if "UNIQUE constraint failed" in err_msg or "constraint failed" in err_msg.lower():
                     raise IntegrityError(f"Duplicate entry: {err_msg}")
+                # Silently ignore "duplicate column" errors during ALTER TABLE ADD COLUMN
+                if "duplicate column name" in err_msg.lower():
+                    self._results = []
+                    self._index = 0
+                    self.rowcount = 0
+                    return self
                 raise D1Error(f"Cloudflare D1 Error: {err_msg}")
 
             result_obj = data.get("result", [{}])[0]
@@ -142,7 +269,7 @@ class D1Cursor:
         self._results = []
 
 class D1Connection:
-    def __init__(self, account_id, database_id, api_token, timeout=12):
+    def __init__(self, account_id, database_id, api_token, timeout=15):
         self.account_id = account_id
         self.database_id = database_id
         self.api_token = api_token
@@ -170,4 +297,11 @@ def get_d1_connection():
 
     if account_id and database_id and api_token:
         return D1Connection(account_id, database_id, api_token)
-    return None
+    raise D1Error("Cloudflare D1 credentials not configured. Set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_DATABASE_ID, and CLOUDFLARE_API_TOKEN environment variables.")
+
+
+# Handle Decimal import for param conversion
+try:
+    from decimal import Decimal as Decimal_type
+except ImportError:
+    Decimal_type = type(None)
