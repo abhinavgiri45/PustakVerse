@@ -6,6 +6,9 @@
     <title>Dashboard - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         (function() {
@@ -431,19 +434,18 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="/">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img" style="height: 52px; width: auto; object-fit: contain;">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img">
             </a>
         </div>
-        <div class="navbar-links" style="display: flex; align-items: center; gap: 14px;">
-            <a href="/">Global Library</a> 
-            <a href="{{ url_for('my_library') }}">My Library</a>
-            <a href="{{ url_for('payment_history') }}">Payment History</a>
+        <div class="navbar-links">
+            <a href="/">🏠 Library</a> 
+            <a href="{{ url_for('my_library') }}">📚 My Books</a>
+            <a href="{{ url_for('payment_history') }}">💳 Payments</a>
             {% if session.role in ['developer', 'official'] %}
-            <a href="{{ url_for('management_self_published_books') }}" style="color: #fb923c; font-weight: 700;">📖 Manage Books</a>
+            <a href="{{ url_for('management_self_published_books') }}" class="nav-link-highlight">📖 Manage</a>
             {% endif %}
             <button class="theme-toggle-pill" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle Dark/Light Theme">
                 <span id="themeIcon">🌙</span>
-                <span id="themeText">Dark Mode</span>
             </button>
             <a href="{{ url_for('logout') }}">
                 <button class="btn-logout">Logout</button>
@@ -451,24 +453,27 @@
         </div>
     </nav>
 
-    <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <div>
-            <h1>Welcome, {{ session.username }}</h1>
-            <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
+    <div class="dashboard-header">
+        <div class="dashboard-header-info">
+            <h1>Welcome back, {{ session.username }} 👋</h1>
+            <p>Your Role: <span class="role-badge role-{{ session.role }}">{{ session.role | capitalize }}</span></p>
         </div>
-        {% if session.role in ['developer', 'official'] %}
-            <a href="{{ url_for('management_self_published_books') }}" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
-                <span>📖</span> Self-Published Book Management Hub →
-            </a>
-        {% endif %}
+        <div class="dashboard-header-actions">
+            {% if session.role in ['developer', 'official'] %}
+                <a href="{{ url_for('activity_monitor') }}" class="btn-sm btn-dark">📊 Activity Monitor</a>
+                <a href="{{ url_for('management_self_published_books') }}" class="btn-sm btn-orange">📖 Manage Books →</a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
+            <div class="flash-container">
                 {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
                 {% endfor %}
+            </div>
             {% endif %}
         {% endwith %}
 
