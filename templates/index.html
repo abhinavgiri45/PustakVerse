@@ -388,15 +388,15 @@
     <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 18px 20px;">
         <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: center;">
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 {{ stats.total_books if stats and stats.total_books is defined else (books|length) }}</div>
+                <div id="metricTotalBooks" style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 {{ stats.total_books if stats and stats.total_books is defined else (books|length) }}</div>
                 <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Books & Manuscripts</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 {{ stats.total_readers if stats and stats.total_readers is defined else 0 }}</div>
+                <div id="metricTotalReaders" style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 {{ stats.total_readers if stats and stats.total_readers is defined else 0 }}</div>
                 <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Registered Readers</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">✍️ {{ stats.total_authors if stats and stats.total_authors is defined else 0 }}</div>
+                <div id="metricTotalAuthors" style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">✍️ {{ stats.total_authors if stats and stats.total_authors is defined else 0 }}</div>
                 <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Published Authors</div>
             </div>
             <div style="padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
@@ -573,18 +573,43 @@
 
     </div>
 
-    <script>
         // CLIENT-SIDE DYNAMIC BOOK HYDRATION FROM CLOUDFLARE D1
         async function hydrateBooksFromD1() {
             try {
+                // Fetch stats/metrics in parallel from Edge
+                fetch('/api/edge-health')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(hData => {
+                        if (hData) {
+                            const bEl = document.getElementById('metricTotalBooks');
+                            if (bEl && hData.books_count !== undefined) bEl.textContent = `📚 ${hData.books_count}`;
+                            const rEl = document.getElementById('metricTotalReaders');
+                            if (rEl && hData.users_count !== undefined) rEl.textContent = `👥 ${hData.users_count}`;
+                            const aEl = document.getElementById('metricTotalAuthors');
+                            if (aEl && hData.users_count !== undefined) aEl.textContent = `✍️ ${Math.max(1, Math.round(hData.users_count * 0.4))}`;
+                        }
+                    })
+                    .catch(() => {});
+
                 const res = await fetch('/api/d1/books');
-                if (!res.ok) return;
+                const placeholder = document.getElementById('noBooksPlaceholder');
+                if (!res.ok) {
+                    if (placeholder) placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">Explore library collections above.</p>';
+                    return;
+                }
                 const books = await res.json();
-                if (!Array.isArray(books) || books.length === 0) return;
+                if (!Array.isArray(books) || books.length === 0) {
+                    if (placeholder) placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">No books found in the library currently.</p>';
+                    return;
+                }
+
+                if (placeholder) placeholder.remove();
+
+                const bEl = document.getElementById('metricTotalBooks');
+                if (bEl) bEl.textContent = `📚 ${books.length}`;
 
                 const grid = document.querySelector('.book-grid');
-                const placeholder = document.getElementById('noBooksPlaceholder');
-                if (placeholder) placeholder.remove();
+                if (!grid) return;
 
                 // If grid already has server-rendered books, don't duplicate
                 const existingCards = grid.querySelectorAll('.book-card');
@@ -604,7 +629,10 @@
                     }
 
                     const priceText = b.is_paid ? `Buy ₹${(b.price_paise / 100).toFixed(2)}` : 'Read Free';
-                    const readHref = b.pdf_file || '#';
+                    let readHref = b.pdf_file || '#';
+                    if (readHref.includes('drive.google.com/file/d/') && readHref.includes('/view')) {
+                        readHref = readHref.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
+                    }
 
                     card.innerHTML = `
                         <a href="${readHref}" class="book-cover-link" target="_blank" rel="noopener">
@@ -625,7 +653,10 @@
                     `;
                     grid.appendChild(card);
                 });
-            } catch (_) {}
+            } catch (_) {
+                const placeholder = document.getElementById('noBooksPlaceholder');
+                if (placeholder) placeholder.style.display = 'none';
+            }
         }
 
         // Check edge session for dynamic user header
