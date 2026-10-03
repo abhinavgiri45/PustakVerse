@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+    if (window.location.hostname.endsWith('github.io') && window.location.pathname.startsWith('/PustakVerse')) {
+        var b = document.createElement('base');
+        b.href = '/PustakVerse/';
+        document.head.prepend(b);
+    }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PustakVerse</title>
+    <meta property="og:title" content="PustakVerse">
+    <meta property="og:description" content="PustakVerse - Global Digital Library. Every Book. Every Mind. Free.">
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/PustakVerse.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <!-- SMART ONBOARDING REDIRECT -->
+    <script>
+        // Trigger intro once per browser session for all users
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('skip_intro') === '1') {
+                sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                return;
+            }
+            const introSeen = sessionStorage.getItem('pustakverse_intro_seen');
+            if (!introSeen) {
+                const currentPath = window.location.pathname;
+                const allowedPaths = ['/intro', '/login', '/register', '/forgot-password'];
+                if (!allowedPaths.includes(currentPath)) {
+                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                    window.location.replace('/intro');
+                }
+            }
+        })();
+    </script>
+</head>
+<body>
+    <!-- GLOBAL BROADCAST TICKER BANNER -->
+    
+    <div class="scroll-progress-container"><div class="scroll-progress-bar" id="myBar"></div></div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
+    <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
+        <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        <h3>Browse by category</h3>
+        
+            <a href="/?category=Fiction">Fiction</a>
+        
+            <a href="/?category=Non-Fiction">Non-Fiction</a>
+        
+            <a href="/?category=Educational">Educational</a>
+        
+            <a href="/?category=History">History</a>
+        
+            <a href="/?category=Poetry">Poetry</a>
+        
+        <h3>Special collections</h3>
+        <a href="/?category=Archives">Archives (Free Books)</a>
+    </aside>
+
+    <nav>
+        <div class="nav-brand">
+            <button class="hamburger-btn" type="button" onclick="openNav()" aria-label="Open navigation">☰</button>
+            <a href="/" class="brand-logo" aria-label="PustakVerse home">
+                
+                    <img src="/static/PustakVerse.png" alt="PustakVerse" class="logo-img">
+                
+            </a>
+        </div>
+        <div class="nav-search" aria-label="Global search">
+            <form class="nav-search-form" role="search" id="globalSearchForm" action="javascript:void(0);">
+                <input type="search" id="globalSearchInput" placeholder="Search books, authors, categories... (Ctrl + K)" aria-label="Search books" autocomplete="off">
+                <button type="button" id="globalMicBtn" class="nav-search-btn" title="Search by Voice" aria-label="Search by Voice">🎤</button>
+            </form>
+            <div class="search-autocomplete-dropdown" id="searchAutocompleteDropdown"></div>
+        </div>
+        <div class="nav-links">
+            <a href="/">Library</a>
+            
+                <a href="/contact">Contact</a>
+                <a href="/login" class="nav-btn-highlight">Sign In / Join</a>
+            
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.15); color: #f66d2f; border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
+                🔥 <span id="baseStreakCount">1</span>d
+            </span>
+            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
+        </div>
+    </nav>
+
+    
+      
+    
+
+    
+
+<style>
+    /* INSTANTLY HIDE UNNECESSARY BASE.HTML ELEMENTS (Search, Menu, Telegram Popup) */
+    .nav-search, .search-container, .search-bar { display: none !important; }
+    .nav-links a:not(.custom-back-btn) { display: none !important; } 
+    .menu-btn, .menu-toggle, .hamburger, .sidebar-toggle, .menu-icon, .hamburger-btn { display: none !important; pointer-events: none; }
+    .sidebar, .side-menu, #sidebar, .mobile-menu { display: none !important; }
+    .overlay, .sidebar-overlay, #sidebar-overlay, .blur-overlay { display: none !important; }
+    #tgPopup, .popup-overlay, #telegramPopup, .telegram-popup, #telegram-modal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+    
+    /* CUSTOM 'BACK' BUTTON STYLING */
+    .nav-links .custom-back-btn { 
+        display: inline-flex !important; 
+        color: #f8fafc !important; 
+        font-weight: 600 !important; 
+        text-decoration: none; 
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 18px;
+        border-radius: 25px;
+        transition: 0.2s;
+    }
+    .nav-links .custom-back-btn:hover {
+        background: #f66d2f !important;
+        color: white !important;
+    }
+
+    /* FORM STYLING */
+    :root {
+        --primary-orange: #f66d2f;
+        --primary-orange-hover: #e05c24;
+        --card-bg: #ffffff;
+    }
+
+    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 20px; z-index: 10; position: relative; }
+    .auth-box { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; margin: 0 auto; }
+
+    .flash-wrapper { padding: 15px 20px 0 20px; }
+    .flash { padding: 12px; border-radius: 6px; text-align: center; font-weight: 500; font-size: 0.95rem; margin-bottom: 5px; }
+    .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .flash.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .flash.info { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+
+    .tabs { display: flex; border-bottom: 2px solid #edf2f7; background: #f8fafc; }
+    .tab-btn { flex: 1; padding: 15px 10px; text-align: center; background: none; border: none; font-weight: 600; color: #718096; cursor: pointer; transition: 0.2s; font-size: 0.95rem; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab-btn:hover { color: #2d3748; background: #f1f5f9; }
+    .tab-btn.active { color: var(--primary-orange); border-bottom-color: var(--primary-orange); background: white; }
+
+    .form-area { padding: 30px; display: none; }
+    .form-area.active { display: block; }
+    .form-area h2 { text-align: center; margin-top: 0; color: #2d3748; margin-bottom: 25px; font-size: 1.6rem; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+    .form-group { margin-bottom: 20px; position: relative; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #4a5568; }
+    .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 1rem; background: #f8fafc; transition: 0.2s; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary-orange); background: white; box-shadow: 0 0 0 3px rgba(246, 109, 47, 0.1); }
+    
+    .toggle-password { position: absolute; right: 12px; top: 38px; cursor: pointer; font-size: 1.2rem; user-select: none; opacity: 0.7; }
+    .toggle-password:hover { opacity: 1; }
+
+    .btn-submit { width: 100%; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 1.05rem; cursor: pointer; transition: 0.2s; color: white; }
+    .btn-submit.orange { background: var(--primary-orange); }
+    .btn-submit.orange:hover { background: var(--primary-orange-hover); }
+    .btn-submit.dark { background: #2d3748; }
+    .btn-submit.dark:hover { background: #1a202c; }
+
+    .forgot-link { display: block; text-align: right; margin-top: -10px; margin-bottom: 20px; font-size: 0.85rem; color: #3182ce; text-decoration: none; }
+    .forgot-link:hover { text-decoration: underline; color: #0284c7; }
+
+    .divider { display: flex; align-items: center; text-align: center; margin: 25px 0 20px 0; color: #a0aec0; font-size: 0.9rem; font-weight: 600; }
+    .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
+
+    .btn-google { display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; color: #3c4043; border: 1px solid #dadce0; padding: 12px; border-radius: 6px; font-weight: 600; font-size: 1.05rem; text-decoration: none; transition: 0.2s; box-sizing: border-box; }
+    .btn-google:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px rgba(60,64,67,0.3); border-color: #d2e3fc;}
+    .google-icon { width: 22px; height: 22px; margin-right: 12px; }
+
+    #usernameStatus { display: block; margin-top: 5px; font-size: 0.85rem; font-weight: 600; }
+    .terms-checkbox-group { display: flex; align-items: flex-start; gap: 10px; margin-top: 25px; margin-bottom: 20px; padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; }
+    .terms-checkbox-group input { width: auto; margin-top: 4px; cursor: pointer; transform: scale(1.2); }
+    .terms-checkbox-group label { font-size: 0.85rem; color: #166534; line-height: 1.4; margin-bottom: 0; cursor: pointer; }
+    .terms-checkbox-group a { color: #047857; font-weight: bold; text-decoration: underline; }
+
+    @media (max-width: 768px) {
+        .tabs { flex-direction: column; }
+        .tab-btn { border-bottom: none; border-left: 4px solid transparent; text-align: left; padding: 12px 20px; border-bottom: 1px solid #edf2f7;}
+        .tab-btn.active { border-bottom: 1px solid #edf2f7; border-left-color: var(--primary-orange); }
+    }
+</style>
+
+<div class="auth-wrapper">
+    <div class="auth-box">
+        
+        <div class="flash-wrapper">
+            
+                
+            
+        </div>
+
+        <!-- TWO-STEP VERIFICATION PANEL -->
+        
+            <!-- TABS -->
+            <div class="tabs">
+                <button type="button" class="tab-btn active" onclick="switchTab('reader', this)">📖 Reader Login</button>
+                <button type="button" class="tab-btn " onclick="switchTab('official', this)">🏛️ Author / Official</button>
+                <button type="button" class="tab-btn" onclick="switchTab('register', this)">✨ Create Account</button>
+            </div>
+
+            <!-- READER LOGIN -->
+            <div id="reader" class="form-area active">
+                <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
+                <form action="/login" method="POST">
+                    <input type="hidden" name="csrf_token" value="73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545">
+                    <input type="hidden" name="action" value="login">
+                    <input type="hidden" name="login_portal" value="reader">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" name="username" required placeholder="Enter your username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" id="reader_password" required placeholder="Enter your password">
+                        <span class="toggle-password" onclick="togglePassword('reader_password', this)">👁️</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -8px; margin-bottom: 20px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #4a5568; cursor: pointer; user-select: none; margin-bottom: 0;">
+                            <input type="checkbox" name="remember_me" id="reader_remember_me" value="1" checked style="width: 16px; height: 16px; accent-color: var(--primary-orange); cursor: pointer;">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="/forgot-password" class="forgot-link" style="margin: 0;">Forgot Password?</a>
+                    </div>
+                    <button type="submit" class="btn-submit orange">Sign In to Library</button>
+                </form>
+
+                <div class="divider">or continue with</div>
+                <a href="/login/google" class="btn-google">
+                    <svg class="google-icon" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
+                </a>
+            </div>
+
+            <!-- OFFICIAL LOGIN -->
+            <div id="official" class="form-area ">
+                <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
+                <form action="/login" method="POST">
+                    <input type="hidden" name="csrf_token" value="73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545">
+                    <input type="hidden" name="action" value="login">
+                    <input type="hidden" name="login_portal" value="author_official">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" name="username" required placeholder="Author / Official Username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" id="official_password" required placeholder="Enter your password">
+                        <span class="toggle-password" onclick="togglePassword('official_password', this)">👁️</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -8px; margin-bottom: 20px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #4a5568; cursor: pointer; user-select: none; margin-bottom: 0;">
+                            <input type="checkbox" name="remember_me" id="official_remember_me" value="1" checked style="width: 16px; height: 16px; accent-color: var(--primary-orange); cursor: pointer;">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="/forgot-password" class="forgot-link" style="margin: 0;">Forgot Password?</a>
+                    </div>
+                    <button type="submit" class="btn-submit dark">Secure Sign In</button>
+                </form>
+            </div>
+
+            <!-- REGISTRATION FORM -->
+            <div id="register" class="form-area">
+                <h2><span style="font-size: 2.2rem;">✨</span>Join PustakVerse</h2>
+
+                <a href="/login/google?mode=signup" class="btn-google" style="margin-bottom: 20px;">
+                    <svg class="google-icon" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Sign up with Google (Fast & Verified)
+                </a>
+
+                <div class="divider">or register with email</div>
+
+                <form id="registrationForm" onsubmit="submitRegistration(event)">
+                    <div class="form-group">
+                        <label>Choose Username</label>
+                        <input type="text" id="reg_username" required placeholder="Used for login">
+                        <span id="usernameStatus"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="reg_email" required placeholder="e.g., name@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="reg_password" required minlength="6" placeholder="Minimum 6 characters" oninput="checkRegPassStrength(this.value)">
+                        <span class="toggle-password" onclick="togglePassword('reg_password', this)">👁️</span>
+                        <div style="margin-top: 6px;">
+                            <div style="height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+                                <div id="reg_pw_meter" style="height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <small id="reg_pw_text" style="font-size: 0.75rem; color: #718096; margin-top: 2px; display: block;">Strength: Enter password</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Type</label>
+                        <select id="roleSelect" onchange="toggleAuthorReason()">
+                            <option value="reader">Reader (Access Global Library)</option>
+                            <option value="author">Author (Publish Books)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="authorReasonGroup" style="display: none; background: #fffaf0; padding: 15px; border-radius: 6px; border: 1px solid #fbd38d;">
+                        <label id="reasonLabel" style="color: #c05621;">Why do you want an Author Account?</label>
+                        <input type="text" id="reg_ver_reason" placeholder="Briefly describe your writing or books" style="border-color: #f6ad55;">
+                    </div>
+                    <div class="form-group">
+                        <label>Security Question (For Account Recovery)</label>
+                        <select id="reg_sec_q" required>
+                            <option value="What is your favorite book?">What is your favorite book?</option>
+                            <option value="What city were you born in?">What city were you born in?</option>
+                            <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Security Answer</label>
+                        <input type="text" id="reg_sec_a" required placeholder="Keep this safe">
+                    </div>
+
+                    <div class="terms-checkbox-group">
+                        <input type="checkbox" id="accept_terms" required>
+                        <label for="accept_terms">
+                            I verify I am over 13 and accept the <a href="/terms?role=reader" id="termsLink" target="_blank">Terms and Conditions</a>.
+                        </label>
+                    </div>
+
+                    <button type="submit" id="btnSendOtp" class="btn-submit orange">Verify Email & Create Account</button>
+                </form>
+
+                <!-- AJAX OTP SECTION -->
+                <div id="otpSection" style="display: none; padding-top: 10px;">
+                    <h3 style="margin-top: 0; color: #2d3748; text-align: center;">Verify Your Email</h3>
+                    <div id="otpNoticeBox" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 12px; text-align: center; line-height: 1.4;">
+                        📧 A 6-digit code has been sent to your email. Please check your <strong>Inbox</strong> and <strong>Spam / Junk</strong> folder.
+                    </div>
+                    
+                    <div id="otpTimerDisplay" style="text-align: center; font-weight: bold; color: #e53e3e; margin-bottom: 15px; font-size: 1.1rem;">
+                        Time remaining: 05:00
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="text" id="reg_otp_input" placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.25rem; font-weight: 700; text-align: center;">
+                    </div>
+                    <button type="button" id="btnVerifyOtp" onclick="verifyOtp()" class="btn-submit orange" style="margin-bottom: 10px;">Submit Code & Join</button>
+                    <button type="button" id="btnResendOtp" onclick="resendOtp()" class="btn-submit dark" disabled style="opacity: 0.5;">Resend Code (wait 60s)</button>
+                </div>
+
+            </div>
+        
+    </div>
+</div>
+
+<script>
+    // INJECT THE CLEAN BACK BUTTON AND FORCE-CLOSE SIDEBAR/MODALS
+    document.addEventListener('DOMContentLoaded', () => {
+        const navLinks = document.querySelector('.nav-links');
+        if (navLinks) {
+            navLinks.insertAdjacentHTML('beforeend', '<a href="/" class="custom-back-btn">← Back to Library</a>');
+        }
+
+        // Force hide telegram popup and overlay just in case CSS misses it
+        const telegramPopup = document.getElementById('telegramPopup');
+        const overlay = document.querySelector('.overlay');
+        const sidebar = document.querySelector('.sidebar');
+        if (telegramPopup) telegramPopup.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
+    });
+
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.form-area').forEach(form => form.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if(element) element.classList.add('active');
+    }
+
+    function togglePassword(fieldId, iconElement) {
+        const field = document.getElementById(fieldId);
+        if (field.type === "password") {
+            field.type = "text";
+            iconElement.textContent = "🙈"; 
+        } else {
+            field.type = "password";
+            iconElement.textContent = "👁️"; 
+        }
+    }
+
+    function toggleAuthorReason() {
+        var role = document.getElementById('roleSelect').value;
+        var reasonGroup = document.getElementById('authorReasonGroup');
+        var reasonLabel = document.getElementById('reasonLabel');
+        var reasonInput = document.getElementById('reg_ver_reason');
+        var termsLink = document.getElementById('termsLink');
+        if (role === 'author') {
+            reasonGroup.style.display = 'block';
+            if (reasonLabel) reasonLabel.textContent = 'Why do you want an Author Account?';
+            if (reasonInput) reasonInput.placeholder = 'Briefly describe your writing or books';
+            termsLink.href = "/terms?role=author";
+        } else {
+            reasonGroup.style.display = 'none';
+            termsLink.href = "/terms?role=reader";
+        }
+    }
+
+    const usernameInput = document.getElementById('reg_username');
+    const statusSpan = document.getElementById('usernameStatus');
+    let timeout = null;
+    if(usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            clearTimeout(timeout);
+            const username = this.value.trim();
+            if (username.length === 0) { statusSpan.innerHTML = ''; return; }
+            statusSpan.innerHTML = '<span style="color: #718096;">Checking...</span>';
+            timeout = setTimeout(() => {
+                fetch('/check_username', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                    body: 'username=' + encodeURIComponent(username)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    statusSpan.innerHTML = data.available ? `<span style="color: #166534;">✓ ${data.message}</span>` : `<span style="color: #991b1b;">✗ ${data.message}</span>`;
+                });
+            }, 500);
+        });
+    }
+
+    let otpInterval;
+    let timeLeft = 900; // 15 Minutes OTP Expiry
+
+    function startOtpTimer() {
+        clearInterval(otpInterval);
+        timeLeft = 900; 
+        const resendBtn = document.getElementById('btnResendOtp');
+        resendBtn.disabled = true;
+        resendBtn.style.opacity = '0.5';
+        
+        otpInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const minStr = minutes < 10 ? '0' + minutes : minutes;
+            const secStr = seconds < 10 ? '0' + seconds : seconds;
+            document.getElementById('otpTimerDisplay').textContent = `Time remaining: ${minStr}:${secStr}`;
+            
+            if (timeLeft <= 840) { // Allow resend after 60 seconds
+                resendBtn.disabled = false;
+                resendBtn.style.opacity = '1';
+                resendBtn.textContent = "Resend Code";
+            } else {
+                resendBtn.textContent = `Resend Code (wait ${timeLeft - 840}s)`;
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(otpInterval);
+                document.getElementById('otpTimerDisplay').textContent = "Code Expired. Please resend.";
+            }
+        }, 1000);
+    }
+
+    async function submitRegistration(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSendOtp');
+        btn.disabled = true;
+        btn.textContent = "Sending Code...";
+
+        const payload = {
+            action: 'send_otp',
+            username: document.getElementById('reg_username').value,
+            email: document.getElementById('reg_email').value,
+            password: document.getElementById('reg_password').value,
+            role: document.getElementById('roleSelect').value,
+            security_question: document.getElementById('reg_sec_q').value,
+            security_answer: document.getElementById('reg_sec_a').value,
+            verification_reason: document.getElementById('reg_ver_reason') ? document.getElementById('reg_ver_reason').value : ''
+        };
+
+        try {
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('registrationForm').style.display = 'none';
+                document.getElementById('otpSection').style.display = 'block';
+                startOtpTimer();
+            } else {
+                alert(data.message);
+                btn.disabled = false;
+                btn.textContent = "Verify Email & Create Account";
+            }
+        } catch (err) {
+            alert("Network error. Please check your connection.");
+            btn.disabled = false;
+            btn.textContent = "Verify Email & Create Account";
+        }
+    }
+
+    async function verifyOtp() {
+        const btn = document.getElementById('btnVerifyOtp');
+        const otpVal = document.getElementById('reg_otp_input').value;
+        if (!otpVal) return alert("Please enter the code.");
+        btn.disabled = true;
+        btn.textContent = "Verifying...";
+
+        try {
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                localStorage.setItem('pustakverse_onboarded', 'true'); // Flag to prevent intro repetition
+                alert(data.message);
+                window.location.href = data.redirect;
+            } else {
+                alert(data.message);
+                btn.disabled = false;
+                btn.textContent = "Submit Code & Join";
+            }
+        } catch (err) {
+            alert("Network error. Please try again.");
+            btn.disabled = false;
+            btn.textContent = "Submit Code & Join";
+        }
+    }
+
+    async function resendOtp() {
+        const btn = document.getElementById('btnResendOtp');
+        btn.disabled = true;
+        btn.textContent = "Resending...";
+
+        try {
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                body: JSON.stringify({ action: 'resend_otp' })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message || "A new verification code has been sent to your email.");
+                startOtpTimer();
+            } else {
+                alert(data.message);
+                btn.disabled = false;
+                btn.textContent = "Resend Code";
+            }
+        } catch (err) {
+            alert("Network error.");
+            btn.disabled = false;
+            btn.textContent = "Resend Code";
+        }
+    }
+
+    function checkRegPassStrength(pw) {
+        const meter = document.getElementById('reg_pw_meter');
+        const text = document.getElementById('reg_pw_text');
+        if (!meter || !text) return;
+        
+        let score = 0;
+        if (!pw) {
+            meter.style.width = '0%';
+            text.textContent = 'Strength: Enter password';
+            text.style.color = '#718096';
+            return;
+        }
+        if (pw.length >= 6) score += 25;
+        if (pw.length >= 10) score += 25;
+        if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score += 25;
+        if (/[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score += 25;
+
+        meter.style.width = score + '%';
+        if (score <= 25) {
+            meter.style.background = '#ef4444';
+            text.textContent = 'Strength: Weak (Add numbers / uppercase)';
+            text.style.color = '#ef4444';
+        } else if (score <= 50) {
+            meter.style.background = '#f59e0b';
+            text.textContent = 'Strength: Moderate';
+            text.style.color = '#f59e0b';
+        } else if (score <= 75) {
+            meter.style.background = '#3b82f6';
+            text.textContent = 'Strength: Strong';
+            text.style.color = '#3b82f6';
+        } else {
+            meter.style.background = '#22c55e';
+            text.textContent = 'Strength: Very Strong (Optimal)';
+            text.style.color = '#22c55e';
+        }
+    }
+
+    // --- REMEMBER ME BROWSER CACHE RESTORATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const savedReaderUser = localStorage.getItem('pv_remember_reader_user');
+            const readerRemState = localStorage.getItem('pv_remember_reader_check');
+            const readerInput = document.querySelector('#reader input[name="username"]');
+            const readerCheck = document.getElementById('reader_remember_me');
+
+            if (savedReaderUser && readerInput) {
+                readerInput.value = savedReaderUser;
+            }
+            if (readerCheck && readerRemState !== null) {
+                readerCheck.checked = readerRemState === 'true';
+            }
+
+            const savedOfficialUser = localStorage.getItem('pv_remember_official_user');
+            const officialRemState = localStorage.getItem('pv_remember_official_check');
+            const officialInput = document.querySelector('#official input[name="username"]');
+            const officialCheck = document.getElementById('official_remember_me');
+
+            if (savedOfficialUser && officialInput) {
+                officialInput.value = savedOfficialUser;
+            }
+            if (officialCheck && officialRemState !== null) {
+                officialCheck.checked = officialRemState === 'true';
+            }
+        } catch(e) {}
+    });
+
+    // Save remember me choice into browser cache on login submission
+    document.querySelectorAll('form[action="/login"]').forEach(form => {
+        form.addEventListener('submit', function() {
+            try {
+                const portal = this.querySelector('input[name="login_portal"]')?.value;
+                const userInput = this.querySelector('input[name="username"]')?.value;
+                const remChecked = this.querySelector('input[name="remember_me"]')?.checked;
+
+                if (portal === 'reader') {
+                    if (remChecked && userInput) {
+                        localStorage.setItem('pv_remember_reader_user', userInput);
+                        localStorage.setItem('pv_remember_reader_check', 'true');
+                    } else {
+                        localStorage.removeItem('pv_remember_reader_user');
+                        localStorage.setItem('pv_remember_reader_check', 'false');
+                    }
+                } else if (portal === 'author_official') {
+                    if (remChecked && userInput) {
+                        localStorage.setItem('pv_remember_official_user', userInput);
+                        localStorage.setItem('pv_remember_official_check', 'true');
+                    } else {
+                        localStorage.removeItem('pv_remember_official_user');
+                        localStorage.setItem('pv_remember_official_check', 'false');
+                    }
+                }
+            } catch(e) {}
+        });
+    });
+</script>
+
+
+    
+    
+    <!-- Floating AI Tutor Quick Button -->
+    <a href="/ask_ai" id="floatingAiBtn" title="Ask AI Study Companion" style="position: fixed; bottom: 25px; left: 25px; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; border-radius: 30px; padding: 10px 18px; font-weight: 700; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35); z-index: 999; transition: transform 0.2s;">
+        <span>🤖</span>
+        <span>Ask AI</span>
+    </a>
+
+    <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
+
+    <script>
+        function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
+        function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
+        function dismissPopup() { const popup = document.getElementById('tgPopup'); if (popup) { popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); } localStorage.setItem('pustakverse_tg_seen', 'true'); }
+        function applyTheme(theme) {
+            document.body.classList.remove('dark-theme', 'sepia-theme');
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                if (icon) icon.textContent = '🌙';
+            } else if (theme === 'sepia') {
+                document.body.classList.add('sepia-theme');
+                if (icon) icon.textContent = '📜';
+            } else {
+                if (icon) icon.textContent = '☀️';
+            }
+        }
+        function toggleTheme() {
+            const current = localStorage.getItem('pustakverse_theme') || 'light';
+            const next = current === 'light' ? 'sepia' : (current === 'sepia' ? 'dark' : 'light');
+            localStorage.setItem('pustakverse_theme', next);
+            applyTheme(next);
+        }
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        document.addEventListener('DOMContentLoaded', function() {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
+            
+            const streakCountEl = document.getElementById('baseStreakCount');
+            if (streakCountEl) {
+                const s = localStorage.getItem('pv_reading_streak') || '1';
+                streakCountEl.textContent = s;
+            }
+
+            const isAuthPage = ['/login', '/register', '/google_set_password', '/forgot_password'].some(p => window.location.pathname.startsWith(p));
+            if (!isAuthPage && !localStorage.getItem('pustakverse_tg_seen')) {
+                setTimeout(function() { 
+                    const popup = document.getElementById('tgPopup'); 
+                    if (popup) {
+                        popup.classList.add('is-visible'); 
+                        popup.setAttribute('aria-hidden', 'false'); 
+                    }
+                }, 1200);
+            }
+        });
+
+        document.addEventListener('keydown', function(event) { 
+            if (event.key === 'Escape') { 
+                dismissPopup(); 
+                closeNav(); 
+                const dd = document.getElementById('searchAutocompleteDropdown');
+                if (dd) dd.style.display = 'none';
+            }
+            if ((event.ctrlKey && event.key.toLowerCase() === 'k') || (event.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) {
+                event.preventDefault();
+                const sInput = document.getElementById('globalSearchInput');
+                if (sInput) {
+                    sInput.focus();
+                    sInput.select();
+                }
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            const navSearch = document.querySelector('.nav-search');
+            const dropdown = document.getElementById('searchAutocompleteDropdown');
+            if (dropdown && navSearch && !navSearch.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('scroll', function() {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            document.getElementById('myBar').style.width = height > 0 ? (winScroll / height) * 100 + '%' : '0%';
+            document.getElementById('backToTop').classList.toggle('is-visible', winScroll > 400);
+        });
+
+        const globalSearchInput = document.getElementById('globalSearchInput');
+        const globalSearchForm = document.getElementById('globalSearchForm');
+        const globalMicBtn = document.getElementById('globalMicBtn');
+        const searchDropdown = document.getElementById('searchAutocompleteDropdown');
+
+        let searchDebounceTimer = null;
+        function performLiveAutocomplete(query) {
+            if (!searchDropdown) return;
+            const q = (query || '').trim();
+            if (q.length < 2) {
+                searchDropdown.style.display = 'none';
+                searchDropdown.innerHTML = '';
+                return;
+            }
+
+            fetch('/api/search_books?q=' + encodeURIComponent(q))
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        searchDropdown.innerHTML = '<div style="padding:14px; text-align:center; color:#64748b; font-size:0.88rem;">No books found matching "<strong>' + q + '</strong>"</div>';
+                        searchDropdown.style.display = 'block';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(item => {
+                        html += `
+                            <a href="/book/${item.id}" class="autocomplete-item">
+                                <img src="${item.cover_url}" alt="${item.title}" class="autocomplete-thumb" onerror="this.src='/static/PustakVerse.png'">
+                                <div class="autocomplete-info">
+                                    <div class="autocomplete-title">${item.title}</div>
+                                    <div class="autocomplete-meta">by ${item.author} · ${item.catalog || 'General'}</div>
+                                </div>
+                                <div class="autocomplete-price">${item.price > 0 ? '₹' + item.price.toFixed(0) : 'Free'}</div>
+                            </a>
+                        `;
+                    });
+                    searchDropdown.innerHTML = html;
+                    searchDropdown.style.display = 'block';
+                })
+                .catch(() => {
+                    searchDropdown.style.display = 'none';
+                });
+        }
+
+        function filterVisibleCards(query) {
+            const cards = document.querySelectorAll('.book-card');
+            let visibleCount = 0;
+            const normalized = (query || '').toLowerCase();
+
+            cards.forEach(card => {
+                const title = (card.getAttribute('data-title') || '').toLowerCase();
+                const author = (card.getAttribute('data-author') || '').toLowerCase();
+                const catalog = (card.getAttribute('data-catalog') || '').toLowerCase();
+                const matches = title.includes(normalized) || author.includes(normalized) || catalog.includes(normalized);
+                card.style.display = matches ? 'flex' : 'none';
+                if (matches) visibleCount++;
+            });
+
+            const noResults = document.getElementById('noResultsMsg');
+            if (noResults) {
+                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+            }
+        }
+
+        if (globalSearchInput) {
+            globalSearchInput.addEventListener('input', function() {
+                const val = this.value;
+                filterVisibleCards(val);
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => performLiveAutocomplete(val), 200);
+            });
+            globalSearchInput.addEventListener('focus', function() {
+                if (this.value.trim().length >= 2) performLiveAutocomplete(this.value);
+            });
+        }
+
+        if (globalSearchForm) {
+            globalSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                filterVisibleCards(globalSearchInput?.value || '');
+                if (searchDropdown) searchDropdown.style.display = 'none';
+                globalSearchInput?.blur();
+            });
+        }
+
+        if (globalMicBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            globalMicBtn.addEventListener('click', () => {
+                recognition.start();
+                globalMicBtn.textContent = '🎙️';
+                globalSearchInput.placeholder = 'Listening...';
+            });
+
+            recognition.onresult = (event) => {
+                globalSearchInput.value = event.results[0][0].transcript;
+                filterVisibleCards(globalSearchInput.value);
+                performLiveAutocomplete(globalSearchInput.value);
+            };
+
+            recognition.onerror = () => {
+                globalMicBtn.textContent = '🎤';
+                globalSearchInput.placeholder = 'Search books, authors, categories...';
+            };
+
+            recognition.onend = () => {
+                globalMicBtn.textContent = '🎤';
+                globalSearchInput.placeholder = 'Search books, authors, categories...';
+            };
+        } else if (globalMicBtn) {
+            globalMicBtn.style.display = 'none';
+        }
+    </script>
+
+    
+
+</body>
+</html>

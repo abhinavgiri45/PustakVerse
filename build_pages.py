@@ -89,6 +89,23 @@ def build():
         with open(os.path.join(SITE_DIR, "404.html"), "w", encoding="utf-8") as f:
             f.write(not_found_html)
 
+        # 5. Mirror key HTML pages into static/ so Cloudflare Pages env.ASSETS can serve them directly
+        print("[+] Syncing static HTML files into static/ for Cloudflare Pages deployment...")
+        static_html_map = [
+            ("index.html", "index.html"),
+            ("contact/index.html", "contact.html"),
+            ("terms/index.html", "terms.html"),
+            ("tools/index.html", "tools.html"),
+            ("login/index.html", "login.html"),
+            ("register/index.html", "register.html"),
+            ("ask_ai/index.html", "ask_ai.html"),
+        ]
+        for src_rel, dst_name in static_html_map:
+            src_f = os.path.join(SITE_DIR, src_rel)
+            dst_f = os.path.join(static_src, dst_name)
+            if os.path.exists(src_f):
+                shutil.copy(src_f, dst_f)
+
     print("[SUCCESS] Static site generation complete!")
     print(f"Total files in _site: {len(os.listdir(SITE_DIR))}")
 

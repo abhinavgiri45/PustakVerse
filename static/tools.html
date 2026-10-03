@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+    if (window.location.hostname.endsWith('github.io') && window.location.pathname.startsWith('/PustakVerse')) {
+        var b = document.createElement('base');
+        b.href = '/PustakVerse/';
+        document.head.prepend(b);
+    }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Power Tools & Literary Utilities Suite · PustakVerse</title>
+    
+    <!-- OPEN GRAPH METADATA -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="PustakVerse">
+    <meta property="og:title" content="Power Tools & Literary Utilities Suite · PustakVerse">
+    <meta property="og:description" content="RSVP speed reading trainer, Pomodoro study timer, citation generator, royalty calculator, and global standard ISBN/SBIN registry verifier.">
+    <meta property="og:image" content="http://localhost/static/PustakVerse.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Power Tools Suite · PustakVerse">
+    <meta name="twitter:description" content="Literary utilities and productivity tools for readers and authors.">
+    <meta name="twitter:image" content="http://localhost/static/PustakVerse.png">
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ea580c;
+            --nav-bg: #0f172a;
+            --bg-canvas: #f8fafc;
+            --border-line: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg-canvas); 
+            color: #0f172a; 
+            padding-bottom: 60px;
+            min-height: 100vh;
+        }
+
+        /* Sleek Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 2px solid #f1f5f9; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
+
+        /* Navbar */
+        .navbar {
+            background: var(--nav-bg);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--primary-orange);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .navbar-brand img { height: 44px; width: auto; object-fit: contain; }
+        .nav-links { display: flex; gap: 12px; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; transition: 0.2s; }
+        .nav-links a:hover { background: rgba(255,255,255,0.15); }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 48px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-line);
+        }
+        .hero h1 { font-size: 2.3rem; font-weight: 900; margin-bottom: 8px; }
+        .hero p { color: #94a3b8; font-size: 1.05rem; max-width: 650px; margin: 0 auto; }
+
+        /* Tool Tabs */
+        .tools-nav {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 20px;
+            background: white;
+            border-bottom: 1px solid var(--border-line);
+            flex-wrap: wrap;
+            position: sticky;
+            top: 75px;
+            z-index: 900;
+        }
+        .tool-tab-btn {
+            padding: 9px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tool-tab-btn.active, .tool-tab-btn:hover {
+            background: var(--primary-orange);
+            color: white;
+            border-color: var(--primary-orange);
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 30px auto 0;
+            padding: 0 20px;
+        }
+
+        .tool-panel { display: none; }
+        .tool-panel.active { display: block; }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 22px;
+        }
+
+        .tool-card {
+            background: white;
+            border: 1px solid var(--border-line);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .tool-card h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tool-card p { font-size: 0.85rem; color: #64748b; margin-bottom: 16px; }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+        }
+
+        .btn-tool {
+            background: var(--nav-bg);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn-tool:hover { background: var(--primary-orange); }
+
+        .result-box {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/"><img src="/static/PustakVerse.png" alt="Logo"></a>
+        </div>
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="/my-library">📚 Library</a>
+            <a href="/ask_ai" style="color: #c084fc; font-weight: 800;">🧠 GranthMind AI</a>
+            <a href="/dashboard">👤 Dashboard</a>
+            <a href="/contact">🏛️ Contact</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>🛠️ PustakVerse Power Tools Suite</h1>
+        <p>Comprehensive utility workshop for readers, authors, educators, and administrators.</p>
+    </div>
+
+    <div class="tools-nav">
+        <button type="button" onclick="switchToolTab('readers', this)" class="tool-tab-btn active">📖 Reader & Student Tools</button>
+        
+        
+    </div>
+
+    <div class="container">
+
+        <!-- ====================================================================== -->
+        <!-- TAB 1: READERS & STUDENTS SUITE                                       -->
+        <!-- ====================================================================== -->
+        <div id="tab-readers" class="tool-panel active">
+            <div class="card-grid">
+
+                <!-- TOOL 1: RSVP SPEED READING TRAINER -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>⚡</span> RSVP Speed Reading Trainer</h3>
+                        <p>Train your brain to read up to 1000 words per minute using Rapid Serial Visual Presentation.</p>
+                        <textarea id="rsvpInput" rows="3" placeholder="Paste any text or paragraph here to practice speed reading...">PustakVerse is an innovative digital library empowering readers and independent authors worldwide with zero platform commission and instant direct settlements.</textarea>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <select id="rsvpSpeed" style="flex: 1; margin: 0;">
+                                <option value="250">250 WPM (Normal)</option>
+                                <option value="400" selected>400 WPM (Fast)</option>
+                                <option value="600">600 WPM (Pro Reader)</option>
+                                <option value="800">800 WPM (Speed Master)</option>
+                            </select>
+                            <button type="button" onclick="startRSVP()" class="btn-tool" style="width: auto; padding: 0 20px; background: #ea580c;">▶ Play</button>
+                        </div>
+                        <div id="rsvpDisplay" style="height: 70px; background: #0f172a; color: #f8fafc; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.05em;">
+                            READY
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOOL 2: POMODORO STUDY & FOCUS TIMER WITH AMBIENT AUDIO -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>⏱️</span> Pomodoro Focus & Study Timer</h3>
+                        <p>Boost your reading comprehension with 25-minute deep focus intervals and ambient soundscapes.</p>
+                        <div style="text-align: center; margin: 15px 0;">
+                            <div id="pomoTime" style="font-size: 3rem; font-weight: 900; color: #ea580c; font-family: monospace;">25:00</div>
+                            <span id="pomoStatus" style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Deep Study Interval</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <button type="button" onclick="startPomodoro()" class="btn-tool" style="background: #16a34a;">Start Focus</button>
+                            <button type="button" onclick="pausePomodoro()" class="btn-tool" style="background: #eab308;">Pause</button>
+                            <button type="button" onclick="resetPomodoro()" class="btn-tool" style="background: #64748b;">Reset</button>
+                        </div>
+                        <select id="pomoSound" onchange="toggleAmbientAudio(this.value)" style="margin: 0;">
+                            <option value="none">🔇 Sound: Off</option>
+                            <option value="whitenoise">🌊 Ambient White Noise</option>
+                            <option value="rain">🌧️ Library Rain Soundscape</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TOOL 3: ACADEMIC CITATION & BIBLIOGRAPHY GENERATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>🔖</span> Universal Citation Generator</h3>
+                        <p>Generate perfectly formatted academic bibliography citations in APA, MLA, Chicago, or Harvard.</p>
+                        <input type="text" id="citeTitle" placeholder="Book Title (e.g. Clean Architecture)">
+                        <input type="text" id="citeAuthor" placeholder="Author Name (e.g. Robert C. Martin)">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="citeYear" placeholder="Year (2024)" style="width: 50%;">
+                            <select id="citeStyle" style="width: 50%;">
+                                <option value="apa">APA 7th</option>
+                                <option value="mla">MLA 9th</option>
+                                <option value="chicago">Chicago 17th</option>
+                                <option value="harvard">Harvard</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="generateCitation()" class="btn-tool">Generate Citation</button>
+                        <div id="citeOutput" class="result-box" style="display: none; font-style: italic;"></div>
+                    </div>
+                </div>
+
+                <!-- TOOL 4: LEXILE & READING TIME CALCULATOR -->
+                <div class="tool-card">
+                    <div>
+                        <h3><span>📊</span> Lexile & Reading Time Analyzer</h3>
+                        <p>Calculates reading ease score, estimated completion time, and word complexity for any excerpt.</p>
+                        <textarea id="lexileText" rows="3" placeholder="Paste book text here to analyze readability..."></textarea>
+                        <button type="button" onclick="analyzeLexile()" class="btn-tool">Analyze Readability</button>
+                        <div id="lexileResult" class="result-box" style="display: none;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ====================================================================== -->
+        <!-- TAB 2: AUTHORS & PUBLISHERS SUITE                                     -->
+        <!-- ====================================================================== -->
+        
+
+        <!-- ====================================================================== -->
+        <!-- TAB 3: DIAGNOSTICS & SYSTEM SUITE                                     -->
+        <!-- ====================================================================== -->
+        
+    </div>
+
+    <script>
+        // Tab Switching
+        function switchToolTab(tabId, btn) {
+            document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tool-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // RSVP Speed Reader
+        let rsvpInterval = null;
+        function startRSVP() {
+            if (rsvpInterval) clearInterval(rsvpInterval);
+            const text = document.getElementById('rsvpInput').value.trim();
+            const speed = parseInt(document.getElementById('rsvpSpeed').value, 10);
+            const words = text.split(/\s+/);
+            let idx = 0;
+            const display = document.getElementById('rsvpDisplay');
+            const ms = (60 / speed) * 1000;
+
+            rsvpInterval = setInterval(() => {
+                if (idx < words.length) {
+                    display.textContent = words[idx++];
+                } else {
+                    clearInterval(rsvpInterval);
+                    display.textContent = "✓ COMPLETE";
+                }
+            }, ms);
+        }
+
+        // Pomodoro Timer
+        let pomoSeconds = 1500;
+        let pomoInterval = null;
+        let audioCtx = null;
+        let noiseNode = null;
+
+        function startPomodoro() {
+            if (pomoInterval) return;
+            pomoInterval = setInterval(() => {
+                if (pomoSeconds > 0) {
+                    pomoSeconds--;
+                    updatePomoDisplay();
+                } else {
+                    clearInterval(pomoInterval);
+                    pomoInterval = null;
+                    alert("⏰ Pomodoro Focus session complete! Take a 5-minute break.");
+                }
+            }, 1000);
+        }
+        function pausePomodoro() {
+            if (pomoInterval) { clearInterval(pomoInterval); pomoInterval = null; }
+        }
+        function resetPomodoro() {
+            pausePomodoro();
+            pomoSeconds = 1500;
+            updatePomoDisplay();
+        }
+        function updatePomoDisplay() {
+            const m = String(Math.floor(pomoSeconds / 60)).padStart(2, '0');
+            const s = String(pomoSeconds % 60).padStart(2, '0');
+            document.getElementById('pomoTime').textContent = `${m}:${s}`;
+        }
+        function toggleAmbientAudio(type) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (type === 'none' && noiseNode) {
+                try { noiseNode.stop(); noiseNode = null; } catch(e) {}
+                return;
+            }
+            if (type === 'whitenoise' || type === 'rain') {
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = buffer;
+                whiteNoise.loop = true;
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.05;
+                whiteNoise.connect(gain);
+                gain.connect(audioCtx.destination);
+                whiteNoise.start(0);
+                noiseNode = whiteNoise;
+            }
+        }
+
+        // Citations
+        function generateCitation() {
+            const title = document.getElementById('citeTitle').value.trim() || 'Untitled Book';
+            const author = document.getElementById('citeAuthor').value.trim() || 'Author, A.';
+            const year = document.getElementById('citeYear').value.trim() || '2024';
+            const style = document.getElementById('citeStyle').value;
+            const out = document.getElementById('citeOutput');
+
+            let cite = '';
+            if (style === 'apa') cite = `${author} (${year}). ${title}. PustakVerse Publishing.`;
+            else if (style === 'mla') cite = `${author}. ${title}. PustakVerse, ${year}.`;
+            else if (style === 'chicago') cite = `${author}. ${year}. ${title}. PustakVerse.`;
+            else cite = `${author}, ${year}. ${title}. PustakVerse.`;
+
+            out.textContent = cite;
+            out.style.display = 'block';
+        }
+
+        // Readability / Lexile
+        function analyzeLexile() {
+            const text = document.getElementById('lexileText').value.trim();
+            if (!text) return;
+            const words = text.split(/\s+/).length;
+            const sentences = text.split(/[.!?]+/).length || 1;
+            const mins = Math.max(1, Math.round(words / 220));
+            const out = document.getElementById('lexileResult');
+            out.innerHTML = `<strong>Word Count:</strong> ${words} words<br><strong>Est. Reading Time:</strong> ~${mins} min(s)<br><strong>Avg. Sentence Length:</strong> ${(words/sentences).toFixed(1)} words`;
+            out.style.display = 'block';
+        }
+
+        // Author Simulator
+        function calculateSimulator() {
+            const price = parseFloat(document.getElementById('simPrice').value || '0');
+            const copies = parseInt(document.getElementById('simCopies').value || '0', 10);
+            const gross = price * copies;
+            const fee = gross * 0.0236;
+            const net = gross - fee;
+            document.getElementById('simGross').textContent = `₹${gross.toFixed(2)}`;
+            document.getElementById('simFee').textContent = `-₹${fee.toFixed(2)}`;
+            document.getElementById('simNet').textContent = `₹${net.toFixed(2)}`;
+        }
+
+        // ISBN Generator
+        function generateISBN() {
+            const prefix = document.getElementById('isbnPrefix').value.replace(/[^0-9]/g, '') || '97893';
+            const code = document.getElementById('isbnBookCode').value.replace(/[^0-9]/g, '') || '123456';
+            const raw12 = (prefix + code).padEnd(12, '0').slice(0, 12);
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                sum += parseInt(raw12[i], 10) * (i % 2 === 0 ? 1 : 3);
+            }
+            const check = (10 - (sum % 10)) % 10;
+            const full = `${raw12.slice(0,3)}-${raw12.slice(3,5)}-${raw12.slice(5,11)}-${raw12.slice(11,12)}${check}`;
+            const out = document.getElementById('isbnOutput');
+            out.textContent = `ISBN-13: ${full}`;
+            out.style.display = 'block';
+        }
+
+        // Copyright Notice
+        function generateCopyright() {
+            const author = document.getElementById('crAuthor').value.trim() || 'Author Name';
+            const book = document.getElementById('crBook').value.trim() || 'Book Title';
+            const lic = document.getElementById('crLicense').value;
+            const year = new Date().getFullYear();
+            let text = `Copyright © ${year} by ${author}.\nAll rights reserved.\nPublished digitally via PustakVerse.`;
+            if (lic === 'cc_by') text = `Copyright © ${year} by ${author}.\nLicensed under Creative Commons Attribution 4.0 International (CC BY 4.0).`;
+            const out = document.getElementById('crOutput');
+            out.textContent = text;
+            out.style.display = 'block';
+        }
+
+        // Client Env
+        document.getElementById('clientEnv').textContent = navigator.userAgent.slice(0, 60) + '...';
+        document.getElementById('screenRes').textContent = `${window.screen.width} x ${window.screen.height} px`;
+    
+        // Global ISBN / SBIN Verifier Hub
+        async function verifySbinHub() {
+            const input = document.getElementById('verifySbinInput');
+            const code = (input.value || '').trim();
+            const out = document.getElementById('sbinVerifierOutput');
+            if (!code) {
+                input.focus();
+                out.innerHTML = '<span style="color: #dc2626; font-weight: 700;">⚠️ Please enter an ISBN or SBIN identifier code to verify.</span>';
+                out.style.display = 'block';
+                out.style.background = '#fef2f2';
+                out.style.borderColor = '#fca5a5';
+                return;
+            }
+            out.innerHTML = '<span style="color: #64748b; font-weight: 700;">⏳ Verifying mathematical checksum & checking PustakVerse registry...</span>';
+            out.style.display = 'block';
+            out.style.background = '#f8fafc';
+            out.style.borderColor = '#e2e8f0';
+            try {
+                const res = await fetch(`/api/verify_sbin?code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    let html = `
+                        <div style="color: #166534; font-weight: 800; font-size: 0.95rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                            <span>✓</span> ${data.format || 'Valid Identifier'}
+                        </div>
+                        <div style="font-size: 0.82rem; color: #334155; line-height: 1.5;">
+                            <div><strong>Code:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-family: monospace;">${data.code}</code></div>
+                            <div><strong>Mathematical Status:</strong> <span style="color: #16a34a; font-weight: 700;">✓ Parity Checksum Verified</span></div>
+                            <div><strong>Agency Standard:</strong> ${data.registration_agency || 'Global International Standard'}</div>
+                    `;
+                    if (data.registered_on_pustakverse && data.book) {
+                        html += `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #86efac;">
+                                <strong style="color: #0f172a;">📚 Registered PustakVerse Book:</strong>
+                                <div style="font-weight: 800; color: #ea580c; font-size: 0.92rem; margin-top: 2px;">${data.book.title}</div>
+                                <div style="color: #64748b; font-size: 0.8rem;">By ${data.book.author} · Category: ${data.book.catalog}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #86efac; color: #0284c7; font-size: 0.8rem; font-weight: 600;">
+                                🌐 Legitimate standard identifier. Not currently bound to any book in PustakVerse (Available for authors).
+                            </div>
+                        `;
+                    }
+                    html += `</div>`;
+                    out.innerHTML = html;
+                    out.style.background = '#f0fdf4';
+                    out.style.borderColor = '#86efac';
+                } else {
+                    out.innerHTML = `
+                        <div style="color: #dc2626; font-weight: 800; font-size: 0.9rem; margin-bottom: 4px;">
+                            ❌ Invalid Checksum / Identifier
+                        </div>
+                        <div style="font-size: 0.82rem; color: #b91c1c;">
+                            ${data.message || 'Identifier failed mathematical check-digit verification.'}
+                        </div>
+                    `;
+                    out.style.background = '#fef2f2';
+                    out.style.borderColor = '#fca5a5';
+                }
+            } catch (err) {
+                out.innerHTML = '<span style="color: #dc2626; font-weight: 700;">Failed to verify identifier. Please check your connection and try again.</span>';
+                out.style.background = '#fef2f2';
+                out.style.borderColor = '#fca5a5';
+            }
+        }
+
+    
+        // Author AI Blurb & Synopsis Enhancer
+        function generateAiBlurb() {
+            const titleInput = document.getElementById('aiBlurbTitle');
+            const catalogInput = document.getElementById('aiBlurbCatalog');
+            const notesInput = document.getElementById('aiBlurbNotes');
+            const resArea = document.getElementById('aiBlurbResultArea');
+
+            const title = (titleInput ? titleInput.value : '').trim();
+            const catalog = (catalogInput ? catalogInput.value : '').trim();
+            const notes = (notesInput ? notesInput.value : '').trim();
+
+            if (!title) {
+                if (titleInput) titleInput.focus();
+                alert('Please enter a draft book title first.');
+                return;
+            }
+
+            if (resArea) {
+                resArea.style.display = 'block';
+                resArea.style.background = '#fdf4ff';
+                resArea.style.borderColor = '#f5d0fe';
+                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with GranthMind AI...</span>';
+            }
+
+            fetch('/api/author/ai_enhance_blurb', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545'
+                },
+                body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && (data.enhanced_blurb || data.synopsis)) {
+                    resArea.textContent = data.enhanced_blurb || data.synopsis;
+                } else {
+                    resArea.textContent = data.message || 'Could not generate synopsis. Please try again.';
+                }
+            })
+            .catch(err => {
+                if (resArea) resArea.textContent = 'Network error while generating synopsis. Please try again.';
+            });
+        }
+
+    </script>
+</body>
+</html>
