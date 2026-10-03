@@ -215,7 +215,7 @@
             <div id="reader" class="form-area ">
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545">
+                    <input type="hidden" name="csrf_token" value="a3a35360275c7498c0ee6b49f9772996fead4bd2074b8086785f95fa78b09a96">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -250,7 +250,7 @@
             <div id="official" class="form-area ">
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545">
+                    <input type="hidden" name="csrf_token" value="a3a35360275c7498c0ee6b49f9772996fead4bd2074b8086785f95fa78b09a96">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -431,7 +431,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'a3a35360275c7498c0ee6b49f9772996fead4bd2074b8086785f95fa78b09a96' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -495,7 +495,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a3a35360275c7498c0ee6b49f9772996fead4bd2074b8086785f95fa78b09a96' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -526,7 +526,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a3a35360275c7498c0ee6b49f9772996fead4bd2074b8086785f95fa78b09a96' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -556,7 +556,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '73e7b0fc9d084040998ad4624c309a2fd948cda8ddf1e29945d479f28d8e6545' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a3a35360275c7498c0ee6b49f9772996fead4bd2074b8086785f95fa78b09a96' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();

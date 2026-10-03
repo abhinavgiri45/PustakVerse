@@ -488,8 +488,9 @@
 
         <div class="book-grid" id="bookGrid">
             
-                <div style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
-                    <h2 style="color: #334155;">No books available yet. Check back soon!</h2>
+                <div id="noBooksPlaceholder" style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
+                    <h2 style="color: #334155;">Connecting to PustakVerse Library...</h2>
+                    <div style="width: 32px; height: 32px; border: 3px solid #cbd5e1; border-top-color: #f66d2f; border-radius: 50%; margin: 15px auto; animation: spin 0.8s linear infinite;"></div>
                 </div>
             
 
@@ -504,7 +505,82 @@
     </div>
 
     <script>
+        // CLIENT-SIDE DYNAMIC BOOK HYDRATION FROM CLOUDFLARE D1
+        async function hydrateBooksFromD1() {
+            try {
+                const res = await fetch('/api/d1/books');
+                if (!res.ok) return;
+                const books = await res.json();
+                if (!Array.isArray(books) || books.length === 0) return;
+
+                const grid = document.querySelector('.book-grid');
+                const placeholder = document.getElementById('noBooksPlaceholder');
+                if (placeholder) placeholder.remove();
+
+                // If grid already has server-rendered books, don't duplicate
+                const existingCards = grid.querySelectorAll('.book-card');
+                if (existingCards.length > 0) return;
+
+                books.forEach(b => {
+                    const card = document.createElement('div');
+                    card.className = 'book-card';
+                    card.setAttribute('data-title', (b.title || '').toLowerCase());
+                    card.setAttribute('data-author', (b.author_name || '').toLowerCase());
+                    card.setAttribute('data-catalog', (b.catalog || '').toLowerCase());
+
+                    let coverSrc = b.cover_image || '/static/PustakVerse.png';
+                    if (coverSrc.includes('drive.google.com/file/d/')) {
+                        const m = coverSrc.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                        if (m) coverSrc = `https://lh3.googleusercontent.com/d/${m[1]}`;
+                    }
+
+                    const priceText = b.is_paid ? `Buy ₹${(b.price_paise / 100).toFixed(2)}` : 'Read Free';
+                    const readHref = b.pdf_file || '#';
+
+                    card.innerHTML = `
+                        <a href="${readHref}" class="book-cover-link" target="_blank" rel="noopener">
+                            <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
+                        </a>
+                        <div class="book-info">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span class="book-tag">${b.catalog || 'General'}</span>
+                                ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ Featured</span>' : ''}
+                            </div>
+                            <h3 class="book-title"><a href="${readHref}" target="_blank" rel="noopener">${b.title}</a></h3>
+                            <p class="book-author">By ${b.author_name || 'PustakVerse'}</p>
+                            <div style="color: #f59e0b; margin-bottom: 15px;">★★★★★ <span style="color: #475569; font-size: 0.9em;">(5.0)</span></div>
+                            <div class="book-actions">
+                                <a href="${readHref}" class="btn btn-read" target="_blank" rel="noopener">${priceText}</a>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (_) {}
+        }
+
+        // Check edge session for dynamic user header
+        async function checkEdgeSession() {
+            try {
+                const res = await fetch('/api/user/me');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.logged_in && data.user) {
+                    const navLinks = document.querySelector('.navbar-links');
+                    if (navLinks) {
+                        const loginLink = navLinks.querySelector('a[href*="login"]');
+                        if (loginLink) {
+                            loginLink.textContent = `👤 ${data.user.username}`;
+                            loginLink.href = "/dashboard";
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
+            hydrateBooksFromD1();
+            checkEdgeSession();
             let currentItems = 10;
             const step = 10;
             const loadMoreBtn = document.getElementById('loadMoreBtn');
