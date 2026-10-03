@@ -16,6 +16,14 @@ CREATE TABLE IF NOT EXISTS users (
     two_factor_enabled INTEGER DEFAULT 0,
     failed_attempts INTEGER DEFAULT 0,
     locked_until DATETIME NULL,
+    payout_details TEXT DEFAULT NULL,
+    razorpay_account_id TEXT DEFAULT NULL,
+    rp_key_id TEXT DEFAULT NULL,
+    rp_key_secret TEXT DEFAULT NULL,
+    author_bio TEXT DEFAULT NULL,
+    social_links_json TEXT DEFAULT NULL,
+    reading_streak INTEGER DEFAULT 1,
+    monthly_reading_goal INTEGER DEFAULT 5,
     official_designation TEXT DEFAULT 'Official Moderator',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_activity DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -44,6 +52,14 @@ CREATE TABLE IF NOT EXISTS books (
     sbin_no TEXT DEFAULT NULL,
     isbn TEXT DEFAULT NULL,
     video_trailer_url TEXT DEFAULT NULL,
+    audio_preview_url TEXT DEFAULT NULL,
+    co_authors TEXT DEFAULT NULL,
+    chapters_json TEXT DEFAULT NULL,
+    official_staff_review TEXT DEFAULT NULL,
+    official_reviewer_name TEXT DEFAULT NULL,
+    drm_watermark_enabled INTEGER DEFAULT 0,
+    view_count INTEGER DEFAULT 0,
+    completion_count INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -106,7 +122,14 @@ CREATE TABLE IF NOT EXISTS front_page_settings (
     checkout_donation_active INTEGER DEFAULT 1,
     donation_default_inr INTEGER DEFAULT 10,
     maintenance_mode INTEGER DEFAULT 0,
-    upload_freeze INTEGER DEFAULT 0
+    upload_freeze INTEGER DEFAULT 0,
+    granthmind_prompt_tuning TEXT DEFAULT NULL,
+    email_welcome_template TEXT DEFAULT NULL,
+    email_receipt_template TEXT DEFAULT NULL,
+    ip_blacklist TEXT DEFAULT NULL,
+    rbac_permissions_json TEXT DEFAULT NULL,
+    alert_ticker_message TEXT DEFAULT NULL,
+    alert_ticker_active INTEGER DEFAULT 0
 );
 INSERT OR IGNORE INTO front_page_settings (id) VALUES (1);
 
