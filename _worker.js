@@ -62,8 +62,22 @@ export default {
       });
     }
 
-    // 3. Proxy to the live backend application
-    const backendUrl = "https://pustakverse.onrender.com" + url.pathname + url.search;
+    // 5. Route to GitHub Pages automated build (or optional custom backend if env.BACKEND_URL is set)
+    const backendBase = env.BACKEND_URL || "https://abhinavgiri45.github.io";
+    let targetPath = url.pathname;
+
+    if (backendBase.includes("github.io")) {
+      // Map routes for GitHub Pages project path: /PustakVerse/...
+      if (targetPath === "/" || targetPath === "") {
+        targetPath = "/PustakVerse/index.html";
+      } else if (!targetPath.includes(".") && !targetPath.endsWith("/")) {
+        targetPath = "/PustakVerse" + targetPath + "/index.html";
+      } else {
+        targetPath = "/PustakVerse" + targetPath;
+      }
+    }
+
+    const backendUrl = backendBase.replace(/\/+$/, "") + targetPath + url.search;
 
     const newHeaders = new Headers();
     for (const [key, value] of request.headers.entries()) {
@@ -77,7 +91,7 @@ export default {
     const fetchOptions = {
       method: request.method,
       headers: newHeaders,
-      redirect: "manual"
+      redirect: "follow"
     };
 
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -85,7 +99,16 @@ export default {
     }
 
     try {
-      return await fetch(backendUrl, fetchOptions);
+      const response = await fetch(backendUrl, fetchOptions);
+      if (response && response.status < 400) {
+        return response;
+      }
+      // If 404 on subpath on GitHub Pages, fallback to root index.html
+      if (response && response.status === 404 && backendBase.includes("github.io")) {
+        const fallbackResp = await fetch(backendBase.replace(/\/+$/, "") + "/PustakVerse/index.html");
+        if (fallbackResp && fallbackResp.ok) return fallbackResp;
+      }
+      return response;
     } catch (err) {
       return new Response(
         `<!DOCTYPE html>

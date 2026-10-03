@@ -15,3 +15,4 @@ d1_data_import.sql
 migrate_to_d1.py
 
 full_d1_migration.sql
+_site/
