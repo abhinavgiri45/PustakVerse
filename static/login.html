@@ -214,8 +214,9 @@
             <!-- READER LOGIN -->
             <div id="reader" class="form-area active">
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
-                <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed">
+                <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
+                <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
+                    <input type="hidden" name="csrf_token" value="cd2deea0644eb151bc72735386f0bc3f23ae967221dfd8147897f6697ef3c0a9">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -234,7 +235,7 @@
                         </label>
                         <a href="/forgot-password" class="forgot-link" style="margin: 0;">Forgot Password?</a>
                     </div>
-                    <button type="submit" class="btn-submit orange">Sign In to Library</button>
+                    <button type="submit" class="btn-submit orange" id="readerLoginBtn">Sign In to Library</button>
                 </form>
 
                 <div class="divider">or continue with</div>
@@ -249,8 +250,9 @@
             <!-- OFFICIAL LOGIN -->
             <div id="official" class="form-area ">
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
-                <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed">
+                <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
+                <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
+                    <input type="hidden" name="csrf_token" value="cd2deea0644eb151bc72735386f0bc3f23ae967221dfd8147897f6697ef3c0a9">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -269,7 +271,7 @@
                         </label>
                         <a href="/forgot-password" class="forgot-link" style="margin: 0;">Forgot Password?</a>
                     </div>
-                    <button type="submit" class="btn-submit dark">Secure Sign In</button>
+                    <button type="submit" class="btn-submit dark" id="officialLoginBtn">Secure Sign In</button>
                 </form>
             </div>
 
@@ -431,7 +433,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'cd2deea0644eb151bc72735386f0bc3f23ae967221dfd8147897f6697ef3c0a9' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -495,7 +497,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'cd2deea0644eb151bc72735386f0bc3f23ae967221dfd8147897f6697ef3c0a9' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -530,7 +532,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'cd2deea0644eb151bc72735386f0bc3f23ae967221dfd8147897f6697ef3c0a9' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -560,7 +562,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'cd2deea0644eb151bc72735386f0bc3f23ae967221dfd8147897f6697ef3c0a9' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();
@@ -674,6 +676,108 @@
             } catch(e) {}
         });
     });
+
+    async function handleReaderLogin(e) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('.btn-submit');
+        const alertBox = document.getElementById('readerAlert');
+        if (alertBox) alertBox.style.display = 'none';
+
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Signing In...";
+
+        const username = form.username.value.trim();
+        const password = form.password.value;
+        const remember = form.remember_me ? form.remember_me.checked : true;
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    login_portal: 'reader',
+                    remember: remember
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = "✓ Signed In! Redirecting...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/";
+                }, 400);
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = data.message || "Invalid username or password. Please try again.";
+                    alertBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        } catch (_) {
+            form.submit();
+        }
+    }
+
+    async function handleOfficialLogin(e) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('.btn-submit');
+        const alertBox = document.getElementById('officialAlert');
+        if (alertBox) alertBox.style.display = 'none';
+
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Verifying Credentials...";
+
+        const username = form.username.value.trim();
+        const password = form.password.value;
+        const remember = form.remember_me ? form.remember_me.checked : true;
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    login_portal: 'author_official',
+                    remember: remember
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = "✓ Verified! Redirecting...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/";
+                }, 400);
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = data.message || "Invalid credentials for Author/Official portal.";
+                    alertBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        } catch (_) {
+            form.submit();
+        }
+    }
+
+    // Auto-redirect if user already has an active edge session
+    fetch('/api/user/me')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+            if (d && d.logged_in) {
+                window.location.href = '/dashboard';
+            }
+        })
+        .catch(() => {});
 </script>
 
 
@@ -711,8 +815,50 @@
             applyTheme(next);
         }
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+        function syncGlobalSession() {
+            fetch('/api/user/me')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data && data.logged_in && data.user) {
+                        const user = data.user;
+                        const navContainers = document.querySelectorAll('.nav-links, .navbar-links');
+                        navContainers.forEach(container => {
+                            const loginBtn = container.querySelector('a[href*="login"], .nav-btn-highlight');
+                            if (loginBtn) {
+                                loginBtn.outerHTML = `
+                                    <a href="/dashboard" style="color: #ea580c; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">👤 ${user.username}</a>
+                                    <a href="/logout" style="color: #94a3b8; font-size: 0.88rem; margin-left: 6px;">Logout</a>
+                                `;
+                            }
+                        });
+
+                        const sidebar = document.getElementById('mySidebar');
+                        if (sidebar && !document.getElementById('sidebarUserSection')) {
+                            const userDiv = document.createElement('div');
+                            userDiv.id = 'sidebarUserSection';
+                            userDiv.style.cssText = 'padding: 15px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); border-radius: 8px;';
+                            userDiv.innerHTML = `
+                                <div style="color: #ea580c; font-weight: 700; margin-bottom: 4px;">👤 ${user.username}</div>
+                                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; text-transform: capitalize;">${user.role || 'Reader'}</div>
+                                <a href="/dashboard" style="display: block; color: #fff; font-size: 0.9rem; margin-bottom: 6px;">My Dashboard</a>
+                                <a href="/logout" style="display: block; color: #ef4444; font-size: 0.85rem;">Logout</a>
+                            `;
+                            sidebar.prepend(userDiv);
+                        }
+
+                        if (user.reading_streak) {
+                            const streakEl = document.getElementById('baseStreakCount');
+                            if (streakEl) streakEl.textContent = user.reading_streak;
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             applyTheme(localStorage.getItem('pustakverse_theme') || 'light');
+            syncGlobalSession();
             
             const streakCountEl = document.getElementById('baseStreakCount');
             if (streakCountEl) {

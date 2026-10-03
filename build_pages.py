@@ -108,6 +108,13 @@ def build():
             if os.path.exists(src_f):
                 shutil.copy(src_f, dst_f)
 
+        # Ensure dashboard is available in _site for GitHub Pages
+        dash_src = os.path.join(static_src, "dashboard.html")
+        dash_dst_dir = os.path.join(SITE_DIR, "dashboard")
+        os.makedirs(dash_dst_dir, exist_ok=True)
+        if os.path.exists(dash_src):
+            shutil.copy(dash_src, os.path.join(dash_dst_dir, "index.html"))
+
     print("[SUCCESS] Static site generation complete!")
     print(f"Total files in _site: {len(os.listdir(SITE_DIR))}")
 

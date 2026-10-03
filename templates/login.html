@@ -133,7 +133,8 @@
             <!-- READER LOGIN -->
             <div id="reader" class="form-area {% if active_tab == 'reader' or not active_tab %}active{% endif %}">
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
-                <form action="/login" method="POST">
+                <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
+                <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
@@ -153,7 +154,7 @@
                         </label>
                         <a href="{{ url_for('forgot_password') }}" class="forgot-link" style="margin: 0;">Forgot Password?</a>
                     </div>
-                    <button type="submit" class="btn-submit orange">Sign In to Library</button>
+                    <button type="submit" class="btn-submit orange" id="readerLoginBtn">Sign In to Library</button>
                 </form>
 
                 <div class="divider">or continue with</div>
@@ -168,7 +169,8 @@
             <!-- OFFICIAL LOGIN -->
             <div id="official" class="form-area {% if active_tab == 'official' %}active{% endif %}">
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
-                <form action="/login" method="POST">
+                <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
+                <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
@@ -188,7 +190,7 @@
                         </label>
                         <a href="{{ url_for('forgot_password') }}" class="forgot-link" style="margin: 0;">Forgot Password?</a>
                     </div>
-                    <button type="submit" class="btn-submit dark">Secure Sign In</button>
+                    <button type="submit" class="btn-submit dark" id="officialLoginBtn">Secure Sign In</button>
                 </form>
             </div>
 
@@ -593,5 +595,107 @@
             } catch(e) {}
         });
     });
+
+    async function handleReaderLogin(e) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('.btn-submit');
+        const alertBox = document.getElementById('readerAlert');
+        if (alertBox) alertBox.style.display = 'none';
+
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Signing In...";
+
+        const username = form.username.value.trim();
+        const password = form.password.value;
+        const remember = form.remember_me ? form.remember_me.checked : true;
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    login_portal: 'reader',
+                    remember: remember
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = "✓ Signed In! Redirecting...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/";
+                }, 400);
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = data.message || "Invalid username or password. Please try again.";
+                    alertBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        } catch (_) {
+            form.submit();
+        }
+    }
+
+    async function handleOfficialLogin(e) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('.btn-submit');
+        const alertBox = document.getElementById('officialAlert');
+        if (alertBox) alertBox.style.display = 'none';
+
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Verifying Credentials...";
+
+        const username = form.username.value.trim();
+        const password = form.password.value;
+        const remember = form.remember_me ? form.remember_me.checked : true;
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    login_portal: 'author_official',
+                    remember: remember
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = "✓ Verified! Redirecting...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/";
+                }, 400);
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = data.message || "Invalid credentials for Author/Official portal.";
+                    alertBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        } catch (_) {
+            form.submit();
+        }
+    }
+
+    // Auto-redirect if user already has an active edge session
+    fetch('/api/user/me')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+            if (d && d.logged_in) {
+                window.location.href = '/dashboard';
+            }
+        })
+        .catch(() => {});
 </script>
 {% endblock %}
