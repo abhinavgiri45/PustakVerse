@@ -260,7 +260,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" id="btnSendOtp" class="btn-submit orange">Verify Email & Create Account</button>
+                    <button type="submit" id="btnSendOtp" class="btn-submit orange">Create Free Account</button>
                 </form>
 
                 <!-- AJAX OTP SECTION -->
@@ -398,7 +398,7 @@
         e.preventDefault();
         const btn = document.getElementById('btnSendOtp');
         btn.disabled = true;
-        btn.textContent = "Sending Code...";
+        btn.textContent = "Creating Account...";
 
         const payload = {
             action: 'send_otp',
@@ -420,18 +420,22 @@
             const data = await response.json();
             
             if (data.success) {
-                document.getElementById('registrationForm').style.display = 'none';
-                document.getElementById('otpSection').style.display = 'block';
-                startOtpTimer();
+                sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                localStorage.setItem('pustakverse_onboarded', 'true');
+                btn.textContent = "✓ Account Created! Logging in...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/";
+                }, 800);
             } else {
-                alert(data.message);
+                alert(data.message || "Registration failed. Please try again.");
                 btn.disabled = false;
-                btn.textContent = "Verify Email & Create Account";
+                btn.textContent = "Create Free Account";
             }
         } catch (err) {
             alert("Network error. Please check your connection.");
             btn.disabled = false;
-            btn.textContent = "Verify Email & Create Account";
+            btn.textContent = "Create Free Account";
         }
     }
 

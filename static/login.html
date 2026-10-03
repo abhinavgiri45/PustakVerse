@@ -215,7 +215,7 @@
             <div id="reader" class="form-area active">
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="c168764bd48049620642a80e9ee5a0bd4819a527f0562f7e51afea829c619586">
+                    <input type="hidden" name="csrf_token" value="46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -250,7 +250,7 @@
             <div id="official" class="form-area ">
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="c168764bd48049620642a80e9ee5a0bd4819a527f0562f7e51afea829c619586">
+                    <input type="hidden" name="csrf_token" value="46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -341,7 +341,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" id="btnSendOtp" class="btn-submit orange">Verify Email & Create Account</button>
+                    <button type="submit" id="btnSendOtp" class="btn-submit orange">Create Free Account</button>
                 </form>
 
                 <!-- AJAX OTP SECTION -->
@@ -431,7 +431,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'c168764bd48049620642a80e9ee5a0bd4819a527f0562f7e51afea829c619586' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -479,7 +479,7 @@
         e.preventDefault();
         const btn = document.getElementById('btnSendOtp');
         btn.disabled = true;
-        btn.textContent = "Sending Code...";
+        btn.textContent = "Creating Account...";
 
         const payload = {
             action: 'send_otp',
@@ -495,24 +495,28 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'c168764bd48049620642a80e9ee5a0bd4819a527f0562f7e51afea829c619586' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
             
             if (data.success) {
-                document.getElementById('registrationForm').style.display = 'none';
-                document.getElementById('otpSection').style.display = 'block';
-                startOtpTimer();
+                sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                localStorage.setItem('pustakverse_onboarded', 'true');
+                btn.textContent = "✓ Account Created! Logging in...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/";
+                }, 800);
             } else {
-                alert(data.message);
+                alert(data.message || "Registration failed. Please try again.");
                 btn.disabled = false;
-                btn.textContent = "Verify Email & Create Account";
+                btn.textContent = "Create Free Account";
             }
         } catch (err) {
             alert("Network error. Please check your connection.");
             btn.disabled = false;
-            btn.textContent = "Verify Email & Create Account";
+            btn.textContent = "Create Free Account";
         }
     }
 
@@ -526,7 +530,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'c168764bd48049620642a80e9ee5a0bd4819a527f0562f7e51afea829c619586' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -556,7 +560,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'c168764bd48049620642a80e9ee5a0bd4819a527f0562f7e51afea829c619586' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '46b5e18748ab47fe52c36534bd5c0a5bf732d68e5b96d65ae4028207f9ab7fed' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();

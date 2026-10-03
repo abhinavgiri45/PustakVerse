@@ -23,6 +23,7 @@ STATIC_ROUTES = [
     ("/tools", "tools/index.html"),
     ("/login", "login/index.html"),
     ("/register", "register/index.html"),
+    ("/forgot_password", "forgot_password/index.html"),
     ("/ask_ai", "ask_ai/index.html"),
     ("/google8a9af3f8fe8a3567.html", "google8a9af3f8fe8a3567.html"),
     ("/sitemap.xml", "sitemap.xml"),
@@ -98,6 +99,7 @@ def build():
             ("tools/index.html", "tools.html"),
             ("login/index.html", "login.html"),
             ("register/index.html", "register.html"),
+            ("forgot_password/index.html", "forgot_password.html"),
             ("ask_ai/index.html", "ask_ai.html"),
         ]
         for src_rel, dst_name in static_html_map:
