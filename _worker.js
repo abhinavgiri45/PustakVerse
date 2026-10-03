@@ -394,14 +394,23 @@ export default {
     // ========================================================================
     if (url.pathname === "/api/d1/books" && env.DB) {
       try {
-        const { results } = await env.DB.prepare(
-          `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description, b.is_featured, b.view_count
-           FROM books b
-           LEFT JOIN users u ON b.author_id = u.id
-           WHERE b.is_quarantined = 0
-           ORDER BY b.id DESC LIMIT 50`
-        ).all();
-        return new Response(JSON.stringify(results || []), {
+        let results = [];
+        try {
+          const res = await env.DB.prepare(
+            `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             ORDER BY b.id DESC LIMIT 50`
+          ).all();
+          results = res.results || [];
+        } catch (_) {
+          const fallbackRes = await env.DB.prepare(
+            `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid FROM books ORDER BY id DESC LIMIT 50`
+          ).all();
+          results = fallbackRes.results || [];
+        }
+
+        return new Response(JSON.stringify(results), {
           headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" }
         });
       } catch (err) {
