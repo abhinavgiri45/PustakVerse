@@ -112,7 +112,23 @@ def build():
                     {'id': 5, 'name': 'Science', 'book_count': 9}
                 ],
                 leadership_team=[
-                    {'id': 1, 'name': 'Abhinav Giri', 'role_title': 'Founder & Developer', 'email': 'abhinavgiri370@gmail.com', 'photo': '/static/PustakVerse.png', 'is_founder': 1, 'display_order': 1}
+                    {
+                        'id': 1,
+                        'name': 'Abhinav Giri',
+                        'role_title': 'Founder & Chief Technology Officer (CTO)',
+                        'email': 'abhinavgiri370@gmail.com',
+                        'phone': '+91 99999 99999',
+                        'address': 'Greater Noida, Uttar Pradesh, India',
+                        'bio': 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.',
+                        'photo': '/static/PustakVerse.png',
+                        'is_founder': 1,
+                        'display_order': 1,
+                        'instagram_id': 'https://www.instagram.com/abhinavgiri45/',
+                        'x_id': 'https://x.com/abhinavgiri45',
+                        'linkedin_id': 'https://www.linkedin.com/in/abhinav-giri',
+                        'github_id': 'https://github.com/abhinavgiri45',
+                        'website_url': 'https://pustakverse.com'
+                    }
                 ],
                 site_settings={
                     'donation_active': True,

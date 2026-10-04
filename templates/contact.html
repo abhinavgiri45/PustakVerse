@@ -567,7 +567,9 @@
             <div class="leader-card {% if leader.is_founder %}founder-card{% endif %}">
                 <div class="circle-avatar-wrap">
                     {% if leader.photo and leader.photo.startswith('http') %}
-                        <img src="{{ leader.photo }}" alt="{{ leader.name }}" class="circle-avatar">
+                        <img src="{{ leader.photo }}" alt="{{ leader.name }}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
+                    {% elif leader.photo and (leader.photo.startswith('/') or leader.photo.startswith('static/')) %}
+                        <img src="{{ leader.photo if leader.photo.startswith('/') else '/' + leader.photo }}" alt="{{ leader.name }}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
                     {% elif leader.photo and leader.photo != 'PustakVerse.png' %}
                         <img src="{{ url_for('static', filename='uploads/leadership/' + leader.photo) }}" alt="{{ leader.name }}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
                     {% else %}

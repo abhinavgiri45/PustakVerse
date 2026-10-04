@@ -706,12 +706,12 @@
                                     <th style="text-align: right; min-width: 150px;">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="leadershipTableBody">
                                 
                                 <tr>
                                     <td>
                                         
-                                            <img src="/static/uploads/leadership//static/PustakVerse.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;">
+                                            <img src="/static/PustakVerse.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
                                         
                                     </td>
                                     <td>
@@ -721,11 +721,11 @@
                                                 <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; margin-left: 4px; font-weight: 800; border: 1px solid #fed7aa;">👑 Founder</span>
                                             
                                         </div>
-                                        <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Founder &amp; Developer</div>
+                                        <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Founder &amp; Chief Technology Officer (CTO)</div>
                                     </td>
                                     <td><a href="mailto:abhinavgiri370@gmail.com" style="color: #0284c7; text-decoration: none; font-weight: 600; font-size: 0.85rem;">abhinavgiri370@gmail.com</a></td>
-                                    <td><span style="font-weight: 600; font-size: 0.85rem; color: #334155;">N/A</span></td>
-                                    <td style="font-size: 0.85rem; color: #475569; max-width: 180px;">India</td>
+                                    <td><span style="font-weight: 600; font-size: 0.85rem; color: #334155;">+91 99999 99999</span></td>
+                                    <td style="font-size: 0.85rem; color: #475569; max-width: 180px;">Greater Noida, Uttar Pradesh, India</td>
                                     <td><span style="background: #f1f5f9; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.78rem;">#1</span></td>
                                     <td style="text-align: right;">
                                         <div style="display: flex; gap: 6px; justify-content: flex-end;">
@@ -733,16 +733,16 @@
                                                     style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 14px; border-radius: 6px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25); cursor: pointer;"
                                                     data-id="1"
                                                     data-name="Abhinav Giri"
-                                                    data-role="Founder &amp; Developer"
+                                                    data-role="Founder &amp; Chief Technology Officer (CTO)"
                                                     data-email="abhinavgiri370@gmail.com"
-                                                    data-phone=""
-                                                    data-address=""
-                                                    data-bio=""
-                                                    data-ig=""
-                                                    data-x=""
-                                                    data-li=""
-                                                    data-gh=""
-                                                    data-web=""
+                                                    data-phone="+91 99999 99999"
+                                                    data-address="Greater Noida, Uttar Pradesh, India"
+                                                    data-bio="Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide."
+                                                    data-ig="https://www.instagram.com/abhinavgiri45/"
+                                                    data-x="https://x.com/abhinavgiri45"
+                                                    data-li="https://www.linkedin.com/in/abhinav-giri"
+                                                    data-gh="https://github.com/abhinavgiri45"
+                                                    data-web="https://pustakverse.com"
                                                     data-founder="true"
                                                     data-order="1"
                                                     data-photo="/static/PustakVerse.png"
@@ -750,7 +750,10 @@
                                                 ✏️ Edit
                                             </button>
 
-                                            
+                                            <form action="/developer/leadership/delete/1" method="POST" onsubmit="return confirm('Warning: This is marked as the Founder profile. Are you sure you want to remove Abhinav Giri?');" style="display: inline;">
+                                                <input type="hidden" name="csrf_token" value="">
+                                                <button type="submit" class="btn-sm btn-red" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🗑️ Remove</button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>

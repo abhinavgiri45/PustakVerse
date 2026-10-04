@@ -9412,10 +9412,6 @@ def developer_delete_leadership(leader_id):
             flash("Leader record not found.", "error")
             return redirect(url_for('dashboard'))
 
-        if leader.get('is_founder'):
-            flash("The Founder profile cannot be deleted. You may update its contact details instead.", "error")
-            return redirect(url_for('dashboard'))
-
         cursor.execute("DELETE FROM leadership_team WHERE id = %s", (leader_id,))
         db.commit()
         log_official_activity(session['user_id'], f"Removed executive #{leader_id} ({leader.get('name')})")

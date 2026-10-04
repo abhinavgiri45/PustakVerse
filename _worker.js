@@ -1746,6 +1746,56 @@ export default {
       return new Response(null, { status: 302, headers: resHeaders });
     }
 
+    // 5I-2. Dynamic Contact & Leadership Directory: /contact
+    if ((url.pathname === "/contact" || url.pathname === "/contact/") && request.method === "GET") {
+      let contactHtml = "";
+      if (env.ASSETS) {
+        try {
+          const assetResp = await env.ASSETS.fetch(new Request(`${url.origin}/contact.html`));
+          if (assetResp && assetResp.status === 200) {
+            contactHtml = await assetResp.text();
+          }
+        } catch (_) {}
+      }
+      if (!contactHtml) {
+        try {
+          const rawResp = await fetch(`${RAW_GITHUB_STATIC_BASE}/contact.html`, {
+            headers: { "User-Agent": "PustakVerse-Edge-Proxy" }
+          });
+          if (rawResp && rawResp.status === 200) {
+            contactHtml = await rawResp.text();
+          }
+        } catch (_) {}
+      }
+
+      if (contactHtml) {
+        let leaders = [];
+        if (env.DB) {
+          try {
+            await ensureLeadershipTable(env);
+            const lRes = await env.DB.prepare(
+              "SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC"
+            ).all();
+            leaders = lRes.results || [];
+          } catch (_) {}
+        }
+        if (leaders && leaders.length > 0) {
+          const renderedCards = renderContactLeadershipCards(leaders);
+          contactHtml = contactHtml.replace(
+            /<div class="leadership-grid">[\s\S]*?<\/div>(?=\s*<\/div>\s*<!-- EMAIL COMPOSE)/i,
+            `<div class="leadership-grid">\n${renderedCards}\n        </div>`
+          );
+        }
+        return new Response(contactHtml, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "private, no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+    }
+
     // 5J. Native Cloudflare Edge User Dashboard: /dashboard
     if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -1914,9 +1964,10 @@ export default {
       }
 
       if (dashHtml) {
-        // Fetch active live categories from D1 if available
+        // Fetch active live categories, books, and leadership team from D1 if available
         let liveCatalogs = [];
         let myBooks = [];
+        let leadershipTeam = [];
         if (env.DB) {
           try {
             const catRes = await env.DB.prepare(
@@ -1938,9 +1989,19 @@ export default {
           } catch (e) {
             console.warn("Could not load dashboard books:", e.message);
           }
+
+          try {
+            await ensureLeadershipTable(env);
+            const lRes = await env.DB.prepare(
+              "SELECT * FROM leadership_team ORDER BY is_founder DESC, display_order ASC, id ASC"
+            ).all();
+            leadershipTeam = lRes.results || [];
+          } catch (e) {
+            console.warn("Could not load leadership_team:", e.message);
+          }
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, url);
+        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url);
         return new Response(personalized, {
           status: 200,
           headers: {
@@ -2134,18 +2195,96 @@ export default {
       if (!user || user.role !== "developer") {
         return new Response("Unauthorized", { status: 403 });
       }
+      await ensureLeadershipTable(env);
       const formData = await request.formData().catch(() => new FormData());
       const leaderName = (formData.get("name") || "").trim();
       const roleTitle = (formData.get("role_title") || formData.get("designation") || "Executive").trim();
       const leaderEmail = (formData.get("email") || "").trim();
-      const photo = (formData.get("photo") || "/static/PustakVerse.png").trim();
+      const phone = (formData.get("phone") || "").trim();
+      const address = (formData.get("address") || "").trim();
+      const photo = (formData.get("photo_url") || formData.get("photo") || "/static/PustakVerse.png").trim();
       const bio = (formData.get("bio") || "").trim();
+      const ig = (formData.get("instagram_id") || "").trim();
+      const xId = (formData.get("x_id") || "").trim();
+      const li = (formData.get("linkedin_id") || "").trim();
+      const gh = (formData.get("github_id") || "").trim();
+      const web = (formData.get("website_url") || "").trim();
+      const isFounder = formData.get("is_founder") === "on" || formData.get("is_founder") === "1" || formData.get("is_founder") === "true";
+      const displayOrder = parseInt(formData.get("display_order") || "10", 10) || 10;
+
       if (leaderName && leaderEmail) {
-        await env.DB.prepare(
-          "INSERT INTO leadership_team (name, role_title, email, photo, bio, is_founder, display_order) VALUES (?, ?, ?, ?, ?, 0, 10)"
-        ).bind(leaderName, roleTitle, leaderEmail, photo, bio).run();
+        await env.DB.prepare(`
+          INSERT INTO leadership_team 
+          (name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+        `).bind(
+          leaderName, roleTitle, leaderEmail, phone || null, address || null, photo, bio || null,
+          isFounder ? 1 : 0, displayOrder, ig || null, xId || null, li || null, gh || null, web || null
+        ).run();
       }
-      return Response.redirect(`${url.origin}/dashboard`, 302);
+      return Response.redirect(`${url.origin}/dashboard?added_leader=1`, 302);
+    }
+
+    // Edit Executive Leadership Member: POST /developer/leadership/edit/:id
+    const editLeaderMatch = url.pathname.match(/^\/developer\/leadership\/edit\/(\d+)/);
+    if (editLeaderMatch && request.method === "POST" && env.DB) {
+      const leaderId = parseInt(editLeaderMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || user.role !== "developer") {
+        return new Response("Unauthorized", { status: 403 });
+      }
+      await ensureLeadershipTable(env);
+      const formData = await request.formData().catch(() => new FormData());
+      const leaderName = (formData.get("name") || "").trim();
+      const roleTitle = (formData.get("role_title") || formData.get("designation") || "Executive").trim();
+      const leaderEmail = (formData.get("email") || "").trim();
+      const phone = (formData.get("phone") || "").trim();
+      const address = (formData.get("address") || "").trim();
+      const bio = (formData.get("bio") || "").trim();
+      const photoUrl = (formData.get("photo_url") || "").trim();
+      const ig = (formData.get("instagram_id") || "").trim();
+      const xId = (formData.get("x_id") || "").trim();
+      const li = (formData.get("linkedin_id") || "").trim();
+      const gh = (formData.get("github_id") || "").trim();
+      const web = (formData.get("website_url") || "").trim();
+      const isFounder = formData.get("is_founder") === "on" || formData.get("is_founder") === "1" || formData.get("is_founder") === "true";
+      const displayOrder = parseInt(formData.get("display_order") || "10", 10) || 10;
+
+      if (leaderName && leaderEmail) {
+        let finalPhoto = "/static/PustakVerse.png";
+        try {
+          const cur = await env.DB.prepare("SELECT photo FROM leadership_team WHERE id = ?").bind(leaderId).first();
+          if (cur && cur.photo) finalPhoto = cur.photo;
+        } catch (_) {}
+        if (photoUrl) finalPhoto = photoUrl;
+
+        await env.DB.prepare(`
+          UPDATE leadership_team 
+          SET name = ?, role_title = ?, email = ?, phone = ?, address = ?, photo = ?, bio = ?, 
+              is_founder = ?, display_order = ?, instagram_id = ?, x_id = ?, linkedin_id = ?, github_id = ?, website_url = ?
+          WHERE id = ?
+        `).bind(
+          leaderName, roleTitle, leaderEmail, phone || null, address || null, finalPhoto, bio || null,
+          isFounder ? 1 : 0, displayOrder, ig || null, xId || null, li || null, gh || null, web || null,
+          leaderId
+        ).run();
+      }
+      return Response.redirect(`${url.origin}/dashboard?updated_leader=1`, 302);
+    }
+
+    // Delete Executive Leadership Member: POST /developer/leadership/delete/:id
+    const delLeaderMatch = url.pathname.match(/^\/developer\/leadership\/delete\/(\d+)/);
+    if (delLeaderMatch && request.method === "POST" && env.DB) {
+      const leaderId = parseInt(delLeaderMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || user.role !== "developer") {
+        return new Response("Unauthorized", { status: 403 });
+      }
+      await ensureLeadershipTable(env);
+      await env.DB.prepare("DELETE FROM leadership_team WHERE id = ?").bind(leaderId).run();
+      return Response.redirect(`${url.origin}/dashboard?deleted_leader=1`, 302);
     }
 
     // Assign Official Staff Post & Power Delegation
@@ -3671,7 +3810,131 @@ function renderTwoFactorHtml(email) {
 </html>`;
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], url = null) {
+async function ensureLeadershipTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS leadership_team (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        role_title TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT DEFAULT NULL,
+        address TEXT DEFAULT NULL,
+        photo TEXT DEFAULT 'PustakVerse.png',
+        bio TEXT,
+        is_founder INTEGER DEFAULT 0,
+        display_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        instagram_id TEXT DEFAULT NULL,
+        x_id TEXT DEFAULT NULL,
+        linkedin_id TEXT DEFAULT NULL,
+        github_id TEXT DEFAULT NULL,
+        website_url TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    const countRes = await env.DB.prepare("SELECT COUNT(*) as cnt FROM leadership_team").first();
+    if (!countRes || countRes.cnt === 0) {
+      await env.DB.prepare(`
+        INSERT INTO leadership_team (id, name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
+        VALUES (1, 'Abhinav Giri', 'Founder & Chief Technology Officer (CTO)', 'abhinavgiri370@gmail.com', '+91 99999 99999', 'Greater Noida, Uttar Pradesh, India', '/static/PustakVerse.png', 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.', 1, 1, 1, 'https://www.instagram.com/abhinavgiri45/', 'https://x.com/abhinavgiri45', 'https://www.linkedin.com/in/abhinav-giri', 'https://github.com/abhinavgiri45', 'https://pustakverse.com')
+      `).run();
+    }
+  } catch (e) {
+    console.warn("ensureLeadershipTable warning:", e.message);
+  }
+}
+
+function renderContactLeadershipCards(leaders) {
+  if (!leaders || leaders.length === 0) return "";
+  return leaders.map(leader => {
+    const isFounder = Boolean(leader.is_founder) || (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+    let photoSrc = "/static/PustakVerse.png";
+    if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
+      photoSrc = leader.photo;
+    } else if (leader.photo && leader.photo !== "PustakVerse.png") {
+      photoSrc = `/static/uploads/leadership/${leader.photo}`;
+    }
+
+    const socialLinks = [];
+    if (leader.instagram_id) {
+      const url = leader.instagram_id.startsWith("http") ? leader.instagram_id : `https://instagram.com/${leader.instagram_id.replace(/^@/, "")}`;
+      socialLinks.push(`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="social-pill ig" title="Instagram"><span>📸</span> <span>Instagram</span></a>`);
+    }
+    if (leader.x_id) {
+      const url = leader.x_id.startsWith("http") ? leader.x_id : `https://x.com/${leader.x_id.replace(/^@/, "")}`;
+      socialLinks.push(`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="social-pill x" title="Twitter"><span>𝕏</span> <span>Twitter</span></a>`);
+    }
+    if (leader.linkedin_id) {
+      const url = leader.linkedin_id.startsWith("http") ? leader.linkedin_id : `https://linkedin.com/in/${leader.linkedin_id.replace(/^@/, "")}`;
+      socialLinks.push(`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="social-pill li" title="LinkedIn"><span>💼</span> <span>LinkedIn</span></a>`);
+    }
+    if (leader.github_id) {
+      const url = leader.github_id.startsWith("http") ? leader.github_id : `https://github.com/${leader.github_id.replace(/^@/, "")}`;
+      socialLinks.push(`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="social-pill gh" title="GitHub"><span>💻</span> <span>GitHub</span></a>`);
+    }
+    if (leader.website_url) {
+      const url = leader.website_url.startsWith("http") ? leader.website_url : `https://${leader.website_url}`;
+      socialLinks.push(`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="social-pill web" title="Website"><span>🌐</span> <span>Portfolio</span></a>`);
+    }
+
+    return `
+      <div class="leader-card ${isFounder ? 'founder-card' : ''}">
+          <div class="circle-avatar-wrap">
+              <img src="${escapeHtml(photoSrc)}" alt="${escapeHtml(leader.name)}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
+              ${isFounder ? '<span class="founder-crown" title="Founder">👑</span>' : ''}
+          </div>
+
+          <h3 class="leader-name">${escapeHtml(leader.name)}</h3>
+          
+          <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+              ${isFounder ? '<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em;">👑 Founder</span>' : ''}
+              <span class="role-badge ${isFounder ? 'founder-badge' : ''}">${escapeHtml(leader.role_title || 'Executive')}</span>
+          </div>
+
+          ${leader.bio ? `<p class="leader-bio">${escapeHtml(leader.bio)}</p>` : ''}
+
+          <div class="leader-contacts">
+              <div class="contact-row">
+                  <span class="contact-icon">📧</span>
+                  <div>
+                      <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Official Email</span>
+                      <a href="mailto:${escapeHtml(leader.email)}" class="contact-link">${escapeHtml(leader.email)}</a>
+                  </div>
+              </div>
+
+              ${leader.phone ? `
+              <div class="contact-row">
+                  <span class="contact-icon">📞</span>
+                  <div>
+                      <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
+                      <a href="tel:${escapeHtml(leader.phone)}" class="contact-link">${escapeHtml(leader.phone)}</a>
+                  </div>
+              </div>` : ''}
+
+              ${leader.address ? `
+              <div class="contact-row">
+                  <span class="contact-icon">📍</span>
+                  <div>
+                      <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
+                      <span style="font-weight: 600; color: #0f172a;">${escapeHtml(leader.address)}</span>
+                  </div>
+              </div>` : ''}
+          </div>
+
+          ${socialLinks.length > 0 ? `
+          <div class="leader-social-row">
+              ${socialLinks.join('\n              ')}
+          </div>` : ''}
+      </div>
+    `;
+  }).join("\n");
+}
+
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null) {
   const username = user.username || "Reader";
   const role = user.role || "reader";
   const email = user.email || "";
@@ -3696,6 +3959,15 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     } else if (url.searchParams.get("updated") === "1") {
       const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✏️</span><div>Book details updated successfully!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("updated_leader") === "1") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✏️</span><div>Executive leadership profile updated successfully!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("deleted_leader") === "1") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🗑️</span><div>Executive removed from leadership roster.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("added_leader") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🎉</span><div>New executive appointed and published to leadership roster!</div></div>`;
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     }
   }
@@ -3849,6 +4121,72 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
         </div>
       `).join("");
       out = out.replace(/<div id="couponBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="couponBookList" style="max-height: 130px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">${couponBookRows}</div>`);
+    }
+  }
+
+  // 5C. Inject Leadership Table into Executive Leadership Management Suite
+  if (leadershipTeam && leadershipTeam.length > 0) {
+    const leaderRowsHtml = leadershipTeam.map(leader => {
+      const isFounder = Boolean(leader.is_founder) || (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+      let photoSrc = "/static/PustakVerse.png";
+      if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
+        photoSrc = leader.photo;
+      } else if (leader.photo && leader.photo !== "PustakVerse.png") {
+        photoSrc = `/static/uploads/leadership/${leader.photo}`;
+      }
+
+      return `
+        <tr>
+          <td>
+            <img src="${escapeHtml(photoSrc)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
+          </td>
+          <td>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
+              ${escapeHtml(leader.name)}
+              ${isFounder ? '<span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; margin-left: 4px; font-weight: 800; border: 1px solid #fed7aa;">👑 Founder</span>' : ''}
+            </div>
+            <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">${escapeHtml(leader.role_title || 'Executive')}</div>
+          </td>
+          <td><a href="mailto:${escapeHtml(leader.email)}" style="color: #0284c7; text-decoration: none; font-weight: 600; font-size: 0.85rem;">${escapeHtml(leader.email)}</a></td>
+          <td><span style="font-weight: 600; font-size: 0.85rem; color: #334155;">${escapeHtml(leader.phone || 'N/A')}</span></td>
+          <td style="font-size: 0.85rem; color: #475569; max-width: 180px;">${escapeHtml(leader.address || 'India')}</td>
+          <td><span style="background: #f1f5f9; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.78rem;">#${leader.display_order || 1}</span></td>
+          <td style="text-align: right;">
+            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+              <button type="button" class="btn-sm btn-orange" 
+                      style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 14px; border-radius: 6px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25); cursor: pointer;"
+                      data-id="${leader.id}"
+                      data-name="${escapeHtml(leader.name || '')}"
+                      data-role="${escapeHtml(leader.role_title || '')}"
+                      data-email="${escapeHtml(leader.email || '')}"
+                      data-phone="${escapeHtml(leader.phone || '')}"
+                      data-address="${escapeHtml(leader.address || '')}"
+                      data-bio="${escapeHtml(leader.bio || '')}"
+                      data-ig="${escapeHtml(leader.instagram_id || '')}"
+                      data-x="${escapeHtml(leader.x_id || '')}"
+                      data-li="${escapeHtml(leader.linkedin_id || '')}"
+                      data-gh="${escapeHtml(leader.github_id || '')}"
+                      data-web="${escapeHtml(leader.website_url || '')}"
+                      data-founder="${isFounder ? 'true' : 'false'}"
+                      data-order="${leader.display_order || 1}"
+                      data-photo="${escapeHtml(leader.photo || '')}"
+                      onclick="openEditLeaderModal(this)">
+                ✏️ Edit
+              </button>
+
+              <form action="/developer/leadership/delete/${leader.id}" method="POST" onsubmit="return confirm('${isFounder ? "Warning: This is the Founder profile. Are you sure you want to remove " + escapeHtml(leader.name) + "?" : "Are you sure you want to remove " + escapeHtml(leader.name) + " from the leadership team?"}');" style="display: inline;">
+                <button type="submit" class="btn-sm btn-red" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🗑️ Remove</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    if (out.includes('id="leadershipTableBody"')) {
+      out = out.replace(/<tbody id="leadershipTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
+    } else {
+      out = out.replace(/(<table[^>]*>[\s\S]*?Executive Name & Role[\s\S]*?<\/thead>\s*)<tbody>[\s\S]*?<\/tbody>/i, `$1<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
     }
   }
 

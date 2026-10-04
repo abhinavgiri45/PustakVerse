@@ -625,14 +625,16 @@
                                     <th style="text-align: right; min-width: 150px;">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="leadershipTableBody">
                                 {% for leader in leadership_team %}
                                 <tr>
                                     <td>
-                                        {% if leader.photo.startswith('http') %}
-                                            <img src="{{ leader.photo }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;">
+                                        {% if leader.photo and leader.photo.startswith('http') %}
+                                            <img src="{{ leader.photo }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
+                                        {% elif leader.photo and (leader.photo.startswith('/') or leader.photo.startswith('static/')) %}
+                                            <img src="{{ leader.photo if leader.photo.startswith('/') else '/' + leader.photo }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
                                         {% elif leader.photo and leader.photo != 'PustakVerse.png' %}
-                                            <img src="{{ url_for('static', filename='uploads/leadership/' + leader.photo) }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;">
+                                            <img src="{{ url_for('static', filename='uploads/leadership/' + leader.photo) }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
                                         {% else %}
                                             <img src="{{ url_for('static', filename='PustakVerse.png') }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #0f172a; padding: 4px; border: 2px solid #ea580c;">
                                         {% endif %}
@@ -673,12 +675,10 @@
                                                 ✏️ Edit
                                             </button>
 
-                                            {% if not leader.is_founder %}
-                                            <form action="{{ url_for('developer_delete_leadership', leader_id=leader.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove {{ leader.name }} from the leadership team?');" style="display: inline;">
+                                            <form action="{{ url_for('developer_delete_leadership', leader_id=leader.id) }}" method="POST" onsubmit="return confirm('{% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}Warning: This is marked as the Founder profile. Are you sure you want to remove {{ leader.name }}?{% else %}Are you sure you want to remove {{ leader.name }} from the leadership team?{% endif %}');" style="display: inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn-sm btn-red">🗑️ Remove</button>
+                                                <button type="submit" class="btn-sm btn-red" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🗑️ Remove</button>
                                             </form>
-                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
