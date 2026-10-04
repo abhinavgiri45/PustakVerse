@@ -880,12 +880,24 @@
 </footer>
 
 <script>
-// ── Relative time formatting ──
+// ── Universal Date Normalizer ──
+function parseUtcDate(ts) {
+    if (!ts || ts === '—' || ts === 'None' || ts === 'null') return null;
+    let s = String(ts).trim();
+    if (s.includes(' ') && !s.includes('T')) {
+        s = s.replace(' ', 'T') + 'Z';
+    } else if (!s.endsWith('Z') && !s.includes('+')) {
+        s = s + 'Z';
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// ── High-Precision Relative Time ──
 function relTime(ts) {
-    if (!ts) return '—';
-    const d = new Date(ts);
-    if (isNaN(d)) return ts;
-    const diff = (Date.now() - d.getTime()) / 1000;
+    const d = parseUtcDate(ts);
+    if (!d) return '—';
+    const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
     if (diff < 60) return 'Just now';
     if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
     if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
@@ -900,13 +912,24 @@ document.querySelectorAll('.rel-time').forEach(el => {
     else el.textContent = '—';
 });
 
-// ── Online/Offline status (15 min threshold) ──
+// ── Multi-Tier Status Engine: Online, Idle, Recent, Offline ──
 document.querySelectorAll('.status-indicator').forEach(el => {
     const ts = el.dataset.ts;
-    if (!ts || ts === 'None') { el.innerHTML = '<span class="status-offline">Offline</span>'; return; }
-    const diff = (Date.now() - new Date(ts).getTime()) / 1000;
-    if (diff < 900) { el.innerHTML = '<span class="status-online">Online</span>'; }
-    else { el.innerHTML = '<span class="status-offline">Offline</span>'; }
+    const d = parseUtcDate(ts);
+    if (!d) {
+        el.innerHTML = '<span class="status-offline">Offline</span>';
+        return;
+    }
+    const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    if (diff < 900) { // Active within 15 mins
+        el.innerHTML = '<span class="status-online" style="color:#34d399;font-weight:700;">🟢 Online</span>';
+    } else if (diff < 7200) { // Active within 2 hours
+        el.innerHTML = '<span style="color:#fbbf24;font-weight:700;display:inline-flex;align-items:center;gap:6px;">🟡 Idle (' + Math.floor(diff / 60) + 'm)</span>';
+    } else if (diff < 86400) { // Active within 24 hours
+        el.innerHTML = '<span style="color:#93c5fd;font-weight:600;display:inline-flex;align-items:center;gap:6px;">🔵 Today (' + Math.floor(diff / 3600) + 'h ago)</span>';
+    } else {
+        el.innerHTML = '<span class="status-offline">⚪ Offline</span>';
+    }
 });
 
 // ── User table instant search filter ──

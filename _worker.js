@@ -560,6 +560,36 @@ export default {
       });
     }
 
+    // 3B. Active User Heartbeat & Automatic Activity Touch
+    if (url.pathname === "/api/user/heartbeat" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (user && user.id) {
+        try {
+          await env.DB.prepare("UPDATE users SET last_activity = datetime('now') WHERE id = ?").bind(user.id).run();
+        } catch (_) {}
+        return new Response(JSON.stringify({ status: "ok", active: true, user_id: user.id }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return new Response(JSON.stringify({ status: "guest" }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // Touch user activity on authenticated requests (throttled every request)
+    if (env.DB && !url.pathname.startsWith("/static/") && !url.pathname.includes(".")) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      if (cookies.pv_session) {
+        const userQuick = getSessionUser(cookies.pv_session);
+        if (userQuick && userQuick.id) {
+          try {
+            await env.DB.prepare("UPDATE users SET last_activity = datetime('now') WHERE id = ?").bind(userQuick.id).run();
+          } catch (_) {}
+        }
+      }
+    }
+
     // 4. Health check endpoint & Cloudflare D1 / Email Engine Diagnostic
     if (url.pathname === "/api/edge-health") {
       let d1Status = "Not bound";
@@ -5321,11 +5351,22 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
 <footer class="am-footer">PustakVerse Activity Monitor • Restricted to Officials &amp; Developers • Secured by 8-Digit PIN</footer>
 
 <script>
+function parseUtcDate(ts) {
+    if (!ts || ts === '—' || ts === 'None' || ts === 'null') return null;
+    let s = String(ts).trim();
+    if (s.includes(' ') && !s.includes('T')) {
+        s = s.replace(' ', 'T') + 'Z';
+    } else if (!s.endsWith('Z') && !s.includes('+')) {
+        s = s + 'Z';
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
 function relTime(ts) {
-    if (!ts || ts === '—' || ts === 'None') return '—';
-    const d = new Date(ts.includes(' ') && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts);
-    if (isNaN(d)) return ts;
-    const diff = (Date.now() - d.getTime()) / 1000;
+    const d = parseUtcDate(ts);
+    if (!d) return '—';
+    const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
     if (diff < 60) return 'Just now';
     if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
     if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
@@ -5340,11 +5381,21 @@ document.querySelectorAll('.rel-time').forEach(el => {
 });
 document.querySelectorAll('.status-indicator').forEach(el => {
     const ts = el.dataset.ts;
-    if (!ts || ts === 'None') { el.innerHTML = '<span class="status-offline">Offline</span>'; return; }
-    const d = new Date(ts.includes(' ') && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts);
-    const diff = isNaN(d) ? 999999 : (Date.now() - d.getTime()) / 1000;
-    if (diff < 900) { el.innerHTML = '<span class="status-online">Online</span>'; }
-    else { el.innerHTML = '<span class="status-offline">Offline</span>'; }
+    const d = parseUtcDate(ts);
+    if (!d) {
+        el.innerHTML = '<span class="status-offline">Offline</span>';
+        return;
+    }
+    const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    if (diff < 900) {
+        el.innerHTML = '<span class="status-online" style="color:#34d399;font-weight:700;">🟢 Online</span>';
+    } else if (diff < 7200) {
+        el.innerHTML = '<span style="color:#fbbf24;font-weight:700;display:inline-flex;align-items:center;gap:6px;">🟡 Idle (' + Math.floor(diff / 60) + 'm)</span>';
+    } else if (diff < 86400) {
+        el.innerHTML = '<span style="color:#93c5fd;font-weight:600;display:inline-flex;align-items:center;gap:6px;">🔵 Today (' + Math.floor(diff / 3600) + 'h ago)</span>';
+    } else {
+        el.innerHTML = '<span class="status-offline">⚪ Offline</span>';
+    }
 });
 function filterUsers() {
     const q = (document.getElementById('userSearch')?.value || '').toLowerCase();
