@@ -5057,9 +5057,17 @@ function renderEdgeDashboardHtml(user) {
 
   <script>
     (function() {
-      const theme = localStorage.getItem('pustakverse_theme') || 'dark';
-      if (theme === 'light') {
-        document.body.classList.add('light-theme');
+      function syncTheme() {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (!prefersDark) {
+          document.body.classList.add('light-theme');
+        } else {
+          document.body.classList.remove('light-theme');
+        }
+      }
+      syncTheme();
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
       }
     })();
   </script>

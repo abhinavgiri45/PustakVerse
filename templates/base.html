@@ -17,6 +17,18 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            try {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (prefersDark) {
+                    document.documentElement.classList.add('dark-theme');
+                } else {
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <!-- SMART ONBOARDING REDIRECT -->
     <script>
         // Trigger intro once per browser session for all users
@@ -108,7 +120,6 @@
             <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.15); color: #f66d2f; border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
                 🔥 <span id="baseStreakCount">1</span>d
             </span>
-            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle color theme" title="Toggle color theme"><span id="themeIcon">☾</span></button>
         </div>
     </nav>
 
@@ -151,25 +162,23 @@
         function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
         function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
         function dismissPopup() { const popup = document.getElementById('tgPopup'); if (popup) { popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); } localStorage.setItem('pustakverse_tg_seen', 'true'); }
-        function applyTheme(theme) {
-            document.body.classList.remove('dark-theme', 'sepia-theme');
-            const icon = document.getElementById('themeIcon');
-            if (theme === 'dark') {
-                document.body.classList.add('dark-theme');
-                if (icon) icon.textContent = '🌙';
-            } else if (theme === 'sepia') {
-                document.body.classList.add('sepia-theme');
-                if (icon) icon.textContent = '📜';
+        // System Theme Controller (Defaults automatically to system preferences)
+        function applySystemTheme() {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (prefersDark) {
+                document.documentElement.classList.add('dark-theme');
+                if (document.body) document.body.classList.add('dark-theme');
             } else {
-                if (icon) icon.textContent = '☀️';
+                document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                if (document.body) document.body.classList.remove('dark-theme', 'sepia-theme');
             }
         }
-        function toggleTheme() {
-            const current = localStorage.getItem('pustakverse_theme') || 'light';
-            const next = current === 'light' ? 'sepia' : (current === 'sepia' ? 'dark' : 'light');
-            localStorage.setItem('pustakverse_theme', next);
-            applyTheme(next);
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                applySystemTheme();
+            });
         }
+        applySystemTheme();
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
         function syncGlobalSession() {
