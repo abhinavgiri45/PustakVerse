@@ -346,9 +346,14 @@
             <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
         </div>
         {% if session.role in ['developer', 'official'] %}
-            <a href="{{ url_for('management_self_published_books') }}" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
-                <span>📖</span> Self-Published Book Management Hub →
-            </a>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <a href="/admin/activity-monitor" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); font-size: 0.95rem;">
+                    <span>📊</span> User Activity Monitor 🔒
+                </a>
+                <a href="{{ url_for('management_self_published_books') }}" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
+                    <span>📖</span> Self-Published Book Management Hub →
+                </a>
+            </div>
         {% endif %}
     </div>
 
@@ -1488,6 +1493,23 @@
         {% endif %}
 
         {% if session.role in ['official', 'developer'] %}
+            <!-- USER ACTIVITY MONITOR LAUNCH CARD -->
+            <div class="panel" style="border-left: 5px solid #6366f1; background: linear-gradient(to right, #f5f3ff, #ffffff); margin-top: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h2 style="color: #4f46e5; display: flex; align-items: center; gap: 8px; margin: 0 0 6px 0;">
+                            <span>📊</span> Real-Time User Activity Monitor
+                        </h2>
+                        <p style="color: #64748b; font-size: 0.88rem; margin: 0;">
+                            Live monitoring suite for officials &amp; developers. Inspect active sessions, online readers, search actions, registration audit trails, and official activity logs. Protected by 8-Digit PIN.
+                        </p>
+                    </div>
+                    <a href="/admin/activity-monitor" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; font-weight: 800; padding: 12px 24px; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); font-size: 0.92rem; white-space: nowrap;">
+                        <span>🔒</span> Unlock Activity Monitor (8-Digit PIN) →
+                    </a>
+                </div>
+            </div>
+
             <!-- OFFICIAL MODERATION SUITE: Category Announcements -->
             <div class="panel" style="border-left: 4px solid #8b5cf6; margin-top: 25px;">
                 <h2 style="color: #7c3aed; display: flex; align-items: center; gap: 8px;">

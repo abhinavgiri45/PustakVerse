@@ -615,9 +615,8 @@
                 const grid = document.querySelector('.book-grid');
                 if (!grid) return;
 
-                // If grid already has server-rendered books, don't duplicate
-                const existingCards = grid.querySelectorAll('.book-card');
-                if (existingCards.length > 0) return;
+                // Refresh book grid to stay 100% in sync with live Cloudflare D1 books
+                grid.innerHTML = '';
 
                 books.forEach(b => {
                     const card = document.createElement('div');
@@ -651,8 +650,11 @@
                         `;
                     } else {
                         actionsHtml = `
-                            <div class="book-actions">
-                                <a href="${readHref}" class="btn btn-read">Read Free</a>
+                            <div class="book-actions" style="display: flex; gap: 8px;">
+                                <a href="${readHref}" class="btn btn-read" style="flex: 1;">Read Free</a>
+                                <form action="/save_book/${b.id}" method="POST" style="flex: 1; display: flex; margin: 0;">
+                                    <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                </form>
                             </div>
                         `;
                     }

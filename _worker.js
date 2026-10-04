@@ -81,6 +81,68 @@ function clearSessionCookie(isHttps) {
   return `pv_session=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }
 
+async function verifySession(sessionCookie, env = null) {
+  if (!sessionCookie) return null;
+  let user = null;
+  try {
+    user = JSON.parse(atob(sessionCookie));
+    if (!user || typeof user !== "object") return null;
+    const uid = user.id || user.user_id;
+    user.id = uid;
+    user.user_id = uid;
+  } catch (_) {
+    return null;
+  }
+
+  if (env && env.DB && user.id) {
+    try {
+      const dbUser = await env.DB.prepare(
+        "SELECT id, username, email, role, official_designation, is_verified, two_factor_enabled, avatar_url, sbin_wallet_address, wallet_balance_inr FROM users WHERE id = ? LIMIT 1"
+      ).bind(user.id).first();
+      if (dbUser) {
+        user = { ...user, ...dbUser, user_id: dbUser.id, id: dbUser.id };
+      }
+    } catch (_) {}
+  }
+  return user;
+}
+
+function getSessionUser(requestOrCookie) {
+  let cookieHeader = "";
+  if (typeof requestOrCookie === "string") {
+    cookieHeader = requestOrCookie;
+  } else if (requestOrCookie && typeof requestOrCookie === "object" && requestOrCookie.headers) {
+    cookieHeader = requestOrCookie.headers.get("Cookie") || "";
+  }
+  const cookies = parseCookies(cookieHeader);
+  if (!cookies.pv_session) return null;
+  try {
+    const raw = JSON.parse(atob(cookies.pv_session));
+    if (!raw || typeof raw !== "object") return null;
+    const uid = raw.id || raw.user_id;
+    raw.id = uid;
+    raw.user_id = uid;
+    return raw;
+  } catch (_) {
+    return null;
+  }
+}
+
+function createSessionPayload(user) {
+  const uid = user.id || user.user_id;
+  return JSON.stringify({
+    id: uid,
+    user_id: uid,
+    username: user.username,
+    role: user.role,
+    email: user.email,
+    official_designation: user.official_designation || null,
+    avatar_url: user.avatar_url || null,
+    sbin_wallet_address: user.sbin_wallet_address || null,
+    wallet_balance_inr: user.wallet_balance_inr || 0
+  });
+}
+
 function escapeHtml(str) {
   if (!str) return "";
   return String(str)
@@ -455,7 +517,8 @@ function generateEdgeOtpEmail(title, otpCode, contextDescription, expiryMinutes 
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
+    try {
+      const url = new URL(request.url);
 
     // 1. Static asset fast path via Cloudflare Pages asset engine
     if (env.ASSETS && (url.pathname.startsWith("/static/") || url.pathname.endsWith(".png") || url.pathname.endsWith(".css") || url.pathname.endsWith(".js") || url.pathname.endsWith(".jpg"))) {
@@ -2291,6 +2354,167 @@ export default {
       return Response.redirect(`${url.origin}/dashboard?deleted_leader=1`, 302);
     }
 
+    if ((editLeaderMatch || delLeaderMatch) && request.method === "GET") {
+      return Response.redirect(`${url.origin}/dashboard`, 302);
+    }
+
+    // Remove from personal library: POST /remove_from_library/:id or POST /remove_book/:id
+    const removeLibMatch = url.pathname.match(/^\/(?:remove_from_library|remove_book)\/(\d+)/);
+    if (removeLibMatch && env.DB) {
+      if (request.method === "GET") {
+        return Response.redirect(`${url.origin}/my-library`, 302);
+      }
+      const bookId = parseInt(removeLibMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) {
+        return Response.redirect(`${url.origin}/login`, 302);
+      }
+      try {
+        await env.DB.prepare(
+          "DELETE FROM personal_library WHERE user_id = ? AND book_id = ?"
+        ).bind(user.id, bookId).run();
+      } catch (_) {}
+      return Response.redirect(`${url.origin}/my-library`, 302);
+    }
+
+    // ========================================================================
+    // 5L. ADMIN USER ACTIVITY MONITOR (Officials & Developers with 8-digit PIN)
+    // ========================================================================
+    if (url.pathname === "/admin/activity-monitor/logout" || url.pathname === "/activity-monitor/logout") {
+      const resHeaders = new Headers({ "Location": "/dashboard" });
+      resHeaders.append("Set-Cookie", `pv_am_unlocked=; Path=/; Max-Age=0; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+      return new Response(null, { status: 302, headers: resHeaders });
+    }
+
+    if (url.pathname === "/admin/activity-monitor" || url.pathname === "/activity-monitor") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+
+      if (!user) {
+        return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
+      }
+
+      if (user.role !== "developer" && user.role !== "official") {
+        return new Response(
+          `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Access Denied</title><style>body{background:#0f172a;color:#fff;font-family:system-ui;text-align:center;padding:60px 20px;}h1{color:#ef4444;}a{color:#f97316;text-decoration:none;font-weight:700;}</style></head><body><h1>🚫 403 Forbidden</h1><p>The User Activity Monitor is strictly restricted to Platform Officials and Developers.</p><p><a href="/dashboard">← Return to Dashboard</a></p></body></html>`,
+          { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      const configuredPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "12345678").trim();
+      let isPinVerified = cookies.pv_am_unlocked === "1";
+      let pinError = false;
+
+      // Handle PIN submission
+      if (request.method === "POST") {
+        const formData = await request.formData().catch(() => new FormData());
+        let pinInput = "";
+        for (let i = 1; i <= 8; i++) {
+          pinInput += (formData.get(`pin_${i}`) || "").trim();
+        }
+        if (!pinInput) {
+          pinInput = (formData.get("pin") || "").trim();
+        }
+
+        if (pinInput && pinInput === configuredPin && pinInput.length === 8) {
+          isPinVerified = true;
+        } else {
+          pinError = true;
+        }
+      }
+
+      // If PIN is not verified, render the 8-digit PIN gate
+      if (!isPinVerified) {
+        const pinGateHtml = renderActivityMonitorEdgeHtml({ pin_verified: false, pin_error: pinError });
+        return new Response(pinGateHtml, {
+          status: pinError ? 401 : 200,
+          headers: { "Content-Type": "text/html; charset=utf-8" }
+        });
+      }
+
+      // Gather Live Data from Cloudflare D1
+      let stats = {
+        total_users: 0,
+        active_today: 0,
+        total_books: 0,
+        ai_chats_today: 0,
+        role_counts: []
+      };
+      let usersList = [];
+      let officialLogs = [];
+      let topReaders = [];
+      let recentRegistrations = [];
+
+      if (env.DB) {
+        try {
+          const uCount = await env.DB.prepare("SELECT COUNT(*) as c FROM users").first();
+          stats.total_users = uCount?.c || 0;
+        } catch (_) {}
+
+        try {
+          const aCount = await env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE last_activity >= datetime('now', '-1 day')").first();
+          stats.active_today = aCount?.c || 0;
+        } catch (_) {}
+
+        try {
+          const bCount = await env.DB.prepare("SELECT COUNT(*) as c FROM books").first();
+          stats.total_books = bCount?.c || 0;
+        } catch (_) {}
+
+        try {
+          const rCounts = await env.DB.prepare("SELECT role, COUNT(*) as count FROM users GROUP BY role").all();
+          stats.role_counts = rCounts.results || [];
+        } catch (_) {}
+
+        try {
+          const uRes = await env.DB.prepare(
+            "SELECT id, username, email, role, last_activity, created_at, locked_until FROM users ORDER BY last_activity DESC LIMIT 100"
+          ).all();
+          usersList = uRes.results || [];
+        } catch (_) {}
+
+        try {
+          const lRes = await env.DB.prepare(
+            "SELECT action, username, timestamp FROM official_activity_logs ORDER BY timestamp DESC LIMIT 50"
+          ).all();
+          officialLogs = lRes.results || [];
+        } catch (_) {}
+
+        try {
+          const trRes = await env.DB.prepare(
+            `SELECT u.username, COUNT(DISTINCT pl.book_id) as books_read, COUNT(DISTINCT pl.book_id) * 1800 as total_seconds, 0 as completed_books
+             FROM personal_library pl JOIN users u ON pl.user_id = u.id
+             GROUP BY u.id ORDER BY books_read DESC LIMIT 10`
+          ).all();
+          topReaders = trRes.results || [];
+        } catch (_) {}
+
+        try {
+          const regRes = await env.DB.prepare(
+            "SELECT username, email, role, created_at FROM users WHERE created_at >= datetime('now', '-30 days') ORDER BY created_at DESC LIMIT 20"
+          ).all();
+          recentRegistrations = regRes.results || [];
+        } catch (_) {}
+      }
+
+      const monitorHtml = renderActivityMonitorEdgeHtml({
+        pin_verified: true,
+        stats,
+        users: usersList,
+        official_logs: officialLogs,
+        top_readers: topReaders,
+        recent_registrations: recentRegistrations
+      });
+
+      const resHeaders = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+      if (request.method === "POST" && isPinVerified) {
+        resHeaders.append("Set-Cookie", `pv_am_unlocked=1; Path=/; Max-Age=3600; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+      }
+
+      return new Response(monitorHtml, { status: 200, headers: resHeaders });
+    }
+
     // Assign Official Staff Post & Power Delegation
     if (url.pathname === "/assign_staff_post" && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -3280,6 +3504,33 @@ export default {
       </html>`,
       { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
+    } catch (unhandledError) {
+      console.error("Cloudflare Worker Exception caught:", unhandledError);
+      return new Response(
+        `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>PustakVerse Service Notice</title>
+          <style>
+            body { background: #0f172a; color: #fff; font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
+            .box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+            h2 { color: #f97316; margin-bottom: 12px; }
+            p { color: #94a3b8; line-height: 1.5; margin-bottom: 24px; }
+            a { background: #f97316; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700; display: inline-block; }
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <h2>PustakVerse Edge Notice</h2>
+            <p>An edge synchronization update is underway. Please return to the dashboard or try refreshing.</p>
+            <a href="/dashboard">Return to Dashboard</a>
+          </div>
+        </body>
+        </html>`,
+        { status: 500, headers: { "Content-Type": "text/html; charset=utf-8" } }
+      );
+    }
   }
 };
 
@@ -4521,6 +4772,340 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             e.preventDefault();
         });
     </script>
+</body>
+</html>`;
+}
+
+function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false, stats = {}, users = [], official_logs = [], top_readers = [], recent_registrations = [] }) {
+  if (!pin_verified) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Monitor - PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root { --am-bg: #f0f4f8; --am-card: #ffffff; --am-text: #1e293b; --am-muted: #64748b; --am-border: #e2e8f0; --am-accent: #6366f1; --am-danger: #ef4444; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--am-bg); color: var(--am-text); min-height: 100vh; }
+        .pin-gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); }
+        .pin-card { background: var(--am-card); border-radius: 20px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,.35); }
+        .pin-card h1 { font-size: 1.6rem; margin-bottom: 8px; color: var(--am-text); }
+        .pin-card p { color: var(--am-muted); margin-bottom: 28px; font-size: .95rem; }
+        .pin-card .lock-icon { font-size: 3rem; margin-bottom: 16px; }
+        .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
+        .pin-inputs input { width: 44px; height: 52px; text-align: center; font-size: 1.4rem; font-weight: 700; border: 2px solid var(--am-border); border-radius: 10px; background: var(--am-bg); color: var(--am-text); outline: none; transition: border-color .2s; }
+        .pin-inputs input:focus { border-color: var(--am-accent); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+        .pin-btn { width: 100%; padding: 14px; font-size: 1rem; font-weight: 600; color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+        .pin-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,.35); }
+        .pin-error { color: var(--am-danger); font-size: .9rem; margin-bottom: 16px; font-weight: 600; background: #fee2e2; border: 1px solid #fca5a5; padding: 8px 12px; border-radius: 8px; }
+        @media (max-width: 640px) {
+            .pin-card { padding: 32px 20px; }
+            .pin-inputs input { width: 34px; height: 44px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="pin-gate">
+    <div class="pin-card">
+        <div class="lock-icon">🔐</div>
+        <h1>User Activity Monitor</h1>
+        <p>Restricted Access — Enter the 8-digit PIN</p>
+        ${pin_error ? '<div class="pin-error">❌ Incorrect PIN. Please try again.</div>' : ''}
+        <form method="POST" id="pinForm">
+            <div class="pin-inputs">
+                ${[1,2,3,4,5,6,7,8].map(i => `<input type="text" name="pin_${i}" id="pin_${i}" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>`).join('')}
+            </div>
+            <button type="submit" class="pin-btn">Verify & Enter Monitor</button>
+            <div style="margin-top: 18px;">
+                <a href="/dashboard" style="color: var(--am-muted); text-decoration: none; font-size: 0.88rem; font-weight: 600;">← Back to Dashboard</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+    const inputs = document.querySelectorAll('.pin-inputs input');
+    inputs.forEach((inp, i) => {
+        inp.addEventListener('input', function() {
+            this.value = this.value.replace(/\\D/g, '').slice(0,1);
+            if (this.value && i < inputs.length - 1) inputs[i+1].focus();
+        });
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && i > 0) { inputs[i-1].focus(); inputs[i-1].value = ''; }
+        });
+        inp.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\\D/g, '').slice(0,8);
+            for (let j = 0; j < text.length && j < inputs.length; j++) { inputs[j].value = text[j]; }
+            if (text.length > 0) inputs[Math.min(text.length, inputs.length) - 1].focus();
+        });
+    });
+    if (inputs[0]) inputs[0].focus();
+})();
+</script>
+</body>
+</html>`;
+  }
+
+  // Live Unlocked Dashboard HTML
+  const roleCountsHtml = (stats.role_counts || []).map(rc => `
+    <span class="role-pill role-${escapeHtml(rc.role || 'reader')}">${escapeHtml((rc.role || 'reader').toUpperCase())}: ${rc.count || 0}</span>
+  `).join("");
+
+  const userRowsHtml = (users || []).map((u, idx) => `
+    <tr class="user-row">
+      <td>${idx + 1}</td>
+      <td><strong>${escapeHtml(u.username || '')}</strong></td>
+      <td>${escapeHtml(u.email || '')}</td>
+      <td><span class="badge badge-${escapeHtml(u.role || 'reader')}">${escapeHtml(u.role || 'reader')}</span></td>
+      <td><span class="rel-time" data-ts="${escapeHtml(u.last_activity || '')}">${escapeHtml(u.last_activity || '—')}</span></td>
+      <td>${escapeHtml(u.created_at || '—')}</td>
+      <td>
+        ${u.locked_until ? '<span style="color:var(--am-danger);font-weight:600">🔒 Locked</span>' : `<span class="status-indicator" data-ts="${escapeHtml(u.last_activity || '')}">—</span>`}
+      </td>
+    </tr>
+  `).join("") || '<tr><td colspan="7" style="text-align:center;color:var(--am-muted)">No users found.</td></tr>';
+
+  const officialRowsHtml = (official_logs || []).map(l => `
+    <tr>
+      <td>${escapeHtml(l.action || '')}</td>
+      <td><strong>${escapeHtml(l.username || '')}</strong></td>
+      <td><span class="rel-time" data-ts="${escapeHtml(l.timestamp || '')}">${escapeHtml(l.timestamp || '')}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="3" style="text-align:center;color:var(--am-muted)">No official actions recorded yet.</td></tr>';
+
+  const readerRowsHtml = (top_readers || []).map((r, idx) => {
+    const totalSec = r.total_seconds || 0;
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    return `
+      <tr>
+        <td>${idx + 1}</td>
+        <td><strong>${escapeHtml(r.username || '')}</strong></td>
+        <td>${r.books_read || 0}</td>
+        <td>${hrs}h ${mins}m</td>
+        <td>${r.completed_books || 0}</td>
+      </tr>
+    `;
+  }).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted)">No reader activity data recorded yet.</td></tr>';
+
+  const regRowsHtml = (recent_registrations || []).map(reg => `
+    <tr>
+      <td><strong>${escapeHtml(reg.username || '')}</strong></td>
+      <td>${escapeHtml(reg.email || '')}</td>
+      <td><span class="badge badge-${escapeHtml(reg.role || 'reader')}">${escapeHtml(reg.role || 'reader')}</span></td>
+      <td><span class="rel-time" data-ts="${escapeHtml(reg.created_at || '')}">${escapeHtml(reg.created_at || '')}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="4" style="text-align:center;color:var(--am-muted)">No new registrations in the last 30 days.</td></tr>';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Monitor - PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root { --am-bg: #f0f4f8; --am-card: #ffffff; --am-text: #1e293b; --am-muted: #64748b; --am-border: #e2e8f0; --am-accent: #6366f1; --am-success: #10b981; --am-danger: #ef4444; --am-warning: #f59e0b; }
+        .dark-theme { --am-bg: #0f172a; --am-card: #1e293b; --am-text: #e2e8f0; --am-muted: #94a3b8; --am-border: #334155; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--am-bg); color: var(--am-text); min-height: 100vh; }
+        .am-header { background: linear-gradient(135deg, #1e1b4b, #4338ca); color: #fff; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+        .am-header h1 { font-size: 1.35rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .am-header-actions { display: flex; gap: 10px; }
+        .am-header-actions a { padding: 8px 18px; border-radius: 8px; font-size: .85rem; font-weight: 600; text-decoration: none; transition: background .2s; }
+        .am-back { background: rgba(255,255,255,.15); color: #fff; }
+        .am-back:hover { background: rgba(255,255,255,.25); }
+        .am-logout { background: rgba(239,68,68,.85); color: #fff; }
+        .am-logout:hover { background: rgba(239,68,68,1); }
+        .am-body { max-width: 1360px; margin: 0 auto; padding: 24px 20px 60px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stat-card { background: var(--am-card); border-radius: 14px; padding: 22px 20px; border: 1px solid var(--am-border); box-shadow: 0 2px 8px rgba(0,0,0,.04); transition: transform .15s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .stat-icon { font-size: 2rem; margin-bottom: 6px; }
+        .stat-card .stat-num { font-size: 2rem; font-weight: 800; line-height: 1.1; color: var(--am-text); }
+        .stat-card .stat-label { color: var(--am-muted); font-size: .85rem; margin-top: 4px; font-weight: 600; }
+        .role-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
+        .role-pill { padding: 8px 18px; border-radius: 20px; font-size: .85rem; font-weight: 600; }
+        .role-developer { background: #ede9fe; color: #6d28d9; }
+        .role-official { background: #dbeafe; color: #1d4ed8; }
+        .role-author { background: #dcfce7; color: #15803d; }
+        .role-reader { background: #f1f5f9; color: #475569; }
+        .am-section { background: var(--am-card); border-radius: 14px; border: 1px solid var(--am-border); padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+        .am-section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--am-text); }
+        .am-search { width: 100%; max-width: 360px; padding: 10px 14px; border: 1px solid var(--am-border); border-radius: 8px; font-size: .9rem; margin-bottom: 14px; background: var(--am-bg); color: var(--am-text); outline: none; }
+        .am-search:focus { border-color: var(--am-accent); }
+        .am-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .am-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+        .am-table th { background: var(--am-bg); font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--am-border); white-space: nowrap; }
+        .am-table td { padding: 10px 12px; border-bottom: 1px solid var(--am-border); }
+        .am-table tr:hover td { background: rgba(99,102,241,.04); }
+        .badge { padding: 3px 10px; border-radius: 12px; font-size: .78rem; font-weight: 600; text-transform: capitalize; }
+        .badge-developer { background: #ede9fe; color: #6d28d9; }
+        .badge-official { background: #dbeafe; color: #1d4ed8; }
+        .badge-author { background: #dcfce7; color: #15803d; }
+        .badge-reader { background: #f1f5f9; color: #475569; }
+        .status-online { color: var(--am-success); font-weight: 700; }
+        .status-offline { color: var(--am-muted); font-weight: 600; }
+        .am-footer { text-align: center; padding: 20px; color: var(--am-muted); font-size: .8rem; }
+        .am-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+        .am-pagination button { padding: 6px 14px; border: 1px solid var(--am-border); border-radius: 6px; background: var(--am-card); color: var(--am-text); cursor: pointer; font-size: .82rem; }
+        .am-pagination button.active { background: var(--am-accent); color: #fff; border-color: var(--am-accent); }
+        @media (max-width: 640px) {
+            .am-header { padding: 16px 18px; }
+            .am-body { padding: 16px 12px 40px; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+<header class="am-header">
+    <h1>📊 PustakVerse Activity Monitor</h1>
+    <div class="am-header-actions">
+        <a href="/dashboard" class="am-back">← Back to Dashboard</a>
+        <a href="/admin/activity-monitor/logout" class="am-logout">🔒 Lock Monitor</a>
+    </div>
+</header>
+<div class="am-body">
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-num">${stats.total_users || 0}</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-num">${stats.active_today || 0}</div>
+            <div class="stat-label">Active Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-num">${stats.total_books || 0}</div>
+            <div class="stat-label">Total Books</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-num">${(stats.role_counts || []).find(r => r.role === 'official' || r.role === 'developer')?.count || 1}</div>
+            <div class="stat-label">Official Staff</div>
+        </div>
+    </div>
+
+    <div class="role-bar">
+        ${roleCountsHtml}
+    </div>
+
+    <div class="am-section">
+        <h2>📋 All Users Activity & Real-Time Status</h2>
+        <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search by username or email..." oninput="filterUsers()">
+        <div class="am-table-wrap">
+            <table class="am-table" id="userTable">
+                <thead>
+                    <tr><th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Last Active</th><th>Joined</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    ${userRowsHtml}
+                </tbody>
+            </table>
+        </div>
+        <div class="am-pagination" id="userPagination"></div>
+    </div>
+
+    <div class="am-section">
+        <h2>🛡️ Official Moderation Actions Log</h2>
+        <div class="am-table-wrap">
+            <table class="am-table">
+                <thead><tr><th>Action</th><th>Performed By</th><th>Timestamp</th></tr></thead>
+                <tbody>
+                    ${officialRowsHtml}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="am-section">
+        <h2>📖 Top Readers (Personal Library Saved Books)</h2>
+        <div class="am-table-wrap">
+            <table class="am-table">
+                <thead><tr><th>Rank</th><th>Username</th><th>Books in Library</th><th>Reading Time</th><th>Completed</th></tr></thead>
+                <tbody>
+                    ${readerRowsHtml}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="am-section">
+        <h2>🆕 Recent Registrations (Last 30 Days)</h2>
+        <div class="am-table-wrap">
+            <table class="am-table">
+                <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Registered</th></tr></thead>
+                <tbody>
+                    ${regRowsHtml}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<footer class="am-footer">PustakVerse Activity Monitor • Restricted to Officials &amp; Developers • Secured by 8-Digit PIN</footer>
+<script>
+function relTime(ts) {
+    if (!ts || ts === '—' || ts === 'None') return '—';
+    const d = new Date(ts.includes(' ') && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts);
+    if (isNaN(d)) return ts;
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 172800) return 'Yesterday';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return d.toLocaleDateString();
+}
+document.querySelectorAll('.rel-time').forEach(el => {
+    const ts = el.dataset.ts;
+    if (ts && ts !== 'None') el.textContent = relTime(ts);
+    else el.textContent = '—';
+});
+document.querySelectorAll('.status-indicator').forEach(el => {
+    const ts = el.dataset.ts;
+    if (!ts || ts === 'None') { el.innerHTML = '<span class="status-offline">Offline</span>'; return; }
+    const d = new Date(ts.includes(' ') && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts);
+    const diff = isNaN(d) ? 999999 : (Date.now() - d.getTime()) / 1000;
+    if (diff < 900) { el.innerHTML = '<span class="status-online">🟢 Online</span>'; }
+    else { el.innerHTML = '<span class="status-offline">Offline</span>'; }
+});
+function filterUsers() {
+    const q = document.getElementById('userSearch').value.toLowerCase();
+    document.querySelectorAll('#userTable .user-row').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+(function(){
+    const PAGE_SIZE = 50;
+    const rows = Array.from(document.querySelectorAll('#userTable .user-row'));
+    const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+    if (totalPages <= 1) return;
+    let currentPage = 1;
+    const pag = document.getElementById('userPagination');
+    function showPage(p) {
+        currentPage = p;
+        rows.forEach((r, i) => { r.style.display = (i >= (p-1)*PAGE_SIZE && i < p*PAGE_SIZE) ? '' : 'none'; });
+        pag.innerHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            if (i === currentPage) btn.classList.add('active');
+            btn.onclick = () => showPage(i);
+            pag.appendChild(btn);
+        }
+    }
+    showPage(1);
+})();
+setTimeout(() => location.reload(), 60000);
+</script>
 </body>
 </html>`;
 }

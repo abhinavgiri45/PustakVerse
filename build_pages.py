@@ -211,6 +211,21 @@ def build():
         os.makedirs(lib_alt_dst, exist_ok=True)
         shutil.copy(lib_path, os.path.join(lib_alt_dst, "index.html"))
 
+        # 4D. Render activity monitor template
+        print("[+] Rendering activity monitor template...")
+        with app.test_request_context():
+            session['user_id'] = 1
+            session['username'] = 'abhinavgiri45'
+            session['role'] = 'developer'
+            master_am_html = render_template('activity_monitor.html', pin_verified=False, pin_error=False)
+            am_path = os.path.join(static_src, "activity_monitor.html")
+            with open(am_path, "w", encoding="utf-8") as f:
+                f.write(master_am_html)
+
+        am_dst_dir = os.path.join(SITE_DIR, "admin", "activity-monitor")
+        os.makedirs(am_dst_dir, exist_ok=True)
+        shutil.copy(am_path, os.path.join(am_dst_dir, "index.html"))
+
         # Ensure dashboard is available in _site for GitHub Pages
         dash_src = os.path.join(static_src, "dashboard.html")
         dash_dst_dir = os.path.join(SITE_DIR, "dashboard")
