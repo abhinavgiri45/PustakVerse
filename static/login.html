@@ -203,7 +203,27 @@
         </div>
 
         <!-- TWO-STEP VERIFICATION PANEL -->
-        
+        <div id="twoFactorArea" class="form-area " style="display: none; padding-top: 20px;">
+            <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>Two-Step Verification</h2>
+            <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
+                We have sent a 6-digit security code to <strong id="twoFactorEmailDisplay">your registered email</strong>. Please enter the code below to securely authenticate your sign-in.
+            </p>
+            <div id="twoFactorAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
+            <form action="/login" method="POST" id="twoFactorForm" onsubmit="handleTwoFactorSubmit(event)">
+                <input type="hidden" name="csrf_token" value="21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365">
+                <input type="hidden" name="action" value="verify_2fa">
+                <div class="form-group">
+                    <label>Verification Code</label>
+                    <input type="text" name="otp" id="twoFactorOtpInput" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.25rem; text-align: center; font-weight: 700;">
+                </div>
+                <button type="submit" class="btn-submit dark" id="twoFactorSubmitBtn">Verify & Login</button>
+            </form>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/login" class="forgot-link" style="text-align: center;" onclick="cancelTwoFactor(event)">Cancel and go back</a>
+            </div>
+        </div>
+
+        <div id="loginMainContent" style="">
             <!-- TABS -->
             <div class="tabs">
                 <button type="button" class="tab-btn active" onclick="switchTab('reader', this)">📖 Reader Login</button>
@@ -216,7 +236,7 @@
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
-                    <input type="hidden" name="csrf_token" value="36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1">
+                    <input type="hidden" name="csrf_token" value="21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -252,7 +272,7 @@
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
-                    <input type="hidden" name="csrf_token" value="36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1">
+                    <input type="hidden" name="csrf_token" value="21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -365,7 +385,7 @@
                 </div>
 
             </div>
-        
+        </div> <!-- end of loginMainContent -->
     </div>
 </div>
 
@@ -433,7 +453,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -497,7 +517,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -532,7 +552,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -562,7 +582,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '21643c143d96f19ba74064034745cc23fea10aa8afb8460866b7da182097b365' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();
@@ -704,6 +724,12 @@
                 })
             });
             const data = await res.json();
+            if (data.require_2fa) {
+                showTwoFactorPanel(data.email || username);
+                btn.disabled = false;
+                btn.textContent = origText;
+                return;
+            }
             if (data.success) {
                 btn.textContent = "✓ Signed In! Redirecting...";
                 btn.style.background = "#16a34a";
@@ -750,6 +776,12 @@
                 })
             });
             const data = await res.json();
+            if (data.require_2fa) {
+                showTwoFactorPanel(data.email || username);
+                btn.disabled = false;
+                btn.textContent = origText;
+                return;
+            }
             if (data.success) {
                 btn.textContent = "✓ Verified! Redirecting...";
                 btn.style.background = "#16a34a";
@@ -759,6 +791,83 @@
             } else {
                 if (alertBox) {
                     alertBox.textContent = data.message || "Invalid credentials for Author/Official portal.";
+                    alertBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        } catch (_) {
+            form.submit();
+        }
+    }
+
+    function showTwoFactorPanel(email) {
+        const mainContent = document.getElementById('loginMainContent');
+        const twoFactorArea = document.getElementById('twoFactorArea');
+        const tabs = document.querySelector('.tabs');
+        if (mainContent) mainContent.style.display = 'none';
+        if (tabs) tabs.style.display = 'none';
+        document.querySelectorAll('.form-area').forEach(f => f.classList.remove('active'));
+        if (twoFactorArea) {
+            twoFactorArea.style.display = 'block';
+            twoFactorArea.classList.add('active');
+            const emailEl = document.getElementById('twoFactorEmailDisplay');
+            if (emailEl && email) emailEl.textContent = email;
+            const otpInput = document.getElementById('twoFactorOtpInput');
+            if (otpInput) {
+                otpInput.value = '';
+                setTimeout(() => otpInput.focus(), 100);
+            }
+        }
+    }
+
+    function cancelTwoFactor(e) {
+        if (e) e.preventDefault();
+        const mainContent = document.getElementById('loginMainContent');
+        const twoFactorArea = document.getElementById('twoFactorArea');
+        const tabs = document.querySelector('.tabs');
+        if (twoFactorArea) {
+            twoFactorArea.style.display = 'none';
+            twoFactorArea.classList.remove('active');
+        }
+        if (mainContent) mainContent.style.display = 'block';
+        if (tabs) tabs.style.display = 'flex';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.tab-btn')?.classList.add('active');
+        document.getElementById('reader')?.classList.add('active');
+    }
+
+    async function handleTwoFactorSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = document.getElementById('twoFactorSubmitBtn');
+        const alertBox = document.getElementById('twoFactorAlert');
+        if (alertBox) alertBox.style.display = 'none';
+
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Verifying Code...";
+
+        const otp = document.getElementById('twoFactorOtpInput').value.trim();
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'verify_2fa',
+                    otp: otp
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = "✓ Verified! Redirecting...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/dashboard";
+                }, 300);
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = data.message || "Invalid verification code. Please check and try again.";
                     alertBox.style.display = 'block';
                 }
                 btn.disabled = false;

@@ -90,6 +90,73 @@ def build():
         with open(os.path.join(SITE_DIR, "404.html"), "w", encoding="utf-8") as f:
             f.write(not_found_html)
 
+        # 4B. Render master authentic dashboard from templates/dashboard.html
+        print("[+] Rendering authentic full dashboard from templates/dashboard.html...")
+        from flask import render_template, session
+        with app.test_request_context():
+            session['user_id'] = 1
+            session['username'] = 'abhinavgiri45'
+            session['role'] = 'developer'
+            session['email'] = 'abhinavgiri370@gmail.com'
+            session['official_designation'] = 'Founder & Lead Architect'
+            session['is_absolute_power'] = True
+            session['post_tier'] = 1
+            
+            master_dash_html = render_template('dashboard.html',
+                all_categories=[
+                    {'id': 1, 'name': 'Fiction', 'book_count': 12},
+                    {'id': 2, 'name': 'Non-Fiction', 'book_count': 8},
+                    {'id': 3, 'name': 'Philosophy', 'book_count': 15},
+                    {'id': 4, 'name': 'Academic', 'book_count': 5},
+                    {'id': 5, 'name': 'Science', 'book_count': 9}
+                ],
+                leadership_team=[
+                    {'id': 1, 'name': 'Abhinav Giri', 'role_title': 'Founder & Developer', 'email': 'abhinavgiri370@gmail.com', 'photo': '/static/PustakVerse.png', 'is_founder': 1, 'display_order': 1}
+                ],
+                site_settings={
+                    'donation_active': True,
+                    'checkout_donation_active': True,
+                    'upi_id': 'abhinavgiri370@okaxis',
+                    'rp_key_id': 'rzp_live_key',
+                    'rp_key_secret': 'rzp_live_secret'
+                },
+                two_factor_enabled=True,
+                security_score=100,
+                user_profile={
+                    'id': 1,
+                    'username': 'abhinavgiri45',
+                    'email': 'abhinavgiri370@gmail.com',
+                    'role': 'developer',
+                    'is_verified': 1,
+                    'two_factor_enabled': 1,
+                    'security_question': 'What is your primary development framework?',
+                    'created_at': '2026-01-01',
+                    'last_activity': '2026-10-04'
+                },
+                my_books=[],
+                pending_authors=[],
+                all_users=[
+                    {'id': 1, 'username': 'abhinavgiri45', 'email': 'abhinavgiri370@gmail.com', 'role': 'developer', 'last_activity': 'Active now', 'failed_attempts': 0, 'locked_until': None}
+                ],
+                searched_users=[],
+                official_logs=[],
+                del_requests=[],
+                book_del_requests=[],
+                username_requests=[],
+                search_query='',
+                show_delete_otp_form=False,
+                client_ip='127.0.0.1',
+                user_agent_str='Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                system_metrics={'cached_items': 120, 'maintenance_mode': False, 'upload_freeze': False},
+                archive_books=[],
+                official_designation='Founder & Lead Architect',
+                is_absolute_power=True,
+                post_tier=1
+            )
+            dash_path = os.path.join(static_src, "dashboard.html")
+            with open(dash_path, "w", encoding="utf-8") as f:
+                f.write(master_dash_html)
+
         # 5. Mirror key HTML pages into static/ so Cloudflare Pages env.ASSETS can serve them directly
         print("[+] Syncing static HTML files into static/ for Cloudflare Pages deployment...")
         static_html_map = [

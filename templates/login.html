@@ -102,27 +102,27 @@
         </div>
 
         <!-- TWO-STEP VERIFICATION PANEL -->
-        {% if show_2fa_form %}
-            <div class="form-area active" style="padding-top: 20px;">
-                <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>Two-Step Verification</h2>
-                <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
-                    We have sent a 6-digit security code to <strong>{{ email }}</strong>. Please enter the code below to securely authenticate your sign-in.
-                </p>
-                <form action="/login" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="action" value="verify_2fa">
-                    <div class="form-group">
-                        <label>Verification Code</label>
-                        <input type="text" name="otp" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.2rem; text-align: center;">
-                    </div>
-                    <button type="submit" class="btn-submit dark">Verify & Login</button>
-                </form>
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="{{ url_for('login') }}" class="forgot-link" style="text-align: center;">Cancel and go back</a>
+        <div id="twoFactorArea" class="form-area {% if show_2fa_form %}active{% endif %}" style="{% if not show_2fa_form %}display: none;{% endif %} padding-top: 20px;">
+            <h2><span style="font-size: 2.5rem; margin-bottom: 10px;">🔐</span>Two-Step Verification</h2>
+            <p style="text-align: center; color: #718096; margin-bottom: 25px; line-height: 1.5;">
+                We have sent a 6-digit security code to <strong id="twoFactorEmailDisplay">{{ email or 'your registered email' }}</strong>. Please enter the code below to securely authenticate your sign-in.
+            </p>
+            <div id="twoFactorAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
+            <form action="/login" method="POST" id="twoFactorForm" onsubmit="handleTwoFactorSubmit(event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="verify_2fa">
+                <div class="form-group">
+                    <label>Verification Code</label>
+                    <input type="text" name="otp" id="twoFactorOtpInput" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 5px; font-size: 1.25rem; text-align: center; font-weight: 700;">
                 </div>
+                <button type="submit" class="btn-submit dark" id="twoFactorSubmitBtn">Verify & Login</button>
+            </form>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/login" class="forgot-link" style="text-align: center;" onclick="cancelTwoFactor(event)">Cancel and go back</a>
             </div>
+        </div>
 
-        {% else %}
+        <div id="loginMainContent" style="{% if show_2fa_form %}display: none;{% endif %}">
             <!-- TABS -->
             <div class="tabs">
                 <button type="button" class="tab-btn {% if active_tab == 'reader' or not active_tab %}active{% endif %}" onclick="switchTab('reader', this)">📖 Reader Login</button>
@@ -284,7 +284,7 @@
                 </div>
 
             </div>
-        {% endif %}
+        </div> <!-- end of loginMainContent -->
     </div>
 </div>
 
@@ -623,6 +623,12 @@
                 })
             });
             const data = await res.json();
+            if (data.require_2fa) {
+                showTwoFactorPanel(data.email || username);
+                btn.disabled = false;
+                btn.textContent = origText;
+                return;
+            }
             if (data.success) {
                 btn.textContent = "✓ Signed In! Redirecting...";
                 btn.style.background = "#16a34a";
@@ -669,6 +675,12 @@
                 })
             });
             const data = await res.json();
+            if (data.require_2fa) {
+                showTwoFactorPanel(data.email || username);
+                btn.disabled = false;
+                btn.textContent = origText;
+                return;
+            }
             if (data.success) {
                 btn.textContent = "✓ Verified! Redirecting...";
                 btn.style.background = "#16a34a";
@@ -678,6 +690,83 @@
             } else {
                 if (alertBox) {
                     alertBox.textContent = data.message || "Invalid credentials for Author/Official portal.";
+                    alertBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        } catch (_) {
+            form.submit();
+        }
+    }
+
+    function showTwoFactorPanel(email) {
+        const mainContent = document.getElementById('loginMainContent');
+        const twoFactorArea = document.getElementById('twoFactorArea');
+        const tabs = document.querySelector('.tabs');
+        if (mainContent) mainContent.style.display = 'none';
+        if (tabs) tabs.style.display = 'none';
+        document.querySelectorAll('.form-area').forEach(f => f.classList.remove('active'));
+        if (twoFactorArea) {
+            twoFactorArea.style.display = 'block';
+            twoFactorArea.classList.add('active');
+            const emailEl = document.getElementById('twoFactorEmailDisplay');
+            if (emailEl && email) emailEl.textContent = email;
+            const otpInput = document.getElementById('twoFactorOtpInput');
+            if (otpInput) {
+                otpInput.value = '';
+                setTimeout(() => otpInput.focus(), 100);
+            }
+        }
+    }
+
+    function cancelTwoFactor(e) {
+        if (e) e.preventDefault();
+        const mainContent = document.getElementById('loginMainContent');
+        const twoFactorArea = document.getElementById('twoFactorArea');
+        const tabs = document.querySelector('.tabs');
+        if (twoFactorArea) {
+            twoFactorArea.style.display = 'none';
+            twoFactorArea.classList.remove('active');
+        }
+        if (mainContent) mainContent.style.display = 'block';
+        if (tabs) tabs.style.display = 'flex';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.tab-btn')?.classList.add('active');
+        document.getElementById('reader')?.classList.add('active');
+    }
+
+    async function handleTwoFactorSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = document.getElementById('twoFactorSubmitBtn');
+        const alertBox = document.getElementById('twoFactorAlert');
+        if (alertBox) alertBox.style.display = 'none';
+
+        const origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Verifying Code...";
+
+        const otp = document.getElementById('twoFactorOtpInput').value.trim();
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'verify_2fa',
+                    otp: otp
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.textContent = "✓ Verified! Redirecting...";
+                btn.style.background = "#16a34a";
+                setTimeout(() => {
+                    window.location.href = data.redirect || "/dashboard";
+                }, 300);
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = data.message || "Invalid verification code. Please check and try again.";
                     alertBox.style.display = 'block';
                 }
                 btn.disabled = false;
