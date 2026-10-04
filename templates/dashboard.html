@@ -616,23 +616,23 @@
                     </button>
                 </div>
 
-                {% if leadership_team %}
-                    <div class="table-scroll-container" style="max-height: 380px; overflow-x: auto; overflow-y: auto; box-shadow: inset 0 0 4px rgba(0,0,0,0.02);">
-                        <table style="min-width: 960px; width: 100%;">
-                            <thead>
-                                <tr style="background: #f8fafc;">
-                                    <th style="width: 70px;">Avatar</th>
-                                    <th style="min-width: 220px;">Executive Name & Role</th>
-                                    <th style="min-width: 180px;">Email ID</th>
-                                    <th style="min-width: 120px;">Contact No</th>
-                                    <th style="min-width: 200px;">Location / Address</th>
-                                    <th style="width: 80px;">Order</th>
-                                    <th style="text-align: right; min-width: 150px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leadershipTableBody">
+                <div class="table-scroll-container" style="max-height: 380px; overflow-x: auto; overflow-y: auto; box-shadow: inset 0 0 4px rgba(0,0,0,0.02);">
+                    <table style="min-width: 960px; width: 100%;">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th style="width: 70px;">Avatar</th>
+                                <th style="min-width: 220px;">Executive Name & Role</th>
+                                <th style="min-width: 180px;">Email ID</th>
+                                <th style="min-width: 120px;">Contact No</th>
+                                <th style="min-width: 200px;">Location / Address</th>
+                                <th style="width: 80px;">Order</th>
+                                <th style="text-align: right; min-width: 150px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadershipTableBody">
+                            {% if leadership_team %}
                                 {% for leader in leadership_team %}
-                                <tr>
+                                <tr id="leader-row-{{ leader.id }}">
                                     <td>
                                         {% if leader.photo and leader.photo.startswith('http') %}
                                             <img src="{{ leader.photo }}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
@@ -680,7 +680,7 @@
                                                 ✏️ Edit
                                             </button>
 
-                                            <form action="{{ url_for('developer_delete_leadership', leader_id=leader.id) }}" method="POST" onsubmit="return confirm('{% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}Warning: This is marked as the Founder profile. Are you sure you want to remove {{ leader.name }}?{% else %}Are you sure you want to remove {{ leader.name }} from the leadership team?{% endif %}');" style="display: inline;">
+                                            <form action="{{ url_for('developer_delete_leadership', leader_id=leader.id) }}" method="POST" onsubmit="event.preventDefault(); deleteLeader('{{ leader.id }}', '{{ leader.name | escape }}', {{ 'true' if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() else 'false' }}, this.querySelector('button'));" style="display: inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn-sm btn-red" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🗑️ Remove</button>
                                             </form>
@@ -688,12 +688,17 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p style="color: #64748b;">No leadership members appointed yet.</p>
-                {% endif %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #64748b; padding: 28px 16px; font-weight: 500;">
+                                        <div style="font-size: 1.6rem; margin-bottom: 6px;">👥</div>
+                                        No executive leadership members appointed yet. Use the "Appoint New Executive" button above to add members.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
 
@@ -4002,6 +4007,93 @@
         const m = document.getElementById('editLeaderModal');
         if (m) m.style.display = 'none';
     }
+
+    async function deleteLeader(leaderId, leaderName, isFounder, btn) {
+        const warningMsg = isFounder 
+            ? `⚠️ Warning: This is marked as the Founder profile.\n\nAre you sure you want to remove "${leaderName}"?`
+            : `Are you sure you want to remove "${leaderName}" from the executive leadership team?`;
+
+        if (!confirm(warningMsg)) {
+            return false;
+        }
+
+        const tr = btn ? btn.closest('tr') : document.getElementById(`leader-row-${leaderId}`);
+        const originalHtml = btn ? btn.innerHTML : '🗑️ Remove';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Removing...';
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'not-allowed';
+        }
+
+        try {
+            const formData = new FormData();
+            const csrfEl = document.querySelector('input[name="csrf_token"]');
+            if (csrfEl && csrfEl.value) {
+                formData.append('csrf_token', csrfEl.value);
+            }
+
+            const resp = await fetch(`/developer/leadership/delete/${leaderId}`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json, text/html, */*'
+                }
+            });
+
+            if (resp.ok) {
+                if (tr) {
+                    tr.style.transition = 'all 0.35s ease';
+                    tr.style.opacity = '0';
+                    tr.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        tr.remove();
+                        const tbody = document.getElementById('leadershipTableBody');
+                        if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #64748b; padding: 28px 16px; font-weight: 500;">
+                                        <div style="font-size: 1.6rem; margin-bottom: 6px;">👥</div>
+                                        No executive leadership members appointed yet. Use the "Appoint New Executive" button above to add members.
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    }, 350);
+                } else {
+                    window.location.reload();
+                }
+                return false;
+            } else {
+                const errData = await resp.text();
+                alert(`Unable to remove executive: ${errData || 'Access denied or server error.'}`);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
+                return false;
+            }
+        } catch (err) {
+            console.error("Delete leader error:", err);
+            const form = btn ? btn.closest('form') : null;
+            if (form) {
+                form.submit();
+            } else {
+                alert("Error removing executive: " + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
+            }
+            return false;
+        }
+    }
+    window.deleteLeader = deleteLeader;
 
     // Dynamic Book Filter Tab: All Books vs Uploaded By Me
     let currentBookTab = 'all';

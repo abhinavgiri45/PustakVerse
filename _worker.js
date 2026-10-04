@@ -1882,6 +1882,11 @@ export default {
             /<div class="leadership-grid">[\s\S]*?<\/div>(?=\s*<\/div>\s*<!-- EMAIL COMPOSE)/i,
             `<div class="leadership-grid">\n${renderedCards}\n        </div>`
           );
+        } else if (env.DB) {
+          contactHtml = contactHtml.replace(
+            /<div class="leadership-grid">[\s\S]*?<\/div>(?=\s*<\/div>\s*<!-- EMAIL COMPOSE)/i,
+            `<div class="leadership-grid"><p style="text-align: center; color: #64748b; grid-column: 1/-1; padding: 24px; font-weight: 500;">Executive roster is currently being updated.</p></div>`
+          );
         }
         return new Response(contactHtml, {
           status: 200,
@@ -2289,7 +2294,8 @@ export default {
     if ((url.pathname === "/appoint_leader" || url.pathname === "/developer/leadership/add") && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      if (!user || user.role !== "developer") {
+      const isPrivileged = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45");
+      if (!user || !isPrivileged) {
         return new Response("Unauthorized", { status: 403 });
       }
       await ensureLeadershipTable(env);
@@ -2328,7 +2334,8 @@ export default {
       const leaderId = parseInt(editLeaderMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      if (!user || user.role !== "developer") {
+      const isPrivileged = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45");
+      if (!user || !isPrivileged) {
         return new Response("Unauthorized", { status: 403 });
       }
       await ensureLeadershipTable(env);
@@ -2376,12 +2383,40 @@ export default {
       const leaderId = parseInt(delLeaderMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      if (!user || user.role !== "developer") {
+      const isPrivileged = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45");
+      const isAjax = request.headers.get("X-Requested-With") === "XMLHttpRequest" || request.headers.get("Accept")?.includes("application/json");
+
+      if (!user || !isPrivileged) {
+        if (isAjax) {
+          return new Response(JSON.stringify({ success: false, error: "Unauthorized access." }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
         return new Response("Unauthorized", { status: 403 });
       }
-      await ensureLeadershipTable(env);
-      await env.DB.prepare("DELETE FROM leadership_team WHERE id = ?").bind(leaderId).run();
-      return Response.redirect(`${url.origin}/dashboard?deleted_leader=1`, 302);
+
+      try {
+        await ensureLeadershipTable(env);
+        await env.DB.prepare("DELETE FROM leadership_team WHERE id = ?").bind(leaderId).run();
+        
+        if (isAjax) {
+          return new Response(JSON.stringify({ success: true, message: "Executive removed successfully" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?deleted_leader=1`, 302);
+      } catch (err) {
+        console.error("Error deleting executive:", err);
+        if (isAjax) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?error=${encodeURIComponent(err.message)}`, 302);
+      }
     }
 
     if ((editLeaderMatch || delLeaderMatch) && request.method === "GET") {
@@ -4177,12 +4212,23 @@ async function ensureLeadershipTable(env) {
       )
     `).run();
 
-    const countRes = await env.DB.prepare("SELECT COUNT(*) as cnt FROM leadership_team").first();
-    if (!countRes || countRes.cnt === 0) {
-      await env.DB.prepare(`
-        INSERT INTO leadership_team (id, name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
-        VALUES (1, 'Abhinav Giri', 'Founder & Chief Technology Officer (CTO)', 'abhinavgiri370@gmail.com', '+91 99999 99999', 'Greater Noida, Uttar Pradesh, India', '/static/PustakVerse.png', 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.', 1, 1, 1, 'https://www.instagram.com/abhinavgiri45/', 'https://x.com/abhinavgiri45', 'https://www.linkedin.com/in/abhinav-giri', 'https://github.com/abhinavgiri45', 'https://pustakverse.com')
-      `).run();
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS leadership_metadata (
+        key TEXT PRIMARY KEY,
+        val TEXT
+      )
+    `).run();
+
+    const meta = await env.DB.prepare("SELECT val FROM leadership_metadata WHERE key = 'seeded'").first();
+    if (!meta) {
+      const countRes = await env.DB.prepare("SELECT COUNT(*) as cnt FROM leadership_team").first();
+      if (!countRes || countRes.cnt === 0) {
+        await env.DB.prepare(`
+          INSERT INTO leadership_team (id, name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
+          VALUES (1, 'Abhinav Giri', 'Founder & Chief Technology Officer (CTO)', 'abhinavgiri370@gmail.com', '+91 99999 99999', 'Greater Noida, Uttar Pradesh, India', '/static/PustakVerse.png', 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.', 1, 1, 1, 'https://www.instagram.com/abhinavgiri45/', 'https://x.com/abhinavgiri45', 'https://www.linkedin.com/in/abhinav-giri', 'https://github.com/abhinavgiri45', 'https://pustakverse.com')
+        `).run();
+      }
+      await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('seeded', '1')").run();
     }
   } catch (e) {
     console.warn("ensureLeadershipTable warning:", e.message);
@@ -4466,8 +4512,9 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   }
 
   // 5C. Inject Leadership Table into Executive Leadership Management Suite
+  let leaderRowsHtml = "";
   if (leadershipTeam && leadershipTeam.length > 0) {
-    const leaderRowsHtml = leadershipTeam.map(leader => {
+    leaderRowsHtml = leadershipTeam.map(leader => {
       const isFounder = Boolean(leader.is_founder) || (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
       let photoSrc = "/static/PustakVerse.png";
       if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
@@ -4477,7 +4524,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       }
 
       return `
-        <tr>
+        <tr id="leader-row-${leader.id}">
           <td>
             <img src="${escapeHtml(photoSrc)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #ea580c;" onerror="this.src='/static/PustakVerse.png'">
           </td>
@@ -4515,7 +4562,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
                 ✏️ Edit
               </button>
 
-              <form action="/developer/leadership/delete/${leader.id}" method="POST" onsubmit="return confirm('${isFounder ? "Warning: This is the Founder profile. Are you sure you want to remove " + escapeHtml(leader.name) + "?" : "Are you sure you want to remove " + escapeHtml(leader.name) + " from the leadership team?"}');" style="display: inline;">
+              <form action="/developer/leadership/delete/${leader.id}" method="POST" onsubmit="event.preventDefault(); deleteLeader('${leader.id}', '${escapeHtml(leader.name)}', ${isFounder}, this.querySelector('button'));" style="display: inline;">
                 <button type="submit" class="btn-sm btn-red" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🗑️ Remove</button>
               </form>
             </div>
@@ -4523,12 +4570,21 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
         </tr>
       `;
     }).join("");
+  } else {
+    leaderRowsHtml = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: #64748b; padding: 28px 16px; font-weight: 500;">
+          <div style="font-size: 1.6rem; margin-bottom: 6px;">👥</div>
+          No executive leadership members appointed yet. Use the "Appoint New Executive" button above to add members.
+        </td>
+      </tr>
+    `;
+  }
 
-    if (out.includes('id="leadershipTableBody"')) {
-      out = out.replace(/<tbody id="leadershipTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
-    } else {
-      out = out.replace(/(<table[^>]*>[\s\S]*?Executive Name & Role[\s\S]*?<\/thead>\s*)<tbody>[\s\S]*?<\/tbody>/i, `$1<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
-    }
+  if (out.includes('id="leadershipTableBody"')) {
+    out = out.replace(/<tbody id="leadershipTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
+  } else {
+    out = out.replace(/(<table[^>]*>[\s\S]*?Executive Name & Role[\s\S]*?<\/thead>\s*)<tbody>[\s\S]*?<\/tbody>/i, `$1<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
   }
 
   // 6. Append edge live sync script before </body>
@@ -4551,6 +4607,62 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
 
   const offHub = document.getElementById('manageBooksHubBtn');
   if (offHub && !isDev && !isOff) offHub.style.display = 'none';
+
+  if (typeof window.deleteLeader !== 'function') {
+    window.deleteLeader = async function(leaderId, leaderName, isFounder, btn) {
+      const warningMsg = isFounder 
+        ? ("⚠️ Warning: This is marked as the Founder profile.\\n\\nAre you sure you want to remove " + leaderName + "?")
+        : ("Are you sure you want to remove " + leaderName + " from the executive leadership team?");
+      if (!confirm(warningMsg)) return false;
+      const tr = btn ? btn.closest('tr') : document.getElementById('leader-row-' + leaderId);
+      const originalHtml = btn ? btn.innerHTML : '🗑️ Remove';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Removing...';
+        btn.style.opacity = '0.7';
+      }
+      try {
+        const resp = await fetch('/developer/leadership/delete/' + leaderId, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json, text/html, */*'
+          }
+        });
+        if (resp.ok) {
+          if (tr) {
+            tr.style.transition = 'all 0.35s ease';
+            tr.style.opacity = '0';
+            tr.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+              tr.remove();
+              const tbody = document.getElementById('leadershipTableBody');
+              if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 28px 16px; font-weight: 500;"><div style="font-size: 1.6rem; margin-bottom: 6px;">👥</div>No executive leadership members appointed yet. Use the "Appoint New Executive" button above to add members.</td></tr>';
+              }
+            }, 350);
+          } else {
+            window.location.reload();
+          }
+          return false;
+        } else {
+          const errData = await resp.text();
+          alert('Unable to remove executive: ' + (errData || 'Access denied.'));
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            btn.style.opacity = '1';
+          }
+          return false;
+        }
+      } catch (err) {
+        const form = btn ? btn.closest('form') : null;
+        if (form) form.submit();
+        else alert('Error: ' + err.message);
+        return false;
+      }
+    };
+  }
 })();
 </script>
 `;
