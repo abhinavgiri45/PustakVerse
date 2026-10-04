@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Library - PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="stylesheet" href="/static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -442,15 +442,15 @@
     <header class="lib-navbar">
         <div class="lib-nav-brand">
             <a href="/" aria-label="PustakVerse Home">
-                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo-img">
+                <img src="/static/PustakVerse.png" alt="PustakVerse" class="logo-img">
             </a>
         </div>
         <div class="lib-nav-links">
             <a href="/">← Library</a>
             <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-girionix-nav">🧠 Girionix AI ↗</a>
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('payment_history') }}">Payment History</a>
-            <a href="{{ url_for('logout') }}" style="color: #ef4444 !important;">Logout</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/payment_history">Payment History</a>
+            <a href="/logout" style="color: #ef4444 !important;">Logout</a>
             <button type="button" onclick="toggleTheme()" class="shelf-tab-btn" style="padding: 6px 12px;" title="Toggle Theme">
                 <span id="themeIcon">🌙</span>
             </button>
@@ -472,8 +472,8 @@
                 </div>
             </div>
 
-            <form action="{{ url_for('reader_update_goals') }}" method="POST" class="habit-goal-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form action="/reader/goals/update" method="POST" class="habit-goal-form">
+                <input type="hidden" name="csrf_token" value="">
                 <span style="font-size: 0.8rem; font-weight: 800; color: #f97316;">🎯 Target:</span>
                 <select name="daily_minutes_goal" class="habit-goal-select">
                     <option value="15">15 Mins / Day</option>
@@ -493,7 +493,7 @@
         <div class="lib-controls-bar">
             <div class="shelf-tabs-group" id="shelfTabsContainer">
                 <button type="button" class="shelf-tab-btn active" onclick="filterByShelf('all', this)">
-                    📚 All Books ({{ saved_books|length }})
+                    📚 All Books (0)
                 </button>
                 <button type="button" class="shelf-tab-btn" onclick="filterByShelf('reading', this)">
                     📖 Currently Reading (<span id="readingShelfCount">0</span>)
@@ -513,49 +513,14 @@
     <!-- BOOK CATALOG GRID -->
     <main class="lib-container">
         <div class="book-grid" id="bookGrid">
-            {% for book in saved_books %}
-            <div class="book-card" id="bookCard_{{ book.id }}" data-book-id="{{ book.id }}" data-title="{{ book.title | escape | lower }}" data-author="{% if book.author_role == 'developer' %}developer{% else %}{{ book.author_name | escape | lower }}{% endif %}" data-catalog="{{ book.catalog | escape | lower }}">
-                
-                {% set cover = book.cover_image %}
-                <a href="{{ url_for('view_book', book_id=book.id) }}" style="display: block;">
-                    {% if cover.startswith('http') %}
-                        <img src="{{ cover | drive_img }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="Cover of {{ book.title | escape }}" class="book-cover" loading="lazy" width="250" height="320">
-                    {% endif %}
-                </a>
-
-                <div class="book-info">
-                    <div class="book-tag-row">
-                        <span class="book-tag">{{ book.catalog }}</span>
-                        <select onchange="updateShelfStatus({{ book.id }}, this.value)" id="shelfSelect_{{ book.id }}" class="shelf-dropdown">
-                            <option value="saved">📑 Saved</option>
-                            <option value="reading">📖 Reading</option>
-                            <option value="completed">✅ Done</option>
-                        </select>
-                    </div>
-                    
-                    <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
-                    <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
-                    
-                    <div class="book-actions">
-                        <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn-read-full">Read Book</a>
-                        {% if book.order_id %}
-                        <a href="/invoice/{{ book.order_id }}" target="_blank" class="btn-invoice" title="Download Tax Invoice">
-                            📄 Invoice
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% else %}
+            
                 <div class="empty-library-state">
                     <div style="font-size: 3rem; margin-bottom: 12px;">📚</div>
                     <h2 style="color: white; margin-bottom: 8px;">Your library is currently empty.</h2>
                     <p style="color: var(--text-muted); margin-bottom: 22px;">Head over to the Global Library to explore thousands of free books and research papers!</p>
                     <a href="/" style="display: inline-block; background: var(--accent); color: white; padding: 12px 28px; text-decoration: none; font-weight: 800; border-radius: 12px;">Browse Global Library</a>
                 </div>
-            {% endfor %}
+            
 
             <div class="no-results" id="noResultsMsg" style="display: none;">
                 <div style="font-size: 2.4rem; margin-bottom: 8px;">🔍</div>

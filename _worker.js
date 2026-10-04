@@ -2235,16 +2235,132 @@ export default {
             "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
           ).bind(paymentId, orderId, sessionUser.id).run();
 
-          if (bookId) {
+          // Check book ID from purchase record if missing from form
+          let targetBookId = bookId;
+          if (!targetBookId) {
+            const pur = await env.DB.prepare("SELECT book_id FROM purchases WHERE razorpay_order_id = ?").bind(orderId).first();
+            if (pur) targetBookId = pur.book_id;
+          }
+
+          if (targetBookId) {
+            // ALWAYS guarantee saved in reader's personal library!
             await env.DB.prepare(
-              "INSERT OR IGNORE INTO personal_library (user_id, book_id) VALUES (?, ?)"
-            ).bind(sessionUser.id, bookId).run();
+              "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+            ).bind(sessionUser.id, targetBookId).run();
           }
         } catch (_) {}
       }
 
-      const dest = bookId ? `/read_book/${bookId}` : "/";
-      return Response.redirect(`${url.origin}${dest}`, 302);
+      // Seamless redirect: take reader straight to their personal library with unlock message
+      return Response.redirect(`${url.origin}/my-library?purchased=1`, 302);
+    }
+
+    // 6A-5. User Saved & Purchased Books API: GET /api/user/saved_books
+    if (url.pathname === "/api/user/saved_books" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        return new Response(JSON.stringify({ logged_in: false, books: [] }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        let books = [];
+        if (sessionUser.role === "developer" || sessionUser.role === "official") {
+          const res = await env.DB.prepare(
+            `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
+                    u.username as author_name, 1 as is_purchased
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             ORDER BY b.id DESC LIMIT 100`
+          ).all();
+          books = res.results || [];
+        } else {
+          // Normal reader: get books in personal_library plus any paid purchases
+          const res = await env.DB.prepare(
+            `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
+                    u.username as author_name,
+                    p.razorpay_order_id as order_id,
+                    CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END as is_purchased
+             FROM personal_library pl
+             JOIN books b ON pl.book_id = b.id
+             LEFT JOIN users u ON b.author_id = u.id
+             LEFT JOIN purchases p ON p.book_id = b.id AND p.user_id = pl.user_id AND p.status = 'paid'
+             WHERE pl.user_id = ?
+             ORDER BY pl.added_at DESC`
+          ).bind(sessionUser.id).all();
+          books = res.results || [];
+
+          // Also check for any paid purchases that may not yet be in personal_library
+          const unaddedPurchases = await env.DB.prepare(
+            `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
+                    u.username as author_name,
+                    p.razorpay_order_id as order_id,
+                    1 as is_purchased
+             FROM purchases p
+             JOIN books b ON p.book_id = b.id
+             LEFT JOIN users u ON b.author_id = u.id
+             WHERE p.user_id = ? AND p.status = 'paid'
+               AND b.id NOT IN (SELECT book_id FROM personal_library WHERE user_id = ?)`
+          ).bind(sessionUser.id, sessionUser.id).all();
+
+          if (unaddedPurchases.results && unaddedPurchases.results.length > 0) {
+            for (const pb of unaddedPurchases.results) {
+              books.unshift(pb);
+              // Auto-sync into personal_library
+              try {
+                await env.DB.prepare(
+                  "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+                ).bind(sessionUser.id, pb.id).run();
+              } catch (_) {}
+            }
+          }
+        }
+
+        return new Response(JSON.stringify({ logged_in: true, books }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message, books: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6A-6. Save Book to Personal Library Edge Action: POST /save_book/:id
+    const saveBookMatch = url.pathname.match(/^\/save_book\/(\d+)/);
+    if (saveBookMatch && request.method === "POST" && env.DB) {
+      const bookId = parseInt(saveBookMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        return Response.redirect(`${url.origin}/login`, 302);
+      }
+
+      try {
+        await env.DB.prepare(
+          "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+        ).bind(sessionUser.id, bookId).run();
+      } catch (_) {}
+
+      return Response.redirect(`${url.origin}/my-library`, 302);
+    }
+
+    // 6A-7. My Library Edge Proxy: /my-library & /my_library
+    if ((url.pathname === "/my-library" || url.pathname === "/my_library") && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      if (!cookies.pv_session) {
+        return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
+      }
     }
 
     // 6B. Read Book / Secure Viewer Route: /read_book/:id, /viewer/:id, /read/:id, /viewer.html?id=...

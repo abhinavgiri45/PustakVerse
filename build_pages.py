@@ -176,6 +176,25 @@ def build():
             if os.path.exists(src_f):
                 shutil.copy(src_f, dst_f)
 
+        # 4C. Render master authentic my_library from templates/my_library.html
+        print("[+] Rendering authentic my_library from templates/my_library.html...")
+        with app.test_request_context():
+            session['user_id'] = 1
+            session['username'] = 'abhinavgiri45'
+            session['role'] = 'developer'
+            master_lib_html = render_template('my_library.html', saved_books=[])
+            lib_path = os.path.join(static_src, "my_library.html")
+            with open(lib_path, "w", encoding="utf-8") as f:
+                f.write(master_lib_html)
+
+        # Ensure my_library is available in _site for GitHub Pages
+        lib_dst_dir = os.path.join(SITE_DIR, "my-library")
+        os.makedirs(lib_dst_dir, exist_ok=True)
+        shutil.copy(lib_path, os.path.join(lib_dst_dir, "index.html"))
+        lib_alt_dst = os.path.join(SITE_DIR, "my_library")
+        os.makedirs(lib_alt_dst, exist_ok=True)
+        shutil.copy(lib_path, os.path.join(lib_alt_dst, "index.html"))
+
         # Ensure dashboard is available in _site for GitHub Pages
         dash_src = os.path.join(static_src, "dashboard.html")
         dash_dst_dir = os.path.join(SITE_DIR, "dashboard")
