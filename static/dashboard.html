@@ -1288,14 +1288,14 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div>
                         <h2 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; font-size: 1.25rem;">
-                            <span>✨</span> Mint 100% Unique Free Digital SBIN (Standard Book Identifier)
+                            <span>🌐</span> Generate Valid Digital SBIN-13 (International Bookland Standard)
                         </h2>
                         <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">
-                            Generate authentic, globally compliant 13-digit EAN-13 identifiers with guaranteed database uniqueness and mathematical check-digit parity for your manuscripts.
+                            Generate authentic, globally compliant 13-digit EAN-13 identifiers with guaranteed international validity, Modulo-10 checksum parity, and Bookland registration.
                         </p>
                     </div>
                     <button type="button" onclick="mintAuthorDashboardSBIN()" class="btn-sm" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; padding: 10px 20px; font-weight: 800; font-size: 0.88rem; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                        <span>✨</span> Mint New Unique SBIN
+                        <span>🌐</span> Generate Valid SBIN
                     </button>
                 </div>
 
@@ -1371,10 +1371,10 @@
                             <input type="radio" name="has_sbin" value="no" id="radio_sbin_no" checked onchange="toggleUploadSBIN(this.value)" style="margin-top: 3px; cursor: pointer; accent-color: #ea580c;">
                             <div style="flex: 1;">
                                 <div style="font-weight: 800; font-size: 0.88rem; color: #9a3412;">
-                                    ✨ I do not have an ISBN/SBIN (Auto-Mint Free Digital SBIN)
+                                    🌐 Auto-Generate Valid International SBIN-13 (Standard Book Identifier)
                                 </div>
                                 <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px; line-height: 1.4;">
-                                    PustakVerse will automatically generate an authentic, 100% unique 13-digit digital SBIN (EAN-13 format with parity checksum) and bind it to your book for free upon publishing.
+                                    PustakVerse will automatically assign a mathematically valid 13-digit EAN-13 standard book identifier (Prefix 978 Bookland with Modulo-10 parity checksum), valid worldwide across global catalog indices.
                                 </div>
                             </div>
                         </div>
@@ -1398,11 +1398,8 @@
                         <label style="font-size: 0.82rem; font-weight: 700; color: #166534; display: block; margin-bottom: 6px;">
                             Enter Standard ISBN-10, ISBN-13, or Digital SBIN:
                         </label>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="e.g. 978-93-849-201-4" oninput="verifyInputSBIN(this.value, 'upload_sbin_status')" style="flex: 1; min-width: 200px; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin: 0; outline: none;">
-                            <button type="button" onclick="generateAndSetSBIN('upload_sbin_input', 'upload_sbin_status')" style="background: #ea580c; color: white; border: none; padding: 0 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; white-space: nowrap; height: 42px;">
-                                ✨ Mint New SBIN
-                            </button>
+                        <div style="position: relative;">
+                            <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="e.g. 978-93-849-201-4 or 978-0743273565" oninput="verifyInputSBIN(this.value, 'upload_sbin_status')" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin: 0; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#cbd5e1'">
                         </div>
                         <div id="upload_sbin_status" style="font-size: 0.82rem; font-weight: 700; margin-top: 8px;"></div>
                     </div>
@@ -2906,7 +2903,7 @@
             const statusDiv = document.getElementById(statusDivId);
             if (statusDiv) {
                 statusDiv.style.color = '#0284c7';
-                statusDiv.innerHTML = '⏳ Minting authentic unique SBIN...';
+                statusDiv.innerHTML = '⏳ Generating valid international SBIN-13...';
             }
             try {
                 const res = await fetch('/api/generate_sbin');
