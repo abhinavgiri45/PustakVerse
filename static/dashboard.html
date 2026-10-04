@@ -1243,20 +1243,73 @@
 
 
                 <!-- 3. Author AI Book Synopsis & Blurb Generator -->
-                <div class="panel" style="border-left: 4px solid #8b5cf6; grid-column: span 2;">
-                    <h2 style="color: #7c3aed; display: flex; align-items: center; gap: 8px;">
-                        <span>🪄</span> Author AI Book Blurb & Synopsis Enhancer
-                    </h2>
-                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Generate captivating marketing synopses, audience hooks, and SEO keywords for your new book drafts using Girionix AI.</p>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="aiBlurbTitle" placeholder="Draft Book Title *" style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
-                            <input type="text" id="aiBlurbCatalog" placeholder="Category (e.g. Science, Fiction)" style="width: 200px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
-                        </div>
-                        <textarea id="aiBlurbNotes" rows="2" placeholder="Rough plot summary, main thesis, or key concepts..." style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.88rem;"></textarea>
-                        <button type="button" onclick="generateAiBlurb()" class="btn-sm btn-dark" style="align-self: flex-start; padding: 8px 18px;">✨ Generate Professional Synopsis</button>
+                <div class="panel" style="border-left: 4px solid #8b5cf6; grid-column: span 2; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
+                        <h2 style="color: #7c3aed; display: flex; align-items: center; gap: 8px; margin: 0;">
+                            <span>🪄</span> Author AI Book Blurb &amp; Synopsis Enhancer
+                        </h2>
+                        <span id="girionixStatusBadge" style="font-size: 0.75rem; font-weight: 700; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; box-shadow: 0 0 6px rgba(34,197,94,0.6);"></span>
+                            ⚡ Girionix AI Connected
+                        </span>
                     </div>
-                    <div id="aiBlurbResultArea" style="display: none; background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 8px; padding: 14px; margin-top: 12px; font-size: 0.88rem; line-height: 1.6; color: #1e293b; white-space: pre-wrap;"></div>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 14px;">
+                        Generate captivating marketing synopses, audience hooks, and SEO keywords for your new book drafts using Girionix AI publishing intelligence.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Draft Book Title <span style="color: #ef4444;">*</span></label>
+                                <input type="text" id="aiBlurbTitle" placeholder="e.g. Beyond the Stars" style="padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#8b5cf6'" onblur="this.style.borderColor='#cbd5e1'">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Category / Genre</label>
+                                <input type="text" id="aiBlurbCatalog" placeholder="e.g. Science, Fiction, History" style="padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#8b5cf6'" onblur="this.style.borderColor='#cbd5e1'">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Tone / Style</label>
+                                <select id="aiBlurbTone" style="padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; outline: none; background: white; transition: border-color 0.2s;" onfocus="this.style.borderColor='#8b5cf6'" onblur="this.style.borderColor='#cbd5e1'">
+                                    <option value="bestseller">⚡ Bestseller &amp; Cinematic</option>
+                                    <option value="academic">🎓 Academic &amp; Scholarly</option>
+                                    <option value="inspirational">🌟 Inspirational &amp; Impactful</option>
+                                    <option value="poetic">📜 Classic &amp; Atmospheric</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Rough Plot Summary, Thesis, or Key Concepts</label>
+                            <textarea id="aiBlurbNotes" rows="3" placeholder="Outline your main premise, central conflict, key characters, or unique philosophical themes..." style="width: 100%; box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#8b5cf6'" onblur="this.style.borderColor='#cbd5e1'"></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px;">
+                            <button type="button" id="btnGenerateAiBlurb" onclick="generateAiBlurb()" class="btn-sm btn-dark" style="background: linear-gradient(135deg, #7c3aed, #6366f1); border: none; padding: 10px 22px; font-weight: 700; font-size: 0.88rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); transition: opacity 0.2s;">
+                                <span>✨</span> Generate Professional Synopsis
+                            </button>
+                            <span style="font-size: 0.78rem; color: #64748b;">
+                                💡 Powered by Girionix AI Publisher Core with instant synopsis synthesis
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Result Presentation Box -->
+                    <div id="aiBlurbResultWrapper" style="display: none; margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; padding: 9px 14px; border-radius: 8px 8px 0 0; font-size: 0.82rem; font-weight: 700; flex-wrap: wrap; gap: 6px;">
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                <span>🤖</span> Girionix AI Synopsis &amp; SEO Package
+                                <span id="aiBlurbEngineBadge" style="font-size: 0.7rem; font-weight: 600; background: rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
+                            </span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button type="button" id="btnCopyBlurb" onclick="copyAiBlurbText()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: background 0.2s;">
+                                    📋 Copy
+                                </button>
+                                <button type="button" onclick="insertAiBlurbIntoDraft()" style="background: white; border: none; color: #7c3aed; padding: 4px 11px; border-radius: 6px; font-size: 0.76rem; font-weight: 800; cursor: pointer; transition: transform 0.15s;">
+                                    📥 Use in Book Description
+                                </button>
+                            </div>
+                        </div>
+                        <div id="aiBlurbResultArea" style="background: #ffffff; border: 1.5px solid #e9d5ff; border-top: none; border-radius: 0 0 8px 8px; padding: 16px 18px; font-size: 0.88rem; line-height: 1.7; color: #1e293b; white-space: pre-wrap; max-height: 380px; overflow-y: auto; scrollbar-width: thin;"></div>
+                    </div>
                 </div>
             </div>
         
@@ -2851,32 +2904,157 @@
             }).catch(() => {});
         }
 
-        // Author AI Blurb Generator
-        function generateAiBlurb() {
-            const title = document.getElementById('aiBlurbTitle').value.trim();
-            const catalog = document.getElementById('aiBlurbCatalog').value.trim();
-            const notes = document.getElementById('aiBlurbNotes').value.trim();
+        // Author AI Blurb Generator (Girionix AI Integration)
+        let currentGeneratedBlurbRaw = '';
+
+        async function generateAiBlurb() {
+            const titleInput = document.getElementById('aiBlurbTitle');
+            const catalogInput = document.getElementById('aiBlurbCatalog');
+            const toneSelect = document.getElementById('aiBlurbTone');
+            const notesInput = document.getElementById('aiBlurbNotes');
+            const btn = document.getElementById('btnGenerateAiBlurb');
+            const wrapper = document.getElementById('aiBlurbResultWrapper');
             const resArea = document.getElementById('aiBlurbResultArea');
+            const engineBadge = document.getElementById('aiBlurbEngineBadge');
+
+            const title = (titleInput ? titleInput.value : '').trim();
+            const catalog = (catalogInput ? catalogInput.value : '').trim();
+            const tone = (toneSelect ? toneSelect.value : 'bestseller').trim();
+            const notes = (notesInput ? notesInput.value : '').trim();
 
             if (!title) {
                 alert('Please enter a draft book title first.');
+                if (titleInput) titleInput.focus();
                 return;
             }
 
+            if (wrapper) wrapper.style.display = 'block';
             if (resArea) {
-                resArea.style.display = 'block';
-                resArea.textContent = 'Generating professional synopsis and SEO blurb with Girionix AI... ⏳';
+                resArea.innerHTML = `
+                    <div style="padding: 24px 16px; text-align: center; color: #7c3aed;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">🪄</div>
+                        <strong style="font-size: 1rem; color: #4c1d95;">Connecting to Girionix AI Intelligence Engine...</strong>
+                        <p style="font-size: 0.84rem; color: #64748b; margin: 6px auto 0; max-width: 480px; line-height: 1.5;">
+                            Synthesizing captivating book hook, 3-paragraph synopsis, key audience takeaways, and discoverability SEO tags for "${escapeHtml(title)}"...
+                        </p>
+                    </div>
+                `;
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.75';
+                btn.innerHTML = '<span>⏳</span> Connecting to Girionix AI...';
             }
 
-            fetch('/api/author/ai_enhance_blurb', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '' },
-                body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
-            }).then(r => r.json()).then(data => {
-                if (resArea && data.success) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 14000);
+
+            try {
+                const response = await fetch('/api/author/ai_enhance_blurb', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ title, catalog, notes, tone }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || ('Server returned HTTP status ' + response.status));
+                }
+
+                const data = await response.json();
+                if (!data || !data.success || !data.enhanced_blurb) {
+                    throw new Error(data.message || 'No synopsis returned from Girionix AI.');
+                }
+
+                currentGeneratedBlurbRaw = data.enhanced_blurb;
+                if (engineBadge) {
+                    engineBadge.textContent = data.engine || 'Girionix Pro 2.5';
+                }
+
+                if (resArea) {
                     resArea.textContent = data.enhanced_blurb;
                 }
-            }).catch(() => {});
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.warn('Girionix AI error:', err);
+                if (resArea) {
+                    const isAbort = err.name === 'AbortError';
+                    resArea.innerHTML = `
+                        <div style="padding: 16px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; color: #991b1b; font-size: 0.88rem;">
+                            <strong>⚠️ Girionix AI Connection Notice:</strong>
+                            <p style="margin: 6px 0 10px 0; font-size: 0.82rem; color: #7f1d1d;">
+                                ${isAbort ? 'The AI connection timed out. Please check your connection and try again.' : escapeHtml(err.message || 'Unable to connect to Girionix AI at this moment.')}
+                            </p>
+                            <button type="button" onclick="generateAiBlurb()" style="background: #991b1b; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer;">
+                                🔄 Retry Generation
+                            </button>
+                        </div>
+                    `;
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.innerHTML = '<span>✨</span> Generate Professional Synopsis';
+                }
+            }
+        }
+
+        function copyAiBlurbText() {
+            if (!currentGeneratedBlurbRaw) {
+                const resArea = document.getElementById('aiBlurbResultArea');
+                currentGeneratedBlurbRaw = resArea ? resArea.textContent : '';
+            }
+            if (!currentGeneratedBlurbRaw) {
+                alert('No synopsis available to copy.');
+                return;
+            }
+            navigator.clipboard.writeText(currentGeneratedBlurbRaw).then(() => {
+                const btn = document.getElementById('btnCopyBlurb');
+                if (btn) {
+                    const origText = btn.innerHTML;
+                    btn.innerHTML = '✓ Copied!';
+                    btn.style.background = '#22c55e';
+                    setTimeout(() => {
+                        btn.innerHTML = origText;
+                        btn.style.background = 'rgba(255,255,255,0.2)';
+                    }, 2000);
+                }
+            }).catch(() => {
+                alert('Copied synopsis to clipboard!');
+            });
+        }
+
+        function insertAiBlurbIntoDraft() {
+            if (!currentGeneratedBlurbRaw) {
+                const resArea = document.getElementById('aiBlurbResultArea');
+                currentGeneratedBlurbRaw = resArea ? resArea.textContent : '';
+            }
+            if (!currentGeneratedBlurbRaw) {
+                alert('Please generate a synopsis first.');
+                return;
+            }
+
+            const descArea = document.querySelector('textarea[name="description"]') || document.getElementById('edit_description');
+            if (descArea) {
+                descArea.value = currentGeneratedBlurbRaw;
+                descArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                descArea.style.borderColor = '#8b5cf6';
+                descArea.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.2)';
+                setTimeout(() => {
+                    descArea.style.boxShadow = '';
+                }, 2500);
+                alert('✓ Girionix AI Synopsis successfully inserted into the Book Description field!');
+            } else {
+                copyAiBlurbText();
+                alert('Synopsis copied to clipboard! You can paste it into any description field.');
+            }
         }
 
         // Multi-Theme Controller

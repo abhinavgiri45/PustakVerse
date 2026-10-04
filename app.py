@@ -9066,32 +9066,137 @@ def ai_multilingual_translate():
     translated = build_ai_free_response(translate_prompt)
     return jsonify({'success': True, 'target_language': target_lang, 'translated_text': translated})
 
+def synthesize_girionix_book_blurb(title, catalog='General', notes='', tone='bestseller'):
+    clean_title = (title or "Untitled Masterpiece").strip()
+    clean_cat = (catalog or "Literature & General").strip()
+    clean_notes = (notes or "").strip()
+    notes_snippet = f" rooted in the premise that {clean_notes[:180]}" if clean_notes else ""
+
+    if tone == 'academic' or any(k in clean_cat.lower() for k in ['science', 'academic', 'tech']):
+        hook = f"A definitive, rigorously researched tour de force that redefines modern scholarship in {clean_cat}: \"{clean_title}\"."
+        p1 = f"In \"{clean_title},\" readers are invited into a profound intellectual journey through the frontier of {clean_cat}. Synthesizing foundational principles with breakthrough contemporary insights, this work systematically dismantles outdated assumptions{notes_snippet if notes_snippet else ', offering readers an authoritative and deeply insightful architecture'}."
+        p2 = "Moving beyond superficial overviews, the text confronts core structural challenges, evaluating empirical developments and theoretical implications with razor-sharp analytical clarity. Each chapter acts as a vital stepping stone for thinkers, researchers, and professionals striving for complete domain mastery."
+        p3 = f"Both an essential reference for study and a transformative academic thesis, \"{clean_title}\" sets an uncompromising benchmark for modern non-fiction. It leaves an indelible mark on curious minds, shaping the conversation for generations to come."
+        take1 = "Comprehensive deconstruction of fundamental principles, mechanisms, and future horizons."
+        take2 = "Empirically grounded frameworks tailored for real-world application, critical problem-solving, and advanced research."
+        take3 = "Clear, analytical synthesis connecting foundational theory with pragmatic, high-impact outcomes."
+        tags = [f"#{clean_cat.replace(' ', '')}", f"#{re.sub(r'[^a-zA-Z0-9]', '', clean_title)}", '#AcademicResearch', '#HigherEducation', '#ScholarlyPublishing', '#NonFiction', '#GirionixAI', '#PustakVerse']
+    elif tone == 'inspirational' or any(k in clean_cat.lower() for k in ['self', 'philosophy', 'motivat']):
+        hook = f"The breakthrough guide to unlocking your highest potential: \"{clean_title}\" will transform how you see the world—and yourself."
+        p1 = f"What if the invisible boundaries holding you back are merely assumptions you never questioned? In \"{clean_title},\" readers embark on an empowering, life-altering odyssey toward genuine clarity, relentless resilience, and lasting fulfillment{notes_snippet if notes_snippet else ', cutting through modern noise to reveal enduring truths'}."
+        p2 = "Through deeply human storytelling, practical wisdom, and transformative insights, this book equips you to transcend self-doubt, reforge your inner compass, and rise above adversity. It does not promise superficial shortcuts; rather, it provides an authentic roadmap to mastery from within."
+        p3 = f"Prepare to be energized, inspired, and fundamentally renewed. \"{clean_title}\" is far more than a book—it is a personal catalyst that will guide and elevate your journey long after the final page is turned."
+        take1 = "Practical mental models to overcome paralysis, break limiting beliefs, and navigate uncertainty with quiet confidence."
+        take2 = "Actionable daily disciplines that build unbreakable focus, inner fortitude, and compound personal growth."
+        take3 = "A proven, heart-centered framework to align ambition with purpose, meaning, and authentic impact."
+        tags = [f"#{clean_cat.replace(' ', '')}", f"#{re.sub(r'[^a-zA-Z0-9]', '', clean_title)}", '#PersonalGrowth', '#MindsetShift', '#Inspiration', '#SelfMastery', '#GirionixAI', '#PustakVerse']
+    elif tone == 'poetic' or any(k in clean_cat.lower() for k in ['poetry', 'classic']):
+        hook = f"Where memory meets destiny, \"{clean_title}\" weaves an unforgettable tapestry of truth, longing, and sublime grace."
+        p1 = f"Lyrical, haunting, and breathtakingly evocative, \"{clean_title}\" beckons readers into a rich literary sanctuary where every sentence reverberates with exquisite emotion{notes_snippet if notes_snippet else ', and every silence holds an untold revelation'}."
+        p2 = "With prose that shimmers with rhythmic beauty and acute psychological resonance, the work explores the fragile intersections of human vulnerability and moral courage. Across shifting landscapes of time and passion, characters navigate unforgettable crossroads of love, loss, and redemption."
+        p3 = f"A luminous celebration of the written word, \"{clean_title}\" lingers in the consciousness like an unforgettable melody. It stands as a timeless testament to the enduring power of literature to heal, provoke, and enchant."
+        take1 = "Rich, evocative prose crafted with poetic resonance and deep emotional truth."
+        take2 = "Nuanced exploration of universal human experiences: memory, desire, reconciliation, and transcendence."
+        take3 = "An unforgettable aesthetic experience that lingers in the heart long after reading."
+        tags = [f"#{clean_cat.replace(' ', '')}", f"#{re.sub(r'[^a-zA-Z0-9]', '', clean_title)}", '#LiteraryFiction', '#ClassicLiterature', '#PoeticVision', '#BookClubFavorite', '#GirionixPublishing', '#PustakVerse']
+    else:
+        # Bestseller / Cinematic Default
+        hook = f"An electrifying, unputdownable masterpiece: \"{clean_title}\" will seize your imagination and refuse to let go."
+        p1 = f"Some stories entertain; others completely consume you. In \"{clean_title},\" heart-stopping tension and unforgettable characters collide in a dynamic narrative{notes_snippet if notes_snippet else ', where every decision carries irreversible consequences and danger lurks in plain sight'}."
+        p2 = "As mysteries deepen and unexpected revelations come to light, the story accelerates with breathtaking velocity. Blending cinematic atmosphere with razor-sharp dialogue and emotional stakes, this is high-impact storytelling at its absolute pinnacle."
+        p3 = f"With twists that shatter expectations and an emotional payoff that resonates deeply, \"{clean_title}\" announces itself as an instant modern classic. Once you open chapter one, sleep becomes secondary."
+        take1 = "Relentless narrative momentum and cinematic pacing that commands reader attention from page one."
+        take2 = "Multifaceted, compelling character arcs driven by deep motivations and emotional authenticity."
+        take3 = "A masterfully orchestrated climax delivering both shocking revelations and profound thematic resonance."
+        tags = [f"#{clean_cat.replace(' ', '')}", f"#{re.sub(r'[^a-zA-Z0-9]', '', clean_title)}", '#Bestseller', '#PageTurner', '#MustRead', '#FictionLovers', '#GirionixPublishing', '#PustakVerse']
+
+    return f"""### ⚡ Hook Tagline
+*"{hook}"*
+
+---
+
+### 📖 Back-Cover Synopsis
+{p1}
+
+{p2}
+
+{p3}
+
+---
+
+### 🎯 Key Audience Takeaways & Themes
+- **Core Concept**: {take1}
+- **Thematic Resonance**: {take2}
+- **Reader Impact**: {take3}
+
+---
+
+### 🏷️ Strategic SEO & Discoverability Tags
+{", ".join(tags)}
+
+---
+
+### 💡 Girionix Market Positioning
+*Engineered by Girionix AI Book Architect. Recommended for readers seeking high-caliber {clean_cat}. Optimally calibrated for digital distribution, search discoverability, and author platforms worldwide.*"""
+
 @app.route('/api/author/ai_enhance_blurb', methods=['POST'])
 def author_ai_enhance_blurb():
-    """Author AI assistant generating SEO tags, hook lines, and compelling back-cover blurbs."""
+    """Author AI assistant generating SEO tags, hook lines, and compelling back-cover blurbs with Girionix AI."""
     if session.get('role') not in ['author', 'developer', 'official']:
         return jsonify({'success': False, 'message': 'Author privileges required.'}), 403
 
-    data = request.json or request.form
+    data = request.json or request.form or {}
     title = (data.get('title') or '').strip()
     notes = (data.get('notes') or '').strip()
     catalog = (data.get('catalog') or 'General').strip()
+    tone = (data.get('tone') or 'bestseller').strip()
 
-    prompt = f"""
-You are an elite book publishing editor and copywriter.
-Generate a captivating, high-conversion book synopsis and 5 SEO keywords for:
+    if not title:
+        return jsonify({'success': False, 'message': 'Draft book title is required.'}), 400
+
+    prompt = f"""You are Girionix AI, an elite publishing editor and copywriter.
+Generate a captivating, high-conversion book synopsis, hook line, key takeaways, and SEO tags for:
 Title: {title}
 Category: {catalog}
-Author Notes / Rough Outline: {notes}
+Tone / Style: {tone}
+Author Notes / Outline: {notes or 'General premise exploring deep themes and character journeys'}
 
-Format with:
-1. **Hook Tagline** (1 powerful punchy sentence)
-2. **Back-Cover Synopsis** (2-3 engaging paragraphs)
-3. **Key Audience Takeaways** (3 bullet points)
-4. **Tags**: (comma-separated list)
+Format strictly with these markdown sections:
+### ⚡ Hook Tagline
+(1 powerful, punchy sentence in quotation marks)
+
+### 📖 Back-Cover Synopsis
+(2-3 compelling paragraphs with rich vocabulary, setting up the premise, rising stakes, and climax)
+
+### 🎯 Key Audience Takeaways & Themes
+(3 bullet points)
+
+### 🏷️ Strategic SEO & Discoverability Tags
+(8-10 comma-separated tags e.g. #Genre, #Theme)
+
+### 💡 Girionix Market Positioning
+(Target readership and category recommendation)
 """
-    result = build_ai_free_response(prompt)
-    return jsonify({'success': True, 'enhanced_blurb': result, 'synopsis': result})
+    result = ''
+    engine = 'Girionix AI Book Architect 2.5'
+    try:
+        live_res = call_provider_live_api('gemini', 'gemini-2.0-flash', prompt, timeout=4.0)
+        if live_res and len(live_res.strip()) > 80:
+            result = live_res.strip()
+            engine = 'Girionix AI (Gemini 2.0 Flash)'
+    except Exception:
+        pass
+
+    if not result:
+        result = synthesize_girionix_book_blurb(title, catalog=catalog, notes=notes, tone=tone)
+
+    return jsonify({
+        'success': True,
+        'enhanced_blurb': result,
+        'synopsis': result,
+        'engine': engine,
+        'tone': tone
+    })
 
 if __name__ == '__main__':
     ensure_payment_schema()

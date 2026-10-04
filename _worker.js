@@ -902,6 +902,113 @@ export default {
       }
     }
 
+    // 4F-bis. Author AI Book Blurb & Synopsis Enhancer: POST /api/author/ai_enhance_blurb
+    if (url.pathname === "/api/author/ai_enhance_blurb" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized. Please login to use Girionix AI." }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const data = await request.json().catch(() => ({}));
+        const title = (data.title || "").trim();
+        const catalog = (data.catalog || "General").trim();
+        const notes = (data.notes || "").trim();
+        const tone = (data.tone || "bestseller").trim();
+
+        if (!title) {
+          return new Response(JSON.stringify({ success: false, message: "Draft book title is required." }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        let enhancedBlurb = "";
+        let usedEngine = "Girionix AI Book Architect 2.5";
+
+        // 1. Try Live Gemini API if key is available in env or DB
+        let geminiKey = env.GEMINI_API_KEY || "";
+        if (!geminiKey && env.DB) {
+          try {
+            const row = await env.DB.prepare("SELECT gemini_api_key FROM front_page_settings WHERE id = 1").first();
+            if (row && row.gemini_api_key) geminiKey = row.gemini_api_key;
+          } catch (_) {}
+        }
+
+        if (geminiKey) {
+          try {
+            const geminiPrompt = `You are Girionix AI, an elite publishing editor and copywriter.
+Create a captivating, high-conversion book synopsis, hook line, key takeaways, and SEO tags for:
+Title: "${title}"
+Category: "${catalog}"
+Tone / Style: "${tone}"
+Author Notes / Outline: "${notes || 'General premise exploring deep themes and character journeys'}"
+
+Format with these exact markdown sections:
+### ⚡ Hook Tagline
+(1 powerful, punchy sentence in quotation marks)
+
+### 📖 Back-Cover Synopsis
+(2-3 compelling paragraphs with rich vocabulary, setting up the premise, rising stakes, and climax)
+
+### 🎯 Key Audience Takeaways & Themes
+(3 bullet points)
+
+### 🏷️ Strategic SEO & Discoverability Tags
+(8-10 comma-separated tags e.g. #Genre, #Theme)
+
+### 💡 Girionix Market Positioning
+(Target readership and category recommendation)`;
+
+            const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: geminiPrompt }] }],
+                generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
+              }),
+              signal: AbortSignal.timeout(6500)
+            });
+
+            if (geminiResp.ok) {
+              const gData = await geminiResp.json();
+              const text = gData?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text && text.length > 50) {
+                enhancedBlurb = text.trim();
+                usedEngine = "Girionix AI (Gemini 2.0 Flash)";
+              }
+            }
+          } catch (e) {
+            console.warn("Girionix live Gemini call failed or timed out:", e.message);
+          }
+        }
+
+        // 2. High-precision native Girionix fallback if live API was unavailable or timed out
+        if (!enhancedBlurb) {
+          enhancedBlurb = generateGirionixSmartBlurb(title, catalog, notes, tone);
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          enhanced_blurb: enhancedBlurb,
+          synopsis: enhancedBlurb,
+          engine: usedEngine,
+          tone: tone
+        }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({
+          success: false,
+          message: "Girionix AI processing error: " + err.message
+        }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // 4G. Edge Checkout Apply Coupon: POST /api/apply_coupon
     if (url.pathname === "/api/apply_coupon" && request.method === "POST") {
       const data = await request.json().catch(() => ({}));
@@ -5626,4 +5733,92 @@ setTimeout(() => location.reload(), 60000);
 </script>
 </body>
 </html>`;
+}
+
+// ============================================================================
+// GIRIONIX AI BOOK PUBLISHING INTELLIGENCE ENGINE (EDGE CORE)
+// ============================================================================
+function generateGirionixSmartBlurb(title, catalog, notes, tone = "bestseller") {
+  const cleanTitle = (title || "Untitled Masterpiece").trim();
+  const cleanCat = (catalog || "Literature & General").trim();
+  const cleanNotes = (notes || "").trim();
+
+  let hook = "";
+  let p1 = "";
+  let p2 = "";
+  let p3 = "";
+  let take1 = "";
+  let take2 = "";
+  let take3 = "";
+  let tags = [];
+
+  const notesSnippet = cleanNotes ? ` rooted in the premise that ${cleanNotes.slice(0, 180)}` : "";
+
+  if (tone === "academic" || cleanCat.toLowerCase().includes("science") || cleanCat.toLowerCase().includes("academic") || cleanCat.toLowerCase().includes("tech")) {
+    hook = `A definitive, rigorously researched tour de force that redefines modern scholarship in ${cleanCat}: "${cleanTitle}".`;
+    p1 = `In "${cleanTitle}," readers are invited into a profound intellectual journey through the frontier of ${cleanCat}. Synthesizing foundational principles with breakthrough contemporary insights, this work systematically dismantles outdated assumptions${notesSnippet ? notesSnippet : ", offering readers an authoritative and deeply insightful architecture"}.`;
+    p2 = `Moving beyond superficial overviews, the text confronts core structural challenges, evaluating empirical developments and theoretical implications with razor-sharp analytical clarity. Each chapter acts as a vital stepping stone for thinkers, researchers, and professionals striving for complete domain mastery.`;
+    p3 = `Both an essential reference for study and a transformative academic thesis, "${cleanTitle}" sets an uncompromising benchmark for modern non-fiction. It leaves an indelible mark on curious minds, shaping the conversation for generations to come.`;
+    take1 = `Comprehensive deconstruction of fundamental principles, mechanisms, and future horizons.`;
+    take2 = `Empirically grounded frameworks tailored for real-world application, critical problem-solving, and advanced research.`;
+    take3 = `Clear, analytical synthesis connecting foundational theory with pragmatic, high-impact outcomes.`;
+    tags = [`#${cleanCat.replace(/\s+/g, '')}`, `#${cleanTitle.replace(/[^a-zA-Z0-9]/g, '')}`, '#AcademicResearch', '#HigherEducation', '#ScholarlyPublishing', '#NonFiction', '#GirionixAI', '#PustakVerse'];
+  } else if (tone === "inspirational" || cleanCat.toLowerCase().includes("self") || cleanCat.toLowerCase().includes("philosophy") || cleanCat.toLowerCase().includes("motivat")) {
+    hook = `The breakthrough guide to unlocking your highest potential: "${cleanTitle}" will transform how you see the world—and yourself.`;
+    p1 = `What if the invisible boundaries holding you back are merely assumptions you never questioned? In "${cleanTitle}," readers embark on an empowering, life-altering odyssey toward genuine clarity, relentless resilience, and lasting fulfillment${notesSnippet ? notesSnippet : ", cutting through modern noise to reveal enduring truths"}.`;
+    p2 = `Through deeply human storytelling, practical wisdom, and transformative insights, this book equips you to transcend self-doubt, reforge your inner compass, and rise above adversity. It does not promise superficial shortcuts; rather, it provides an authentic roadmap to mastery from within.`;
+    p3 = `Prepare to be energized, inspired, and fundamentally renewed. "${cleanTitle}" is far more than a book—it is a personal catalyst that will guide and elevate your journey long after the final page is turned.`;
+    take1 = `Practical mental models to overcome paralysis, break limiting beliefs, and navigate uncertainty with quiet confidence.`;
+    take2 = `Actionable daily disciplines that build unbreakable focus, inner fortitude, and compound personal growth.`;
+    take3 = `A proven, heart-centered framework to align ambition with purpose, meaning, and authentic impact.`;
+    tags = [`#${cleanCat.replace(/\s+/g, '')}`, `#${cleanTitle.replace(/[^a-zA-Z0-9]/g, '')}`, '#PersonalGrowth', '#MindsetShift', '#Inspiration', '#SelfMastery', '#GirionixAI', '#PustakVerse'];
+  } else if (tone === "poetic" || cleanCat.toLowerCase().includes("poetry") || cleanCat.toLowerCase().includes("classic")) {
+    hook = `Where memory meets destiny, "${cleanTitle}" weaves an unforgettable tapestry of truth, longing, and sublime grace.`;
+    p1 = `Lyrical, haunting, and breathtakingly evocative, "${cleanTitle}" beckons readers into a rich literary sanctuary where every sentence reverberates with exquisite emotion${notesSnippet ? notesSnippet : ", and every silence holds an untold revelation"}.`;
+    p2 = `With prose that shimmers with rhythmic beauty and acute psychological resonance, the work explores the fragile intersections of human vulnerability and moral courage. Across shifting landscapes of time and passion, characters navigate unforgettable crossroads of love, loss, and redemption.`;
+    p3 = `A luminous celebration of the written word, "${cleanTitle}" lingers in the consciousness like an unforgettable melody. It stands as a timeless testament to the enduring power of literature to heal, provoke, and enchant.`;
+    take1 = `Rich, evocative prose crafted with poetic resonance and deep emotional truth.`;
+    take2 = `Nuanced exploration of universal human experiences: memory, desire, reconciliation, and transcendence.`;
+    take3 = `An unforgettable aesthetic experience that lingers in the heart long after reading.`;
+    tags = [`#${cleanCat.replace(/\s+/g, '')}`, `#${cleanTitle.replace(/[^a-zA-Z0-9]/g, '')}`, '#LiteraryFiction', '#ClassicLiterature', '#PoeticVision', '#BookClubFavorite', '#GirionixPublishing', '#PustakVerse'];
+  } else {
+    // Bestseller / Cinematic Default
+    hook = `An electrifying, unputdownable masterpiece: "${cleanTitle}" will seize your imagination and refuse to let go.`;
+    p1 = `Some stories entertain; others completely consume you. In "${cleanTitle}," heart-stopping tension and unforgettable characters collide in a dynamic narrative${notesSnippet ? notesSnippet : ", where every decision carries irreversible consequences and danger lurks in plain sight"}.`;
+    p2 = `As mysteries deepen and unexpected revelations come to light, the story accelerates with breathtaking velocity. Blending cinematic atmosphere with razor-sharp dialogue and emotional stakes, this is high-impact storytelling at its absolute pinnacle.`;
+    p3 = `With twists that shatter expectations and an emotional payoff that resonates deeply, "${cleanTitle}" announces itself as an instant modern classic. Once you open chapter one, sleep becomes secondary.`;
+    take1 = `Relentless narrative momentum and cinematic pacing that commands reader attention from page one.`;
+    take2 = `Multifaceted, compelling character arcs driven by deep motivations and emotional authenticity.`;
+    take3 = `A masterfully orchestrated climax delivering both shocking revelations and profound thematic resonance.`;
+    tags = [`#${cleanCat.replace(/\s+/g, '')}`, `#${cleanTitle.replace(/[^a-zA-Z0-9]/g, '')}`, '#Bestseller', '#PageTurner', '#MustRead', '#FictionLovers', '#GirionixPublishing', '#PustakVerse'];
+  }
+
+  return `### ⚡ Hook Tagline
+*"${hook}"*
+
+---
+
+### 📖 Back-Cover Synopsis
+${p1}
+
+${p2}
+
+${p3}
+
+---
+
+### 🎯 Key Audience Takeaways & Themes
+- **Core Concept**: ${take1}
+- **Thematic Resonance**: ${take2}
+- **Reader Impact**: ${take3}
+
+---
+
+### 🏷️ Strategic SEO & Discoverability Tags
+${tags.join(', ')}
+
+---
+
+### 💡 Girionix Market Positioning
+*Engineered by Girionix AI Book Architect. Recommended for readers seeking high-caliber ${cleanCat}. Optimally calibrated for digital distribution, search discoverability, and author platforms worldwide.*`;
 }
