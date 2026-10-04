@@ -7682,6 +7682,57 @@ def dashboard():
             try: db.close()
             except: pass
 
+@app.route('/api/dashboard/books', methods=['GET'])
+def api_dashboard_books():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized', 'books': []}), 401
+    
+    role = session.get('role')
+    user_id = session.get('user_id')
+    current_username = session.get('username')
+    
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        if role in ['developer', 'official']:
+            cursor.execute("""
+                SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file,
+                       books.is_paid, books.price_paise, books.private_pdf, books.description,
+                       books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret,
+                       books.rp_verified, books.rp_verify_message, books.sbin_no,
+                       users.username as author_name, users.id as author_id
+                FROM books
+                LEFT JOIN users ON books.author_id = users.id
+                ORDER BY books.created_at DESC
+            """)
+        else:
+            cursor.execute("""
+                SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file,
+                       books.is_paid, books.price_paise, books.private_pdf, books.description,
+                       books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret,
+                       books.rp_verified, books.rp_verify_message, books.sbin_no,
+                       users.username as author_name, users.id as author_id
+                FROM books
+                LEFT JOIN users ON books.author_id = users.id
+                WHERE books.author_id = %s
+                ORDER BY books.created_at DESC
+            """, (user_id,))
+        
+        books = clean_book_data(cursor.fetchall() or [])
+        return jsonify({
+            'success': True,
+            'books': books,
+            'role': role,
+            'current_username': current_username
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'books': []}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 @app.route('/logout/all_devices', methods=['POST'])
 def logout_all_devices():
     if 'user_id' not in session:

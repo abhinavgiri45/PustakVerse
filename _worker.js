@@ -2790,15 +2790,23 @@ Format with these exact markdown sections:
           } catch (_) {}
 
           try {
-            const isPrivileged = user.role === "developer" || user.role === "official";
-            const bookQuery = isPrivileged
-              ? `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.rp_verified, b.is_featured, b.is_quarantined, b.sbin_no, b.description, u.username as author_name, b.author_id, b.rp_key_id, b.rp_key_secret
-                 FROM books b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.id DESC LIMIT 100`
-              : `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.rp_verified, b.is_featured, b.is_quarantined, b.sbin_no, b.description, u.username as author_name, b.author_id, b.rp_key_id, b.rp_key_secret
-                 FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.author_id = ? ORDER BY b.id DESC LIMIT 100`;
-            const stmt = isPrivileged ? env.DB.prepare(bookQuery) : env.DB.prepare(bookQuery).bind(user.id);
-            const bRes = await stmt.all();
-            myBooks = bRes.results || [];
+            await ensureBooksTable(env);
+            const isPrivileged = user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user);
+            let bRes = null;
+            try {
+              const bookQuery = isPrivileged
+                ? `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.id DESC LIMIT 200`
+                : `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.author_id = ? ORDER BY b.id DESC LIMIT 200`;
+              const stmt = isPrivileged ? env.DB.prepare(bookQuery) : env.DB.prepare(bookQuery).bind(user.id);
+              bRes = await stmt.all();
+            } catch (errInner) {
+              const fbQuery = isPrivileged
+                ? `SELECT * FROM books ORDER BY id DESC LIMIT 200`
+                : `SELECT * FROM books WHERE author_id = ? ORDER BY id DESC LIMIT 200`;
+              const fbStmt = isPrivileged ? env.DB.prepare(fbQuery) : env.DB.prepare(fbQuery).bind(user.id);
+              bRes = await fbStmt.all();
+            }
+            myBooks = bRes?.results || [];
           } catch (e) {
             console.warn("Could not load dashboard books:", e.message);
           }
@@ -3723,6 +3731,54 @@ Format with these exact markdown sections:
         });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message, results: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6-bis. Edge Dashboard Books Hydration API: GET /api/dashboard/books
+    if (url.pathname === "/api/dashboard/books" && env.DB) {
+      try {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        let user = null;
+        if (cookies.pv_session) {
+          try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+        }
+        if (!user) {
+          return new Response(JSON.stringify({ success: false, error: "Unauthorized", books: [] }), {
+            status: 401, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        await ensureBooksTable(env);
+        const isPrivileged = user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user);
+        let results = [];
+        try {
+          const bookQuery = isPrivileged
+            ? `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.id DESC LIMIT 200`
+            : `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.author_id = ? ORDER BY b.id DESC LIMIT 200`;
+          const stmt = isPrivileged ? env.DB.prepare(bookQuery) : env.DB.prepare(bookQuery).bind(user.id);
+          const bRes = await stmt.all();
+          results = bRes?.results || [];
+        } catch (_) {
+          const fbQuery = isPrivileged
+            ? `SELECT * FROM books ORDER BY id DESC LIMIT 200`
+            : `SELECT * FROM books WHERE author_id = ? ORDER BY id DESC LIMIT 200`;
+          const fbStmt = isPrivileged ? env.DB.prepare(fbQuery) : env.DB.prepare(fbQuery).bind(user.id);
+          const fbRes = await fbStmt.all();
+          results = fbRes?.results || [];
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          books: results,
+          role: user.role,
+          current_username: user.username
+        }), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message, books: [] }), {
           status: 500, headers: { "Content-Type": "application/json" }
         });
       }
@@ -5190,6 +5246,55 @@ function renderTwoFactorHtml(email) {
 </html>`;
 }
 
+async function ensureBooksTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS books (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        author_id INTEGER NOT NULL,
+        catalog TEXT NOT NULL,
+        cover_image TEXT NOT NULL,
+        pdf_file TEXT NOT NULL,
+        is_paid INTEGER NOT NULL DEFAULT 0,
+        price_paise INTEGER NOT NULL DEFAULT 0,
+        private_pdf INTEGER NOT NULL DEFAULT 0,
+        preview_pages INTEGER NOT NULL DEFAULT 5,
+        rp_key_id TEXT DEFAULT NULL,
+        rp_key_secret TEXT DEFAULT NULL,
+        rp_verified INTEGER NOT NULL DEFAULT 0,
+        rp_verify_message TEXT DEFAULT NULL,
+        description TEXT,
+        is_quarantined INTEGER NOT NULL DEFAULT 0,
+        is_featured INTEGER NOT NULL DEFAULT 0,
+        sbin_no TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (_) {}
+
+  const bookCols = [
+    ["is_paid", "INTEGER NOT NULL DEFAULT 0"],
+    ["price_paise", "INTEGER NOT NULL DEFAULT 0"],
+    ["private_pdf", "INTEGER NOT NULL DEFAULT 0"],
+    ["preview_pages", "INTEGER NOT NULL DEFAULT 5"],
+    ["rp_key_id", "TEXT DEFAULT NULL"],
+    ["rp_key_secret", "TEXT DEFAULT NULL"],
+    ["rp_verified", "INTEGER NOT NULL DEFAULT 0"],
+    ["rp_verify_message", "TEXT DEFAULT NULL"],
+    ["description", "TEXT DEFAULT NULL"],
+    ["is_quarantined", "INTEGER NOT NULL DEFAULT 0"],
+    ["is_featured", "INTEGER NOT NULL DEFAULT 0"],
+    ["sbin_no", "TEXT DEFAULT NULL"]
+  ];
+  for (const [col, colType] of bookCols) {
+    try {
+      await env.DB.prepare(`ALTER TABLE books ADD COLUMN ${col} ${colType}`).run();
+    } catch (_) {}
+  }
+}
+
 async function ensureLeadershipTable(env) {
   if (!env || !env.DB) return;
   try {
@@ -5519,9 +5624,11 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     `;
 
     out = out.replace(/<p>No books available\.<\/p>/i, tableContainer);
+    out = out.replace(/<div id="libraryTableContainer"[\s\S]*?<\/table>\s*<\/div>/i, tableContainer);
     out = out.replace(/📚 All Books \(\d+\)/g, `📚 All Books (${myBooks.length})`);
+    out = out.replace(/id="allBooksCount">[\s\S]*?<\/span>/g, `id="allBooksCount">${myBooks.length}</span>`);
     const myCount = myBooks.filter(b => b.author_id === user.id || (b.author_name && b.author_name.toLowerCase() === username.toLowerCase())).length;
-    out = out.replace(/id="myUploadedCount">0<\/span>/g, `id="myUploadedCount">${myCount}</span>`);
+    out = out.replace(/id="myUploadedCount">[\s\S]*?<\/span>/g, `id="myUploadedCount">${myCount}</span>`);
 
     // 5B. Hydrate Promotional Coupon Book Selector
     // Authors & Officials see only self-published books; Developer sees all books

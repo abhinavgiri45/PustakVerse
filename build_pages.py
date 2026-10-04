@@ -150,7 +150,72 @@ def build():
                     'created_at': '2026-01-01',
                     'last_activity': '2026-10-04'
                 },
-                my_books=[],
+                my_books=[
+                    {
+                        'id': 1,
+                        'title': 'PustakVerse Architectural Foundations',
+                        'author_name': 'abhinavgiri45',
+                        'catalog': 'Academic',
+                        'cover_image': 'https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=300&auto=format&fit=crop&q=80',
+                        'pdf_file': 'https://example.com/sample1.pdf',
+                        'is_paid': 0,
+                        'price_paise': 0,
+                        'is_featured': 1,
+                        'is_quarantined': 0,
+                        'rp_verified': 1,
+                        'rp_verify_message': 'Verified Developer Publishing',
+                        'sbin_no': 'SBIN-PV-2026-9041',
+                        'description': 'Master blueprint and systems design guide for modern distributed digital libraries.'
+                    },
+                    {
+                        'id': 2,
+                        'title': 'Girionix AI & Neural Cognition',
+                        'author_name': 'abhinavgiri45',
+                        'catalog': 'Science',
+                        'cover_image': 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=300&auto=format&fit=crop&q=80',
+                        'pdf_file': 'https://example.com/sample2.pdf',
+                        'is_paid': 1,
+                        'price_paise': 49900,
+                        'is_featured': 1,
+                        'is_quarantined': 0,
+                        'rp_verified': 1,
+                        'rp_verify_message': 'Razorpay Merchant ID Verified',
+                        'sbin_no': 'SBIN-PV-2026-8812',
+                        'description': 'Deep exploration into Girionix core reasoning pipelines and autonomous agent systems.'
+                    },
+                    {
+                        'id': 3,
+                        'title': 'The Art of Vedic Philosophy',
+                        'author_name': 'Aarav Sharma',
+                        'catalog': 'Philosophy',
+                        'cover_image': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80',
+                        'pdf_file': 'https://example.com/sample3.pdf',
+                        'is_paid': 0,
+                        'price_paise': 0,
+                        'is_featured': 0,
+                        'is_quarantined': 0,
+                        'rp_verified': 0,
+                        'rp_verify_message': 'Open-access title',
+                        'sbin_no': 'SBIN-PV-2026-5591',
+                        'description': 'Timeless philosophical discourses translated into contemporary readable frameworks.'
+                    },
+                    {
+                        'id': 4,
+                        'title': 'Chronicles of the Solar Frontier',
+                        'author_name': 'Dr. Elena Rostova',
+                        'catalog': 'Fiction',
+                        'cover_image': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&auto=format&fit=crop&q=80',
+                        'pdf_file': 'https://example.com/sample4.pdf',
+                        'is_paid': 1,
+                        'price_paise': 29900,
+                        'is_featured': 0,
+                        'is_quarantined': 0,
+                        'rp_verified': 1,
+                        'rp_verify_message': 'Verified Merchant Account',
+                        'sbin_no': 'SBIN-PV-2026-3120',
+                        'description': 'Hard science fiction exploring deep-space propulsion, orbital habitats, and human resilience.'
+                    }
+                ],
                 pending_authors=[],
                 all_users=[
                     {'id': 1, 'username': 'abhinavgiri45', 'email': 'abhinavgiri370@gmail.com', 'role': 'developer', 'last_activity': 'Active now', 'failed_attempts': 0, 'locked_until': None}

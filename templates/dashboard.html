@@ -1829,69 +1829,121 @@
                 </div>
 
                 <div>
-                    <div class="panel">
-                        <h2>{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
-                        
-                        <!-- BOOK MANAGEMENT FILTER TABS -->
-                        <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <button type="button" id="tabAllBooks" onclick="setBookFilterTab('all')" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: #0f172a; color: white;">
-                                    📚 All Books ({{ my_books|length }})
-                                </button>
-                                <button type="button" id="tabMyUploaded" onclick="setBookFilterTab('mine')" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #475569;">
-                                    ✍️ Uploaded By Me (<span id="myUploadedCount">0</span>)
-                                </button>
+                    <div class="panel" id="platformLibraryManagementPanel">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
+                            <div>
+                                <h2 style="margin: 0;">{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
+                                <p style="color: #64748b; font-size: 0.86rem; margin: 4px 0 0 0;">
+                                    {{ 'Manage your published books, track sales, and edit details.' if session.role == 'author' else 'Review all published titles, feature staff picks, monitor pricing, and moderate platform content.' }}
+                                </p>
                             </div>
-                            <span style="font-size: 0.8rem; color: #64748b;">Logged in as: <strong>{{ session.username }}</strong></span>
+                            <span style="font-size: 0.8rem; background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 20px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 6px;">
+                                👤 Logged in as: <strong style="color: #0f172a;">{{ session.username }}</strong>
+                            </span>
+                        </div>
+                        
+                        <!-- BOOK MANAGEMENT FILTER TABS & STATUS CHIPS -->
+                        <div style="display: flex; gap: 8px; margin: 16px 0 12px 0; flex-wrap: wrap; align-items: center;">
+                            <button type="button" id="tabAllBooks" onclick="setBookFilterTab('all')" class="lib-filter-pill active" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1px solid #0f172a; background: #0f172a; color: white; transition: all 0.2s;">
+                                📚 All Books (<span id="allBooksCount">{{ my_books|length if my_books else 0 }}</span>)
+                            </button>
+                            <button type="button" id="tabMyUploaded" onclick="setBookFilterTab('mine')" class="lib-filter-pill" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #475569; transition: all 0.2s;">
+                                ✍️ Uploaded By Me (<span id="myUploadedCount">0</span>)
+                            </button>
+                            <button type="button" id="tabStaffPicks" onclick="setBookFilterTab('featured')" class="lib-filter-pill" style="padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #854d0e; transition: all 0.2s;">
+                                ⭐ Staff Picks (<span id="staffPicksCount">0</span>)
+                            </button>
+                            <button type="button" id="tabPaidOnly" onclick="setBookFilterTab('paid')" class="lib-filter-pill" style="padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #166534; transition: all 0.2s;">
+                                💰 Paid (<span id="paidBooksCount">0</span>)
+                            </button>
+                            <button type="button" id="tabFreeOnly" onclick="setBookFilterTab('free')" class="lib-filter-pill" style="padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #0284c7; transition: all 0.2s;">
+                                🆓 Free (<span id="freeBooksCount">0</span>)
+                            </button>
+                            {% if session.role in ['official', 'developer'] %}
+                            <button type="button" id="tabQuarantined" onclick="setBookFilterTab('quarantined')" class="lib-filter-pill" style="padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #991b1b; transition: all 0.2s;">
+                                🔒 Quarantined (<span id="quarantinedCount">0</span>)
+                            </button>
+                            {% endif %}
                         </div>
 
-                        <!-- INSTANT SEARCH BAR -->
-                        <div style="margin-bottom: 20px;">
-                            <input type="text" id="librarySearch" placeholder="Search books by title, author, or category..." onkeyup="filterLibrary()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
+                        <!-- SEARCH & CATEGORY FILTER TOOLBAR -->
+                        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-bottom: 18px; align-items: center;">
+                            <div style="position: relative;">
+                                <input type="text" id="librarySearch" placeholder="Search by title, author, SBIN, or category..." onkeyup="filterLibrary()" style="width: 100%; padding: 10px 14px 10px 36px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; background: #f8fafc; font-size: 0.88rem;" autocomplete="off">
+                                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.95rem; color: #94a3b8;">🔍</span>
+                            </div>
+                            <select id="categoryFilterSelect" onchange="filterLibrary()" style="padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; font-size: 0.88rem; color: #334155; min-width: 150px;">
+                                <option value="">All Categories</option>
+                                {% if all_categories %}
+                                    {% for cat in all_categories %}
+                                        <option value="{{ cat.name }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                            <button type="button" onclick="resetLibraryFilters()" class="btn-sm" style="padding: 10px 14px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 600; cursor: pointer; white-space: nowrap;" title="Reset filters & reload">
+                                🔄 Reset
+                            </button>
                         </div>
 
-                        {% if my_books %}
-                            <div class="table-scroll-container">
-                                <table>
-                                    <tr>
-                                        <th>Cover</th>
-                                        <th>Title & Status</th>
-                                        <th>Type</th>
-                                        <th>Action</th>
+                        <!-- TABLE CONTAINER -->
+                        <div id="libraryTableContainer" class="table-scroll-container">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                        <th style="width: 60px; padding: 10px;">Cover</th>
+                                        <th style="padding: 10px; text-align: left;">Title & Metadata</th>
+                                        <th style="width: 100px; padding: 10px; text-align: left;">Type & Price</th>
+                                        <th style="width: 180px; padding: 10px; text-align: left;">Action</th>
                                     </tr>
+                                </thead>
+                                <tbody id="libraryTableBody">
+                                {% if my_books %}
                                     {% for book in my_books %}
-                                    <tr class="library-row" data-author="{{ book.author_name | escape if book.author_name is defined else session.username }}" data-catalog="{{ book.catalog | escape }}">
-                                        <td>
-                                            <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
+                                    <tr class="library-row"
+                                        data-id="{{ book.id }}"
+                                        data-author="{{ book.author_name | escape if book.author_name is defined else session.username }}"
+                                        data-catalog="{{ book.catalog | escape }}"
+                                        data-paid="{{ '1' if book.is_paid else '0' }}"
+                                        data-price="{{ book.price_paise or 0 }}"
+                                        data-featured="{{ '1' if book.is_featured else '0' }}"
+                                        data-quarantined="{{ '1' if book.is_quarantined else '0' }}"
+                                        data-title="{{ book.title | escape }}">
+                                        <td style="padding: 8px; vertical-align: top;">
+                                            <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 44px; height: 64px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="this.src='/static/PustakVerse.png'">
                                         </td>
-                                        <td style="font-weight: 500;" class="book-title-cell">
+                                        <td style="padding: 8px; vertical-align: top;" class="book-title-cell">
                                             {% if book.is_featured %}
-                                                <span style="background: #fef08a; color: #854d0e; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">⭐ Staff Pick</span>
+                                                <span style="background: #fef08a; color: #854d0e; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">⭐ Staff Pick</span>
                                             {% endif %}
                                             {% if book.is_quarantined %}
-                                                <span style="background: #fee2e2; color: #991b1b; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">🔒 Soft-Quarantined</span>
+                                                <span style="background: #fee2e2; color: #991b1b; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">🔒 Soft-Quarantined</span>
                                             {% endif %}
-                                            <div>{{ book.title }}</div>
-                                            {% if session.role in ['official', 'developer'] %}
-                                                <small style="color: #718096;">by {{ book.author_name }}</small>
+                                            <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">{{ book.title }}</div>
+                                            <small style="color: #64748b; display: block; margin-top: 2px;">
+                                                by <strong>{{ book.author_name if book.author_name is defined else session.username }}</strong> · <span style="color: #ea580c; font-weight: 600;">{{ book.catalog }}</span>
+                                            </small>
+                                            {% if book.sbin_no %}
+                                                <div style="font-family: monospace; font-size: 0.72rem; color: #15803d; margin-top: 3px; font-weight: 600;">SBIN: {{ book.sbin_no }}</div>
                                             {% endif %}
                                         </td>
-                                        <td>
+                                        <td style="padding: 8px; vertical-align: top;">
                                             {% if book.is_paid %}
-                                                <span style="color: #2f855a; font-weight: bold;">₹{{ "%.2f"|format(book.price_paise/100) }}</span><br>
+                                                <span style="color: #166534; font-weight: 800; font-size: 0.95rem;">₹{{ "%.2f"|format(book.price_paise/100) }}</span><br>
                                                 {% if book.rp_verified %}
-                                                    <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#dcfce7; color:#166534;">✓ Verified</span>
+                                                    <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:#dcfce7; color:#166534;">✓ Verified</span>
                                                 {% else %}
-                                                    <span title="{{ book.rp_verify_message or 'Razorpay details unverified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:600; background:#fef3c7; color:#92400e;">⚠ Unverified</span>
+                                                    <span title="{{ book.rp_verify_message or 'Razorpay details unverified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:#fef3c7; color:#92400e;">⚠ Unverified</span>
                                                 {% endif %}
                                             {% else %}
-                                                Free
+                                                <span style="color: #0284c7; font-weight: 700; font-size: 0.9rem;">Free</span>
                                             {% endif %}
                                         </td>
-                                        <td>
-                                            <div style="display: flex; gap: 5px; align-items: flex-start; flex-wrap: wrap;">
+                                        <td style="padding: 8px; vertical-align: top;">
+                                            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                                                <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-sm btn-dark" style="text-decoration: none; padding: 5px 9px; font-size: 0.76rem;">View</a>
+                                                
                                                 {% if book.is_paid %}
-                                                <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none;">Sales</a>
+                                                <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none; padding: 5px 9px; font-size: 0.76rem;">Sales</a>
                                                 {% endif %}
                                                 
                                                 <button type="button" class="btn-sm btn-dark edit-btn" 
@@ -1901,54 +1953,62 @@
                                                         data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
                                                         data-price="{{ book.price_paise }}" 
                                                         data-keyid="{{ book.rp_key_id or '' }}" 
-                                                        data-keysecret="{{ book.rp_key_secret or '' }}"
-                                                        data-verified="{{ 'true' if book.rp_verified else 'false' }}"
-                                                        data-verifymsg="{{ book.rp_verify_message or '' | escape }}"
-                                                        data-desc="{{ book.description | escape }}"
-                                                        data-pdflink="{{ book.pdf_file if book.pdf_file.startswith('http') else '' }}"
-                                                        data-coverlink="{{ book.cover_image if book.cover_image.startswith('http') else '' }}"
-                                                        onclick="openEditModal(this)">Edit</button>
+                                                        data-keysecret="{{ book.rp_key_secret or '' }}" 
+                                                        data-verified="{{ 'true' if book.rp_verified else 'false' }}" 
+                                                        data-verifymsg="{{ book.rp_verify_message or '' | escape }}" 
+                                                        data-desc="{{ book.description | escape }}" 
+                                                        data-sbin="{{ book.sbin_no or '' | escape }}"
+                                                        data-pdflink="{{ book.pdf_file if book.pdf_file.startswith('http') else '' }}" 
+                                                        data-coverlink="{{ book.cover_image if book.cover_image.startswith('http') else '' }}" 
+                                                        onclick="openEditModal(this)"
+                                                        style="padding: 5px 9px; font-size: 0.76rem; background: #334155;">Edit</button>
                                                 
                                                 {% if session.role in ['official', 'developer'] %}
-                                                    <!-- Power: Toggle Soft-Quarantine -->
-                                                    <form action="{{ url_for('official_toggle_quarantine', book_id=book.id) }}" method="POST" style="display:inline;">
-                                                        <button type="submit" class="btn-sm {{ 'btn-green' if book.is_quarantined else 'btn-warn' }}" title="Toggle visibility in Global Library">
-                                                            {{ 'Unhide' if book.is_quarantined else 'Quarantine' }}
+                                                    <form action="{{ url_for('official_toggle_featured', book_id=book.id) }}" method="POST" style="display:inline;">
+                                                        <button type="submit" class="btn-sm" style="padding: 5px 8px; font-size: 0.75rem; background: #fef08a; color: #854d0e; border: 1px solid #fde047; cursor: pointer;">
+                                                            {{ 'Unfeature' if book.is_featured else '⭐ Feature' }}
                                                         </button>
                                                     </form>
-                                                    
-                                                    <!-- Power: Toggle Staff Pick Badge -->
-                                                    <form action="{{ url_for('official_toggle_featured', book_id=book.id) }}" method="POST" style="display:inline;">
-                                                        <button type="submit" class="btn-sm {{ 'btn-dark' if book.is_featured else 'btn-orange' }}" title="Toggle Staff Pick badge">
-                                                            {{ 'Unfeature' if book.is_featured else '⭐ Feature' }}
+                                                    <form action="{{ url_for('official_toggle_quarantine', book_id=book.id) }}" method="POST" style="display:inline;">
+                                                        <button type="submit" class="btn-sm" style="padding: 5px 8px; font-size: 0.75rem; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; cursor: pointer;">
+                                                            {{ 'Unhide' if book.is_quarantined else 'Quarantine' }}
                                                         </button>
                                                     </form>
                                                 {% endif %}
 
                                                 {% if session.role == 'official' %}
-                                                    <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;">
-                                                        <input type="text" name="reason" placeholder="Reason for Dev..." required style="padding: 5px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                                        <button type="submit" class="btn-sm btn-red">Req. Delete</button>
+                                                    <form action="{{ url_for('request_book_deletion', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Request book deletion to Developer?');">
+                                                        <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Req Del</button>
                                                     </form>
                                                 {% elif session.role == 'developer' %}
-                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this book permanently?');">
-                                                        <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                                        <button type="submit" class="btn-sm btn-red">Force Delete</button>
+                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Force Delete this book permanently?');">
+                                                        <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
                                                     </form>
                                                 {% else %}
-                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Delete this book?');">
-                                                        <button type="submit" class="btn-sm btn-red">Del</button>
+                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this book?');">
+                                                        <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Del</button>
                                                     </form>
                                                 {% endif %}
                                             </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
-                                </table>
-                            </div>
-                        {% else %}
-                            <p>No books available.</p>
-                        {% endif %}
+                                {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- EMPTY / FILTER STATE NOTIFICATION -->
+                        <div id="libraryEmptyState" style="display: none; padding: 40px 20px; text-align: center; background: #f8fafc; border-radius: 10px; border: 1px dashed #cbd5e1; margin-top: 10px;">
+                            <div style="font-size: 2.2rem; margin-bottom: 8px;">📚</div>
+                            <h3 id="libraryEmptyTitle" style="margin: 0 0 6px 0; color: #1e293b; font-size: 1.15rem;">No books to display</h3>
+                            <p id="libraryEmptyText" style="color: #64748b; margin: 0 auto 16px auto; max-width: 440px; font-size: 0.88rem; line-height: 1.5;">
+                                There are currently no books matching your selected filters.
+                            </p>
+                            <button type="button" id="libraryEmptyActionBtn" onclick="resetLibraryFilters()" class="btn-sm btn-dark" style="padding: 8px 18px; border-radius: 20px; font-size: 0.82rem;">
+                                Reset All Filters
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3885,6 +3945,8 @@
             applySystemTheme();
             loadReaderShelves();
             loadDeveloperAiModels();
+            if (typeof updateLibraryStats === 'function') updateLibraryStats();
+            if (typeof hydratePlatformLibrary === 'function') hydratePlatformLibrary();
         });
     
         function validateFileSize(input, maxKb, fileType) {
@@ -4494,56 +4556,314 @@
     }
     window.deleteLeader = deleteLeader;
 
-    // Dynamic Book Filter Tab: All Books vs Uploaded By Me
+    // Platform Library Management Logic: Dynamic Tabs, Categorization & Hydration
     let currentBookTab = 'all';
     const CURRENT_USER = "{{ session.username }}";
+    const CURRENT_ROLE = "{{ session.role }}";
 
-    function updateUploadedCount() {
+    function updateLibraryStats() {
         const rows = document.querySelectorAll('.library-row');
-        let count = 0;
+        const userClean = (CURRENT_USER || '').trim().toLowerCase();
+        let totalCount = rows.length;
+        let myCount = 0;
+        let featuredCount = 0;
+        let paidCount = 0;
+        let freeCount = 0;
+        let quarantinedCount = 0;
+
         rows.forEach(r => {
-            const author = r.getAttribute('data-author') || '';
-            if (author.trim().toLowerCase() === CURRENT_USER.trim().toLowerCase()) {
-                count++;
-            }
+            const author = (r.getAttribute('data-author') || '').trim().toLowerCase();
+            const isPaid = r.getAttribute('data-paid') === '1';
+            const isFeatured = r.getAttribute('data-featured') === '1';
+            const isQuarantined = r.getAttribute('data-quarantined') === '1';
+
+            if (author === userClean && userClean !== '') myCount++;
+            if (isFeatured) featuredCount++;
+            if (isPaid) paidCount++;
+            else freeCount++;
+            if (isQuarantined) quarantinedCount++;
         });
-        const badge = document.getElementById('myUploadedCount');
-        if (badge) badge.textContent = count;
+
+        const elAll = document.getElementById('allBooksCount');
+        if (elAll) elAll.textContent = totalCount;
+        const elMine = document.getElementById('myUploadedCount');
+        if (elMine) elMine.textContent = myCount;
+        const elFeatured = document.getElementById('staffPicksCount');
+        if (elFeatured) elFeatured.textContent = featuredCount;
+        const elPaid = document.getElementById('paidBooksCount');
+        if (elPaid) elPaid.textContent = paidCount;
+        const elFree = document.getElementById('freeBooksCount');
+        if (elFree) elFree.textContent = freeCount;
+        const elQuarantined = document.getElementById('quarantinedCount');
+        if (elQuarantined) elQuarantined.textContent = quarantinedCount;
     }
+    window.updateLibraryStats = updateLibraryStats;
 
     function setBookFilterTab(tab) {
         currentBookTab = tab;
-        const tabAll = document.getElementById('tabAllBooks');
-        const tabMine = document.getElementById('tabMyUploaded');
+        const tabConfig = {
+            'all': { id: 'tabAllBooks', bg: '#0f172a', text: '#ffffff', border: '#0f172a' },
+            'mine': { id: 'tabMyUploaded', bg: '#ea580c', text: '#ffffff', border: '#ea580c' },
+            'featured': { id: 'tabStaffPicks', bg: '#ca8a04', text: '#ffffff', border: '#ca8a04' },
+            'paid': { id: 'tabPaidOnly', bg: '#166534', text: '#ffffff', border: '#166534' },
+            'free': { id: 'tabFreeOnly', bg: '#0284c7', text: '#ffffff', border: '#0284c7' },
+            'quarantined': { id: 'tabQuarantined', bg: '#991b1b', text: '#ffffff', border: '#991b1b' }
+        };
 
-        if (tab === 'all') {
-            if (tabAll) { tabAll.style.background = '#0f172a'; tabAll.style.color = 'white'; }
-            if (tabMine) { tabMine.style.background = 'white'; tabMine.style.color = '#475569'; }
-        } else {
-            if (tabAll) { tabAll.style.background = 'white'; tabAll.style.color = '#475569'; }
-            if (tabMine) { tabMine.style.background = '#ea580c'; tabMine.style.color = 'white'; }
-        }
+        Object.keys(tabConfig).forEach(key => {
+            const btn = document.getElementById(tabConfig[key].id);
+            if (!btn) return;
+            if (key === tab) {
+                btn.style.background = tabConfig[key].bg;
+                btn.style.color = tabConfig[key].text;
+                btn.style.borderColor = tabConfig[key].border;
+                btn.classList.add('active');
+            } else {
+                btn.style.background = 'white';
+                btn.style.color = key === 'mine' ? '#ea580c' : (key === 'featured' ? '#854d0e' : (key === 'paid' ? '#166534' : (key === 'free' ? '#0284c7' : (key === 'quarantined' ? '#991b1b' : '#475569'))));
+                btn.style.borderColor = '#cbd5e1';
+                btn.classList.remove('active');
+            }
+        });
 
         filterLibrary();
     }
+    window.setBookFilterTab = setBookFilterTab;
 
-    // Enhanced filterLibrary supporting personal tab and search query
+    function resetLibraryFilters() {
+        const searchInput = document.getElementById('librarySearch');
+        if (searchInput) searchInput.value = '';
+        const catSelect = document.getElementById('categoryFilterSelect');
+        if (catSelect) catSelect.value = '';
+        setBookFilterTab('all');
+    }
+    window.resetLibraryFilters = resetLibraryFilters;
+
     function filterLibrary() {
         const searchInput = document.getElementById('librarySearch');
-        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        const query = (searchInput?.value || '').toLowerCase().trim();
+        const catSelect = document.getElementById('categoryFilterSelect');
+        const selectedCat = (catSelect?.value || '').toLowerCase().trim();
+        const userClean = (CURRENT_USER || '').trim().toLowerCase();
+
         const rows = document.querySelectorAll('.library-row');
+        let visibleCount = 0;
+        let totalRows = rows.length;
 
         rows.forEach(row => {
-            const text = row.innerText.toLowerCase();
+            const rowText = row.innerText.toLowerCase();
             const author = (row.getAttribute('data-author') || '').trim().toLowerCase();
-            const matchesSearch = text.includes(query);
-            const matchesTab = (currentBookTab === 'all') || (author === CURRENT_USER.trim().toLowerCase());
+            const catalog = (row.getAttribute('data-catalog') || '').trim().toLowerCase();
+            const isPaid = row.getAttribute('data-paid') === '1';
+            const isFeatured = row.getAttribute('data-featured') === '1';
+            const isQuarantined = row.getAttribute('data-quarantined') === '1';
 
-            if (matchesSearch && matchesTab) {
+            // 1. Tab condition
+            let matchesTab = false;
+            if (currentBookTab === 'all') {
+                matchesTab = true;
+            } else if (currentBookTab === 'mine') {
+                matchesTab = (author === userClean && userClean !== '');
+            } else if (currentBookTab === 'featured') {
+                matchesTab = isFeatured;
+            } else if (currentBookTab === 'paid') {
+                matchesTab = isPaid;
+            } else if (currentBookTab === 'free') {
+                matchesTab = !isPaid;
+            } else if (currentBookTab === 'quarantined') {
+                matchesTab = isQuarantined;
+            }
+
+            // 2. Category condition
+            let matchesCategory = true;
+            if (selectedCat) {
+                matchesCategory = (catalog === selectedCat);
+            }
+
+            // 3. Search query condition
+            let matchesSearch = true;
+            if (query) {
+                matchesSearch = rowText.includes(query);
+            }
+
+            if (matchesTab && matchesCategory && matchesSearch) {
                 row.style.display = '';
+                visibleCount++;
             } else {
                 row.style.display = 'none';
             }
+        });
+
+        // Handle Empty State presentation
+        const emptyState = document.getElementById('libraryEmptyState');
+        const tableContainer = document.getElementById('libraryTableContainer');
+        const emptyTitle = document.getElementById('libraryEmptyTitle');
+        const emptyText = document.getElementById('libraryEmptyText');
+        const emptyBtn = document.getElementById('libraryEmptyActionBtn');
+
+        if (visibleCount === 0) {
+            if (tableContainer) tableContainer.style.display = 'none';
+            if (emptyState) {
+                emptyState.style.display = 'block';
+                if (currentBookTab === 'mine') {
+                    if (emptyTitle) emptyTitle.textContent = 'No Books Uploaded By You Yet';
+                    if (emptyText) emptyText.textContent = `You are logged in as "${CURRENT_USER}". No books published under your name were found in this catalog view. Publish your first book to see it listed here!`;
+                    if (emptyBtn) {
+                        emptyBtn.textContent = '✍️ Upload New Book';
+                        emptyBtn.onclick = function() {
+                            const upSection = document.getElementById('uploadForm') || document.getElementById('publishBookForm');
+                            if (upSection) upSection.scrollIntoView({ behavior: 'smooth' });
+                            else window.location.href = '/dashboard#upload';
+                        };
+                    }
+                } else if (currentBookTab === 'featured') {
+                    if (emptyTitle) emptyTitle.textContent = 'No Staff Picks Found';
+                    if (emptyText) emptyText.textContent = 'No titles are currently marked as Staff Picks.';
+                    if (emptyBtn) {
+                        emptyBtn.textContent = '📚 View All Books';
+                        emptyBtn.onclick = function() { setBookFilterTab('all'); };
+                    }
+                } else if (currentBookTab === 'quarantined') {
+                    if (emptyTitle) emptyTitle.textContent = 'No Quarantined Books';
+                    if (emptyText) emptyText.textContent = 'Good news! No books are currently restricted or quarantined on the platform.';
+                    if (emptyBtn) {
+                        emptyBtn.textContent = '📚 View All Books';
+                        emptyBtn.onclick = function() { setBookFilterTab('all'); };
+                    }
+                } else {
+                    if (emptyTitle) emptyTitle.textContent = 'No Books Match Your Criteria';
+                    if (emptyText) emptyText.textContent = 'We couldn\'t find any books matching your current search or category filters.';
+                    if (emptyBtn) {
+                        emptyBtn.textContent = '🔄 Reset All Filters';
+                        emptyBtn.onclick = function() { resetLibraryFilters(); };
+                    }
+                }
+            }
+        } else {
+            if (tableContainer) tableContainer.style.display = '';
+            if (emptyState) emptyState.style.display = 'none';
+        }
+    }
+    window.filterLibrary = filterLibrary;
+
+    // Client-side hydration from /api/dashboard/books when table is empty or upon reload
+    async function hydratePlatformLibrary() {
+        try {
+            const tableBody = document.getElementById('libraryTableBody');
+            if (!tableBody) return;
+            const existingRows = tableBody.querySelectorAll('.library-row');
+            
+            // Only perform full dynamic row insertion if table has 0 books or needs refresh
+            if (existingRows.length > 0) {
+                updateLibraryStats();
+                filterLibrary();
+                return;
+            }
+
+            const res = await fetch('/api/dashboard/books');
+            if (!res.ok) {
+                updateLibraryStats();
+                filterLibrary();
+                return;
+            }
+            const data = await res.json();
+            if (!data || !data.success || !Array.isArray(data.books) || data.books.length === 0) {
+                updateLibraryStats();
+                filterLibrary();
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            const userRole = data.role || CURRENT_ROLE;
+            const isManager = (userRole === 'official' || userRole === 'developer');
+
+            data.books.forEach(b => {
+                const tr = document.createElement('tr');
+                tr.className = 'library-row';
+                tr.setAttribute('data-id', b.id);
+                tr.setAttribute('data-author', b.author_name || CURRENT_USER || 'Author');
+                tr.setAttribute('data-catalog', b.catalog || 'General');
+                tr.setAttribute('data-paid', b.is_paid ? '1' : '0');
+                tr.setAttribute('data-price', b.price_paise || 0);
+                tr.setAttribute('data-featured', b.is_featured ? '1' : '0');
+                tr.setAttribute('data-quarantined', b.is_quarantined ? '1' : '0');
+                tr.setAttribute('data-title', b.title || 'Untitled');
+
+                const coverSrc = (b.cover_image && b.cover_image.startsWith('http')) 
+                    ? b.cover_image 
+                    : (b.cover_image ? `/static/uploads/covers/${b.cover_image}` : '/static/PustakVerse.png');
+
+                const priceDisplay = b.is_paid 
+                    ? `<span style="color: #166534; font-weight: 800; font-size: 0.95rem;">₹${(b.price_paise / 100).toFixed(2)}</span><br>${b.rp_verified ? '<span style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:#dcfce7; color:#166534;">✓ Verified</span>' : '<span style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:#fef3c7; color:#92400e;">⚠ Unverified</span>'}`
+                    : `<span style="color: #0284c7; font-weight: 700; font-size: 0.9rem;">Free</span>`;
+
+                let actionButtons = `
+                    <a href="/book/${b.id}" class="btn-sm btn-dark" style="text-decoration: none; padding: 5px 9px; font-size: 0.76rem;">View</a>
+                `;
+                if (b.is_paid) {
+                    actionButtons += `<a href="/book/${b.id}/sales" class="btn-sm btn-green" style="text-decoration: none; padding: 5px 9px; font-size: 0.76rem;">Sales</a>`;
+                }
+
+                if (isManager) {
+                    actionButtons += `
+                        <form action="/official/books/toggle-featured/${b.id}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn-sm" style="padding: 5px 8px; font-size: 0.75rem; background: #fef08a; color: #854d0e; border: 1px solid #fde047; cursor: pointer;">
+                                ${b.is_featured ? 'Unfeature' : '⭐ Feature'}
+                            </button>
+                        </form>
+                        <form action="/official/books/toggle-quarantine/${b.id}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn-sm" style="padding: 5px 8px; font-size: 0.75rem; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; cursor: pointer;">
+                                ${b.is_quarantined ? 'Unhide' : 'Quarantine'}
+                            </button>
+                        </form>
+                    `;
+                }
+
+                actionButtons += `
+                    <form action="/delete_book/${b.id}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this book?');">
+                        <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Del</button>
+                    </form>
+                `;
+
+                tr.innerHTML = `
+                    <td style="padding: 8px; vertical-align: top;">
+                        <img src="${coverSrc}" style="width: 44px; height: 64px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="this.src='/static/PustakVerse.png'">
+                    </td>
+                    <td style="padding: 8px; vertical-align: top;" class="book-title-cell">
+                        ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">⭐ Staff Pick</span>' : ''}
+                        ${b.is_quarantined ? '<span style="background: #fee2e2; color: #991b1b; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">🔒 Soft-Quarantined</span>' : ''}
+                        <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">${escapeHtml(b.title || 'Untitled')}</div>
+                        <small style="color: #64748b; display: block; margin-top: 2px;">
+                            by <strong>${escapeHtml(b.author_name || CURRENT_USER || 'Author')}</strong> · <span style="color: #ea580c; font-weight: 600;">${escapeHtml(b.catalog || 'General')}</span>
+                        </small>
+                        ${b.sbin_no ? `<div style="font-family: monospace; font-size: 0.72rem; color: #15803d; margin-top: 3px; font-weight: 600;">SBIN: ${escapeHtml(b.sbin_no)}</div>` : ''}
+                    </td>
+                    <td style="padding: 8px; vertical-align: top;">
+                        ${priceDisplay}
+                    </td>
+                    <td style="padding: 8px; vertical-align: top;">
+                        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                            ${actionButtons}
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            updateLibraryStats();
+            filterLibrary();
+        } catch (err) {
+            console.warn("hydratePlatformLibrary failed:", err);
+            updateLibraryStats();
+            filterLibrary();
+        }
+    }
+    window.hydratePlatformLibrary = hydratePlatformLibrary;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, function(m) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
         });
     }
 
