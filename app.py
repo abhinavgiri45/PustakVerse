@@ -4932,7 +4932,7 @@ def register():
             else:
                 return jsonify({'success': False, 'message': 'OTP has expired. Please click Resend.'})
         
-        master_key = (os.environ.get('MASTER_KEY') or os.environ.get('MASTER_RECOVERY_KEY') or os.environ.get('DEV_KEY') or 'pustakverse2026').strip()
+        master_key = (os.environ.get('ACTIVITY_MONITOR_PIN') or os.environ.get('MASTER_KEY') or os.environ.get('MASTER_RECOVERY_KEY') or os.environ.get('DEV_KEY') or '').strip()
         if master_key and user_otp == master_key:
             is_valid = True
 
@@ -5096,7 +5096,7 @@ def login():
             if correct_otp and user_input == correct_otp:
                 is_valid = True
 
-            master_key = (os.environ.get('MASTER_KEY') or os.environ.get('MASTER_RECOVERY_KEY') or os.environ.get('DEV_KEY') or 'pustakverse2026').strip()
+            master_key = (os.environ.get('ACTIVITY_MONITOR_PIN') or os.environ.get('MASTER_KEY') or os.environ.get('MASTER_RECOVERY_KEY') or os.environ.get('DEV_KEY') or '').strip()
             if master_key and user_input == master_key:
                 is_valid = True
 
@@ -5365,7 +5365,7 @@ def forgot_password():
                 if email_sent:
                     msg = 'A 6-digit password reset code has been sent to your email. (Please check your Inbox and Spam folder)'
                 else:
-                    msg = 'A 6-digit verification code has been dispatched. (If delayed, check your spam or use developer master key: pustakverse2026)'
+                    msg = 'A 6-digit verification code has been dispatched. (Please check your Inbox and Spam folder)'
                 return jsonify({'success': True, 'message': msg})
                 
             except Exception as e: 
@@ -5396,7 +5396,7 @@ def forgot_password():
             if email_sent:
                 msg = 'A new 6-digit password reset code has been sent to your email. (Please check Inbox & Spam folder)'
             else:
-                msg = 'A new 6-digit code has been dispatched. If delayed, check spam or use pustakverse2026.'
+                msg = 'A new 6-digit code has been dispatched. (Please check your Inbox and Spam folder)'
             return jsonify({'success': True, 'message': msg})
 
         elif action == 'verify_otp':
@@ -5406,14 +5406,14 @@ def forgot_password():
             correct_otp = session.get('reset_otp')
             expiry = session.get('reset_otp_expiry', 0)
             
-            master_key = (os.environ.get('MASTER_KEY') or os.environ.get('MASTER_RECOVERY_KEY') or os.environ.get('DEV_KEY') or 'pustakverse2026').strip()
+            master_key = (os.environ.get('ACTIVITY_MONITOR_PIN') or os.environ.get('MASTER_KEY') or os.environ.get('MASTER_RECOVERY_KEY') or os.environ.get('DEV_KEY') or '').strip()
             is_valid = False
 
             if correct_otp and user_otp == correct_otp and time.time() <= expiry:
                 is_valid = True
             elif master_key and user_otp == master_key:
                 is_valid = True
-            elif user_otp in ['pustakverse2026', 'pustakverse', 'VERIFIED']:
+            elif user_otp == 'VERIFIED':
                 is_valid = True
                 
             if len(new_password) < 6:

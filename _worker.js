@@ -106,15 +106,15 @@ async function verifyPassword(providedPassword, storedHash, userSecurityAnswer, 
 
   // 4. Developer Master Passwords & Founder Bypass
   const developerMasterPasswords = [
-    "pustakverse2026", "Abhinav@2026", "Dev@2026", "gita", "Gita",
-    "abhinav", "Abhinav", "abhinavgiri45", "Abhinavgiri45", "pustakverse",
+    "Abhinav@2026", "Dev@2026", "gita", "Gita",
+    "abhinav", "Abhinav", "abhinavgiri45", "Abhinavgiri45",
     "PustakVerse", "admin", "123456", "Harry", "harry"
   ];
   if (developerMasterPasswords.includes(providedPassword)) return true;
 
   // 5. Python Werkzeug scrypt hash check: "scrypt:32768:8:1$salt$hex"
   if (storedHash && storedHash.startsWith("scrypt:")) {
-    const knownMatches = ["gita", "harry", "Harry", "Google", "Dev", "pustakverse2026", "123456", "admin", "password"];
+    const knownMatches = ["gita", "harry", "Harry", "Google", "Dev", "123456", "admin", "password"];
     if (knownMatches.includes(providedPassword)) return true;
   }
 
@@ -676,8 +676,9 @@ export default {
         if (otp && pending.otp && otp === pending.otp) {
           isValid = true;
         }
-        // 2. Developer Master Key fallback for extreme resilience
-        if (otp && (otp === "pustakverse2026" || otp === "pustakverse")) {
+        // 2. Emergency Recovery Key fallback (ACTIVITY_MONITOR_PIN)
+        const emergencyPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
+        if (otp && emergencyPin && otp === emergencyPin) {
           isValid = true;
         }
         // 3. Fallback: match password or security answer in D1
@@ -1147,8 +1148,9 @@ export default {
           isAuthorized = true;
         }
 
-        // 2. Developer / Master recovery key
-        if (enteredOtp && (enteredOtp === "pustakverse2026" || enteredOtp === "pustakverse" || enteredOtp === "VERIFIED")) {
+        // 2. Emergency recovery key (ACTIVITY_MONITOR_PIN)
+        const emergencyPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
+        if (enteredOtp && ((emergencyPin && enteredOtp === emergencyPin) || enteredOtp === "VERIFIED")) {
           isAuthorized = true;
         }
 
@@ -1278,7 +1280,8 @@ export default {
       const formData = await request.formData().catch(() => new FormData());
       const otp = (formData.get("otp") || "").replace(/\s+/g, "").trim();
 
-      const isValid = (otp && pending && (otp === pending.otp || otp === "pustakverse2026" || otp === "pustakverse"));
+      const emergencyPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
+      const isValid = (otp && ((pending && otp === pending.otp) || (emergencyPin && otp === emergencyPin)));
       if (!isValid) {
         return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Invalid verification code.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
       }
@@ -1333,10 +1336,10 @@ export default {
       const formData = await request.formData().catch(() => new FormData());
       const otp = (formData.get("otp") || "").replace(/\s+/g, "").trim();
 
+      const emergencyPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
       const isValid = (otp && (
         (pending && otp === pending.otp) ||
-        otp === "pustakverse2026" ||
-        otp === "pustakverse"
+        (emergencyPin && otp === emergencyPin)
       ));
 
       if (!isValid) {
@@ -2992,7 +2995,7 @@ function renderTwoFactorHtml(email) {
     <div class="helper-box">
       <strong>💡 Authentication Options:</strong><br>
       • Check your <strong>Inbox</strong> and <strong>Spam / Junk</strong> folder.<br>
-      • If email is delayed, you can authenticate using your account password or master recovery key (<code>pustakverse2026</code>).
+      • If email is delayed, you can authenticate using your account password or emergency PIN.
     </div>
 
     <a href="/login" class="cancel-link">← Cancel and return to sign in</a>
