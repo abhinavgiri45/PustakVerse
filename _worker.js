@@ -133,8 +133,31 @@ async function verifyPassword(providedPassword, storedHash, userSecurityAnswer, 
 
 // ============================================================================
 // EDGE EMAIL & OTP DISPATCH ENGINE
-// Multi-provider HTTPS dispatch: Resend, Brevo (Sendinblue), SendGrid, Webhook
+// Multi-provider HTTPS dispatch: Google Gmail REST API, Resend, Brevo, SendGrid
 // ============================================================================
+
+function utf8ToBase64(str) {
+  const bytes = new TextEncoder().encode(str || "");
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function utf8ToBase64Url(str) {
+  return utf8ToBase64(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function chunkBase64(b64, chunkSize = 76) {
+  if (!b64) return "";
+  const chunks = [];
+  for (let i = 0; i < b64.length; i += chunkSize) {
+    chunks.push(b64.slice(i, i + chunkSize));
+  }
+  return chunks.join("\r\n");
+}
 
 async function sendEdgeEmail(env, { to, subject, html, text }) {
   if (!to || !to.includes("@")) return { success: false, error: "Invalid recipient email" };
@@ -143,9 +166,9 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
   const fromEmail = env.EMAIL_FROM || "PustakVerse <support@pustakverse.org>";
 
   // 1. Google Gmail REST API (HTTPS Port 443 via OAuth2 / Refresh Token)
-  const googleClientId = env.GOOGLE_CLIENT_ID || env.GMAIL_CLIENT_ID;
-  const googleClientSecret = env.GOOGLE_CLIENT_SECRET || env.GMAIL_CLIENT_SECRET;
-  const googleRefreshToken = env.GOOGLE_REFRESH_TOKEN || env.GMAIL_REFRESH_TOKEN;
+  const googleClientId = (env.GOOGLE_CLIENT_ID || env.GMAIL_CLIENT_ID || env.CLIENT_ID || "").trim().replace(/^["']|["']$/g, "");
+  const googleClientSecret = (env.GOOGLE_CLIENT_SECRET || env.GMAIL_CLIENT_SECRET || env.CLIENT_SECRET || "").trim().replace(/^["']|["']$/g, "");
+  const googleRefreshToken = (env.GOOGLE_REFRESH_TOKEN || env.GMAIL_REFRESH_TOKEN || env.REFRESH_TOKEN || env.GMAIL_TOKEN || "").trim().replace(/^["']|["']$/g, "");
 
   if (googleClientId && googleClientSecret && googleRefreshToken) {
     try {
@@ -153,28 +176,48 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-          client_id: googleClientId.trim(),
-          client_secret: googleClientSecret.trim(),
-          refresh_token: googleRefreshToken.trim(),
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          refresh_token: googleRefreshToken,
           grant_type: "refresh_token"
         })
       });
+
       const tokenData = await tokenRes.json();
       if (tokenData.access_token) {
-        const sender = env.EMAIL_SMTP_USERNAME || env.EMAIL_FROM || "PustakVerse <auth@pustakverse.org>";
+        // Automatically discover authorized Gmail address to guarantee accepted 'From' header
+        let authEmail = "";
+        try {
+          const profRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
+            headers: { "Authorization": `Bearer ${tokenData.access_token}` }
+          });
+          if (profRes.ok) {
+            const prof = await profRes.json();
+            if (prof.emailAddress) authEmail = prof.emailAddress;
+          }
+        } catch (_) {}
+
+        // Sender header formulation: Must match authorized account or alias
+        const senderEmail = authEmail || (env.EMAIL_SMTP_USERNAME && env.EMAIL_SMTP_USERNAME.includes("@") ? env.EMAIL_SMTP_USERNAME : null);
+        const fromHeader = senderEmail ? `PustakVerse <${senderEmail}>` : "PustakVerse <me>";
+        const replyToHeader = senderEmail || "support@pustakverse.org";
+
+        // Construct standard RFC 2822 / RFC 2045 compliant MIME message
+        const base64Body = chunkBase64(utf8ToBase64(html || plainText || ""), 76);
         const rfc822Lines = [
-          `From: ${sender}`,
+          `From: ${fromHeader}`,
           `To: ${cleanTo}`,
-          `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+          `Reply-To: ${replyToHeader}`,
+          `Subject: =?UTF-8?B?${utf8ToBase64(subject)}?=`,
+          `Date: ${new Date().toUTCString()}`,
           `MIME-Version: 1.0`,
           `Content-Type: text/html; charset=UTF-8`,
           `Content-Transfer-Encoding: base64`,
           ``,
-          btoa(unescape(encodeURIComponent(html)))
+          base64Body
         ];
         const rawMime = rfc822Lines.join("\r\n");
-        // Base64URL-encode raw message
-        const base64UrlMessage = btoa(rawMime).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        const base64UrlMessage = utf8ToBase64Url(rawMime);
 
         const sendRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
           method: "POST",
@@ -184,12 +227,15 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
           },
           body: JSON.stringify({ raw: base64UrlMessage })
         });
+
         if (sendRes.ok) {
-          console.log(`✓ [EDGE EMAIL DISPATCHED] Recipient: ${cleanTo} via Gmail REST API`);
-          return { success: true, provider: "gmail_api" };
+          console.log(`✓ [EDGE EMAIL DISPATCHED] Recipient: ${cleanTo} via Gmail REST API (${senderEmail || 'authorized account'})`);
+          return { success: true, provider: "gmail_api", sender: senderEmail };
         }
         const errTxt = await sendRes.text();
-        console.warn(`Gmail API error (${sendRes.status}): ${errTxt}`);
+        console.warn(`Gmail API send error (${sendRes.status}): ${errTxt}`);
+      } else {
+        console.warn(`Gmail OAuth token error: ${JSON.stringify(tokenData)}`);
       }
     } catch (e) {
       console.warn(`Gmail API dispatch error: ${e.message}`);
@@ -394,7 +440,7 @@ export default {
       });
     }
 
-    // 4. Health check endpoint & Cloudflare D1 Diagnostic
+    // 4. Health check endpoint & Cloudflare D1 / Email Engine Diagnostic
     if (url.pathname === "/api/edge-health") {
       let d1Status = "Not bound";
       let userCount = 0;
@@ -410,12 +456,63 @@ export default {
           d1Status = `Connected (Error querying tables: ${e.message})`;
         }
       }
+
+      const hasGmailApi = !!(
+        (env.GOOGLE_CLIENT_ID || env.GMAIL_CLIENT_ID || env.CLIENT_ID) &&
+        (env.GOOGLE_CLIENT_SECRET || env.GMAIL_CLIENT_SECRET || env.CLIENT_SECRET) &&
+        (env.GOOGLE_REFRESH_TOKEN || env.GMAIL_REFRESH_TOKEN || env.REFRESH_TOKEN || env.GMAIL_TOKEN)
+      );
+
       return new Response(JSON.stringify({
         status: "online",
         platform: "Cloudflare Pages Edge",
         database: d1Status,
         users_count: userCount,
         books_count: bookCount,
+        email_engine: {
+          gmail_api_configured: hasGmailApi,
+          resend_configured: !!env.RESEND_API_KEY,
+          brevo_configured: !!(env.BREVO_API_KEY || env.SENDINBLUE_API_KEY),
+          sendgrid_configured: !!env.SENDGRID_API_KEY,
+          active_provider: hasGmailApi ? "Google Gmail REST API (OAuth2)" : (env.RESEND_API_KEY ? "Resend" : (env.BREVO_API_KEY ? "Brevo" : "None / Simulated"))
+        },
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4B. Email Delivery Diagnostic Test: /api/test-email
+    if (url.pathname === "/api/test-email") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+
+      const reqPin = url.searchParams.get("pin") || url.searchParams.get("key");
+      const emergencyPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
+      const isAuthorized = (
+        (sessionUser && (sessionUser.role === "developer" || sessionUser.role === "official")) ||
+        (reqPin && emergencyPin && reqPin === emergencyPin)
+      );
+
+      const targetTo = (url.searchParams.get("to") || (sessionUser ? sessionUser.email : null) || "abhinavgiri370@gmail.com").trim();
+
+      if (!isAuthorized && targetTo !== "abhinavgiri370@gmail.com") {
+        return new Response(JSON.stringify({
+          success: false,
+          message: "Unauthorized. Please authenticate as developer/official or pass ?pin=YOUR_ACTIVITY_MONITOR_PIN."
+        }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+
+      const testResult = await sendEdgeEmail(env, {
+        to: targetTo,
+        subject: "PustakVerse - Gmail REST API Verification Test",
+        html: generateEdgeOtpEmail("Email System Active", "VERIFIED", `This is a live diagnostic test confirmation from your PustakVerse platform confirming that the Google Gmail REST API is working seamlessly!`, 60)
+      });
+
+      return new Response(JSON.stringify({
+        test_email: targetTo,
+        dispatch_result: testResult,
         timestamp: new Date().toISOString()
       }), {
         headers: { "Content-Type": "application/json" }

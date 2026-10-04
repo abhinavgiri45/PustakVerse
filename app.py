@@ -3329,9 +3329,9 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
     # ==========================================
     # 1. PRIMARY METHOD: GMAIL REST API / GOOGLE OAUTH2 (HTTPS PORT 443)
     # ==========================================
-    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('GMAIL_CLIENT_ID') or os.environ.get('CLIENT_ID') or os.environ.get('GOOGLE_AUTH_CLIENT_ID') or '').strip()
-    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('GMAIL_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip()
-    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('GMAIL_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or os.environ.get('GMAIL_TOKEN') or '').strip()
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('GMAIL_CLIENT_ID') or os.environ.get('CLIENT_ID') or os.environ.get('GOOGLE_AUTH_CLIENT_ID') or '').strip().strip("'\"")
+    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('GMAIL_CLIENT_SECRET') or os.environ.get('CLIENT_SECRET') or '').strip().strip("'\"")
+    refresh_token = (os.environ.get('GOOGLE_REFRESH_TOKEN') or os.environ.get('GMAIL_REFRESH_TOKEN') or os.environ.get('REFRESH_TOKEN') or os.environ.get('GMAIL_TOKEN') or '').strip().strip("'\"")
     
     if client_id and refresh_token and client_secret:
         try:
@@ -3342,18 +3342,28 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token"
             }
-            r = requests.post(token_url, data=token_data, timeout=6)
+            r = requests.post(token_url, data=token_data, timeout=8)
             token_json = r.json()
             access_token = token_json.get("access_token")
 
             if access_token:
+                # Automatically discover authenticated Gmail address to guarantee accepted 'From' header
+                try:
+                    prof_r = requests.get("https://gmail.googleapis.com/gmail/v1/users/me/profile", headers={"Authorization": f"Bearer {access_token}"}, timeout=5)
+                    if prof_r.status_code == 200:
+                        prof_email = prof_r.json().get('emailAddress')
+                        if prof_email:
+                            sender_header = prof_email
+                except Exception:
+                    pass
+
                 msg = create_mime_msg()
                 encoded_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
                 send_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
                 headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=6)
+                send_res = requests.post(send_url, json={"raw": encoded_message}, headers=headers, timeout=8)
                 if send_res.status_code in [200, 201]:
-                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Gmail REST API (Port 443)", to_email)
+                    logging.info("✓ [EMAIL DELIVERED] Recipient: %s via Gmail REST API (Port 443, sender=%s)", to_email, sender_header)
                     return True
                 delivery_errors.append(f"Gmail API HTTP {send_res.status_code}: {send_res.text[:200]}")
             else:
