@@ -86,7 +86,7 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
-        .btn-granthmind-nav {
+        .btn-girionix-nav {
             background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
             color: white !important;
             padding: 8px 16px;
@@ -100,7 +100,7 @@
             gap: 6px;
             transition: transform 0.15s;
         }
-        .btn-granthmind-nav:hover { transform: translateY(-1px); }
+        .btn-girionix-nav:hover { transform: translateY(-1px); }
 
         .btn-nav-primary {
             background: var(--primary-orange);
@@ -432,7 +432,7 @@
             nav { padding: 10px 16px; }
             .nav-actions { gap: 8px; }
             .nav-link { font-size: 0.8rem; padding: 6px 10px; }
-            .btn-granthmind-nav { font-size: 0.78rem; padding: 6px 12px; }
+            .btn-girionix-nav { font-size: 0.78rem; padding: 6px 12px; }
             .hero-banner { padding: 36px 16px; }
             .main-content { padding: 24px 16px 40px; }
         }
@@ -448,7 +448,7 @@
         </a>
         <div class="nav-actions">
             <a href="/" class="nav-link">← Back to Library</a>
-            <a href="{{ url_for('ask_ai') }}" class="btn-granthmind-nav">🧠 GranthMind AI</a>
+            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-girionix-nav">🧠 Girionix AI ↗</a>
             {% if session.user_id %}
                 <a href="{{ url_for('dashboard') }}" class="btn-nav-primary">Dashboard</a>
             {% else %}

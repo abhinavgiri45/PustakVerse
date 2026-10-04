@@ -4810,7 +4810,7 @@ def contact():
             'id': 1,
             'name': 'Abhinav Giri',
             'role_title': 'Founder & Chief Technology Officer (CTO)',
-            'bio': 'Visionary founder and lead architect behind PustakVerse and GranthMind AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.',
+            'bio': 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.',
             'email': 'abhinavgiri370@gmail.com',
             'phone': '+91 99999 99999',
             'address': 'Greater Noida, Uttar Pradesh, India',

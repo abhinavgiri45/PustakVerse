@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GranthMind AI Study Suite · {{ book.title }}</title>
+    <title>Girionix AI Study Suite · {{ book.title }}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -97,7 +97,7 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
-        .btn-granthmind-nav {
+        .btn-girionix-nav {
             background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
             color: white !important;
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
@@ -486,7 +486,7 @@
         </a>
         <div class="study-nav-links">
             <a href="{{ url_for('view_book', book_id=book.id) }}">← Back to Book</a>
-            <a href="{{ url_for('ask_ai', book_id=book.id) }}" class="btn-granthmind-nav">🧠 GranthMind AI</a>
+            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-girionix-nav">🧠 Girionix AI ↗</a>
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
         </div>
     </nav>
@@ -504,7 +504,7 @@
                     <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="{{ book.title }}" class="book-thumb">
                 {% endif %}
                 <div>
-                    <span class="study-badge">🧠 GranthMind AI Study Suite</span>
+                    <span class="study-badge">🧠 Girionix AI Study Suite</span>
                     <h1 class="study-title">{{ book.title }}</h1>
                     <p class="study-sub">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %} · Deep Concept Breakdown &amp; Practice Questions</p>
                 </div>
@@ -546,10 +546,10 @@
                 <!-- ACTION BUTTONS -->
                 <div class="concept-actions-row">
                     <button type="submit" class="btn-explain-concept">
-                        <span>✨</span> Explain with GranthMind
+                        <span>✨</span> Explain with Girionix AI
                     </button>
-                    <a href="{{ url_for('ask_ai', book_id=book.id) }}?question={{ concept | urlencode }}" class="btn-live-chat-concept">
-                        <span>💬</span> Open in Full GranthMind Workspace
+                    <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-live-chat-concept">
+                        <span>💬</span> Open in Girionix AI Workspace ↗
                     </a>
                 </div>
             </form>
@@ -628,12 +628,12 @@
                 </div>
 
                 <div class="side-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%); border-color: rgba(139, 92, 246, 0.3);">
-                    <h3 class="side-card-title" style="color: #c084fc;"><span>🤖</span> Ask GranthMind AI Live</h3>
+                    <h3 class="side-card-title" style="color: #c084fc;"><span>🤖</span> Ask Girionix AI Live</h3>
                     <p style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
                         Need deeper derivations, multi-step math solutions, or custom code examples for this concept?
                     </p>
-                    <a href="{{ url_for('ask_ai', book_id=book.id) }}?question={{ concept | urlencode }}" class="btn-live-chat-concept" style="width: 100%; justify-content: center; box-sizing: border-box;">
-                        Launch AI Workspace →
+                    <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-live-chat-concept" style="width: 100%; justify-content: center; box-sizing: border-box;">
+                        Launch Girionix AI ↗
                     </a>
                 </div>
             </div>

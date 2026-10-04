@@ -155,7 +155,6 @@ export default {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://pustakverse.pages.dev/</loc><lastmod>2026-10-03</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://pustakverse.pages.dev/ask_ai/</loc><lastmod>2026-10-03</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://pustakverse.pages.dev/granthmind</loc><lastmod>2026-10-03</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://pustakverse.pages.dev/tools</loc><lastmod>2026-10-03</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://pustakverse.pages.dev/login</loc><lastmod>2026-10-03</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://pustakverse.pages.dev/signup</loc><lastmod>2026-10-03</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1240,7 +1239,7 @@ function renderEdgeDashboardHtml(user) {
     </a>
     <nav class="dash-nav-links">
       <a href="/">📚 Library</a>
-      <a href="/ask_ai">🤖 GranthMind AI</a>
+      <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener">🧠 Girionix AI ↗</a>
       <a href="/tools">🛠️ Tools</a>
       <a href="/logout" class="btn-logout">Logout</a>
     </nav>
@@ -1282,9 +1281,9 @@ function renderEdgeDashboardHtml(user) {
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">🤖</div>
+        <div class="stat-icon">🧠</div>
         <div>
-          <div class="stat-val">GranthMind</div>
+          <div class="stat-val">Girionix AI</div>
           <div class="stat-label">AI Research Companion</div>
         </div>
       </div>
@@ -1308,13 +1307,13 @@ function renderEdgeDashboardHtml(user) {
         <div class="hub-link-text">Open Library Catalog →</div>
       </a>
 
-      <a href="/ask_ai" class="hub-card">
+      <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="hub-card">
         <div>
-          <div class="hub-icon">🤖</div>
-          <h3>GranthMind AI Companion</h3>
-          <p>Interact with our specialized literary AI. Ask deep philosophical, historical, or academic questions.</p>
+          <div class="hub-icon">🧠</div>
+          <h3>Girionix AI Companion</h3>
+          <p>Interact with our next-generation AI intelligence system. Ask deep philosophical, historical, or academic questions.</p>
         </div>
-        <div class="hub-link-text">Launch GranthMind →</div>
+        <div class="hub-link-text">Launch Girionix AI ↗</div>
       </a>
 
       <a href="/tools" class="hub-card">

@@ -193,7 +193,7 @@
         <div class="nav-links">
             <a href="/">🏠 Home</a>
             <a href="/my-library">📚 Library</a>
-            <a href="/ask_ai" style="color: #c084fc; font-weight: 800;">🧠 GranthMind AI</a>
+            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" style="color: #c084fc; font-weight: 800;">🧠 Girionix AI ↗</a>
             <a href="/dashboard">👤 Dashboard</a>
             <a href="/contact">🏛️ Contact</a>
         </div>
@@ -559,14 +559,14 @@
                 resArea.style.display = 'block';
                 resArea.style.background = '#fdf4ff';
                 resArea.style.borderColor = '#f5d0fe';
-                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with GranthMind AI...</span>';
+                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with Girionix AI...</span>';
             }
 
             fetch('/api/author/ai_enhance_blurb', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': 'c0ce444fd45258a74ca7acb9814424ee083093fd405005e2f3af1beb792fbffd'
+                    'X-CSRF-Token': '36a1ede19bcd9851cde6b1ba456feb7124aca1fbd6c30ee488b783b69a41b5b1'
                 },
                 body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
             })
