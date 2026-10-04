@@ -7024,10 +7024,20 @@ def remove_from_library(book_id):
     db = None
     try:
         db = get_db_connection()
-        cursor = db.cursor()
-        cursor.execute("DELETE FROM personal_library WHERE user_id = %s AND book_id = %s", (session['user_id'], book_id))
-        db.commit()
-        flash("Book removed from your library.", "info")
+        cursor = db.cursor(dictionary=True)
+        # Check if the book is paid or has an active paid purchase
+        cursor.execute("SELECT is_paid, price_paise FROM books WHERE id = %s", (book_id,))
+        book_info = cursor.fetchone()
+        cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
+        purchase_rec = cursor.fetchone()
+
+        is_paid = (book_info and (book_info.get('is_paid') or (book_info.get('price_paise') and book_info['price_paise'] > 0))) or bool(purchase_rec)
+        if is_paid:
+            flash("Purchased paid books cannot be deleted from your personal library.", "warning")
+        else:
+            cursor.execute("DELETE FROM personal_library WHERE user_id = %s AND book_id = %s", (session['user_id'], book_id))
+            db.commit()
+            flash("Book removed from your personal library.", "info")
     except Exception:
         flash("Database error.", "error")
     finally:

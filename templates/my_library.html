@@ -545,11 +545,13 @@
                             📄 Invoice
                         </a>
                         {% endif %}
+                        {% if not book.is_paid and not book.order_id %}
                         <form action="/remove_from_library/{{ book.id }}" method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('Remove this book from your library?');">
                             <button type="submit" class="btn-invoice" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; cursor: pointer;" title="Remove from Personal Library">
                                 🗑️ Remove
                             </button>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -758,11 +760,12 @@
                             <div class="book-actions">
                                 <a href="${readHref}" class="btn-read-full">Read Book</a>
                                 ${book.order_id ? `<a href="/invoice/${book.order_id}" target="_blank" class="btn-invoice" title="Tax Invoice">📄 Invoice</a>` : ''}
+                                ${(!isPaidUser && !book.is_paid) ? `
                                 <form action="/remove_from_library/${book.id}" method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('Remove this book from your library?');">
                                     <button type="submit" class="btn-invoice" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; cursor: pointer;" title="Remove from Personal Library">
                                         🗑️ Remove
                                     </button>
-                                </form>
+                                </form>` : ''}
                             </div>
                         </div>
                     `;

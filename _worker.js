@@ -2358,7 +2358,7 @@ export default {
       return Response.redirect(`${url.origin}/dashboard`, 302);
     }
 
-    // Remove from personal library: POST /remove_from_library/:id or POST /remove_book/:id
+    // Remove from personal library: POST /remove_from_library/:id or POST /remove_book/:id (FREE BOOKS ONLY)
     const removeLibMatch = url.pathname.match(/^\/(?:remove_from_library|remove_book)\/(\d+)/);
     if (removeLibMatch && env.DB) {
       if (request.method === "GET") {
@@ -2371,9 +2371,22 @@ export default {
         return Response.redirect(`${url.origin}/login`, 302);
       }
       try {
-        await env.DB.prepare(
-          "DELETE FROM personal_library WHERE user_id = ? AND book_id = ?"
-        ).bind(user.id, bookId).run();
+        // Enforce: only free books can be removed from personal library. Paid/purchased books are permanently preserved.
+        const bookInfo = await env.DB.prepare(
+          "SELECT is_paid, price_paise FROM books WHERE id = ?"
+        ).bind(bookId).first();
+
+        const purchaseRecord = await env.DB.prepare(
+          "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+        ).bind(user.id, bookId).first();
+
+        const isPaidBook = (bookInfo && (bookInfo.is_paid === 1 || (bookInfo.price_paise && bookInfo.price_paise > 0))) || !!purchaseRecord;
+
+        if (!isPaidBook) {
+          await env.DB.prepare(
+            "DELETE FROM personal_library WHERE user_id = ? AND book_id = ?"
+          ).bind(user.id, bookId).run();
+        }
       } catch (_) {}
       return Response.redirect(`${url.origin}/my-library`, 302);
     }
