@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading: {{ book.title }} - PustakVerse</title>
-      <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <style>
         body, html {
             margin: 0;
@@ -13,7 +11,6 @@
             height: 100%;
             overflow: hidden; /* Prevents scrolling outside the iframe */
             background-color: #333;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .header {
             background-color: #1a1a1a;
@@ -22,9 +19,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-family: sans-serif;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            z-index: 10;
-            position: relative;
         }
         
         .header-left {
@@ -44,7 +40,7 @@
             color: #f39c12;
         }
 
-        /* View Controls */
+        /* --- NEW: View Controls --- */
         .view-controls {
             display: flex;
             gap: 8px;
@@ -72,52 +68,22 @@
             color: white;
         }
 
-        /* Preview Warning Banner */
-        .preview-warning { 
-            background: #feebc8; 
-            color: #c05621; 
-            padding: 12px; 
-            text-align: center; 
-            font-weight: bold; 
-            border-bottom: 1px solid #f6ad55; 
-            z-index: 9; 
-            position: relative; 
-            font-size: 0.95rem; 
-        }
-
-        /* Iframe Sizing */
         iframe {
             width: 100%;
+            height: calc(100vh - 48px); /* Adjusted for header height */
             border: none;
         }
-        .pdf-container { height: calc(100vh - 48px); }
-        .pdf-container.with-warning { height: calc(100vh - 93px); }
-
-        /* --- NEW: Google Drive Clipping Wrapper --- */
-        .drive-wrapper {
-            width: 100%;
-            overflow: hidden; /* Hides anything pushed outside this box */
-            position: relative;
-        }
-        .drive-wrapper.standard { height: calc(100vh - 48px); }
-        .drive-wrapper.with-warning { height: calc(100vh - 93px); }
-
-        .drive-iframe {
+        
+        /* Overlay to block transparent clicks if necessary */
+        #protection-overlay {
             position: absolute;
-            top: -56px; /* Pushes the iframe up to hide the Google Drive pop-out toolbar */
+            top: 0;
             left: 0;
             width: 100%;
-            height: calc(100% + 56px); /* Compensates for the height lost at the top */
-            border: none;
+            height: 100%;
+            z-index: 9999;
+            pointer-events: none; /* Let clicks pass through to the document */
         }
-
-        /* Lock Screen for Drive Links */
-        .drive-block { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: calc(100vh - 48px); text-align: center; padding: 20px; background-color: #f4f6f9; 
-        }
-        .drive-block h2 { color: #2d3748; margin-top: 15px; }
-        .drive-block p { color: #718096; max-width: 500px; line-height: 1.6; }
     </style>
 </head>
 <!-- Prevent Right Click entirely on the body -->
@@ -137,55 +103,37 @@
             {% endif %}
         </div>
         
-        <a href="javascript:history.back()">← Back</a>
+        <a href="{{ request.referrer or url_for('index') }}">← Back to Library</a>
     </div>
 
-    <!-- Shows a bright warning banner if the user is in Preview mode -->
-    {% if not can_read %}
-        <div class="preview-warning">
-            ⚠️ You are viewing a limited preview. Purchase the book to unlock the full version.
-        </div>
-    {% endif %}
-
-    <!-- Determine how to serve the file based on link type and purchase status -->
+    <!-- Determine the correct URL based on if it's a Drive Link or Local Upload -->
+    {% set pdf_url = '' %}
+    
     {% if book.pdf_file.startswith('http') %}
-        
-        <!-- Google Drive Links (Clipped to hide pop-out) -->
-        {% if can_read %}
-            <div class="drive-wrapper {% if not can_read %}with-warning{% else %}standard{% endif %}">
-                <iframe src="{{ book.pdf_file.replace('/view', '/preview') }}" class="drive-iframe" allow="autoplay"></iframe>
-            </div>
-        {% else %}
-            <!-- Block Drive Links if Unpaid -->
-            <div class="drive-block">
-                <span style="font-size: 4rem;">🔒</span>
-                <h2>Preview Not Available</h2>
-                <p>Because this premium book is securely hosted on an external drive, our system cannot automatically slice it to generate a preview. Please purchase the book to unlock full access.</p>
-                <a href="javascript:history.back()" style="display:inline-block; margin-top:20px; padding:10px 20px; background:#f66d2f; color:white; border-radius:5px; text-decoration:none; font-weight:bold;">Go Back</a>
-            </div>
-        {% endif %}
-
+        <!-- For Google Drive Links: replace /view with /preview to hide toolbars -->
+        {% set pdf_url = book.pdf_file.replace('/view', '/preview') %}
     {% else %}
-        <!-- Secure Internal Python Slicer for Uploaded PDFs -->
-        <iframe id="pdf-frame" 
-                src="{{ url_for('serve_secure_pdf', book_id=book.id) }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
-                class="pdf-container {% if not can_read %}with-warning{% endif %}" 
-                sandbox="allow-scripts allow-same-origin">
-        </iframe>
+        <!-- For Local Uploads: point to secure internal route -->
+        {% set pdf_url = url_for('serve_secure_pdf', book_id=book.id) %}
     {% endif %}
+
+    <!-- Embed the Document with a default view of FitH (Fit Width) -->
+    <iframe id="pdf-frame" 
+            src="{{ pdf_url }}{% if not book.pdf_file.startswith('http') %}#toolbar=0&navpanes=0&scrollbar=0&view=FitH{% endif %}" 
+            sandbox="allow-scripts allow-same-origin">
+    </iframe>
 
     <!-- Advanced Protection & View Scripts -->
     <script>
-        // Dynamically change the PDF view mode for internal files
+        // --- NEW: Function to dynamically change the PDF view mode ---
         function changeView(viewMode) {
             const frame = document.getElementById('pdf-frame');
-            if (frame) {
-                const baseUrl = "{{ url_for('serve_secure_pdf', book_id=book.id) }}";
-                frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
-            }
+            const baseUrl = "{{ pdf_url }}";
+            // Update the iframe source with the new view fragment identifier
+            frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
         }
 
-        // Disable common keyboard shortcuts used for saving/printing/inspecting
+        // --- EXISITNG: Disable common keyboard shortcuts used for saving/printing/inspecting ---
         document.addEventListener('keydown', function(e) {
             // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C
             if ((e.ctrlKey && e.key === 's') || 
@@ -199,7 +147,7 @@
             }
         });
 
-        // Prevent Dragging elements (like images)
+        // --- EXISTING: Prevent Dragging elements (like images) ---
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();
         });
