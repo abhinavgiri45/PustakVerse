@@ -142,7 +142,61 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
   const plainText = text || (html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "");
   const fromEmail = env.EMAIL_FROM || "PustakVerse <support@pustakverse.org>";
 
-  // 1. Resend API (Recommended HTTPS REST API - Port 443)
+  // 1. Google Gmail REST API (HTTPS Port 443 via OAuth2 / Refresh Token)
+  const googleClientId = env.GOOGLE_CLIENT_ID || env.GMAIL_CLIENT_ID;
+  const googleClientSecret = env.GOOGLE_CLIENT_SECRET || env.GMAIL_CLIENT_SECRET;
+  const googleRefreshToken = env.GOOGLE_REFRESH_TOKEN || env.GMAIL_REFRESH_TOKEN;
+
+  if (googleClientId && googleClientSecret && googleRefreshToken) {
+    try {
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: googleClientId.trim(),
+          client_secret: googleClientSecret.trim(),
+          refresh_token: googleRefreshToken.trim(),
+          grant_type: "refresh_token"
+        })
+      });
+      const tokenData = await tokenRes.json();
+      if (tokenData.access_token) {
+        const sender = env.EMAIL_SMTP_USERNAME || env.EMAIL_FROM || "PustakVerse <auth@pustakverse.org>";
+        const rfc822Lines = [
+          `From: ${sender}`,
+          `To: ${cleanTo}`,
+          `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+          `MIME-Version: 1.0`,
+          `Content-Type: text/html; charset=UTF-8`,
+          `Content-Transfer-Encoding: base64`,
+          ``,
+          btoa(unescape(encodeURIComponent(html)))
+        ];
+        const rawMime = rfc822Lines.join("\r\n");
+        // Base64URL-encode raw message
+        const base64UrlMessage = btoa(rawMime).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+        const sendRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${tokenData.access_token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ raw: base64UrlMessage })
+        });
+        if (sendRes.ok) {
+          console.log(`✓ [EDGE EMAIL DISPATCHED] Recipient: ${cleanTo} via Gmail REST API`);
+          return { success: true, provider: "gmail_api" };
+        }
+        const errTxt = await sendRes.text();
+        console.warn(`Gmail API error (${sendRes.status}): ${errTxt}`);
+      }
+    } catch (e) {
+      console.warn(`Gmail API dispatch error: ${e.message}`);
+    }
+  }
+
+  // 2. Resend API (Recommended HTTPS REST API - Port 443)
   if (env.RESEND_API_KEY) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
