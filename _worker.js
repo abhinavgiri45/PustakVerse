@@ -3214,6 +3214,103 @@ Format with these exact markdown sections:
       return new Response(null, { status: 302, headers: resHeaders });
     }
 
+    // Official Emergency Unlock Request to Developer
+    if (url.pathname === "/admin/activity-monitor/request-unlock" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) return Response.redirect(`${url.origin}/login`, 302);
+      if (user.role !== "developer" && user.role !== "official") return Response.redirect(`${url.origin}/dashboard`, 302);
+
+      const formData = await request.formData().catch(() => new FormData());
+      const reason = (formData.get("reason") || "").trim() || "Emergency Activity Monitor access clearance requested.";
+
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            INSERT INTO activity_monitor_pin_security (user_id, failed_attempts, locked_until, unlock_requested, request_reason, requested_at)
+            VALUES (?, 5, datetime('now', '+90 days'), 1, ?, datetime('now'))
+            ON CONFLICT(user_id) DO UPDATE SET unlock_requested = 1, request_reason = excluded.request_reason, requested_at = datetime('now')
+          `).bind(user.id, reason).run();
+        } catch (_) {}
+      }
+      return Response.redirect(`${url.origin}/admin/activity-monitor`, 302);
+    }
+
+    // Developer 1-Click Instant Unlock & Cooldown Reset
+    if (url.pathname === "/developer/activity-monitor/unlock" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || user.role !== "developer") return Response.redirect(`${url.origin}/dashboard`, 302);
+
+      const formData = await request.formData().catch(() => new FormData());
+      const targetUserId = formData.get("target_user_id");
+      const selfVerify = formData.get("self_verify") === "1";
+      const nextUrl = formData.get("next") || `${url.origin}/dashboard`;
+
+      if (env.DB) {
+        try {
+          if (targetUserId && targetUserId !== "all") {
+            await env.DB.prepare(`
+              UPDATE activity_monitor_pin_security
+              SET failed_attempts = 0, locked_until = NULL, unlock_requested = 0, request_reason = NULL
+              WHERE user_id = ?
+            `).bind(Number(targetUserId)).run();
+          } else {
+            await env.DB.prepare(`
+              UPDATE activity_monitor_pin_security
+              SET failed_attempts = 0, locked_until = NULL, unlock_requested = 0, request_reason = NULL
+            `).run();
+          }
+        } catch (_) {}
+      }
+
+      const resHeaders = new Headers({ "Location": nextUrl });
+      if (selfVerify || (targetUserId && Number(targetUserId) === user.id)) {
+        resHeaders.append("Set-Cookie", `pv_am_unlocked=1; Path=/; Max-Age=3600; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+      }
+      return new Response(null, { status: 302, headers: resHeaders });
+    }
+
+    // Instant Moderation Action from Activity Monitor
+    if (url.pathname === "/admin/activity-monitor/moderate-user" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || (user.role !== "developer" && user.role !== "official")) return Response.redirect(`${url.origin}/dashboard`, 302);
+
+      const formData = await request.formData().catch(() => new FormData());
+      const action = formData.get("action");
+      const targetUserId = Number(formData.get("target_user_id"));
+      const reason = (formData.get("reason") || "").trim() || "Activity Monitor security policy enforcement";
+      const strikeLevel = Number(formData.get("strike_level") || 1);
+
+      if (env.DB && targetUserId) {
+        try {
+          if (action === "strike") {
+            try {
+              await env.DB.prepare("CREATE TABLE IF NOT EXISTS user_strikes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, reason TEXT, strike_level INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").run();
+              await env.DB.prepare("INSERT INTO user_strikes (user_id, reason, strike_level) VALUES (?, ?, ?)").bind(targetUserId, reason, strikeLevel).run();
+            } catch (_) {}
+          } else if (action === "ban") {
+            await env.DB.prepare("UPDATE users SET locked_until = '2099-12-31 23:59:59' WHERE id = ?").bind(targetUserId).run();
+            try {
+              await env.DB.prepare("CREATE TABLE IF NOT EXISTS security_ban_list (id INTEGER PRIMARY KEY AUTOINCREMENT, target_type TEXT, target_value TEXT UNIQUE, reason TEXT, banned_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").run();
+              await env.DB.prepare("INSERT OR REPLACE INTO security_ban_list (target_type, target_value, reason, banned_by) VALUES ('user_id', ?, ?, ?)").bind(String(targetUserId), reason, user.id).run();
+            } catch (_) {}
+          } else if (action === "unlock") {
+            await env.DB.prepare("UPDATE users SET locked_until = NULL, failed_attempts = 0 WHERE id = ?").bind(targetUserId).run();
+            try {
+              await env.DB.prepare("DELETE FROM security_ban_list WHERE target_type = 'user_id' AND target_value = ?").bind(String(targetUserId)).run();
+            } catch (_) {}
+          } else if (action === "clear_strikes") {
+            try {
+              await env.DB.prepare("DELETE FROM user_strikes WHERE user_id = ?").bind(targetUserId).run();
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+      return Response.redirect(`${url.origin}/admin/activity-monitor`, 302);
+    }
+
     if (url.pathname === "/admin/activity-monitor" || url.pathname === "/activity-monitor") {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
@@ -3229,31 +3326,115 @@ Format with these exact markdown sections:
         );
       }
 
+      // Ensure pin security table in D1
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS activity_monitor_pin_security (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER UNIQUE,
+              failed_attempts INTEGER DEFAULT 0,
+              locked_until TEXT,
+              unlock_requested INTEGER DEFAULT 0,
+              request_reason TEXT,
+              requested_at TEXT
+            )
+          `).run();
+        } catch (_) {}
+      }
+
+      let pinSec = null;
+      if (env.DB) {
+        try {
+          pinSec = await env.DB.prepare("SELECT * FROM activity_monitor_pin_security WHERE user_id = ?").bind(user.id).first();
+        } catch (_) {}
+      }
+
+      let failedAttempts = pinSec?.failed_attempts || 0;
+      let lockedUntil = pinSec?.locked_until || null;
+      let unlockRequested = Boolean(pinSec?.unlock_requested);
+      let requestReason = pinSec?.request_reason || null;
+      let requestedAt = pinSec?.requested_at || null;
+      let isLocked = false;
+
+      if (lockedUntil) {
+        const lockStr = lockedUntil.endsWith('Z') || lockedUntil.includes('+') ? lockedUntil : lockedUntil.replace(' ', 'T') + 'Z';
+        const lockDate = new Date(lockStr);
+        if (lockDate > new Date()) {
+          isLocked = true;
+        }
+      }
+
       const configuredPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "12345678").trim();
-      let isPinVerified = cookies.pv_am_unlocked === "1";
+      let isPinVerified = cookies.pv_am_unlocked === "1" && !isLocked;
       let pinError = false;
 
       // Handle PIN submission
       if (request.method === "POST") {
-        const formData = await request.formData().catch(() => new FormData());
-        let pinInput = "";
-        for (let i = 1; i <= 8; i++) {
-          pinInput += (formData.get(`pin_${i}`) || "").trim();
-        }
-        if (!pinInput) {
-          pinInput = (formData.get("pin") || "").trim();
-        }
-
-        if (pinInput && pinInput === configuredPin && pinInput.length === 8) {
-          isPinVerified = true;
-        } else {
+        if (isLocked) {
           pinError = true;
+        } else {
+          const formData = await request.formData().catch(() => new FormData());
+          let pinInput = "";
+          for (let i = 1; i <= 8; i++) {
+            pinInput += (formData.get(`pin_${i}`) || "").trim();
+          }
+          if (!pinInput) {
+            pinInput = (formData.get("pin") || "").trim();
+          }
+
+          if (pinInput && pinInput === configuredPin && pinInput.length === 8) {
+            isPinVerified = true;
+            if (env.DB) {
+              try {
+                await env.DB.prepare("UPDATE activity_monitor_pin_security SET failed_attempts = 0, locked_until = NULL, unlock_requested = 0, request_reason = NULL WHERE user_id = ?").bind(user.id).run();
+              } catch (_) {}
+            }
+          } else {
+            pinError = true;
+            failedAttempts += 1;
+            if (failedAttempts >= 5) {
+              isLocked = true;
+              lockedUntil = new Date(Date.now() + 90 * 86400000).toISOString();
+              if (env.DB) {
+                try {
+                  await env.DB.prepare(`
+                    INSERT INTO activity_monitor_pin_security (user_id, failed_attempts, locked_until)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(user_id) DO UPDATE SET failed_attempts = excluded.failed_attempts, locked_until = excluded.locked_until
+                  `).bind(user.id, failedAttempts, lockedUntil).run();
+                } catch (_) {}
+              }
+            } else {
+              if (env.DB) {
+                try {
+                  await env.DB.prepare(`
+                    INSERT INTO activity_monitor_pin_security (user_id, failed_attempts)
+                    VALUES (?, ?)
+                    ON CONFLICT(user_id) DO UPDATE SET failed_attempts = excluded.failed_attempts
+                  `).bind(user.id, failedAttempts).run();
+                } catch (_) {}
+              }
+            }
+          }
         }
       }
 
-      // If PIN is not verified, render the 8-digit PIN gate
+      // If PIN is not verified, render the 8-digit PIN gate or 3-month lockout
       if (!isPinVerified) {
-        const pinGateHtml = renderActivityMonitorEdgeHtml({ pin_verified: false, pin_error: pinError });
+        const pinGateHtml = renderActivityMonitorEdgeHtml({
+          pin_verified: false,
+          pin_error: pinError,
+          is_locked: isLocked,
+          locked_until: lockedUntil,
+          unlock_requested: unlockRequested,
+          request_reason: requestReason,
+          requested_at: requestedAt,
+          failed_attempts: failedAttempts,
+          remaining_attempts: Math.max(0, 5 - failedAttempts),
+          is_developer: user.role === "developer",
+          user_id: user.id
+        });
         return new Response(pinGateHtml, {
           status: pinError ? 401 : 200,
           headers: { "Content-Type": "text/html; charset=utf-8" }
@@ -3272,6 +3453,10 @@ Format with these exact markdown sections:
       let officialLogs = [];
       let topReaders = [];
       let recentRegistrations = [];
+      let activeReadingStream = [];
+      let completedReadingStream = [];
+      let flaggedSecurityUsers = [];
+      let securityStats = { total_flagged: 0, banned_count: 0, strikes_count: 0, anomalies_count: 0 };
 
       if (env.DB) {
         try {
@@ -3295,9 +3480,8 @@ Format with these exact markdown sections:
         } catch (_) {}
 
         try {
-          // Comprehensive User Profile with live stats: books published, books saved/read, purchases made, reviews written
           const uRes = await env.DB.prepare(`
-            SELECT u.id, u.username, u.email, u.role, u.is_verified, u.last_activity, u.created_at, u.locked_until,
+            SELECT u.id, u.username, u.email, u.role, u.is_verified, u.last_activity, u.created_at, u.locked_until, u.failed_attempts,
                    (SELECT COUNT(*) FROM books b WHERE b.author_id = u.id) as published_books_count,
                    (SELECT COUNT(*) FROM personal_library pl WHERE pl.user_id = u.id) as saved_books_count,
                    (SELECT COUNT(*) FROM purchases p WHERE p.user_id = u.id AND p.status = 'paid') as purchases_count,
@@ -3310,11 +3494,70 @@ Format with these exact markdown sections:
         } catch (_) {
           try {
             const fallbackU = await env.DB.prepare(
-              "SELECT id, username, email, role, last_activity, created_at, locked_until, 0 as published_books_count, 0 as saved_books_count, 0 as purchases_count, 0 as total_spent_paise FROM users ORDER BY last_activity DESC LIMIT 150"
+              "SELECT id, username, email, role, last_activity, created_at, locked_until, 0 as failed_attempts, 0 as published_books_count, 0 as saved_books_count, 0 as purchases_count, 0 as total_spent_paise FROM users ORDER BY last_activity DESC LIMIT 150"
             ).all();
             usersList = fallbackU.results || [];
           } catch (_) {}
         }
+
+        // Reading Telemetry
+        let readingMap = {};
+        try {
+          const rpRes = await env.DB.prepare(`
+            SELECT rp.user_id, rp.book_id, rp.current_page, rp.total_pages, rp.percent_completed,
+                   rp.reading_seconds, rp.is_completed, rp.completed_at, rp.last_read_at,
+                   b.title as book_title, u.username as reader_username
+            FROM reading_progress rp
+            JOIN books b ON rp.book_id = b.id
+            JOIN users u ON rp.user_id = u.id
+            ORDER BY rp.last_read_at DESC LIMIT 100
+          `).all();
+          (rpRes.results || []).forEach(r => {
+            if (!readingMap[r.user_id]) readingMap[r.user_id] = { currently_reading: [], has_read: [] };
+            const isDone = Boolean(r.is_completed || (r.percent_completed && r.percent_completed >= 90));
+            if (isDone) {
+              readingMap[r.user_id].has_read.push(r);
+              if (completedReadingStream.length < 50) completedReadingStream.push(r);
+            } else {
+              readingMap[r.user_id].currently_reading.push(r);
+              if (activeReadingStream.length < 50) activeReadingStream.push(r);
+            }
+          });
+        } catch (_) {}
+
+        // Fallback reading from personal_library if reading_progress empty
+        usersList.forEach(u => {
+          const rdata = readingMap[u.id] || { currently_reading: [], has_read: [] };
+          u.currently_reading = rdata.currently_reading;
+          u.has_read = rdata.has_read;
+        });
+
+        // Flagged Security Accounts (Illegal activities)
+        usersList.forEach(u => {
+          let flags = [];
+          let risk = "LOW";
+          if (u.locked_until) {
+            flags.push({ type: "lock", label: "Account Locked", severity: "critical", detail: "Locked out due to excessive failed attempts or ban" });
+            risk = "CRITICAL";
+          }
+          if (u.failed_attempts >= 3) {
+            flags.push({ type: "brute", label: `${u.failed_attempts} Failed Logins`, severity: "warning", detail: "Multiple failed password attempts detected" });
+            if (risk === "LOW") risk = "MEDIUM";
+          }
+          if (flags.length > 0) {
+            flaggedSecurityUsers.push({
+              id: u.id,
+              username: u.username,
+              email: u.email,
+              role: u.role,
+              risk_level: risk,
+              flags,
+              is_locked: Boolean(u.locked_until),
+              last_active: u.last_activity
+            });
+          }
+        });
+        securityStats.total_flagged = flaggedSecurityUsers.length;
 
         try {
           const lRes = await env.DB.prepare(
@@ -3370,6 +3613,10 @@ Format with these exact markdown sections:
         pin_verified: true,
         stats,
         users: usersList,
+        active_reading_stream: activeReadingStream,
+        completed_reading_stream: completedReadingStream,
+        flagged_security_users: flaggedSecurityUsers,
+        security_stats: securityStats,
         official_logs: officialLogs,
         top_readers: topReaders,
         recent_books: recentBooks || [],
@@ -5779,8 +6026,116 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 </html>`;
 }
 
-function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false, stats = {}, users = [], official_logs = [], top_readers = [], recent_books = [], recent_purchases = [], recent_registrations = [] }) {
+function renderActivityMonitorEdgeHtml({
+  pin_verified = false,
+  pin_error = false,
+  is_locked = false,
+  locked_until = null,
+  unlock_requested = false,
+  request_reason = null,
+  requested_at = null,
+  failed_attempts = 0,
+  remaining_attempts = 5,
+  is_developer = false,
+  user_id = null,
+  stats = {},
+  users = [],
+  active_reading_stream = [],
+  completed_reading_stream = [],
+  flagged_security_users = [],
+  security_stats = {},
+  official_logs = [],
+  top_readers = [],
+  recent_books = [],
+  recent_purchases = [],
+  recent_registrations = []
+}) {
   if (!pin_verified) {
+    if (is_locked) {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Monitor Locked - PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root { --am-bg: #0b0f19; --am-card: #131b2e; --am-text: #f8fafc; --am-muted: #94a3b8; --am-border: #1e293b; --am-danger: #ef4444; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--am-bg); color: var(--am-text); min-height: 100vh; }
+        .pin-gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: radial-gradient(circle at top, #2e1065 0%, #0f172a 70%, #020617 100%); }
+        .pin-card { background: var(--am-card); border: 2px solid #ef4444; border-radius: 24px; padding: 44px 36px; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,.6); }
+        .pin-card h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; color: #f87171; }
+        .pin-btn { width: 100%; padding: 13px; font-size: 0.95rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s; }
+        .pin-btn:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+<div class="pin-gate">
+    <div class="pin-card">
+        <div style="font-size: 3.2rem; margin-bottom: 14px; filter: drop-shadow(0 0 16px #ef4444);">⛔</div>
+        <h1>Security Cooldown Active</h1>
+        <p style="color: #cbd5e1; font-size: 0.88rem; margin-bottom: 18px;">
+            5 consecutive incorrect PIN entries detected. For platform security, access is restricted under a <strong>3-Month (90 Days) Cooldown</strong>.
+        </p>
+
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.74rem; text-transform: uppercase; color: #fca5a5; font-weight: 800;">🔒 Cooldown Period</span>
+                <span style="background: #dc2626; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 800;">3 MONTHS (90 DAYS)</span>
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #fbbf24; margin-top: 6px;">
+                ${escapeHtml(locked_until || '90 Days Lockout')}
+            </div>
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;" id="cooldownTimerText">
+                Automated release scheduled after 90 days.
+            </div>
+        </div>
+
+        ${is_developer ? `
+        <div style="background: rgba(99, 102, 241, 0.15); border: 1.5px dashed #6366f1; border-radius: 12px; padding: 14px; margin-bottom: 18px; text-align: left;">
+            <div style="font-weight: 700; color: #a5b4fc; margin-bottom: 4px; font-size: 0.9rem;">👑 Developer Master Authorization Recognized</div>
+            <p style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 10px;">As Developer, you can bypass and immediately clear this cooldown.</p>
+            <form action="/developer/activity-monitor/unlock" method="POST" style="margin: 0;">
+                <input type="hidden" name="target_user_id" value="${user_id || ''}">
+                <input type="hidden" name="self_verify" value="1">
+                <input type="hidden" name="next" value="/admin/activity-monitor">
+                <button type="submit" class="pin-btn" style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px;">
+                    ⚡ Developer Master 1-Click Instant Unlock &amp; Enter
+                </button>
+            </form>
+        </div>
+        ` : ''}
+
+        <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--am-border); border-radius: 12px; padding: 16px; text-align: left;">
+            <div style="font-weight: 700; color: #f8fafc; font-size: 0.9rem; margin-bottom: 4px;">📨 Special Request to Developer</div>
+            <p style="color: var(--am-muted); font-size: 0.8rem; margin-bottom: 12px;">
+                Officials requiring emergency audit access can submit an urgent request to the Developer. The Developer can unlock and clear your cooldown <strong>instantly</strong>.
+            </p>
+
+            ${unlock_requested ? `
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 12px; color: #34d399; font-size: 0.84rem; font-weight: 600;">
+                ✓ Emergency Unlock Request Dispatched to Developer Master Console!
+                <div style="color: #94a3b8; font-size: 0.74rem; margin-top: 4px; font-weight: 400;">Awaiting Developer 1-click clearance.</div>
+            </div>
+            ` : `
+            <form action="/admin/activity-monitor/request-unlock" method="POST">
+                <textarea name="reason" placeholder="State reason for urgent Activity Monitor clearance..." rows="3" style="width: 100%; border-radius: 8px; border: 1px solid var(--am-border); background: rgba(15, 23, 42, 0.9); color: #fff; padding: 8px; font-size: 0.82rem; font-family: inherit; margin-bottom: 10px;" required></textarea>
+                <button type="submit" class="pin-btn" style="padding: 10px;">🚨 Submit Emergency Request to Developer</button>
+            </form>
+            `}
+        </div>
+
+        <div style="margin-top: 20px;">
+            <a href="/dashboard" style="color: var(--am-muted); text-decoration: none; font-size: 0.86rem; font-weight: 600;">← Return to Dashboard</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>`;
+    }
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5796,14 +6151,14 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         .pin-gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 70%, #020617 100%); }
         .pin-card { background: var(--am-card); border: 1px solid var(--am-border); border-radius: 24px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,.5); }
         .pin-card h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 8px; color: var(--am-text); }
-        .pin-card p { color: var(--am-muted); margin-bottom: 28px; font-size: .95rem; }
+        .pin-card p { color: var(--am-muted); margin-bottom: 24px; font-size: .95rem; }
         .pin-card .lock-icon { font-size: 3.2rem; margin-bottom: 16px; filter: drop-shadow(0 0 12px #6366f1); }
         .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
         .pin-inputs input { width: 44px; height: 54px; text-align: center; font-size: 1.4rem; font-weight: 800; border: 2px solid var(--am-border); border-radius: 12px; background: rgba(15,23,42,.8); color: #fff; outline: none; transition: all .2s; }
         .pin-inputs input:focus { border-color: var(--am-accent); box-shadow: 0 0 16px rgba(99,102,241,.3); transform: scale(1.05); }
-        .pin-btn { width: 100%; padding: 14px; font-size: 1rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+        .pin-btn { width: 100%; padding: 14px; font-size: 1rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s; }
         .pin-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,.5); }
-        .pin-error { color: #fca5a5; font-size: .9rem; margin-bottom: 18px; font-weight: 600; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); padding: 10px; border-radius: 10px; }
+        .pin-error { color: #fca5a5; font-size: .88rem; margin-bottom: 18px; font-weight: 600; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.35); padding: 12px; border-radius: 10px; text-align: left; }
         @media (max-width: 640px) {
             .pin-card { padding: 32px 20px; }
             .pin-inputs input { width: 34px; height: 44px; font-size: 1.1rem; }
@@ -5814,9 +6169,16 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
 <div class="pin-gate">
     <div class="pin-card">
         <div class="lock-icon">🔐</div>
-        <h1>User Activity Monitor</h1>
+        <h1>Activity Monitor</h1>
         <p>Restricted Access — Enter the 8-digit PIN (<code>ACTIVITY_MONITOR_PIN</code>)</p>
-        ${pin_error ? '<div class="pin-error">❌ Incorrect PIN. Please try again.</div>' : ''}
+        ${pin_error ? `
+        <div class="pin-error">
+            <div>❌ Incorrect 8-Digit PIN (Attempt <strong>${failed_attempts} of 5</strong>)</div>
+            <div style="font-size: 0.78rem; color: #fde68a; margin-top: 4px;">
+                ⚠️ <strong>Security Policy:</strong> 5 failed attempts triggers a mandatory <strong>3-Month (90 Days) Cooldown Lockout</strong>! (${remaining_attempts} attempts remaining).
+            </div>
+        </div>
+        ` : ''}
         <form method="POST" id="pinForm">
             <div class="pin-inputs">
                 ${[1,2,3,4,5,6,7,8].map(i => `<input type="text" name="pin_${i}" id="pin_${i}" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>`).join('')}
@@ -5853,41 +6215,121 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
 </html>`;
   }
 
-  // Live Unlocked Dashboard HTML
+  // ── Unlocked Activity Monitor Edge SSR ──
   const roleCountsHtml = (stats.role_counts || []).map(rc => `
     <span class="role-pill role-${escapeHtml(rc.role || 'reader')}">${escapeHtml((rc.role || 'reader').toUpperCase())}: <strong>${rc.count || 0}</strong></span>
   `).join("");
 
-  const userRowsHtml = (users || []).map((u, idx) => `
-    <tr class="user-row">
+  // Flagged Security Users HTML
+  const securityRowsHtml = (flagged_security_users || []).map((su, idx) => `
+    <tr>
       <td>${idx + 1}</td>
       <td>
-        <strong>${escapeHtml(u.username || '')}</strong>
-        <div style="font-size: 0.78rem; color: var(--am-muted);">${escapeHtml(u.email || '')}</div>
+        <strong>${escapeHtml(su.username || '')}</strong>
+        <div style="font-size: 0.76rem; color: var(--am-muted);">${escapeHtml(su.email || '')} • ID: #${su.id}</div>
       </td>
-      <td><span class="badge badge-${escapeHtml(u.role || 'reader')}">${escapeHtml(u.role || 'reader')}</span></td>
+      <td><span class="badge badge-${escapeHtml(su.role || 'reader')}">${escapeHtml(su.role || 'reader')}</span></td>
       <td>
-        ${u.locked_until ? '<span style="color:var(--am-danger);font-weight:700">🔒 Locked</span>' : `<span class="status-indicator" data-ts="${escapeHtml(u.last_activity || '')}">—</span>`}
-      </td>
-      <td><span class="rel-time" data-ts="${escapeHtml(u.last_activity || '')}">${escapeHtml(u.last_activity || '—')}</span></td>
-      <td>
-        ${u.published_books_count > 0 ? `<span class="metric-pill metric-pill-green">📖 ${u.published_books_count} Books</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}
+        ${su.risk_level === 'CRITICAL' ? '<span class="badge badge-risk-critical">🔴 CRITICAL RISK</span>' : (su.risk_level === 'HIGH' ? '<span class="badge badge-risk-high">🟠 HIGH RISK</span>' : '<span class="badge badge-risk-medium">🟡 MEDIUM RISK</span>')}
       </td>
       <td>
-        ${u.saved_books_count > 0 ? `<span class="metric-pill metric-pill-blue">📑 ${u.saved_books_count} Saved</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}
+        ${(su.flags || []).map(f => `
+          <div class="security-flag-pill flag-${escapeHtml(f.severity || 'warning')}">
+            <span>${f.type === 'lock' ? '🔒' : (f.type === 'ban' ? '🚫' : '⚠️')}</span>
+            <strong>${escapeHtml(f.label || '')}</strong>: <span style="font-weight:400;font-size:0.72rem;">${escapeHtml(f.detail || '')}</span>
+          </div>
+        `).join('')}
       </td>
+      <td><span class="rel-time" data-ts="${escapeHtml(su.last_active || '')}">${escapeHtml(su.last_active || '—')}</span></td>
       <td>
-        ${u.purchases_count > 0 ? `<span class="metric-pill metric-pill-purple">💳 ${u.purchases_count} Orders</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}
-      </td>
-      <td>
-        ${u.total_spent_paise > 0 ? `<strong style="color:#34d399;">₹${((u.total_spent_paise || 0) / 100).toFixed(2)}</strong>` : '<span style="color:var(--am-muted);font-size:0.8rem;">₹0</span>'}
-      </td>
-      <td><span class="rel-time" data-ts="${escapeHtml(u.created_at || '')}">${escapeHtml(u.created_at || '—')}</span></td>
-      <td>
-        ${u.is_verified ? '<span style="color:#34d399;font-size:0.78rem;font-weight:700;">✓ Verified</span>' : '<span style="color:var(--am-muted);font-size:0.78rem;">Regular</span>'}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <form action="/admin/activity-monitor/moderate-user" method="POST" style="margin:0;" onsubmit="return confirm('Ban user #${su.id}?');">
+            <input type="hidden" name="action" value="ban">
+            <input type="hidden" name="target_user_id" value="${su.id}">
+            <button type="submit" class="btn-sm" style="background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;padding:4px 8px;border-radius:6px;font-weight:700;font-size:0.75rem;cursor:pointer;">🔨 Ban</button>
+          </form>
+          ${su.is_locked ? `
+          <form action="/admin/activity-monitor/moderate-user" method="POST" style="margin:0;">
+            <input type="hidden" name="action" value="unlock">
+            <input type="hidden" name="target_user_id" value="${su.id}">
+            <button type="submit" class="btn-sm" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#6ee7b7;padding:4px 8px;border-radius:6px;font-weight:700;font-size:0.75rem;cursor:pointer;">🔓 Unlock</button>
+          </form>
+          ` : ''}
+        </div>
       </td>
     </tr>
-  `).join("") || '<tr><td colspan="11" style="text-align:center;color:var(--am-muted);padding:30px;">No user records found.</td></tr>';
+  `).join("") || '<tr><td colspan="7" style="text-align:center;color:var(--am-muted);padding:30px;">🛡️ All clear! No suspicious activities or brute-force lockouts detected.</td></tr>';
+
+  // Users Table HTML with Reading Telemetry
+  const userRowsHtml = (users || []).map((u, idx) => {
+    const curBook = (u.currently_reading && u.currently_reading.length > 0) ? u.currently_reading[0] : null;
+    const curReadingHtml = curBook ? `
+      <div class="reading-pill-active" title="${escapeHtml(curBook.book_title || 'Book')}">
+        <span>📖</span>
+        <span>${escapeHtml(curBook.book_title || 'Book')}</span>
+        <span style="font-size:0.7rem;color:#c7d2fe;">(p.${curBook.current_page || 1}/${curBook.total_pages || 1} • ${Math.round(curBook.percent_completed || 0)}%)</span>
+      </div>
+    ` : '<span style="color:var(--am-muted);font-size:0.8rem;">None</span>';
+
+    const hasReadHtml = (u.has_read && u.has_read.length > 0) ? `
+      <span class="reading-pill-done">✓ ${u.has_read.length} Done</span>
+    ` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>';
+
+    return `
+      <tr class="user-row">
+        <td>${idx + 1}</td>
+        <td>
+          <strong>${escapeHtml(u.username || '')}</strong>
+          <div style="font-size: 0.78rem; color: var(--am-muted);">${escapeHtml(u.email || '')}</div>
+        </td>
+        <td><span class="badge badge-${escapeHtml(u.role || 'reader')}">${escapeHtml(u.role || 'reader')}</span></td>
+        <td>
+          ${u.locked_until ? '<span style="color:var(--am-danger);font-weight:700">🔒 Locked</span>' : `<span class="status-indicator" data-ts="${escapeHtml(u.last_activity || '')}">—</span>`}
+        </td>
+        <td>${curReadingHtml}</td>
+        <td>${hasReadHtml}</td>
+        <td>
+          <button type="button" class="btn-read-history" onclick="openUserReadingModal(${u.id})">
+            👁️ Reading Log
+          </button>
+        </td>
+        <td>${u.published_books_count > 0 ? `<span class="metric-pill metric-pill-green">📖 ${u.published_books_count}</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}</td>
+        <td>${u.saved_books_count > 0 ? `<span class="metric-pill metric-pill-blue">📑 ${u.saved_books_count}</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}</td>
+        <td>${u.purchases_count > 0 ? `<span class="metric-pill metric-pill-purple">💳 ${u.purchases_count}</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}</td>
+        <td>${u.total_spent_paise > 0 ? `<strong style="color:#34d399;">₹${((u.total_spent_paise || 0) / 100).toFixed(2)}</strong>` : '<span style="color:var(--am-muted);font-size:0.8rem;">₹0</span>'}</td>
+        <td><span class="rel-time" data-ts="${escapeHtml(u.created_at || '')}">${escapeHtml(u.created_at || '—')}</span></td>
+        <td>${u.is_verified ? '<span style="color:#34d399;font-size:0.78rem;font-weight:700;">✓ Verified</span>' : '<span style="color:var(--am-muted);font-size:0.78rem;">Regular</span>'}</td>
+      </tr>
+    `;
+  }).join("") || '<tr><td colspan="13" style="text-align:center;color:var(--am-muted);padding:30px;">No user records found.</td></tr>';
+
+  // Active Reading Stream HTML
+  const activeReadingRowsHtml = (active_reading_stream || []).map(ar => `
+    <tr>
+      <td><strong>${escapeHtml(ar.reader_username || 'Reader')}</strong></td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <strong>${escapeHtml(ar.book_title || 'Book')}</strong>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.round(ar.percent_completed || 0)}%;"></div></div>
+      </td>
+      <td><span class="metric-pill metric-pill-blue">p. ${ar.current_page || 1}/${ar.total_pages || 1} (${Math.round(ar.percent_completed || 0)}%)</span></td>
+      <td>${Math.floor((ar.reading_seconds || 0) / 60)}m ${(ar.reading_seconds || 0) % 60}s</td>
+      <td><span class="rel-time" data-ts="${escapeHtml(ar.last_read_at || '')}">${escapeHtml(ar.last_read_at || '')}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:25px;">No active reading sessions in progress.</td></tr>';
+
+  // Completed Reading Stream HTML
+  const completedReadingRowsHtml = (completed_reading_stream || []).map(cr => `
+    <tr>
+      <td><strong>${escapeHtml(cr.reader_username || 'Reader')}</strong></td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <strong>${escapeHtml(cr.book_title || 'Book')}</strong>
+        <div><span style="color:#34d399;font-size:0.72rem;font-weight:700;">✓ Verified Read</span></div>
+      </td>
+      <td><span class="rel-time" data-ts="${escapeHtml(cr.completed_at || cr.last_read_at || '')}">${escapeHtml(cr.completed_at || cr.last_read_at || '')}</span></td>
+      <td><span class="metric-pill metric-pill-green">${cr.total_pages || 'Complete'} Pages</span></td>
+      <td>${Math.floor((cr.reading_seconds || 0) / 3600)}h ${Math.floor(((cr.reading_seconds || 0) % 3600) / 60)}m</td>
+    </tr>
+  `).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:25px;">No completed books recorded yet.</td></tr>';
 
   const readerRowsHtml = (top_readers || []).map((r, idx) => {
     const totalSec = r.total_seconds || 0;
@@ -6036,6 +6478,23 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         .badge-author { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
         .badge-reader { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
 
+        .badge-risk-critical { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #f87171; font-weight: 800; }
+        .badge-risk-high { background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.5); color: #fb923c; font-weight: 700; }
+        .badge-risk-medium { background: rgba(234, 179, 8, 0.2); border: 1px solid rgba(234, 179, 8, 0.5); color: #facc15; font-weight: 700; }
+
+        .security-flag-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; margin: 2px; }
+        .flag-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .flag-warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .flag-danger { background: rgba(220, 38, 38, 0.25); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.4); }
+
+        .reading-pill-active { background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: #a5b4fc; padding: 4px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .reading-pill-done { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; padding: 4px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-read-history { background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; padding: 4px 10px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+        .btn-read-history:hover { background: #6366f1; color: #fff; }
+
+        .progress-bar-bg { background: rgba(255, 255, 255, 0.1); border-radius: 999px; height: 6px; width: 100%; overflow: hidden; margin-top: 4px; }
+        .progress-bar-fill { background: linear-gradient(90deg, #6366f1, #10b981); height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+
         .status-online { color: #34d399; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
         .status-online::before { content: ''; width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; }
         .status-offline { color: var(--am-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
@@ -6050,6 +6509,11 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         .am-pagination button { padding: 6px 14px; border: 1px solid var(--am-border); border-radius: 8px; background: rgba(15, 23, 42, 0.7); color: var(--am-text); cursor: pointer; font-size: 0.82rem; font-weight: 700; transition: all 0.15s; }
         .am-pagination button:hover { border-color: var(--am-accent); background: rgba(99, 102, 241, 0.2); }
         .am-pagination button.active { background: var(--am-accent); color: #fff; border-color: var(--am-accent); box-shadow: 0 0 10px var(--am-accent-glow); }
+
+        .am-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .am-modal-card { background: var(--am-card); border: 1px solid var(--am-border); border-radius: 20px; width: 100%; max-width: 680px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden; }
+        .am-modal-header { padding: 18px 24px; border-bottom: 1px solid var(--am-border); display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.5); }
+        .am-modal-body { padding: 24px; overflow-y: auto; flex: 1; }
 
         .am-footer { text-align: center; padding: 30px; color: var(--am-muted); font-size: 0.84rem; border-top: 1px solid var(--am-border); margin-top: 40px; }
         @media (max-width: 640px) {
@@ -6089,9 +6553,9 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
             <div class="stat-label">Published Books</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">🛡️</div>
-            <div class="stat-num">${(stats.role_counts || []).find(r => r.role === 'official' || r.role === 'developer')?.count || 1}</div>
-            <div class="stat-label">Officials & Developers</div>
+            <div class="stat-icon">🚨</div>
+            <div class="stat-num" style="color:#f87171;">${security_stats.total_flagged || 0}</div>
+            <div class="stat-label">Threats &amp; Flagged</div>
         </div>
     </div>
 
@@ -6100,12 +6564,47 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         ${roleCountsHtml}
     </div>
 
-    <!-- COMPREHENSIVE USERS MONITOR (WITH DEDICATED SCROLL BAR) -->
+    <!-- 🚨 SECURITY & SUSPICIOUS ACTIVITIES INTELLIGENCE HUB -->
+    <div class="am-section" style="border: 1.5px solid rgba(239, 68, 68, 0.4); background: linear-gradient(180deg, rgba(30, 15, 23, 0.7) 0%, rgba(19, 27, 46, 0.9) 100%);">
+        <div class="am-section-header">
+            <div>
+                <h2 style="color: #f87171;">
+                    <span>🚨 Suspicious &amp; Illegal Activity Intelligence Hub</span>
+                    <span class="section-count-badge" style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; border-color: rgba(239, 68, 68, 0.5);">
+                        ${(flagged_security_users || []).length} Flagged
+                    </span>
+                </h2>
+                <p style="color: var(--am-muted); font-size: 0.82rem; margin: 4px 0 0 0;">
+                    Real-time monitoring: Brute-force account lockouts, active security bans, disciplinary strikes, and rapid automated content scraping.
+                </p>
+            </div>
+        </div>
+        <div class="am-scroll-box am-scroll-box-short">
+            <table class="am-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>User Profile</th>
+                        <th>Role</th>
+                        <th>Risk Severity</th>
+                        <th>Detected Threat / Signals</th>
+                        <th>Last Active</th>
+                        <th>Enforcement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${securityRowsHtml}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- COMPREHENSIVE USERS MONITOR WITH READING PROGRESS -->
     <div class="am-section">
         <div class="am-section-header">
             <h2>
-                <span>👥 Comprehensive User Activity &amp; Live Status</span>
-                <span class="section-count-badge">${(users || []).length} Total Records</span>
+                <span>👥 Comprehensive User Activity &amp; Live Reading Telemetry</span>
+                <span class="section-count-badge">${(users || []).length} Records</span>
             </h2>
             <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search username, email, or role..." oninput="filterUsers()">
         </div>
@@ -6117,13 +6616,15 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
                         <th>User Profile</th>
                         <th>Role</th>
                         <th>Status</th>
-                        <th>Last Active</th>
-                        <th>Published Books</th>
+                        <th>Currently Reading</th>
+                        <th>Completed</th>
+                        <th>Reading Portfolio</th>
+                        <th>Published</th>
                         <th>Library Saved</th>
                         <th>Purchases</th>
                         <th>Total Spent</th>
                         <th>Registered</th>
-                        <th>Account Health</th>
+                        <th>Health</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -6132,6 +6633,59 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
             </table>
         </div>
         <div class="am-pagination" id="userPagination"></div>
+    </div>
+
+    <!-- 📚 REAL-TIME READING STREAM -->
+    <div class="am-two-col">
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>📖 Live Reading In-Progress (Currently Reading)</span>
+                    <span class="section-count-badge" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border-color:rgba(99,102,241,0.4);">${(active_reading_stream || []).length} Active</span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Reader</th>
+                            <th>Book Title</th>
+                            <th>Progress</th>
+                            <th>Study Time</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${activeReadingRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>✅ Verified Book Completions (Has Read)</span>
+                    <span class="section-count-badge" style="background:rgba(16,185,129,0.2);color:#6ee7b7;border-color:rgba(16,185,129,0.4);">${(completed_reading_stream || []).length} Finished</span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Reader</th>
+                            <th>Book Title</th>
+                            <th>Completed At</th>
+                            <th>Pages</th>
+                            <th>Total Study Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${completedReadingRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- 2-COLUMN HIGHLIGHTS: TOP READERS & RECENT PURCHASES -->
@@ -6265,17 +6819,40 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
     </div>
 </div>
 
+<!-- USER READING PORTFOLIO MODAL -->
+<div class="am-modal-overlay" id="readingPortfolioModal">
+    <div class="am-modal-card">
+        <div class="am-modal-header">
+            <div>
+                <h3 id="modalReadingUsername" style="color: #f8fafc; font-size: 1.15rem;">📖 User Reading History</h3>
+                <div id="modalReadingEmail" style="color: var(--am-muted); font-size: 0.8rem; margin-top: 2px;"></div>
+            </div>
+            <button type="button" onclick="closeUserReadingModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">✕</button>
+        </div>
+        <div class="am-modal-body">
+            <div style="margin-bottom: 24px;">
+                <h4 style="color: #818cf8; font-size: 0.95rem; margin-bottom: 12px;">⚡ Currently Reading (In-Progress)</h4>
+                <div id="modalCurrentlyReadingList"></div>
+            </div>
+            <div>
+                <h4 style="color: #34d399; font-size: 0.95rem; margin-bottom: 12px;">✓ Verified Finished Books (Completed)</h4>
+                <div id="modalCompletedBooksList"></div>
+            </div>
+        </div>
+        <div style="padding: 14px 24px; border-top: 1px solid var(--am-border); text-align: right; background: rgba(15, 23, 42, 0.4);">
+            <button type="button" onclick="closeUserReadingModal()" class="pin-btn" style="width: auto; padding: 8px 20px; font-size: 0.88rem;">Close</button>
+        </div>
+    </div>
+</div>
+
 <footer class="am-footer">PustakVerse Activity Monitor • Restricted to Officials &amp; Developers • Secured by 8-Digit PIN</footer>
 
 <script>
 function parseUtcDate(ts) {
     if (!ts || ts === '—' || ts === 'None' || ts === 'null') return null;
     let s = String(ts).trim();
-    if (s.includes(' ') && !s.includes('T')) {
-        s = s.replace(' ', 'T') + 'Z';
-    } else if (!s.endsWith('Z') && !s.includes('+')) {
-        s = s + 'Z';
-    }
+    if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T') + 'Z';
+    else if (!s.endsWith('Z') && !s.includes('+')) s = s + 'Z';
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
@@ -6341,6 +6918,77 @@ function filterUsers() {
     }
     showPage(1);
 })();
+
+const userReadingRepo = ${JSON.stringify((users || []).reduce((acc, u) => {
+  acc[u.id] = {
+    username: u.username,
+    email: u.email,
+    currently_reading: u.currently_reading || [],
+    has_read: u.has_read || []
+  };
+  return acc;
+}, {}))};
+
+function openUserReadingModal(uid) {
+    const data = userReadingRepo[uid];
+    if (!data) return;
+    document.getElementById('modalReadingUsername').textContent = '📖 ' + data.username + "'s Reading Portfolio";
+    document.getElementById('modalReadingEmail').textContent = data.email + ' • User ID #' + uid;
+
+    const curList = document.getElementById('modalCurrentlyReadingList');
+    if (!data.currently_reading || data.currently_reading.length === 0) {
+        curList.innerHTML = '<div style="color:var(--am-muted);font-size:0.86rem;padding:12px;background:rgba(15,23,42,0.5);border-radius:8px;">No books currently in progress.</div>';
+    } else {
+        curList.innerHTML = data.currently_reading.map(b => `
+            <div style="background: rgba(15,23,42,0.6); border: 1px solid var(--am-border); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="color:#fff; font-size:0.92rem;">\${b.book_title || 'Book'}</strong>
+                    <span class="badge badge-reader">Page \${b.current_page || 1} of \${b.total_pages || 1}</span>
+                </div>
+                <div class="progress-bar-bg" style="height: 8px; margin-bottom: 6px;">
+                    <div class="progress-bar-fill" style="width: \${Math.round(b.percent_completed || 0)}%;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted);">
+                    <span>\${Math.round(b.percent_completed || 0)}% Completed</span>
+                    <span>Study Time: \${Math.floor((b.reading_seconds||0)/60)}m \${(b.reading_seconds||0)%60}s</span>
+                    <span>Last read: \${relTime(b.last_read_at)}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    const compList = document.getElementById('modalCompletedBooksList');
+    if (!data.has_read || data.has_read.length === 0) {
+        compList.innerHTML = '<div style="color:var(--am-muted);font-size:0.86rem;padding:12px;background:rgba(15,23,42,0.5);border-radius:8px;">No books completed yet.</div>';
+    } else {
+        compList.innerHTML = data.has_read.map(b => `
+            <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <strong style="color:#6ee7b7; font-size:0.92rem;">✓ \${b.book_title || 'Book'}</strong>
+                    <span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">VERIFIED FINISHED</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted); margin-top:4px;">
+                    <span>Finished: \${relTime(b.completed_at || b.last_read_at)}</span>
+                    <span>Total Pages: \${b.total_pages || 'Complete'}</span>
+                    <span>Study Time: \${Math.floor((b.reading_seconds||0)/3600)}h \${Math.floor(((b.reading_seconds||0)%3600)/60)}m</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('readingPortfolioModal').style.display = 'flex';
+}
+
+function closeUserReadingModal() {
+    document.getElementById('readingPortfolioModal').style.display = 'none';
+}
+
+document.querySelectorAll('.am-modal-overlay').forEach(ov => {
+    ov.addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+});
+
 setTimeout(() => location.reload(), 60000);
 </script>
 </body>

@@ -4036,6 +4036,22 @@ def ensure_payment_schema():
                 FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
             )
         """)
+
+        # 13. Security: Activity Monitor 8-Digit PIN Gate Attempt & 3-Month Lockout Tracker
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activity_monitor_pin_security (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL UNIQUE,
+                failed_attempts INT DEFAULT 0,
+                locked_until TIMESTAMP NULL,
+                unlock_requested BOOLEAN DEFAULT FALSE,
+                request_reason TEXT DEFAULT NULL,
+                requested_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
         
         # Seed default models if empty
         try:
@@ -7601,7 +7617,21 @@ def dashboard():
             cursor.execute("SELECT * FROM leadership_team ORDER BY is_founder DESC, display_order ASC, id ASC")
             leadership_team = cursor.fetchall()
             
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team)
+            # Activity Monitor PIN Security Lockouts & Emergency Unlock Requests
+            try:
+                cursor.execute("""
+                    SELECT ps.user_id, ps.failed_attempts, ps.locked_until, ps.unlock_requested, ps.request_reason, ps.requested_at,
+                           u.username, u.email, u.role
+                    FROM activity_monitor_pin_security ps
+                    JOIN users u ON ps.user_id = u.id
+                    WHERE (ps.locked_until IS NOT NULL AND ps.locked_until > NOW()) OR ps.unlock_requested = TRUE OR ps.failed_attempts >= 5
+                    ORDER BY ps.requested_at DESC, ps.locked_until DESC
+                """)
+                am_pin_lockouts = cursor.fetchall() or []
+            except Exception:
+                am_pin_lockouts = []
+
+            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team, am_pin_lockouts=am_pin_lockouts)
 
         if role == 'official':
             if search_query: 
@@ -10433,29 +10463,95 @@ def activity_monitor():
         flash("Access denied. Activity Monitor is restricted to Officials and Developers.", "error")
         return redirect(url_for('dashboard'))
 
-    # ── PIN verification (POST) ──
-    if request.method == 'POST':
-        pin_input = ''.join([request.form.get(f'pin_{i}', '') for i in range(1, 9)]).strip()
-        if not pin_input:
-            pin_input = request.form.get('pin', '').strip()
-        correct_pin = (os.environ.get('ACTIVITY_MONITOR_PIN') or '12345678').strip()
+    user_id = session['user_id']
+    is_developer = (role == 'developer')
 
-        if pin_input == correct_pin and len(pin_input) == 8:
-            session['activity_monitor_verified'] = True
-            log_official_activity(session['user_id'], 'Accessed Activity Monitor dashboard')
-        else:
-            return render_template('activity_monitor.html', pin_verified=False, pin_error=True)
-
-    # ── Check PIN session ──
-    if not session.get('activity_monitor_verified'):
-        return render_template('activity_monitor.html', pin_verified=False, pin_error=False)
-
-    # ── Gather dashboard data ──
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
 
+        # ── 1. PIN Security & 3-Month Lockout State ──
+        cursor.execute("SELECT * FROM activity_monitor_pin_security WHERE user_id = %s", (user_id,))
+        pin_sec = cursor.fetchone()
+        if not pin_sec:
+            cursor.execute("INSERT INTO activity_monitor_pin_security (user_id, failed_attempts) VALUES (%s, 0)", (user_id,))
+            db.commit()
+            cursor.execute("SELECT * FROM activity_monitor_pin_security WHERE user_id = %s", (user_id,))
+            pin_sec = cursor.fetchone()
+
+        failed_attempts = pin_sec['failed_attempts'] if pin_sec else 0
+        locked_until = pin_sec['locked_until'] if pin_sec else None
+        unlock_requested = bool(pin_sec['unlock_requested']) if pin_sec else False
+        request_reason = pin_sec['request_reason'] if pin_sec else None
+        requested_at = pin_sec['requested_at'] if pin_sec else None
+
+        now_dt = datetime.now()
+        is_locked = bool(locked_until and locked_until > now_dt)
+
+        # ── 2. Handle PIN submission (POST) ──
+        remaining_attempts = max(0, 5 - failed_attempts)
+
+        if request.method == 'POST':
+            if is_locked:
+                flash("Activity Monitor is locked due to 5 failed attempts (3-month cooldown active).", "error")
+                return render_template('activity_monitor.html',
+                    pin_verified=False, pin_error=True, is_locked=True,
+                    locked_until=locked_until, unlock_requested=unlock_requested,
+                    request_reason=request_reason, requested_at=requested_at,
+                    failed_attempts=failed_attempts, is_developer=is_developer)
+
+            pin_input = ''.join([request.form.get(f'pin_{i}', '') for i in range(1, 9)]).strip()
+            if not pin_input:
+                pin_input = request.form.get('pin', '').strip()
+            correct_pin = (os.environ.get('ACTIVITY_MONITOR_PIN') or '12345678').strip()
+
+            if pin_input == correct_pin and len(pin_input) == 8:
+                # Correct PIN -> reset attempts and unlock state
+                cursor.execute("""
+                    UPDATE activity_monitor_pin_security 
+                    SET failed_attempts = 0, locked_until = NULL, unlock_requested = FALSE, request_reason = NULL 
+                    WHERE user_id = %s
+                """, (user_id,))
+                db.commit()
+                session['activity_monitor_verified'] = True
+                log_official_activity(user_id, 'Verified 8-Digit PIN and entered Activity Monitor')
+            else:
+                new_attempts = failed_attempts + 1
+                if new_attempts >= 5:
+                    # 3-Month (90 Days) Cooldown Lockout!
+                    lock_expiry = now_dt + timedelta(days=90)
+                    cursor.execute("""
+                        UPDATE activity_monitor_pin_security 
+                        SET failed_attempts = %s, locked_until = %s 
+                        WHERE user_id = %s
+                    """, (new_attempts, lock_expiry, user_id))
+                    db.commit()
+                    log_official_activity(user_id, 'Activity Monitor 3-Month Cooldown triggered: 5 consecutive failed PIN attempts')
+                    return render_template('activity_monitor.html',
+                        pin_verified=False, pin_error=True, is_locked=True,
+                        locked_until=lock_expiry, unlock_requested=False,
+                        request_reason=None, requested_at=None,
+                        failed_attempts=new_attempts, remaining_attempts=0,
+                        is_developer=is_developer)
+                else:
+                    cursor.execute("UPDATE activity_monitor_pin_security SET failed_attempts = %s WHERE user_id = %s", (new_attempts, user_id))
+                    db.commit()
+                    return render_template('activity_monitor.html',
+                        pin_verified=False, pin_error=True, is_locked=False,
+                        failed_attempts=new_attempts, remaining_attempts=(5 - new_attempts),
+                        is_developer=is_developer)
+
+        # ── 3. Check PIN verification in session ──
+        if not session.get('activity_monitor_verified'):
+            return render_template('activity_monitor.html',
+                pin_verified=False, pin_error=False, is_locked=is_locked,
+                locked_until=locked_until, unlock_requested=unlock_requested,
+                request_reason=request_reason, requested_at=requested_at,
+                failed_attempts=failed_attempts, remaining_attempts=remaining_attempts,
+                is_developer=is_developer)
+
+        # ── 4. PIN is Verified -> Gather Comprehensive Dashboard & Telemetry ──
         stats = {}
 
         # Total users
@@ -10484,7 +10580,7 @@ def activity_monitor():
         cursor.execute("SELECT role, COUNT(*) as count FROM users GROUP BY role")
         stats['role_counts'] = cursor.fetchall()
 
-        # All users with comprehensive actions & telemetry
+        # All users with comprehensive profile metrics
         cursor.execute("""
             SELECT u.id, u.username, u.email, u.role, u.last_activity, u.created_at, u.is_verified, u.failed_attempts, u.locked_until,
                    (SELECT COUNT(*) FROM books b WHERE b.author_id = u.id) as published_books_count,
@@ -10496,6 +10592,185 @@ def activity_monitor():
             LIMIT 250
         """)
         users_list = cursor.fetchall()
+
+        # ── 5. Reading Telemetry: Currently Reading vs Completed Books ──
+        reading_telemetry = {}
+        active_reading_stream = []
+        completed_reading_stream = []
+
+        try:
+            cursor.execute("""
+                SELECT rp.user_id, rp.book_id, rp.current_page, rp.max_page_reached, rp.total_pages,
+                       rp.percent_completed, rp.reading_seconds, rp.is_completed, rp.completed_at, rp.last_read_at,
+                       b.title as book_title, b.catalog, b.cover_image, u.username as reader_username
+                FROM reading_progress rp
+                JOIN books b ON rp.book_id = b.id
+                JOIN users u ON rp.user_id = u.id
+                ORDER BY rp.last_read_at DESC
+            """)
+            all_rp = cursor.fetchall()
+
+            for r in all_rp:
+                uid = r['user_id']
+                if uid not in reading_telemetry:
+                    reading_telemetry[uid] = {'currently_reading': [], 'has_read': []}
+
+                is_done = bool(r.get('is_completed') or (r.get('percent_completed') and r['percent_completed'] >= 90.0))
+                if is_done:
+                    reading_telemetry[uid]['has_read'].append(r)
+                    if len(completed_reading_stream) < 50:
+                        completed_reading_stream.append(r)
+                else:
+                    reading_telemetry[uid]['currently_reading'].append(r)
+                    if len(active_reading_stream) < 50:
+                        active_reading_stream.append(r)
+        except Exception as e:
+            logging.warning(f"Error fetching reading progress: {e}")
+
+        # Attach reading telemetry to each user in users_list
+        for u in users_list:
+            uid = u['id']
+            utele = reading_telemetry.get(uid, {'currently_reading': [], 'has_read': []})
+            u['currently_reading'] = utele['currently_reading']
+            u['has_read'] = utele['has_read']
+            u['currently_reading_count'] = len(utele['currently_reading'])
+            u['has_read_count'] = len(utele['has_read'])
+
+        # ── 6. "Illegal & Suspicious Activities" Intelligence Engine ──
+        # Gather Bans
+        security_bans = []
+        try:
+            cursor.execute("""
+                SELECT sbl.id, sbl.target_type, sbl.target_value, sbl.reason, sbl.banned_by, sbl.created_at,
+                       u.username as banned_by_username
+                FROM security_ban_list sbl
+                LEFT JOIN users u ON sbl.banned_by = u.id
+                ORDER BY sbl.created_at DESC LIMIT 50
+            """)
+            security_bans = cursor.fetchall()
+        except Exception:
+            security_bans = []
+
+        # Gather Strikes
+        user_strikes = []
+        try:
+            cursor.execute("""
+                SELECT us.id, us.user_id, us.reason, us.strike_level, us.created_at,
+                       u.username, u.email, u.role
+                FROM user_strikes us
+                JOIN users u ON us.user_id = u.id
+                ORDER BY us.created_at DESC LIMIT 100
+            """)
+            user_strikes = cursor.fetchall()
+        except Exception:
+            user_strikes = []
+
+        # Map strikes by user_id
+        strikes_by_user = {}
+        for s in user_strikes:
+            uid = s['user_id']
+            if uid not in strikes_by_user:
+                strikes_by_user[uid] = []
+            strikes_by_user[uid].append(s)
+
+        # Detect Scraping / Speed Anomalies (>25 pages read in <25 seconds)
+        scraping_anomalies = []
+        try:
+            cursor.execute("""
+                SELECT rp.user_id, rp.book_id, rp.current_page, rp.reading_seconds, rp.last_read_at,
+                       b.title as book_title, u.username, u.email
+                FROM reading_progress rp
+                JOIN books b ON rp.book_id = b.id
+                JOIN users u ON rp.user_id = u.id
+                WHERE rp.current_page >= 25 AND rp.reading_seconds < 25
+                ORDER BY rp.last_read_at DESC LIMIT 30
+            """)
+            scraping_anomalies = cursor.fetchall()
+        except Exception:
+            scraping_anomalies = []
+
+        scraping_by_user = {}
+        for sc in scraping_anomalies:
+            uid = sc['user_id']
+            if uid not in scraping_by_user:
+                scraping_by_user[uid] = []
+            scraping_by_user[uid].append(sc)
+
+        # Map security bans by target_value
+        banned_user_ids = set()
+        banned_emails = set()
+        for b in security_bans:
+            if b['target_type'] == 'user_id':
+                try: banned_user_ids.add(int(b['target_value']))
+                except: pass
+            elif b['target_type'] == 'email':
+                banned_emails.add(b['target_value'].lower())
+
+        # Build Flagged / High-Risk Suspicious Users List
+        flagged_security_users = []
+        for u in users_list:
+            uid = u['id']
+            u_email = (u.get('email') or '').lower()
+            flags = []
+            risk_level = "LOW"
+
+            # Check Ban
+            is_banned = (uid in banned_user_ids) or (u_email in banned_emails)
+            if is_banned:
+                flags.append({"type": "ban", "label": "Security Ban Active", "severity": "critical", "detail": "Account / Email blocked under platform security ban"})
+                risk_level = "CRITICAL"
+
+            # Check Lock / Brute-force
+            is_pw_locked = bool(u.get('locked_until') and u['locked_until'] > now_dt)
+            failed_pw = u.get('failed_attempts') or 0
+            if is_pw_locked:
+                flags.append({"type": "lock", "label": "Account Locked", "severity": "critical", "detail": f"Account temporarily locked ({failed_pw} failed login attempts)"})
+                if risk_level != "CRITICAL": risk_level = "HIGH"
+            elif failed_pw >= 3:
+                flags.append({"type": "brute", "label": f"{failed_pw} Failed Logins", "severity": "warning", "detail": "Multiple failed password attempts detected"})
+                if risk_level not in ("CRITICAL", "HIGH"): risk_level = "MEDIUM"
+
+            # Check Strikes
+            ustrikes = strikes_by_user.get(uid, [])
+            if ustrikes:
+                max_level = max([st['strike_level'] for st in ustrikes])
+                reasons = [st['reason'] for st in ustrikes]
+                flags.append({"type": "strike", "label": f"{len(ustrikes)} Strike(s) (Max Tier {max_level})", "severity": "danger" if max_level >= 2 else "warning", "detail": "; ".join(reasons)})
+                if max_level >= 3: risk_level = "CRITICAL"
+                elif max_level >= 2 and risk_level != "CRITICAL": risk_level = "HIGH"
+                elif risk_level not in ("CRITICAL", "HIGH"): risk_level = "MEDIUM"
+
+            # Check Scraping Anomaly
+            uscrapes = scraping_by_user.get(uid, [])
+            if uscrapes:
+                for scr in uscrapes:
+                    flags.append({"type": "scraper", "label": "Rapid Content Scraping Anomaly", "severity": "danger", "detail": f"Read {scr['current_page']} pages of '{scr['book_title']}' in {scr['reading_seconds']}s (Impossible human speed)"})
+                if risk_level not in ("CRITICAL", "HIGH"): risk_level = "HIGH"
+
+            if flags:
+                flagged_security_users.append({
+                    "id": uid,
+                    "username": u['username'],
+                    "email": u['email'],
+                    "role": u['role'],
+                    "risk_level": risk_level,
+                    "flags": flags,
+                    "strikes": ustrikes,
+                    "is_banned": is_banned,
+                    "is_locked": is_pw_locked,
+                    "last_active": u['last_activity']
+                })
+
+        # Sort flagged users: CRITICAL first, then HIGH, then MEDIUM
+        risk_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+        flagged_security_users.sort(key=lambda x: risk_order.get(x['risk_level'], 9))
+
+        security_stats = {
+            "total_flagged": len(flagged_security_users),
+            "banned_count": len(security_bans),
+            "strikes_count": len(user_strikes),
+            "anomalies_count": len(scraping_anomalies)
+        }
 
         # Official activity logs
         try:
@@ -10570,6 +10845,12 @@ def activity_monitor():
             pin_verified=True,
             stats=stats,
             users=users_list,
+            active_reading_stream=active_reading_stream,
+            completed_reading_stream=completed_reading_stream,
+            flagged_security_users=flagged_security_users,
+            security_stats=security_stats,
+            security_bans=security_bans,
+            user_strikes=user_strikes,
             official_logs=official_logs,
             top_readers=top_readers,
             ai_activity=ai_activity,
@@ -10586,6 +10867,153 @@ def activity_monitor():
         if db:
             try: db.close()
             except: pass
+
+
+@app.route('/admin/activity-monitor/request-unlock', methods=['POST'])
+def activity_monitor_request_unlock():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    role = session.get('role')
+    if role not in ('developer', 'official'):
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+
+    user_id = session['user_id']
+    reason = request.form.get('reason', '').strip() or "Official requested emergency 3-month cooldown unlock for auditing and moderation."
+    
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            INSERT INTO activity_monitor_pin_security (user_id, failed_attempts, locked_until, unlock_requested, request_reason, requested_at)
+            VALUES (%s, 5, DATE_ADD(NOW(), INTERVAL 90 DAY), TRUE, %s, NOW())
+            ON DUPLICATE KEY UPDATE unlock_requested = TRUE, request_reason = %s, requested_at = NOW()
+        """, (user_id, reason, reason))
+        db.commit()
+        log_official_activity(user_id, f"Dispatched Emergency Activity Monitor Unlock Request to Developer: {reason}")
+        flash("Emergency Unlock Request dispatched to Developer Master Console! Developer can solve and unlock it instantly.", "success")
+    except Exception as e:
+        logging.error(f"Error requesting Activity Monitor unlock: {e}")
+        flash("Could not submit unlock request.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('activity_monitor'))
+
+
+@app.route('/developer/activity-monitor/unlock', methods=['POST'])
+def developer_activity_monitor_unlock():
+    if 'user_id' not in session or session.get('role') != 'developer':
+        flash("Access denied. Developer authorization required.", "error")
+        return redirect(url_for('dashboard'))
+
+    target_user_id = request.form.get('target_user_id')
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        if target_user_id and target_user_id != 'all':
+            cursor.execute("""
+                UPDATE activity_monitor_pin_security
+                SET failed_attempts = 0, locked_until = NULL, unlock_requested = FALSE, request_reason = NULL
+                WHERE user_id = %s
+            """, (target_user_id,))
+            cursor.execute("SELECT username FROM users WHERE id = %s", (target_user_id,))
+            usr = cursor.fetchone()
+            uname = usr['username'] if usr else f"User #{target_user_id}"
+            log_official_activity(session['user_id'], f"Developer granted instant emergency unlock for '{uname}' on Activity Monitor")
+            flash(f"Activity Monitor unlocked instantly for {uname}! 3-month cooldown cleared.", "success")
+        else:
+            cursor.execute("""
+                UPDATE activity_monitor_pin_security
+                SET failed_attempts = 0, locked_until = NULL, unlock_requested = FALSE, request_reason = NULL
+            """)
+            log_official_activity(session['user_id'], "Developer cleared all Activity Monitor PIN security lockouts and cooldowns")
+            flash("All Activity Monitor 3-month cooldown lockouts successfully cleared!", "success")
+        
+        # If developer is unlocking themselves on the monitor gate, verify session
+        if request.form.get('self_verify') == '1' or target_user_id == str(session['user_id']):
+            session['activity_monitor_verified'] = True
+
+        db.commit()
+    except Exception as e:
+        logging.error(f"Developer unlock error: {e}")
+        flash(f"Error executing unlock: {e}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    next_url = request.form.get('next') or request.referrer or url_for('dashboard')
+    return redirect(next_url)
+
+
+@app.route('/admin/activity-monitor/moderate-user', methods=['POST'])
+def admin_activity_monitor_moderate_user():
+    if 'user_id' not in session or session.get('role') not in ('developer', 'official'):
+        flash("Unauthorized moderation request.", "error")
+        return redirect(url_for('dashboard'))
+
+    action = request.form.get('action')
+    target_user_id = request.form.get('target_user_id')
+    reason = request.form.get('reason', '').strip() or "Activity Monitor security policy enforcement"
+    strike_level = int(request.form.get('strike_level', 1) or 1)
+
+    if not target_user_id:
+        flash("Target user ID is required.", "error")
+        return redirect(url_for('activity_monitor'))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, email FROM users WHERE id = %s", (target_user_id,))
+        usr = cursor.fetchone()
+        if not usr:
+            flash("Target user not found.", "error")
+            return redirect(url_for('activity_monitor'))
+
+        if action == 'strike':
+            cursor.execute("INSERT INTO user_strikes (user_id, reason, strike_level) VALUES (%s, %s, %s)",
+                           (target_user_id, reason, strike_level))
+            log_official_activity(session['user_id'], f"Issued Strike {strike_level} to {usr['username']}: {reason}")
+            flash(f"Strike {strike_level} successfully issued to {usr['username']}.", "success")
+
+        elif action == 'ban':
+            cursor.execute("""
+                INSERT INTO security_ban_list (target_type, target_value, reason, banned_by)
+                VALUES ('user_id', %s, %s, %s)
+                ON DUPLICATE KEY UPDATE reason = VALUES(reason)
+            """, (str(target_user_id), reason, session['user_id']))
+            cursor.execute("UPDATE users SET locked_until = '2099-12-31 23:59:59' WHERE id = %s", (target_user_id,))
+            log_official_activity(session['user_id'], f"Executed permanent security ban on {usr['username']} ({reason})")
+            flash(f"Permanent Security Ban executed against {usr['username']}.", "success")
+
+        elif action == 'unlock':
+            cursor.execute("UPDATE users SET locked_until = NULL, failed_attempts = 0 WHERE id = %s", (target_user_id,))
+            cursor.execute("DELETE FROM security_ban_list WHERE target_type = 'user_id' AND target_value = %s", (str(target_user_id),))
+            log_official_activity(session['user_id'], f"Unlocked user account and cleared security locks for {usr['username']}")
+            flash(f"Account unlocked and failed logins cleared for {usr['username']}.", "success")
+
+        elif action == 'clear_strikes':
+            cursor.execute("DELETE FROM user_strikes WHERE user_id = %s", (target_user_id,))
+            log_official_activity(session['user_id'], f"Revoked and cleared all disciplinary strikes for {usr['username']}")
+            flash(f"All strikes revoked for {usr['username']}.", "success")
+
+        db.commit()
+    except Exception as e:
+        logging.error(f"Moderation error: {e}")
+        flash(f"Error executing moderation action: {e}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+    return redirect(url_for('activity_monitor'))
 
 
 @app.route('/admin/activity-monitor/logout')

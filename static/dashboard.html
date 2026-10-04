@@ -1895,6 +1895,32 @@
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Sales Volume</div>
                 </div>
             </div>
+
+            <!-- Activity Monitor PIN Gate: 3-Month Lockout & Emergency Developer Unlock Hub -->
+            <div style="margin-top: 18px; background: white; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="margin: 0; color: #c2410c; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                            <span>🔐</span> Activity Monitor PIN Security &amp; 3-Month Cooldown Emergency Requests
+                        </h3>
+                        <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.82rem;">Officials who enter 5 wrong PINs enter a 3-month security cooldown. Resolve and grant 1-click instant unlock clearance here.</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="/activity-monitor" class="btn-sm btn-dark" style="text-decoration: none; padding: 6px 12px; font-weight: 700;">📊 Open Activity Monitor</a>
+                        <form action="/developer/activity-monitor/unlock" method="POST" style="margin: 0;" onsubmit="return confirm('Clear ALL Activity Monitor PIN lockouts across all users immediately?');">
+                            <input type="hidden" name="target_user_id" value="all">
+                            <button type="submit" class="btn-sm btn-red" style="padding: 6px 12px; font-weight: 700;">⚡ Clear All Lockouts</button>
+                        </form>
+                    </div>
+                </div>
+
+                
+                <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; color: #64748b; display: flex; align-items: center; justify-content: space-between;">
+                    <span>✅ <strong>All Clear:</strong> No officials or staff are currently under 3-month PIN cooldown lockouts. Activity Monitor security is fully nominal.</span>
+                    <span style="font-weight: 700; color: #16a34a; font-size: 0.8rem;">● 0 PENDING UNLOCK TICKETS</span>
+                </div>
+                
+            </div>
         </div>
 
         <!-- DEVELOPER MASTER PANEL: Verification & Approvals Hub -->

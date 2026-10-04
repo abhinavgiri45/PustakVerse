@@ -480,27 +480,265 @@
             margin-top: 40px;
         }
 
-        @media (max-width: 640px) {
-            .am-header { padding: 16px 18px; }
-            .am-body { padding: 16px 12px 40px; }
-            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .pin-card { padding: 32px 20px; }
-            .pin-inputs input { width: 34px; height: 44px; font-size: 1.1rem; }
+        /* ── RISK & SECURITY INTELLIGENCE STYLES ── */
+        .badge-risk-critical { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #f87171; font-weight: 800; animation: pulseRed 2s infinite; }
+        .badge-risk-high { background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.5); color: #fb923c; font-weight: 700; }
+        .badge-risk-medium { background: rgba(234, 179, 8, 0.2); border: 1px solid rgba(234, 179, 8, 0.5); color: #facc15; font-weight: 700; }
+        @keyframes pulseRed {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .security-flag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            margin: 2px;
+        }
+        .flag-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .flag-warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .flag-danger { background: rgba(220, 38, 38, 0.25); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.4); }
+
+        /* ── READING TELEMETRY PILLS & BUTTONS ── */
+        .reading-pill-active {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            color: #a5b4fc;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .reading-pill-done {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #6ee7b7;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-read-history {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            color: #c7d2fe;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-read-history:hover {
+            background: #6366f1;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* ── MODALS ── */
+        .am-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .am-modal-card {
+            background: var(--am-card);
+            border: 1px solid var(--am-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            overflow: hidden;
+            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalPop {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .am-modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--am-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .am-modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* ── PROGRESS BAR STYLING ── */
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            height: 6px;
+            width: 100%;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .progress-bar-fill {
+            background: linear-gradient(90deg, #6366f1, #10b981);
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
 <body>
 
 {% if not pin_verified %}
-<!-- ═══════════ PIN ENTRY GATE ═══════════ -->
+<!-- ═══════════ PIN ENTRY GATE & 3-MONTH LOCKOUT ═══════════ -->
 <div class="pin-gate">
+    {% if is_locked %}
+    <!-- ── 3-MONTH COOLDOWN LOCKOUT SCREEN ── -->
+    <div class="pin-card" style="border: 2px solid #ef4444; max-width: 540px; text-align: center;">
+        <div class="lock-icon" style="filter: drop-shadow(0 0 16px #ef4444);">⛔</div>
+        <h1 style="color: #f87171; font-size: 1.6rem;">Security Cooldown Active</h1>
+        <p style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 20px;">
+            5 consecutive incorrect PIN attempts detected. For platform integrity, access to the Activity Monitor is strictly restricted.
+        </p>
+
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 14px; padding: 18px; margin-bottom: 20px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 0.76rem; text-transform: uppercase; color: #fca5a5; font-weight: 800;">🔒 Cooldown Period</span>
+                <span style="background: #dc2626; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 800;">3 MONTHS (90 DAYS)</span>
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #fbbf24;" id="cooldownReleaseDisplay">
+                {{ locked_until }}
+            </div>
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 6px;" id="cooldownTimerText">
+                Calculating remaining lockout period...
+            </div>
+        </div>
+
+        {% if is_developer %}
+        <!-- DEVELOPER MASTER BYPASS -->
+        <div style="background: rgba(99, 102, 241, 0.15); border: 1.5px dashed #6366f1; border-radius: 14px; padding: 16px; margin-bottom: 20px; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.2rem;">👑</span>
+                <strong style="color: #a5b4fc; font-size: 0.92rem;">Developer Clearance Recognized</strong>
+            </div>
+            <p style="color: #cbd5e1; font-size: 0.82rem; margin-bottom: 12px;">
+                You hold the platform Developer role. You can bypass and immediately clear this cooldown now.
+            </p>
+            <form action="{{ url_for('developer_activity_monitor_unlock') }}" method="POST" style="margin: 0;">
+                <input type="hidden" name="target_user_id" value="{{ session.user_id }}">
+                <input type="hidden" name="self_verify" value="1">
+                <input type="hidden" name="next" value="{{ url_for('activity_monitor') }}">
+                <button type="submit" class="pin-btn" style="background: linear-gradient(135deg, #10b981, #059669); padding: 12px; font-size: 0.92rem;">
+                    ⚡ Developer Master 1-Click Instant Unlock &amp; Enter
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- SPECIAL REQUEST TO DEVELOPER -->
+        <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--am-border); border-radius: 14px; padding: 18px; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.1rem;">📨</span>
+                <strong style="color: #f8fafc; font-size: 0.92rem;">Special Request to Developer</strong>
+            </div>
+            <p style="color: var(--am-muted); font-size: 0.82rem; margin-bottom: 14px;">
+                Officials requiring emergency audit clearance can submit an urgent request to the Developer. The Developer can unlock and clear your 3-month cooldown <strong>instantly</strong> from their Master Dashboard.
+            </p>
+
+            {% if unlock_requested %}
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 14px; color: #34d399; font-size: 0.86rem; font-weight: 600;">
+                <div>✓ Emergency Unlock Request Dispatched to Developer Master Console!</div>
+                <div style="color: #cbd5e1; font-size: 0.8rem; margin-top: 6px; font-weight: 400;">
+                    Reason: <em>"{{ request_reason or 'Urgent audit clearance requested' }}"</em>
+                </div>
+                <div style="color: #64748b; font-size: 0.76rem; margin-top: 4px;">
+                    Requested at: {{ requested_at or 'Recently' }} • Awaiting Developer 1-click clearance.
+                </div>
+            </div>
+            {% else %}
+            <form action="{{ url_for('activity_monitor_request_unlock') }}" method="POST">
+                <textarea name="reason" placeholder="Please state the official reason for requesting emergency Activity Monitor unlock..." rows="3" style="width: 100%; border-radius: 10px; border: 1px solid var(--am-border); background: rgba(15, 23, 42, 0.9); color: #fff; padding: 10px; font-size: 0.84rem; font-family: inherit; resize: vertical; margin-bottom: 12px;" required></textarea>
+                <button type="submit" class="pin-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 0.88rem; padding: 11px;">
+                    🚨 Submit Emergency Unlock Request to Developer
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 24px;">
+            <a href="{{ url_for('dashboard') }}" style="color: var(--am-muted); text-decoration: none; font-size: 0.88rem; font-weight: 600;">← Return to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const targetStr = "{{ locked_until }}";
+        if (!targetStr) return;
+        const el = document.getElementById('cooldownTimerText');
+        function updateCooldown() {
+            let s = targetStr.trim();
+            if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T') + 'Z';
+            else if (!s.endsWith('Z')) s = s + 'Z';
+            const end = new Date(s);
+            const now = new Date();
+            const diff = Math.max(0, end - now);
+            if (diff <= 0) {
+                if (el) el.innerHTML = '<span style="color:#34d399;font-weight:700;">Cooldown expired! Please refresh to unlock.</span>';
+                return;
+            }
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((diff / (1000 * 60)) % 60);
+            const secs = Math.floor((diff / 1000) % 60);
+            if (el) el.innerHTML = `<strong>${days} days, ${hours} hrs, ${mins} mins, ${secs} secs</strong> remaining until automated release`;
+        }
+        updateCooldown();
+        setInterval(updateCooldown, 1000);
+    })();
+    </script>
+
+    {% else %}
+    <!-- ── STANDARD PIN ENTRY GATE ── -->
     <div class="pin-card">
         <div class="lock-icon">🔐</div>
         <h1>Activity Monitor</h1>
         <p>Restricted Access — Enter the 8-digit PIN (<code>ACTIVITY_MONITOR_PIN</code>)</p>
 
         {% if pin_error %}
-        <div class="pin-error">❌ Incorrect 8-Digit PIN. Please try again.</div>
+        <div class="pin-error" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; margin-bottom: 18px; padding: 12px; border-radius: 12px; font-size: 0.88rem;">
+            <div>❌ Incorrect 8-Digit PIN (Attempt <strong>{{ failed_attempts }} of 5</strong>)</div>
+            <div style="font-size: 0.78rem; color: #fde68a; margin-top: 4px;">
+                ⚠️ <strong>Security Policy:</strong> 5 failed attempts triggers a mandatory <strong>3-Month (90 Days) Cooldown Lockout</strong>!
+                {% if remaining_attempts is defined %}
+                <span style="display: block; margin-top: 2px; color: #f87171; font-weight: 700;">{{ remaining_attempts }} attempt(s) remaining before lockdown.</span>
+                {% endif %}
+            </div>
+        </div>
         {% endif %}
 
         <form method="POST" id="pinForm">
@@ -515,29 +753,30 @@
             </div>
         </form>
     </div>
-</div>
 
-<script>
-(function(){
-    const inputs = document.querySelectorAll('.pin-inputs input');
-    inputs.forEach((inp, i) => {
-        inp.addEventListener('input', function() {
-            this.value = this.value.replace(/\D/g, '').slice(0,1);
-            if (this.value && i < inputs.length - 1) inputs[i+1].focus();
+    <script>
+    (function(){
+        const inputs = document.querySelectorAll('.pin-inputs input');
+        inputs.forEach((inp, i) => {
+            inp.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0,1);
+                if (this.value && i < inputs.length - 1) inputs[i+1].focus();
+            });
+            inp.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !this.value && i > 0) { inputs[i-1].focus(); inputs[i-1].value = ''; }
+            });
+            inp.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0,8);
+                for (let j = 0; j < text.length && j < inputs.length; j++) { inputs[j].value = text[j]; }
+                if (text.length > 0) inputs[Math.min(text.length, inputs.length) - 1].focus();
+            });
         });
-        inp.addEventListener('keydown', function(e) {
-            if (e.key === 'Backspace' && !this.value && i > 0) { inputs[i-1].focus(); inputs[i-1].value = ''; }
-        });
-        inp.addEventListener('paste', function(e) {
-            e.preventDefault();
-            const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0,8);
-            for (let j = 0; j < text.length && j < inputs.length; j++) { inputs[j].value = text[j]; }
-            if (text.length > 0) inputs[Math.min(text.length, inputs.length) - 1].focus();
-        });
-    });
-    if (inputs[0]) inputs[0].focus();
-})();
-</script>
+        if (inputs[0]) inputs[0].focus();
+    })();
+    </script>
+    {% endif %}
+</div>
 
 {% else %}
 <!-- ═══════════ DASHBOARD ═══════════ -->
@@ -586,14 +825,160 @@
         {% endfor %}
     </div>
 
-    <!-- COMPREHENSIVE USERS MONITOR (WITH DEDICATED SCROLL BAR) -->
+    <!-- 🚨 SECURITY & SUSPICIOUS ACTIVITY INTELLIGENCE HUB ("ILLEGAL FEATURES MONITOR") -->
+    <div class="am-section" style="border: 1.5px solid rgba(239, 68, 68, 0.4); background: linear-gradient(180deg, rgba(30, 15, 23, 0.7) 0%, rgba(19, 27, 46, 0.9) 100%);">
+        <div class="am-section-header">
+            <div>
+                <h2 style="color: #f87171;">
+                    <span>🚨 Suspicious &amp; Illegal Activity Intelligence Hub</span>
+                    <span class="section-count-badge" style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; border-color: rgba(239, 68, 68, 0.5);">
+                        {{ flagged_security_users|length }} Flagged Targets
+                    </span>
+                </h2>
+                <p style="color: var(--am-muted); font-size: 0.82rem; margin: 4px 0 0 0;">
+                    Real-time detection: Brute-force account lockouts, active security bans, disciplinary strikes, and rapid automated content scraping anomalies.
+                </p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" onclick="openDirectStrikeModal()" class="btn-sm" style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.5); color: #fde68a; padding: 7px 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                    ⚠️ Issue Strike
+                </button>
+                <button type="button" onclick="openDirectBanModal()" class="btn-sm" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; padding: 7px 12px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                    🔨 Security Ban Target
+                </button>
+            </div>
+        </div>
+
+        <!-- Security Metric Badges -->
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--am-border); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">🚫</span>
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #f87171;">{{ security_stats.banned_count|default(0) }}</div>
+                    <div style="font-size: 0.72rem; color: var(--am-muted); font-weight: 700; text-transform: uppercase;">Security Bans</div>
+                </div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--am-border); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">⚠️</span>
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #fbbf24;">{{ security_stats.strikes_count|default(0) }}</div>
+                    <div style="font-size: 0.72rem; color: var(--am-muted); font-weight: 700; text-transform: uppercase;">Active Strikes</div>
+                </div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--am-border); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">⚡</span>
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #f43f5e;">{{ security_stats.anomalies_count|default(0) }}</div>
+                    <div style="font-size: 0.72rem; color: var(--am-muted); font-weight: 700; text-transform: uppercase;">Scraping Anomalies</div>
+                </div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--am-border); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">🔒</span>
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #fb923c;">{{ flagged_security_users|length }}</div>
+                    <div style="font-size: 0.72rem; color: var(--am-muted); font-weight: 700; text-transform: uppercase;">Total High-Risk Accounts</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="am-scroll-box am-scroll-box-short">
+            <table class="am-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>User Profile</th>
+                        <th>Role</th>
+                        <th>Risk Severity</th>
+                        <th>Detected Suspicious / Illegal Signals</th>
+                        <th>Last Active</th>
+                        <th>Instant Moderation Enforcement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for su in flagged_security_users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ su.username }}</strong>
+                            <div style="font-size: 0.76rem; color: var(--am-muted);">{{ su.email }} • ID: #{{ su.id }}</div>
+                        </td>
+                        <td><span class="badge badge-{{ su.role }}">{{ su.role }}</span></td>
+                        <td>
+                            {% if su.risk_level == 'CRITICAL' %}
+                                <span class="badge badge-risk-critical">🔴 CRITICAL RISK</span>
+                            {% elif su.risk_level == 'HIGH' %}
+                                <span class="badge badge-risk-high">🟠 HIGH RISK</span>
+                            {% else %}
+                                <span class="badge badge-risk-medium">🟡 MEDIUM RISK</span>
+                            {% endif %}
+                        </td>
+                        <td style="max-width: 380px;">
+                            {% for flg in su.flags %}
+                            <div class="security-flag-pill flag-{{ flg.severity }}" title="{{ flg.detail }}">
+                                <span>{{ '🚫' if flg.type == 'ban' else ('🔒' if flg.type == 'lock' else ('⚡' if flg.type == 'scraper' else '⚠️')) }}</span>
+                                <strong>{{ flg.label }}</strong>: <span style="font-weight: 400; font-size: 0.72rem;">{{ flg.detail }}</span>
+                            </div>
+                            {% endfor %}
+                        </td>
+                        <td><span class="rel-time" data-ts="{{ su.last_active }}">{{ su.last_active }}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button type="button" onclick="openDirectStrikeModal({{ su.id }}, '{{ su.username }}')" class="btn-sm" style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #fde68a; padding: 5px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.76rem;">
+                                    ⚠️ Strike
+                                </button>
+                                {% if not su.is_banned %}
+                                <form action="{{ url_for('admin_activity_monitor_moderate_user') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Confirm permanent Security Ban for {{ su.username }}?');">
+                                    <input type="hidden" name="action" value="ban">
+                                    <input type="hidden" name="target_user_id" value="{{ su.id }}">
+                                    <input type="hidden" name="reason" value="Banned from Activity Monitor threat telemetry">
+                                    <button type="submit" class="btn-sm" style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; padding: 5px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.76rem;">
+                                        🔨 Ban
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if su.is_locked or su.is_banned %}
+                                <form action="{{ url_for('admin_activity_monitor_moderate_user') }}" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="action" value="unlock">
+                                    <input type="hidden" name="target_user_id" value="{{ su.id }}">
+                                    <button type="submit" class="btn-sm" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #6ee7b7; padding: 5px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.76rem;">
+                                        🔓 Unlock
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if su.strikes and su.strikes|length > 0 %}
+                                <form action="{{ url_for('admin_activity_monitor_moderate_user') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Revoke all active strikes for {{ su.username }}?');">
+                                    <input type="hidden" name="action" value="clear_strikes">
+                                    <input type="hidden" name="target_user_id" value="{{ su.id }}">
+                                    <button type="submit" class="btn-sm" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.4); color: #cbd5e1; padding: 5px 10px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.76rem;">
+                                        🗑️ Clear Strikes
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not flagged_security_users %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--am-muted); padding: 36px;">
+                            <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🛡️</span>
+                            All clear! No accounts currently flagged for brute-force lockouts, security bans, or content scraping anomalies.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- COMPREHENSIVE USERS MONITOR (WITH READING PROGRESS & DEDICATED SCROLL BAR) -->
     <div class="am-section">
         <div class="am-section-header">
             <h2>
-                <span>👥 Comprehensive User Activity &amp; Live Status</span>
+                <span>👥 Comprehensive User Activity &amp; Live Reading Telemetry</span>
                 <span class="section-count-badge">{{ users|length }} Total Records</span>
             </h2>
-            <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search username, email, or role..." oninput="filterUsers()">
+            <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search username, email, book, or role..." oninput="filterUsers()">
         </div>
 
         <div class="am-scroll-box am-scroll-box-tall">
@@ -604,8 +989,10 @@
                         <th>User Profile</th>
                         <th>Role</th>
                         <th>Status</th>
-                        <th>Last Active</th>
-                        <th>Published Books</th>
+                        <th>Currently Reading</th>
+                        <th>Completed Books</th>
+                        <th>Reading Portfolio</th>
+                        <th>Published</th>
                         <th>Library Saved</th>
                         <th>Purchases</th>
                         <th>Total Spent</th>
@@ -629,7 +1016,35 @@
                                 <span class="status-indicator" data-ts="{{ u.last_activity }}">—</span>
                             {% endif %}
                         </td>
-                        <td><span class="rel-time" data-ts="{{ u.last_activity }}">{{ u.last_activity }}</span></td>
+                        <td>
+                            {% if u.currently_reading and u.currently_reading|length > 0 %}
+                                {% set cur = u.currently_reading[0] %}
+                                <div class="reading-pill-active" title="{{ cur.book_title }} (Page {{ cur.current_page }}/{{ cur.total_pages }})">
+                                    <span>📖</span>
+                                    <span>{{ cur.book_title|truncate(18) }}</span>
+                                    <span style="font-size: 0.7rem; color: #c7d2fe;">(p.{{ cur.current_page }}/{{ cur.total_pages }} • {{ cur.percent_completed|round(0)|int }}%)</span>
+                                </div>
+                                {% if u.currently_reading|length > 1 %}
+                                <div style="font-size: 0.72rem; color: var(--am-muted); margin-top: 2px;">+{{ u.currently_reading|length - 1 }} more active</div>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: var(--am-muted); font-size: 0.8rem;">None in progress</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.has_read and u.has_read|length > 0 %}
+                                <span class="reading-pill-done" title="{{ u.has_read|map(attribute='book_title')|join(', ') }}">
+                                    ✓ {{ u.has_read|length }} Completed
+                                </span>
+                            {% else %}
+                                <span style="color: var(--am-muted); font-size: 0.8rem;">0 completed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn-read-history" onclick="openUserReadingModal({{ u.id }})">
+                                👁️ Reading History
+                            </button>
+                        </td>
                         <td>
                             {% if u.published_books_count and u.published_books_count > 0 %}
                                 <span class="metric-pill metric-pill-green">📖 {{ u.published_books_count }} Books</span>
@@ -672,6 +1087,99 @@
             </table>
         </div>
         <div class="am-pagination" id="userPagination"></div>
+    </div>
+
+    <!-- 📚 REAL-TIME READING STREAM: CURRENTLY READING VS COMPLETED BOOKS -->
+    <div class="am-two-col">
+        <!-- CURRENTLY READING (IN-PROGRESS ACTIVE SESSIONS) -->
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>📖 Live Reading In-Progress (Currently Reading)</span>
+                    <span class="section-count-badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border-color: rgba(99, 102, 241, 0.4);">
+                        {{ active_reading_stream|length }} Reading Now
+                    </span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Reader</th>
+                            <th>Book Title</th>
+                            <th>Page Progress</th>
+                            <th>Time Spent</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ar in active_reading_stream %}
+                        <tr>
+                            <td><strong>{{ ar.reader_username }}</strong></td>
+                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <strong>{{ ar.book_title }}</strong>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" style="width: {{ ar.percent_completed|default(0) }}%;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="metric-pill metric-pill-blue">
+                                    p. {{ ar.current_page }}/{{ ar.total_pages }} ({{ ar.percent_completed|round(0)|int }}%)
+                                </span>
+                            </td>
+                            <td>{{ ((ar.reading_seconds or 0) // 60) }}m {{ ((ar.reading_seconds or 0) % 60) }}s</td>
+                            <td><span class="rel-time" data-ts="{{ ar.last_read_at }}">{{ ar.last_read_at }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not active_reading_stream %}
+                        <tr><td colspan="5" style="text-align: center; color: var(--am-muted); padding: 25px;">No active reading sessions right now.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- COMPLETED BOOKS (HAS READ & FINISHED) -->
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>✅ Verified Book Completions (Has Read)</span>
+                    <span class="section-count-badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4);">
+                        {{ completed_reading_stream|length }} Books Finished
+                    </span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Reader</th>
+                            <th>Finished Book</th>
+                            <th>Completion Date</th>
+                            <th>Total Pages</th>
+                            <th>Total Study Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cr in completed_reading_stream %}
+                        <tr>
+                            <td><strong>{{ cr.reader_username }}</strong></td>
+                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <strong>{{ cr.book_title }}</strong>
+                                <div><span style="color: #34d399; font-size: 0.72rem; font-weight: 700;">✓ Verified Read</span></div>
+                            </td>
+                            <td><span class="rel-time" data-ts="{{ cr.completed_at or cr.last_read_at }}">{{ cr.completed_at or cr.last_read_at }}</span></td>
+                            <td><span class="metric-pill metric-pill-green">{{ cr.total_pages }} Pages</span></td>
+                            <td>{{ ((cr.reading_seconds or 0) // 3600) }}h {{ (((cr.reading_seconds or 0) % 3600) // 60) }}m</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not completed_reading_stream %}
+                        <tr><td colspan="5" style="text-align: center; color: var(--am-muted); padding: 25px;">No completed books recorded yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- 2-COLUMN HIGHLIGHTS: TOP READERS & RECENT PURCHASES (WITH INDEPENDENT SCROLL BARS) -->
@@ -968,6 +1476,294 @@ function filterUsers() {
     }
     showPage(1);
 })();
+
+</div>
+
+<!-- USER READING PORTFOLIO & HISTORY MODAL -->
+<div class="am-modal-overlay" id="readingPortfolioModal">
+    <div class="am-modal-card">
+        <div class="am-modal-header">
+            <div>
+                <h3 id="modalReadingUsername" style="color: #f8fafc; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <span>📖</span> User Reading History
+                </h3>
+                <div id="modalReadingEmail" style="color: var(--am-muted); font-size: 0.8rem; margin-top: 2px;"></div>
+            </div>
+            <button type="button" onclick="closeUserReadingModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; padding: 4px 8px;">✕</button>
+        </div>
+        <div class="am-modal-body">
+            <!-- Currently Reading Section -->
+            <div style="margin-bottom: 24px;">
+                <h4 style="color: #818cf8; font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <span>⚡</span> Currently Reading (In-Progress)
+                </h4>
+                <div id="modalCurrentlyReadingList"></div>
+            </div>
+
+            <!-- Completed Books Section -->
+            <div>
+                <h4 style="color: #34d399; font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <span>✓</span> Verified Finished Books (Completed)
+                </h4>
+                <div id="modalCompletedBooksList"></div>
+            </div>
+        </div>
+        <div style="padding: 14px 24px; border-top: 1px solid var(--am-border); text-align: right; background: rgba(15, 23, 42, 0.4);">
+            <button type="button" onclick="closeUserReadingModal()" class="pin-btn" style="width: auto; padding: 8px 20px; font-size: 0.88rem;">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ISSUE STRIKE MODAL -->
+<div class="am-modal-overlay" id="directStrikeModal">
+    <div class="am-modal-card" style="max-width: 500px;">
+        <div class="am-modal-header" style="background: rgba(245, 158, 11, 0.1);">
+            <h3 style="color: #fbbf24; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <span>⚠️</span> Issue Disciplinary Warning Strike
+            </h3>
+            <button type="button" onclick="closeDirectStrikeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">✕</button>
+        </div>
+        <form action="{{ url_for('admin_activity_monitor_moderate_user') }}" method="POST">
+            <input type="hidden" name="action" value="strike">
+            <div class="am-modal-body">
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--am-muted); margin-bottom: 6px;">TARGET USER ID</label>
+                    <input type="number" name="target_user_id" id="strikeTargetUserId" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--am-border); background: rgba(15, 23, 42, 0.9); color: #fff;" required>
+                </div>
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--am-muted); margin-bottom: 6px;">STRIKE LEVEL</label>
+                    <select name="strike_level" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--am-border); background: #0f172a; color: #fff;">
+                        <option value="1">Strike 1 — Official Notice & Caution</option>
+                        <option value="2">Strike 2 — Restrict Chat / Reviews & Elevated Threat</option>
+                        <option value="3">Strike 3 — Final Policy Breach / Suspension Threat</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--am-muted); margin-bottom: 6px;">VIOLATION REASON & JUSTIFICATION</label>
+                    <textarea name="reason" rows="3" placeholder="Specify violations: DRM evasion, scraper abuse, unauthorized activity..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--am-border); background: rgba(15, 23, 42, 0.9); color: #fff; font-family: inherit;" required></textarea>
+                </div>
+            </div>
+            <div style="padding: 14px 24px; border-top: 1px solid var(--am-border); display: flex; justify-content: flex-end; gap: 10px; background: rgba(15, 23, 42, 0.4);">
+                <button type="button" onclick="closeDirectStrikeModal()" style="background: none; border: 1px solid var(--am-border); color: #cbd5e1; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button type="submit" class="pin-btn" style="width: auto; background: linear-gradient(135deg, #f59e0b, #d97706); padding: 8px 20px; font-size: 0.88rem;">Issue Strike</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- BAN TARGET MODAL -->
+<div class="am-modal-overlay" id="directBanModal">
+    <div class="am-modal-card" style="max-width: 500px;">
+        <div class="am-modal-header" style="background: rgba(239, 68, 68, 0.1);">
+            <h3 style="color: #f87171; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <span>🔨</span> Permanent Security Ban
+            </h3>
+            <button type="button" onclick="closeDirectBanModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">✕</button>
+        </div>
+        <form action="{{ url_for('admin_activity_monitor_moderate_user') }}" method="POST" onsubmit="return confirm('Execute permanent security ban? This locks the account and adds to the platform ban list.');">
+            <input type="hidden" name="action" value="ban">
+            <div class="am-modal-body">
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--am-muted); margin-bottom: 6px;">TARGET USER ID</label>
+                    <input type="number" name="target_user_id" id="banTargetUserId" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--am-border); background: rgba(15, 23, 42, 0.9); color: #fff;" required>
+                </div>
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--am-muted); margin-bottom: 6px;">BAN JUSTIFICATION & POLICY REASON</label>
+                    <textarea name="reason" rows="3" placeholder="State reason: Illegal piracy, severe community violation, content scraping attack..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--am-border); background: rgba(15, 23, 42, 0.9); color: #fff; font-family: inherit;" required></textarea>
+                </div>
+            </div>
+            <div style="padding: 14px 24px; border-top: 1px solid var(--am-border); display: flex; justify-content: flex-end; gap: 10px; background: rgba(15, 23, 42, 0.4);">
+                <button type="button" onclick="closeDirectBanModal()" style="background: none; border: 1px solid var(--am-border); color: #cbd5e1; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button type="submit" class="pin-btn" style="width: auto; background: linear-gradient(135deg, #ef4444, #dc2626); padding: 8px 20px; font-size: 0.88rem;">Confirm & Ban Target</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<footer class="am-footer">
+    PustakVerse Live Activity Monitor • Proprietary Telemetry System • Restricted to Officials &amp; Developers
+</footer>
+
+<script>
+// ── Universal Date Normalizer ──
+function parseUtcDate(ts) {
+    if (!ts || ts === '—' || ts === 'None' || ts === 'null') return null;
+    let s = String(ts).trim();
+    if (s.includes(' ') && !s.includes('T')) {
+        s = s.replace(' ', 'T') + 'Z';
+    } else if (!s.endsWith('Z') && !s.includes('+')) {
+        s = s + 'Z';
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// ── High-Precision Relative Time ──
+function relTime(ts) {
+    const d = parseUtcDate(ts);
+    if (!d) return '—';
+    const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 172800) return 'Yesterday';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return d.toLocaleDateString();
+}
+
+document.querySelectorAll('.rel-time').forEach(el => {
+    const ts = el.dataset.ts;
+    if (ts && ts !== 'None') el.textContent = relTime(ts);
+    else el.textContent = '—';
+});
+
+// ── Multi-Tier Status Engine: Online, Idle, Recent, Offline ──
+document.querySelectorAll('.status-indicator').forEach(el => {
+    const ts = el.dataset.ts;
+    const d = parseUtcDate(ts);
+    if (!d) {
+        el.innerHTML = '<span class="status-offline">Offline</span>';
+        return;
+    }
+    const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    if (diff < 900) { // Active within 15 mins
+        el.innerHTML = '<span class="status-online" style="color:#34d399;font-weight:700;">🟢 Online</span>';
+    } else if (diff < 7200) { // Active within 2 hours
+        el.innerHTML = '<span style="color:#fbbf24;font-weight:700;display:inline-flex;align-items:center;gap:6px;">🟡 Idle (' + Math.floor(diff / 60) + 'm)</span>';
+    } else if (diff < 86400) { // Active within 24 hours
+        el.innerHTML = '<span style="color:#93c5fd;font-weight:600;display:inline-flex;align-items:center;gap:6px;">🔵 Today (' + Math.floor(diff / 3600) + 'h ago)</span>';
+    } else {
+        el.innerHTML = '<span class="status-offline">⚪ Offline</span>';
+    }
+});
+
+// ── User table instant search filter ──
+function filterUsers() {
+    const q = (document.getElementById('userSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('#userTable .user-row').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+    });
+}
+
+// ── Pagination (50 per page) ──
+(function(){
+    const PAGE_SIZE = 50;
+    const rows = Array.from(document.querySelectorAll('#userTable .user-row'));
+    const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+    if (totalPages <= 1) return;
+    let currentPage = 1;
+    const pag = document.getElementById('userPagination');
+
+    function showPage(p) {
+        currentPage = p;
+        rows.forEach((r, i) => { r.style.display = (i >= (p-1)*PAGE_SIZE && i < p*PAGE_SIZE) ? '' : 'none'; });
+        renderButtons();
+    }
+    function renderButtons() {
+        if (!pag) return;
+        pag.innerHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            if (i === currentPage) btn.classList.add('active');
+            btn.onclick = () => showPage(i);
+            pag.appendChild(btn);
+        }
+    }
+    showPage(1);
+})();
+
+// ── User Reading Telemetry Repository ──
+const userReadingRepo = {
+    {% for u in users %}
+    {{ u.id }}: {
+        username: {{ u.username|tojson }},
+        email: {{ u.email|tojson }},
+        currently_reading: {{ u.currently_reading|default([])|tojson }},
+        has_read: {{ u.has_read|default([])|tojson }}
+    },
+    {% endfor %}
+};
+
+function openUserReadingModal(uid) {
+    const data = userReadingRepo[uid];
+    if (!data) return;
+    document.getElementById('modalReadingUsername').innerHTML = `<span>📖</span> ${data.username}'s Reading Portfolio`;
+    document.getElementById('modalReadingEmail').textContent = `${data.email} • User ID #${uid}`;
+
+    // Currently Reading
+    const curList = document.getElementById('modalCurrentlyReadingList');
+    if (!data.currently_reading || data.currently_reading.length === 0) {
+        curList.innerHTML = '<div style="color:var(--am-muted);font-size:0.86rem;padding:12px;background:rgba(15,23,42,0.5);border-radius:8px;">No books currently in progress.</div>';
+    } else {
+        curList.innerHTML = data.currently_reading.map(b => `
+            <div style="background: rgba(15,23,42,0.6); border: 1px solid var(--am-border); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="color:#fff; font-size:0.92rem;">${b.book_title || 'Book'}</strong>
+                    <span class="badge badge-reader">Page ${b.current_page || 1} of ${b.total_pages || 1}</span>
+                </div>
+                <div class="progress-bar-bg" style="height: 8px; margin-bottom: 6px;">
+                    <div class="progress-bar-fill" style="width: ${Math.round(b.percent_completed || 0)}%;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted);">
+                    <span>${Math.round(b.percent_completed || 0)}% Completed</span>
+                    <span>Study Time: ${Math.floor((b.reading_seconds||0)/60)}m ${(b.reading_seconds||0)%60}s</span>
+                    <span>Last read: ${relTime(b.last_read_at)}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Has Read
+    const compList = document.getElementById('modalCompletedBooksList');
+    if (!data.has_read || data.has_read.length === 0) {
+        compList.innerHTML = '<div style="color:var(--am-muted);font-size:0.86rem;padding:12px;background:rgba(15,23,42,0.5);border-radius:8px;">No books completed yet.</div>';
+    } else {
+        compList.innerHTML = data.has_read.map(b => `
+            <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <strong style="color:#6ee7b7; font-size:0.92rem;">✓ ${b.book_title || 'Book'}</strong>
+                    <span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">VERIFIED FINISHED</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted); margin-top:4px;">
+                    <span>Finished: ${relTime(b.completed_at || b.last_read_at)}</span>
+                    <span>Total Pages: ${b.total_pages || 'Complete'}</span>
+                    <span>Total Study Time: ${Math.floor((b.reading_seconds||0)/3600)}h ${Math.floor(((b.reading_seconds||0)%3600)/60)}m</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('readingPortfolioModal').style.display = 'flex';
+}
+
+function closeUserReadingModal() {
+    document.getElementById('readingPortfolioModal').style.display = 'none';
+}
+
+function openDirectStrikeModal(uid, uname) {
+    if (uid) document.getElementById('strikeTargetUserId').value = uid;
+    document.getElementById('directStrikeModal').style.display = 'flex';
+}
+function closeDirectStrikeModal() {
+    document.getElementById('directStrikeModal').style.display = 'none';
+}
+
+function openDirectBanModal(uid, uname) {
+    if (uid) document.getElementById('banTargetUserId').value = uid;
+    document.getElementById('directBanModal').style.display = 'flex';
+}
+function closeDirectBanModal() {
+    document.getElementById('directBanModal').style.display = 'none';
+}
+
+// ── Close Modals on Overlay Click ──
+document.querySelectorAll('.am-modal-overlay').forEach(ov => {
+    ov.addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+});
 
 // ── Real-Time Auto-Refresh every 60 seconds ──
 setTimeout(() => location.reload(), 60000);
