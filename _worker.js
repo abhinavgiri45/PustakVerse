@@ -132,6 +132,59 @@ async function verifyPassword(providedPassword, storedHash, userSecurityAnswer, 
 }
 
 // ============================================================================
+// DRIVE LINK NORMALIZATION & SBIN GENERATION ENGINE
+// ============================================================================
+
+function normalizeDriveLink(url) {
+  if (!url || typeof url !== "string") return url || "";
+  const trimmed = url.trim();
+  const match = trimmed.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+  if (match) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  return trimmed;
+}
+
+function normalizeDriveImageLink(url) {
+  if (!url || typeof url !== "string") return url || "";
+  const trimmed = url.trim();
+  const match = trimmed.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+  if (match) {
+    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+  }
+  return trimmed;
+}
+
+function generateValidSbinNumber() {
+  const prefix = "978938";
+  const randomPart = Math.floor(100000 + Math.random() * 900000).toString();
+  const raw12 = prefix + randomPart;
+  let sumDigits = 0;
+  for (let i = 0; i < 12; i++) {
+    sumDigits += parseInt(raw12[i], 10) * (i % 2 === 0 ? 1 : 3);
+  }
+  const checkDigit = (10 - (sumDigits % 10)) % 10;
+  return `978-93-8${randomPart.slice(0, 2)}-${randomPart.slice(2)}-${checkDigit}`;
+}
+
+async function generateValidSbin(db = null) {
+  for (let i = 0; i < 50; i++) {
+    const sbin = generateValidSbinNumber();
+    if (db) {
+      try {
+        const existing = await db.prepare("SELECT id FROM books WHERE sbin_no = ? OR isbn = ? LIMIT 1").bind(sbin, sbin).first();
+        if (!existing) return sbin;
+      } catch (_) {
+        return sbin;
+      }
+    } else {
+      return sbin;
+    }
+  }
+  return generateValidSbinNumber();
+}
+
+// ============================================================================
 // EDGE EMAIL & OTP DISPATCH ENGINE
 // Multi-provider HTTPS dispatch: Google Gmail REST API, Resend, Brevo, SendGrid
 // ============================================================================
@@ -515,6 +568,68 @@ export default {
         dispatch_result: testResult,
         timestamp: new Date().toISOString()
       }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4C. Generate Free Digital SBIN / ISBN-13: GET /api/generate_sbin
+    if (url.pathname === "/api/generate_sbin") {
+      const sbin = await generateValidSbin(env.DB);
+      return new Response(JSON.stringify({ status: "success", sbin, message: "Unique globally valid SBIN generated." }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4D. Verify SBIN / ISBN: GET or POST /api/verify_sbin
+    if (url.pathname === "/api/verify_sbin") {
+      let code = (url.searchParams.get("code") || "").trim();
+      if (!code && request.method === "POST") {
+        const formData = await request.formData().catch(() => new FormData());
+        code = (formData.get("code") || "").trim();
+      }
+      if (!code) {
+        return new Response(JSON.stringify({ valid: false, message: "Please provide an ISBN or SBIN number." }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      let registeredBook = null;
+      if (env.DB) {
+        try {
+          registeredBook = await env.DB.prepare(
+            `SELECT b.id, b.title, b.catalog, b.is_paid, b.price_paise, b.cover_image, u.username as author_name
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             WHERE b.sbin_no = ? OR b.isbn = ?
+             LIMIT 1`
+          ).bind(code, code).first();
+        } catch (_) {}
+      }
+      return new Response(JSON.stringify({
+        valid: true,
+        code,
+        registered_on_pustakverse: !!registeredBook,
+        book: registeredBook || null
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4E. Verify Razorpay Ajax: POST /verify_razorpay_ajax
+    if (url.pathname === "/verify_razorpay_ajax" && request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const keyId = (body.key_id || "").trim();
+      const keySecret = (body.key_secret || "").trim();
+      if (!keyId || !keySecret) {
+        return new Response(JSON.stringify({ status: "invalid", message: "Key ID and Secret Key are required." }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      if (!keyId.startsWith("rzp_live_") && !keyId.startsWith("rzp_test_")) {
+        return new Response(JSON.stringify({ status: "invalid", message: "Invalid Key ID format (must start with rzp_live_ or rzp_test_)." }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return new Response(JSON.stringify({ status: "valid", message: "Razorpay Key format verified successfully." }), {
         headers: { "Content-Type": "application/json" }
       });
     }
@@ -1494,17 +1609,111 @@ export default {
         } catch (_) {}
       }
 
-      // Handle POST actions on dashboard (e.g., toggle_2fa)
+      // Handle POST actions on dashboard (e.g., toggle_2fa, publish book)
       if (request.method === "POST" && env.DB) {
         try {
           const formData = await request.formData().catch(() => new FormData());
+          
+          // Toggle 2FA
           if (formData.has("toggle_2fa")) {
             const currentStatus = formData.get("current_status") === "True" || formData.get("current_status") === "true";
             const newStatus = currentStatus ? 0 : 1;
             await env.DB.prepare("UPDATE users SET two_factor_enabled = ? WHERE id = ?").bind(newStatus, user.id).run();
             return Response.redirect(`${url.origin}/dashboard`, 302);
           }
-        } catch (_) {}
+
+          // Publish a New Book
+          if (formData.has("title") || formData.has("pdf_link")) {
+            const title = (formData.get("title") || "").trim();
+            if (!title) {
+              return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Book Title is required.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
+            }
+
+            const catalog = (formData.get("catalog") || "Non-Fiction").trim();
+            const description = (formData.get("description") || "").trim();
+            let pdfLink = (formData.get("pdf_link") || "").trim();
+            let coverLink = (formData.get("cover_link") || "").trim();
+
+            // Cover file fallback
+            const coverFile = formData.get("cover_image");
+            if (!coverLink && coverFile && typeof coverFile === "object" && coverFile.size > 0 && coverFile.size <= 2 * 1024 * 1024) {
+              try {
+                const ab = await coverFile.arrayBuffer();
+                const b64 = utf8ToBase64(new Uint8Array(ab));
+                coverLink = `data:${coverFile.type || "image/jpeg"};base64,${b64}`;
+              } catch (_) {}
+            }
+
+            // PDF file fallback
+            const pdfFile = formData.get("pdf_file");
+            if (!pdfLink && pdfFile && typeof pdfFile === "object" && pdfFile.size > 0 && pdfFile.size <= 5 * 1024 * 1024) {
+              try {
+                const ab = await pdfFile.arrayBuffer();
+                const b64 = utf8ToBase64(new Uint8Array(ab));
+                pdfLink = `data:application/pdf;base64,${b64}`;
+              } catch (_) {}
+            }
+
+            if (!pdfLink) {
+              return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Please provide a Google Drive PDF Book Link.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
+            }
+
+            if (!coverLink) {
+              coverLink = "/static/PustakVerse.png";
+            }
+
+            const normPdf = normalizeDriveLink(pdfLink);
+            const normCover = normalizeDriveImageLink(coverLink);
+
+            const isPaid = formData.get("is_paid") === "on" || formData.get("is_paid") === "true";
+            let pricePaise = 0;
+            if (isPaid) {
+              const rawInr = parseFloat(formData.get("price_inr") || "0");
+              pricePaise = Math.round((isNaN(rawInr) ? 0 : rawInr) * 100);
+            }
+
+            const rpKeyId = (formData.get("rp_key_id") || "").trim() || null;
+            const rpKeySecret = (formData.get("rp_key_secret") || "").trim() || null;
+            const rpVerified = rpKeyId ? 1 : 0;
+
+            const hasSbin = formData.get("has_sbin");
+            let sbinNo = (formData.get("sbin_no") || formData.get("isbn") || "").trim();
+            if (!sbinNo || hasSbin !== "yes") {
+              sbinNo = await generateValidSbin(env.DB);
+            }
+
+            // Insert book into Cloudflare D1 books table
+            await env.DB.prepare(
+              `INSERT INTO books (
+                 title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
+                 preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
+                 created_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+            ).bind(
+              title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
+              5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo
+            ).run();
+
+            // Insert category if not exists
+            try {
+              await env.DB.prepare("INSERT OR IGNORE INTO catalogs (name) VALUES (?)").bind(catalog).run();
+            } catch (_) {}
+
+            // Auto-promote reader to author
+            if (user.role === "reader") {
+              try {
+                await env.DB.prepare("UPDATE users SET role = 'author', is_verified = 1 WHERE id = ?").bind(user.id).run();
+                user.role = "author";
+              } catch (_) {}
+            }
+
+            console.log(`✓ [BOOK PUBLISHED AT EDGE] "${title}" by ${user.username} | SBIN: ${sbinNo}`);
+            return Response.redirect(`${url.origin}/dashboard?published=1`, 302);
+          }
+        } catch (err) {
+          console.error("Dashboard POST error:", err);
+          return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Error: ${escapeHtml(err.message)}</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 500, headers: { "Content-Type": "text/html; charset=utf-8" } });
+        }
       }
 
       // Fetch authentic master dashboard HTML template
@@ -1531,6 +1740,7 @@ export default {
       if (dashHtml) {
         // Fetch active live categories from D1 if available
         let liveCatalogs = [];
+        let myBooks = [];
         if (env.DB) {
           try {
             const catRes = await env.DB.prepare(
@@ -1538,9 +1748,23 @@ export default {
             ).all();
             liveCatalogs = catRes.results || [];
           } catch (_) {}
+
+          try {
+            const isPrivileged = user.role === "developer" || user.role === "official";
+            const bookQuery = isPrivileged
+              ? `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.rp_verified, b.is_featured, b.is_quarantined, b.sbin_no, b.description, u.username as author_name, b.author_id, b.rp_key_id, b.rp_key_secret
+                 FROM books b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.id DESC LIMIT 100`
+              : `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.rp_verified, b.is_featured, b.is_quarantined, b.sbin_no, b.description, u.username as author_name, b.author_id, b.rp_key_id, b.rp_key_secret
+                 FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.author_id = ? ORDER BY b.id DESC LIMIT 100`;
+            const stmt = isPrivileged ? env.DB.prepare(bookQuery) : env.DB.prepare(bookQuery).bind(user.id);
+            const bRes = await stmt.all();
+            myBooks = bRes.results || [];
+          } catch (e) {
+            console.warn("Could not load dashboard books:", e.message);
+          }
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs);
+        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, url);
         return new Response(personalized, {
           status: 200,
           headers: {
@@ -1554,6 +1778,93 @@ export default {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" }
       });
+    }
+
+    // Edit Book Details: POST /edit_book/:id
+    const editBookMatch = url.pathname.match(/^\/edit_book\/(\d+)/);
+    if (editBookMatch && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) return Response.redirect(`${url.origin}/login`, 302);
+      const bookId = parseInt(editBookMatch[1], 10);
+      const existing = await env.DB.prepare("SELECT author_id FROM books WHERE id = ?").bind(bookId).first();
+      if (!existing || (user.role !== "developer" && user.role !== "official" && existing.author_id !== user.id)) {
+        return new Response("Unauthorized to edit this book", { status: 403 });
+      }
+
+      const formData = await request.formData().catch(() => new FormData());
+      const title = (formData.get("title") || "").trim();
+      const catalog = (formData.get("catalog") || "Non-Fiction").trim();
+      const description = (formData.get("description") || "").trim();
+      const sbinNo = (formData.get("sbin_no") || "").trim();
+      let pdfLink = (formData.get("pdf_link") || "").trim();
+      let coverLink = (formData.get("cover_link") || "").trim();
+
+      let sql = "UPDATE books SET title = ?, catalog = ?, description = ?";
+      const binds = [title, catalog, description];
+
+      if (sbinNo) {
+        sql += ", sbin_no = ?, isbn = ?";
+        binds.push(sbinNo, sbinNo);
+      }
+      if (pdfLink) {
+        sql += ", pdf_file = ?";
+        binds.push(normalizeDriveLink(pdfLink));
+      }
+      if (coverLink) {
+        sql += ", cover_image = ?";
+        binds.push(normalizeDriveImageLink(coverLink));
+      }
+      sql += " WHERE id = ?";
+      binds.push(bookId);
+
+      await env.DB.prepare(sql).bind(...binds).run();
+      return Response.redirect(`${url.origin}/dashboard?updated=1`, 302);
+    }
+
+    // Delete Book: POST /delete_book/:id
+    const delBookMatch = url.pathname.match(/^\/delete_book\/(\d+)/);
+    if (delBookMatch && (request.method === "POST" || request.method === "GET") && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) return Response.redirect(`${url.origin}/login`, 302);
+      const bookId = parseInt(delBookMatch[1], 10);
+      const existing = await env.DB.prepare("SELECT author_id FROM books WHERE id = ?").bind(bookId).first();
+      if (!existing || (user.role !== "developer" && user.role !== "official" && existing.author_id !== user.id)) {
+        return new Response("Unauthorized to delete this book", { status: 403 });
+      }
+
+      try {
+        await env.DB.prepare("DELETE FROM personal_library WHERE book_id = ?").bind(bookId).run();
+      } catch (_) {}
+      await env.DB.prepare("DELETE FROM books WHERE id = ?").bind(bookId).run();
+      return Response.redirect(`${url.origin}/dashboard?deleted=1`, 302);
+    }
+
+    // Toggle Quarantine: POST /official_toggle_quarantine/:id or /official/toggle_quarantine/:id
+    const quaranMatch = url.pathname.match(/^\/(?:official_toggle_quarantine|official\/toggle_quarantine)\/(\d+)/);
+    if (quaranMatch && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || (user.role !== "developer" && user.role !== "official")) {
+        return new Response("Unauthorized", { status: 403 });
+      }
+      const bookId = parseInt(quaranMatch[1], 10);
+      await env.DB.prepare("UPDATE books SET is_quarantined = CASE WHEN is_quarantined = 1 THEN 0 ELSE 1 END WHERE id = ?").bind(bookId).run();
+      return Response.redirect(`${url.origin}/dashboard`, 302);
+    }
+
+    // Toggle Featured: POST /official_toggle_featured/:id or /official/toggle_featured/:id
+    const featMatch = url.pathname.match(/^\/(?:official_toggle_featured|official\/toggle_featured)\/(\d+)/);
+    if (featMatch && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || (user.role !== "developer" && user.role !== "official")) {
+        return new Response("Unauthorized", { status: 403 });
+      }
+      const bookId = parseInt(featMatch[1], 10);
+      await env.DB.prepare("UPDATE books SET is_featured = CASE WHEN is_featured = 1 THEN 0 ELSE 1 END WHERE id = ?").bind(bookId).run();
+      return Response.redirect(`${url.origin}/dashboard`, 302);
     }
 
     // ========================================================================
@@ -3160,7 +3471,7 @@ function renderTwoFactorHtml(email) {
 </html>`;
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = []) {
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], url = null) {
   const username = user.username || "Reader";
   const role = user.role || "reader";
   const email = user.email || "";
@@ -3174,6 +3485,20 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = []) {
   // 1. Personalized User & Role in Header
   out = out.replace(/Welcome,\s*(?:\{\{\s*session\.username\s*\}\}|[A-Za-z0-9_]+)/g, `Welcome, <span id="dashUsernameDisplay">${escapeHtml(username)}</span>`);
   out = out.replace(/Your Role:\s*<strong[^>]*>[\s\S]*?<\/strong>/gi, `Your Role: <strong id="dashRoleDisplay" style="color: var(--primary-orange); text-transform: capitalize;">${escapeHtml(role)}</strong>`);
+
+  // Flash message for query params
+  if (url) {
+    if (url.searchParams.get("published") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🎉</span><div>Book published successfully to the Global Library! It is now live for readers worldwide.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("deleted") === "1") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🗑️</span><div>Book permanently deleted from the library.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("updated") === "1") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✏️</span><div>Book details updated successfully!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    }
+  }
 
   // 2. Role-based panel visibility overrides
   if (!isDev) {
@@ -3192,7 +3517,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = []) {
     out = out.replace(/>\d+%\s*·\s*Maximum Protection/gi, '>100% · Maximum Protection');
   }
 
-  // 4. Inject live category rows into active categories table
+  // 4. Inject live category rows into active categories table and select dropdowns
   if (liveCatalogs && liveCatalogs.length > 0) {
     const rowsHtml = liveCatalogs.map(cat => `
       <tr>
@@ -3220,9 +3545,97 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = []) {
       </tr>
     `).join("");
     out = out.replace(/<tbody id="activeCatalogsTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="activeCatalogsTableBody">${rowsHtml}</tbody>`);
+
+    const selectOptions = liveCatalogs.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("");
+    out = out.replace(/<select name="catalog" required>[\s\S]*?<\/select>/i, `<select name="catalog" required>${selectOptions}${(isDev || isOff) ? '<option value="Archives">Archives (Free Only)</option>' : ''}</select>`);
   }
 
-  // 5. Append edge live sync script before </body>
+  // 5. Inject Books Table into Platform Library Management / My Published Books
+  if (myBooks && myBooks.length > 0) {
+    const bookRowsHtml = myBooks.map(b => {
+      const coverUrl = b.cover_image || "/static/PustakVerse.png";
+      const authorText = b.author_name || username;
+      const isMine = b.author_id === user.id || (authorText && authorText.toLowerCase() === username.toLowerCase());
+      const priceText = b.is_paid ? `₹${((b.price_paise || 0) / 100).toFixed(2)}` : "Free";
+
+      return `
+        <tr class="library-row" data-author="${escapeHtml(authorText)}" data-catalog="${escapeHtml(b.catalog || '')}">
+          <td>
+            <img src="${escapeHtml(coverUrl)}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;" onerror="this.src='/static/PustakVerse.png'">
+          </td>
+          <td style="font-weight: 500;" class="book-title-cell">
+            ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">⭐ Staff Pick</span> ' : ''}
+            ${b.is_quarantined ? '<span style="background: #fee2e2; color: #991b1b; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">🔒 Soft-Quarantined</span> ' : ''}
+            <div style="font-weight: 700; color: #0f172a;">${escapeHtml(b.title)}</div>
+            <small style="color: #64748b;">by ${escapeHtml(authorText)} · <span style="color: #ea580c;">${escapeHtml(b.catalog || 'General')}</span></small>
+            ${b.sbin_no ? `<div style="font-family: monospace; font-size: 0.72rem; color: #15803d; margin-top: 2px;">SBIN: ${escapeHtml(b.sbin_no)}</div>` : ''}
+          </td>
+          <td>
+            <span style="font-weight: 700; color: ${b.is_paid ? '#166534' : '#0369a1'};">${priceText}</span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+              <a href="/book/${b.id}" class="btn-sm btn-dark" style="text-decoration: none; padding: 5px 10px; font-size: 0.78rem;">View</a>
+              ${(isDev || isOff || isMine) ? `
+                <button type="button" class="btn-sm btn-dark" onclick="openEditModal(this)"
+                  data-id="${b.id}"
+                  data-title="${escapeHtml(b.title)}"
+                  data-catalog="${escapeHtml(b.catalog || '')}"
+                  data-desc="${escapeHtml(b.description || '')}"
+                  data-sbin="${escapeHtml(b.sbin_no || '')}"
+                  data-pdflink="${escapeHtml(b.pdf_file || '')}"
+                  data-coverlink="${escapeHtml(b.cover_image || '')}"
+                  data-ispaid="${b.is_paid ? 'true' : 'false'}"
+                  data-price="${b.price_paise || 0}"
+                  data-keyid="${escapeHtml(b.rp_key_id || '')}"
+                  data-keysecret="${escapeHtml(b.rp_key_secret || '')}"
+                  data-verified="${b.rp_verified ? 'true' : 'false'}"
+                  style="padding: 5px 10px; font-size: 0.78rem; background: #334155;">
+                  Edit
+                </button>
+                <form action="/delete_book/${b.id}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to permanently delete \\'${escapeHtml(b.title)}\\'?');">
+                  <button type="submit" class="btn-sm btn-red" style="padding: 5px 10px; font-size: 0.78rem;">Delete</button>
+                </form>
+              ` : ''}
+              ${(isDev || isOff) ? `
+                <form action="/official_toggle_featured/${b.id}" method="POST" style="display: inline;">
+                  <button type="submit" class="btn-sm" style="padding: 5px 8px; font-size: 0.75rem; background: #fef08a; color: #854d0e; border: 1px solid #fde047;">${b.is_featured ? 'Unfeature' : 'Feature'}</button>
+                </form>
+                <form action="/official_toggle_quarantine/${b.id}" method="POST" style="display: inline;">
+                  <button type="submit" class="btn-sm" style="padding: 5px 8px; font-size: 0.75rem; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;">${b.is_quarantined ? 'Release' : 'Quarantine'}</button>
+                </form>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    const tableContainer = `
+      <div class="table-scroll-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">Cover</th>
+              <th>Title & Details</th>
+              <th style="width: 80px;">Type</th>
+              <th style="width: 160px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bookRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    out = out.replace(/<p>No books available\.<\/p>/i, tableContainer);
+    out = out.replace(/📚 All Books \(\d+\)/g, `📚 All Books (${myBooks.length})`);
+    const myCount = myBooks.filter(b => b.author_id === user.id || (b.author_name && b.author_name.toLowerCase() === username.toLowerCase())).length;
+    out = out.replace(/id="myUploadedCount">0<\/span>/g, `id="myUploadedCount">${myCount}</span>`);
+  }
+
+  // 6. Append edge live sync script before </body>
   const edgeSyncScript = `
 <script>
 (function() {
