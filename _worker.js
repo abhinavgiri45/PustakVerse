@@ -2481,15 +2481,30 @@ export default {
         } catch (_) {}
 
         try {
-          const uRes = await env.DB.prepare(
-            "SELECT id, username, email, role, last_activity, created_at, locked_until FROM users ORDER BY last_activity DESC LIMIT 100"
-          ).all();
+          // Comprehensive User Profile with live stats: books published, books saved/read, purchases made, reviews written
+          const uRes = await env.DB.prepare(`
+            SELECT u.id, u.username, u.email, u.role, u.is_verified, u.last_activity, u.created_at, u.locked_until,
+                   (SELECT COUNT(*) FROM books b WHERE b.author_id = u.id) as published_books_count,
+                   (SELECT COUNT(*) FROM personal_library pl WHERE pl.user_id = u.id) as saved_books_count,
+                   (SELECT COUNT(*) FROM purchases p WHERE p.user_id = u.id AND p.status = 'paid') as purchases_count,
+                   (SELECT COALESCE(SUM(p.amount_paise), 0) FROM purchases p WHERE p.user_id = u.id AND p.status = 'paid') as total_spent_paise
+            FROM users u
+            ORDER BY u.last_activity DESC
+            LIMIT 250
+          `).all();
           usersList = uRes.results || [];
-        } catch (_) {}
+        } catch (_) {
+          try {
+            const fallbackU = await env.DB.prepare(
+              "SELECT id, username, email, role, last_activity, created_at, locked_until, 0 as published_books_count, 0 as saved_books_count, 0 as purchases_count, 0 as total_spent_paise FROM users ORDER BY last_activity DESC LIMIT 150"
+            ).all();
+            usersList = fallbackU.results || [];
+          } catch (_) {}
+        }
 
         try {
           const lRes = await env.DB.prepare(
-            "SELECT action, username, timestamp FROM official_activity_logs ORDER BY timestamp DESC LIMIT 50"
+            "SELECT action, username, timestamp FROM official_activity_logs ORDER BY timestamp DESC LIMIT 100"
           ).all();
           officialLogs = lRes.results || [];
         } catch (_) {}
@@ -2498,14 +2513,40 @@ export default {
           const trRes = await env.DB.prepare(
             `SELECT u.username, COUNT(DISTINCT pl.book_id) as books_read, COUNT(DISTINCT pl.book_id) * 1800 as total_seconds, 0 as completed_books
              FROM personal_library pl JOIN users u ON pl.user_id = u.id
-             GROUP BY u.id ORDER BY books_read DESC LIMIT 10`
+             GROUP BY u.id ORDER BY books_read DESC LIMIT 30`
           ).all();
           topReaders = trRes.results || [];
         } catch (_) {}
 
+        // Books published activity stream
+        let recentBooks = [];
+        try {
+          const bRes = await env.DB.prepare(`
+            SELECT b.id, b.title, b.catalog, b.is_paid, b.price_paise, b.created_at, u.username as author_name
+            FROM books b
+            LEFT JOIN users u ON b.author_id = u.id
+            ORDER BY b.id DESC LIMIT 40
+          `).all();
+          recentBooks = bRes.results || [];
+        } catch (_) {}
+
+        // Paid transactions stream
+        let recentPurchases = [];
+        try {
+          const pRes = await env.DB.prepare(`
+            SELECT p.id, p.amount_paise, p.razorpay_order_id, p.status, p.created_at, p.paid_at,
+                   u.username as buyer_name, b.title as book_title
+            FROM purchases p
+            LEFT JOIN users u ON p.user_id = u.id
+            LEFT JOIN books b ON p.book_id = b.id
+            ORDER BY p.id DESC LIMIT 50
+          `).all();
+          recentPurchases = pRes.results || [];
+        } catch (_) {}
+
         try {
           const regRes = await env.DB.prepare(
-            "SELECT username, email, role, created_at FROM users WHERE created_at >= datetime('now', '-30 days') ORDER BY created_at DESC LIMIT 20"
+            "SELECT id, username, email, role, is_verified, created_at FROM users WHERE created_at >= datetime('now', '-30 days') ORDER BY created_at DESC LIMIT 50"
           ).all();
           recentRegistrations = regRes.results || [];
         } catch (_) {}
@@ -2517,6 +2558,8 @@ export default {
         users: usersList,
         official_logs: officialLogs,
         top_readers: topReaders,
+        recent_books: recentBooks || [],
+        recent_purchases: recentPurchases || [],
         recent_registrations: recentRegistrations
       });
 
@@ -4789,7 +4832,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 </html>`;
 }
 
-function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false, stats = {}, users = [], official_logs = [], top_readers = [], recent_registrations = [] }) {
+function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false, stats = {}, users = [], official_logs = [], top_readers = [], recent_books = [], recent_purchases = [], recent_registrations = [] }) {
   if (!pin_verified) {
     return `<!DOCTYPE html>
 <html lang="en">
@@ -4800,20 +4843,20 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
     <link rel="icon" type="image/png" href="/static/PustakVerse.png">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        :root { --am-bg: #f0f4f8; --am-card: #ffffff; --am-text: #1e293b; --am-muted: #64748b; --am-border: #e2e8f0; --am-accent: #6366f1; --am-danger: #ef4444; }
+        :root { --am-bg: #0b0f19; --am-card: #131b2e; --am-text: #f8fafc; --am-muted: #94a3b8; --am-border: #1e293b; --am-accent: #6366f1; --am-danger: #ef4444; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--am-bg); color: var(--am-text); min-height: 100vh; }
-        .pin-gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); }
-        .pin-card { background: var(--am-card); border-radius: 20px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,.35); }
-        .pin-card h1 { font-size: 1.6rem; margin-bottom: 8px; color: var(--am-text); }
+        .pin-gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 70%, #020617 100%); }
+        .pin-card { background: var(--am-card); border: 1px solid var(--am-border); border-radius: 24px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,.5); }
+        .pin-card h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 8px; color: var(--am-text); }
         .pin-card p { color: var(--am-muted); margin-bottom: 28px; font-size: .95rem; }
-        .pin-card .lock-icon { font-size: 3rem; margin-bottom: 16px; }
+        .pin-card .lock-icon { font-size: 3.2rem; margin-bottom: 16px; filter: drop-shadow(0 0 12px #6366f1); }
         .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
-        .pin-inputs input { width: 44px; height: 52px; text-align: center; font-size: 1.4rem; font-weight: 700; border: 2px solid var(--am-border); border-radius: 10px; background: var(--am-bg); color: var(--am-text); outline: none; transition: border-color .2s; }
-        .pin-inputs input:focus { border-color: var(--am-accent); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
-        .pin-btn { width: 100%; padding: 14px; font-size: 1rem; font-weight: 600; color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
-        .pin-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,.35); }
-        .pin-error { color: var(--am-danger); font-size: .9rem; margin-bottom: 16px; font-weight: 600; background: #fee2e2; border: 1px solid #fca5a5; padding: 8px 12px; border-radius: 8px; }
+        .pin-inputs input { width: 44px; height: 54px; text-align: center; font-size: 1.4rem; font-weight: 800; border: 2px solid var(--am-border); border-radius: 12px; background: rgba(15,23,42,.8); color: #fff; outline: none; transition: all .2s; }
+        .pin-inputs input:focus { border-color: var(--am-accent); box-shadow: 0 0 16px rgba(99,102,241,.3); transform: scale(1.05); }
+        .pin-btn { width: 100%; padding: 14px; font-size: 1rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+        .pin-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,.5); }
+        .pin-error { color: #fca5a5; font-size: .9rem; margin-bottom: 18px; font-weight: 600; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); padding: 10px; border-radius: 10px; }
         @media (max-width: 640px) {
             .pin-card { padding: 32px 20px; }
             .pin-inputs input { width: 34px; height: 44px; font-size: 1.1rem; }
@@ -4825,14 +4868,14 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
     <div class="pin-card">
         <div class="lock-icon">🔐</div>
         <h1>User Activity Monitor</h1>
-        <p>Restricted Access — Enter the 8-digit PIN</p>
+        <p>Restricted Access — Enter the 8-digit PIN (<code>ACTIVITY_MONITOR_PIN</code>)</p>
         ${pin_error ? '<div class="pin-error">❌ Incorrect PIN. Please try again.</div>' : ''}
         <form method="POST" id="pinForm">
             <div class="pin-inputs">
                 ${[1,2,3,4,5,6,7,8].map(i => `<input type="text" name="pin_${i}" id="pin_${i}" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>`).join('')}
             </div>
-            <button type="submit" class="pin-btn">Verify & Enter Monitor</button>
-            <div style="margin-top: 18px;">
+            <button type="submit" class="pin-btn">Verify & Enter Activity Monitor</button>
+            <div style="margin-top: 20px;">
                 <a href="/dashboard" style="color: var(--am-muted); text-decoration: none; font-size: 0.88rem; font-weight: 600;">← Back to Dashboard</a>
             </div>
         </form>
@@ -4865,30 +4908,39 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
 
   // Live Unlocked Dashboard HTML
   const roleCountsHtml = (stats.role_counts || []).map(rc => `
-    <span class="role-pill role-${escapeHtml(rc.role || 'reader')}">${escapeHtml((rc.role || 'reader').toUpperCase())}: ${rc.count || 0}</span>
+    <span class="role-pill role-${escapeHtml(rc.role || 'reader')}">${escapeHtml((rc.role || 'reader').toUpperCase())}: <strong>${rc.count || 0}</strong></span>
   `).join("");
 
   const userRowsHtml = (users || []).map((u, idx) => `
     <tr class="user-row">
       <td>${idx + 1}</td>
-      <td><strong>${escapeHtml(u.username || '')}</strong></td>
-      <td>${escapeHtml(u.email || '')}</td>
-      <td><span class="badge badge-${escapeHtml(u.role || 'reader')}">${escapeHtml(u.role || 'reader')}</span></td>
-      <td><span class="rel-time" data-ts="${escapeHtml(u.last_activity || '')}">${escapeHtml(u.last_activity || '—')}</span></td>
-      <td>${escapeHtml(u.created_at || '—')}</td>
       <td>
-        ${u.locked_until ? '<span style="color:var(--am-danger);font-weight:600">🔒 Locked</span>' : `<span class="status-indicator" data-ts="${escapeHtml(u.last_activity || '')}">—</span>`}
+        <strong>${escapeHtml(u.username || '')}</strong>
+        <div style="font-size: 0.78rem; color: var(--am-muted);">${escapeHtml(u.email || '')}</div>
+      </td>
+      <td><span class="badge badge-${escapeHtml(u.role || 'reader')}">${escapeHtml(u.role || 'reader')}</span></td>
+      <td>
+        ${u.locked_until ? '<span style="color:var(--am-danger);font-weight:700">🔒 Locked</span>' : `<span class="status-indicator" data-ts="${escapeHtml(u.last_activity || '')}">—</span>`}
+      </td>
+      <td><span class="rel-time" data-ts="${escapeHtml(u.last_activity || '')}">${escapeHtml(u.last_activity || '—')}</span></td>
+      <td>
+        ${u.published_books_count > 0 ? `<span class="metric-pill metric-pill-green">📖 ${u.published_books_count} Books</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}
+      </td>
+      <td>
+        ${u.saved_books_count > 0 ? `<span class="metric-pill metric-pill-blue">📑 ${u.saved_books_count} Saved</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}
+      </td>
+      <td>
+        ${u.purchases_count > 0 ? `<span class="metric-pill metric-pill-purple">💳 ${u.purchases_count} Orders</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}
+      </td>
+      <td>
+        ${u.total_spent_paise > 0 ? `<strong style="color:#34d399;">₹${((u.total_spent_paise || 0) / 100).toFixed(2)}</strong>` : '<span style="color:var(--am-muted);font-size:0.8rem;">₹0</span>'}
+      </td>
+      <td><span class="rel-time" data-ts="${escapeHtml(u.created_at || '')}">${escapeHtml(u.created_at || '—')}</span></td>
+      <td>
+        ${u.is_verified ? '<span style="color:#34d399;font-size:0.78rem;font-weight:700;">✓ Verified</span>' : '<span style="color:var(--am-muted);font-size:0.78rem;">Regular</span>'}
       </td>
     </tr>
-  `).join("") || '<tr><td colspan="7" style="text-align:center;color:var(--am-muted)">No users found.</td></tr>';
-
-  const officialRowsHtml = (official_logs || []).map(l => `
-    <tr>
-      <td>${escapeHtml(l.action || '')}</td>
-      <td><strong>${escapeHtml(l.username || '')}</strong></td>
-      <td><span class="rel-time" data-ts="${escapeHtml(l.timestamp || '')}">${escapeHtml(l.timestamp || '')}</span></td>
-    </tr>
-  `).join("") || '<tr><td colspan="3" style="text-align:center;color:var(--am-muted)">No official actions recorded yet.</td></tr>';
+  `).join("") || '<tr><td colspan="11" style="text-align:center;color:var(--am-muted);padding:30px;">No user records found.</td></tr>';
 
   const readerRowsHtml = (top_readers || []).map((r, idx) => {
     const totalSec = r.total_seconds || 0;
@@ -4896,23 +4948,56 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
     const mins = Math.floor((totalSec % 3600) / 60);
     return `
       <tr>
-        <td>${idx + 1}</td>
+        <td><strong>#${idx + 1}</strong></td>
         <td><strong>${escapeHtml(r.username || '')}</strong></td>
-        <td>${r.books_read || 0}</td>
+        <td><span class="metric-pill metric-pill-blue">${r.books_read || 0} Books</span></td>
         <td>${hrs}h ${mins}m</td>
-        <td>${r.completed_books || 0}</td>
+        <td><span class="metric-pill metric-pill-green">${r.completed_books || 0} Done</span></td>
       </tr>
     `;
-  }).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted)">No reader activity data recorded yet.</td></tr>';
+  }).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:30px;">No reading telemetry recorded yet.</td></tr>';
+
+  const purchaseRowsHtml = (recent_purchases || []).map(p => `
+    <tr>
+      <td><strong>${escapeHtml(p.buyer_name || 'Reader')}</strong></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.book_title || 'Book')}</td>
+      <td><strong style="color:#34d399;">₹${(((p.amount_paise || 0) / 100)).toFixed(2)}</strong></td>
+      <td><span class="badge badge-author">${escapeHtml((p.status || 'PAID').toUpperCase())}</span></td>
+      <td><span class="rel-time" data-ts="${escapeHtml(p.paid_at || p.created_at || '')}">${escapeHtml(p.paid_at || p.created_at || '')}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:30px;">No transaction logs found.</td></tr>';
+
+  const officialRowsHtml = (official_logs || []).map(l => `
+    <tr>
+      <td>${escapeHtml(l.action || '')}</td>
+      <td><strong>${escapeHtml(l.username || '')}</strong></td>
+      <td><span class="rel-time" data-ts="${escapeHtml(l.timestamp || '')}">${escapeHtml(l.timestamp || '')}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="3" style="text-align:center;color:var(--am-muted);padding:30px;">No official actions recorded yet.</td></tr>';
+
+  const recentBooksHtml = (recent_books || []).map(b => `
+    <tr>
+      <td><strong>${escapeHtml(b.title || '')}</strong></td>
+      <td>${escapeHtml(b.author_name || 'Author')}</td>
+      <td><span class="metric-pill">${escapeHtml(b.catalog || 'General')}</span></td>
+      <td>
+        ${b.is_paid ? `<span class="metric-pill metric-pill-purple">₹${((b.price_paise || 0)/100).toFixed(2)}</span>` : '<span class="metric-pill metric-pill-green">Free</span>'}
+      </td>
+      <td><span class="rel-time" data-ts="${escapeHtml(b.created_at || '')}">${escapeHtml(b.created_at || '')}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:30px;">No books published recently.</td></tr>';
 
   const regRowsHtml = (recent_registrations || []).map(reg => `
     <tr>
       <td><strong>${escapeHtml(reg.username || '')}</strong></td>
       <td>${escapeHtml(reg.email || '')}</td>
       <td><span class="badge badge-${escapeHtml(reg.role || 'reader')}">${escapeHtml(reg.role || 'reader')}</span></td>
+      <td>
+        ${reg.is_verified ? '<span style="color:#34d399;font-weight:700;">✓ Verified</span>' : '<span style="color:var(--am-muted);">Unverified</span>'}
+      </td>
       <td><span class="rel-time" data-ts="${escapeHtml(reg.created_at || '')}">${escapeHtml(reg.created_at || '')}</span></td>
     </tr>
-  `).join("") || '<tr><td colspan="4" style="text-align:center;color:var(--am-muted)">No new registrations in the last 30 days.</td></tr>';
+  `).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:30px;">No new registrations in the last 30 days.</td></tr>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -4923,51 +5008,103 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
     <link rel="icon" type="image/png" href="/static/PustakVerse.png">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        :root { --am-bg: #f0f4f8; --am-card: #ffffff; --am-text: #1e293b; --am-muted: #64748b; --am-border: #e2e8f0; --am-accent: #6366f1; --am-success: #10b981; --am-danger: #ef4444; --am-warning: #f59e0b; }
-        .dark-theme { --am-bg: #0f172a; --am-card: #1e293b; --am-text: #e2e8f0; --am-muted: #94a3b8; --am-border: #334155; }
+        :root {
+            --am-bg: #0b0f19;
+            --am-card: #131b2e;
+            --am-card-hover: #19233c;
+            --am-text: #f8fafc;
+            --am-muted: #94a3b8;
+            --am-border: #1e293b;
+            --am-accent: #6366f1;
+            --am-accent-glow: rgba(99, 102, 241, 0.25);
+            --am-success: #10b981;
+            --am-danger: #ef4444;
+            --am-purple: #a855f7;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--am-bg); color: var(--am-text); min-height: 100vh; }
-        .am-header { background: linear-gradient(135deg, #1e1b4b, #4338ca); color: #fff; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-        .am-header h1 { font-size: 1.35rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .am-header-actions { display: flex; gap: 10px; }
-        .am-header-actions a { padding: 8px 18px; border-radius: 8px; font-size: .85rem; font-weight: 600; text-decoration: none; transition: background .2s; }
-        .am-back { background: rgba(255,255,255,.15); color: #fff; }
-        .am-back:hover { background: rgba(255,255,255,.25); }
-        .am-logout { background: rgba(239,68,68,.85); color: #fff; }
-        .am-logout:hover { background: rgba(239,68,68,1); }
-        .am-body { max-width: 1360px; margin: 0 auto; padding: 24px 20px 60px; }
-        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
-        .stat-card { background: var(--am-card); border-radius: 14px; padding: 22px 20px; border: 1px solid var(--am-border); box-shadow: 0 2px 8px rgba(0,0,0,.04); transition: transform .15s; }
-        .stat-card:hover { transform: translateY(-2px); }
-        .stat-card .stat-icon { font-size: 2rem; margin-bottom: 6px; }
-        .stat-card .stat-num { font-size: 2rem; font-weight: 800; line-height: 1.1; color: var(--am-text); }
-        .stat-card .stat-label { color: var(--am-muted); font-size: .85rem; margin-top: 4px; font-weight: 600; }
-        .role-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
-        .role-pill { padding: 8px 18px; border-radius: 20px; font-size: .85rem; font-weight: 600; }
-        .role-developer { background: #ede9fe; color: #6d28d9; }
-        .role-official { background: #dbeafe; color: #1d4ed8; }
-        .role-author { background: #dcfce7; color: #15803d; }
-        .role-reader { background: #f1f5f9; color: #475569; }
-        .am-section { background: var(--am-card); border-radius: 14px; border: 1px solid var(--am-border); padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
-        .am-section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--am-text); }
-        .am-search { width: 100%; max-width: 360px; padding: 10px 14px; border: 1px solid var(--am-border); border-radius: 8px; font-size: .9rem; margin-bottom: 14px; background: var(--am-bg); color: var(--am-text); outline: none; }
-        .am-search:focus { border-color: var(--am-accent); }
-        .am-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .am-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-        .am-table th { background: var(--am-bg); font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--am-border); white-space: nowrap; }
-        .am-table td { padding: 10px 12px; border-bottom: 1px solid var(--am-border); }
-        .am-table tr:hover td { background: rgba(99,102,241,.04); }
-        .badge { padding: 3px 10px; border-radius: 12px; font-size: .78rem; font-weight: 600; text-transform: capitalize; }
-        .badge-developer { background: #ede9fe; color: #6d28d9; }
-        .badge-official { background: #dbeafe; color: #1d4ed8; }
-        .badge-author { background: #dcfce7; color: #15803d; }
-        .badge-reader { background: #f1f5f9; color: #475569; }
-        .status-online { color: var(--am-success); font-weight: 700; }
-        .status-offline { color: var(--am-muted); font-weight: 600; }
-        .am-footer { text-align: center; padding: 20px; color: var(--am-muted); font-size: .8rem; }
-        .am-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
-        .am-pagination button { padding: 6px 14px; border: 1px solid var(--am-border); border-radius: 6px; background: var(--am-card); color: var(--am-text); cursor: pointer; font-size: .82rem; }
-        .am-pagination button.active { background: var(--am-accent); color: #fff; border-color: var(--am-accent); }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--am-bg); color: var(--am-text); min-height: 100vh; line-height: 1.5; }
+
+        /* Dedicated Custom Sleek Scrollbar */
+        * { scrollbar-width: thin; scrollbar-color: #6366f1 #1e293b; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.7); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #6366f1, #a855f7); border-radius: 8px; border: 2px solid rgba(15, 23, 42, 0.8); }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #4f46e5, #9333ea); }
+
+        .am-header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff; padding: 20px 36px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+        }
+        .am-header-left { display: flex; align-items: center; gap: 14px; }
+        .am-header-left h1 { font-size: 1.45rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .am-live-pill { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.76rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; }
+        .am-header-actions { display: flex; align-items: center; gap: 12px; }
+        .am-header-actions a { padding: 9px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; text-decoration: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .am-back { background: rgba(255, 255, 255, 0.12); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15); }
+        .am-back:hover { background: rgba(255, 255, 255, 0.22); }
+        .am-logout { background: rgba(239, 68, 68, 0.85); color: #fff; }
+        .am-logout:hover { background: #dc2626; transform: translateY(-1px); }
+
+        .am-body { max-width: 1440px; margin: 0 auto; padding: 28px 24px 80px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 28px; }
+        .stat-card { background: var(--am-card); border: 1px solid var(--am-border); border-radius: 18px; padding: 22px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.2s; }
+        .stat-card:hover { transform: translateY(-3px); border-color: var(--am-accent); }
+        .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--am-accent), var(--am-purple)); }
+        .stat-card .stat-icon { font-size: 2.2rem; margin-bottom: 6px; }
+        .stat-card .stat-num { font-size: 2.1rem; font-weight: 900; line-height: 1.1; color: #fff; }
+        .stat-card .stat-label { color: var(--am-muted); font-size: 0.86rem; margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .role-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; background: var(--am-card); border: 1px solid var(--am-border); border-radius: 16px; padding: 14px 20px; align-items: center; }
+        .role-bar-title { font-size: 0.85rem; font-weight: 700; color: var(--am-muted); margin-right: 6px; }
+        .role-pill { padding: 6px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+        .role-developer { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+        .role-official { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); }
+        .role-author { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+        .role-reader { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        .am-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 26px; }
+        @media (max-width: 1024px) { .am-two-col { grid-template-columns: 1fr; } }
+
+        .am-section { background: var(--am-card); border: 1px solid var(--am-border); border-radius: 20px; padding: 24px; margin-bottom: 26px; box-shadow: 0 4px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+        .am-section-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--am-border); }
+        .am-section-header h2 { font-size: 1.22rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #fff; }
+        .section-count-badge { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; font-size: 0.75rem; padding: 2px 10px; font-weight: 800; }
+        .am-search { width: 100%; max-width: 360px; padding: 10px 16px; border: 1px solid var(--am-border); border-radius: 12px; font-size: 0.9rem; background: rgba(15, 23, 42, 0.85); color: #fff; outline: none; }
+        .am-search:focus { border-color: var(--am-accent); box-shadow: 0 0 14px var(--am-accent-glow); }
+
+        .am-scroll-box { overflow-x: auto; overflow-y: auto; max-height: 480px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(11, 15, 25, 0.5); -webkit-overflow-scrolling: touch; }
+        .am-scroll-box-short { max-height: 360px; }
+        .am-scroll-box-tall { max-height: 600px; }
+
+        .am-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left; }
+        .am-table th { background: #0f172a; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 0.74rem; letter-spacing: 0.6px; padding: 12px 14px; border-bottom: 2px solid var(--am-border); white-space: nowrap; position: sticky; top: 0; z-index: 2; }
+        .am-table td { padding: 12px 14px; border-bottom: 1px solid rgba(30, 41, 59, 0.8); vertical-align: middle; }
+        .am-table tr:hover td { background: rgba(99, 102, 241, 0.07); }
+
+        .badge { padding: 4px 10px; border-radius: 10px; font-size: 0.76rem; font-weight: 700; text-transform: capitalize; display: inline-block; }
+        .badge-developer { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+        .badge-official { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-author { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-reader { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        .status-online { color: #34d399; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+        .status-online::before { content: ''; width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; }
+        .status-offline { color: var(--am-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .status-offline::before { content: ''; width: 8px; height: 8px; background: #64748b; border-radius: 50%; }
+
+        .metric-pill { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 3px 8px; font-size: 0.78rem; font-weight: 700; display: inline-block; }
+        .metric-pill-green { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399; }
+        .metric-pill-blue { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.35); color: #60a5fa; }
+        .metric-pill-purple { background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.35); color: #c084fc; }
+
+        .am-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; flex-wrap: wrap; }
+        .am-pagination button { padding: 6px 14px; border: 1px solid var(--am-border); border-radius: 8px; background: rgba(15, 23, 42, 0.7); color: var(--am-text); cursor: pointer; font-size: 0.82rem; font-weight: 700; transition: all 0.15s; }
+        .am-pagination button:hover { border-color: var(--am-accent); background: rgba(99, 102, 241, 0.2); }
+        .am-pagination button.active { background: var(--am-accent); color: #fff; border-color: var(--am-accent); box-shadow: 0 0 10px var(--am-accent-glow); }
+
+        .am-footer { text-align: center; padding: 30px; color: var(--am-muted); font-size: 0.84rem; border-top: 1px solid var(--am-border); margin-top: 40px; }
         @media (max-width: 640px) {
             .am-header { padding: 16px 18px; }
             .am-body { padding: 16px 12px 40px; }
@@ -4977,12 +5114,16 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
 </head>
 <body>
 <header class="am-header">
-    <h1>📊 PustakVerse Activity Monitor</h1>
+    <div class="am-header-left">
+        <h1>📊 PustakVerse Live Activity Monitor</h1>
+        <span class="am-live-pill">● LIVE TELEMETRY</span>
+    </div>
     <div class="am-header-actions">
-        <a href="/dashboard" class="am-back">← Back to Dashboard</a>
+        <a href="/dashboard" class="am-back">← Dashboard</a>
         <a href="/admin/activity-monitor/logout" class="am-logout">🔒 Lock Monitor</a>
     </div>
 </header>
+
 <div class="am-body">
     <div class="stat-grid">
         <div class="stat-card">
@@ -4993,31 +5134,50 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         <div class="stat-card">
             <div class="stat-icon">🟢</div>
             <div class="stat-num">${stats.active_today || 0}</div>
-            <div class="stat-label">Active Today</div>
+            <div class="stat-label">Active Users (24h)</div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">📚</div>
             <div class="stat-num">${stats.total_books || 0}</div>
-            <div class="stat-label">Total Books</div>
+            <div class="stat-label">Published Books</div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">🛡️</div>
             <div class="stat-num">${(stats.role_counts || []).find(r => r.role === 'official' || r.role === 'developer')?.count || 1}</div>
-            <div class="stat-label">Official Staff</div>
+            <div class="stat-label">Officials & Developers</div>
         </div>
     </div>
 
     <div class="role-bar">
+        <span class="role-bar-title">👥 ROLE DISTRIBUTION:</span>
         ${roleCountsHtml}
     </div>
 
+    <!-- COMPREHENSIVE USERS MONITOR (WITH DEDICATED SCROLL BAR) -->
     <div class="am-section">
-        <h2>📋 All Users Activity & Real-Time Status</h2>
-        <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search by username or email..." oninput="filterUsers()">
-        <div class="am-table-wrap">
+        <div class="am-section-header">
+            <h2>
+                <span>👥 Comprehensive User Activity &amp; Live Status</span>
+                <span class="section-count-badge">${(users || []).length} Total Records</span>
+            </h2>
+            <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search username, email, or role..." oninput="filterUsers()">
+        </div>
+        <div class="am-scroll-box am-scroll-box-tall">
             <table class="am-table" id="userTable">
                 <thead>
-                    <tr><th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Last Active</th><th>Joined</th><th>Status</th></tr>
+                    <tr>
+                        <th>#</th>
+                        <th>User Profile</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Active</th>
+                        <th>Published Books</th>
+                        <th>Library Saved</th>
+                        <th>Purchases</th>
+                        <th>Total Spent</th>
+                        <th>Registered</th>
+                        <th>Account Health</th>
+                    </tr>
                 </thead>
                 <tbody>
                     ${userRowsHtml}
@@ -5027,35 +5187,129 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         <div class="am-pagination" id="userPagination"></div>
     </div>
 
-    <div class="am-section">
-        <h2>🛡️ Official Moderation Actions Log</h2>
-        <div class="am-table-wrap">
-            <table class="am-table">
-                <thead><tr><th>Action</th><th>Performed By</th><th>Timestamp</th></tr></thead>
-                <tbody>
-                    ${officialRowsHtml}
-                </tbody>
-            </table>
+    <!-- 2-COLUMN HIGHLIGHTS: TOP READERS & RECENT PURCHASES -->
+    <div class="am-two-col">
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>📖 Top Readers &amp; Study Momentum</span>
+                    <span class="section-count-badge">${(top_readers || []).length} Active</span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Username</th>
+                            <th>Books in Library</th>
+                            <th>Total Study Time</th>
+                            <th>Completed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${readerRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>💳 Recent Book Purchases &amp; Checkout Orders</span>
+                    <span class="section-count-badge">${(recent_purchases || []).length} Orders</span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Buyer</th>
+                            <th>Book Title</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${purchaseRowsHtml}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <div class="am-section">
-        <h2>📖 Top Readers (Personal Library Saved Books)</h2>
-        <div class="am-table-wrap">
-            <table class="am-table">
-                <thead><tr><th>Rank</th><th>Username</th><th>Books in Library</th><th>Reading Time</th><th>Completed</th></tr></thead>
-                <tbody>
-                    ${readerRowsHtml}
-                </tbody>
-            </table>
+    <!-- 2-COLUMN HIGHLIGHTS: OFFICIAL LOGS & RECENT BOOKS PUBLISHED -->
+    <div class="am-two-col">
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>🛡️ Official Moderation Actions Log</span>
+                    <span class="section-count-badge">${(official_logs || []).length} Events</span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Action Executed</th>
+                            <th>Official</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${officialRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="am-section">
+            <div class="am-section-header">
+                <h2>
+                    <span>📚 Recently Published Catalog Titles</span>
+                    <span class="section-count-badge">${(recent_books || []).length} Titles</span>
+                </h2>
+            </div>
+            <div class="am-scroll-box am-scroll-box-short">
+                <table class="am-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Genre</th>
+                            <th>Pricing</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${recentBooksHtml}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
+    <!-- RECENT REGISTRATIONS STREAM -->
     <div class="am-section">
-        <h2>🆕 Recent Registrations (Last 30 Days)</h2>
-        <div class="am-table-wrap">
+        <div class="am-section-header">
+            <h2>
+                <span>🆕 Recent Registrations &amp; New Onboarding (Last 30 Days)</span>
+                <span class="section-count-badge">${(recent_registrations || []).length} New Users</span>
+            </h2>
+        </div>
+        <div class="am-scroll-box am-scroll-box-short">
             <table class="am-table">
-                <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Registered</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Assigned Role</th>
+                        <th>Verification</th>
+                        <th>Registered Date</th>
+                    </tr>
+                </thead>
                 <tbody>
                     ${regRowsHtml}
                 </tbody>
@@ -5063,7 +5317,9 @@ function renderActivityMonitorEdgeHtml({ pin_verified = false, pin_error = false
         </div>
     </div>
 </div>
+
 <footer class="am-footer">PustakVerse Activity Monitor • Restricted to Officials &amp; Developers • Secured by 8-Digit PIN</footer>
+
 <script>
 function relTime(ts) {
     if (!ts || ts === '—' || ts === 'None') return '—';
@@ -5087,11 +5343,11 @@ document.querySelectorAll('.status-indicator').forEach(el => {
     if (!ts || ts === 'None') { el.innerHTML = '<span class="status-offline">Offline</span>'; return; }
     const d = new Date(ts.includes(' ') && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts);
     const diff = isNaN(d) ? 999999 : (Date.now() - d.getTime()) / 1000;
-    if (diff < 900) { el.innerHTML = '<span class="status-online">🟢 Online</span>'; }
+    if (diff < 900) { el.innerHTML = '<span class="status-online">Online</span>'; }
     else { el.innerHTML = '<span class="status-offline">Offline</span>'; }
 });
 function filterUsers() {
-    const q = document.getElementById('userSearch').value.toLowerCase();
+    const q = (document.getElementById('userSearch')?.value || '').toLowerCase();
     document.querySelectorAll('#userTable .user-row').forEach(row => {
         row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
     });

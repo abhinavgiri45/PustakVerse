@@ -10056,8 +10056,17 @@ def activity_monitor():
         cursor.execute("SELECT role, COUNT(*) as count FROM users GROUP BY role")
         stats['role_counts'] = cursor.fetchall()
 
-        # All users
-        cursor.execute("SELECT id, username, email, role, last_activity, created_at, is_verified, failed_attempts, locked_until FROM users ORDER BY last_activity DESC")
+        # All users with comprehensive actions & telemetry
+        cursor.execute("""
+            SELECT u.id, u.username, u.email, u.role, u.last_activity, u.created_at, u.is_verified, u.failed_attempts, u.locked_until,
+                   (SELECT COUNT(*) FROM books b WHERE b.author_id = u.id) as published_books_count,
+                   (SELECT COUNT(*) FROM personal_library pl WHERE pl.user_id = u.id) as saved_books_count,
+                   (SELECT COUNT(*) FROM purchases p WHERE p.user_id = u.id AND p.status = 'paid') as purchases_count,
+                   (SELECT COALESCE(SUM(p.amount_paise), 0) FROM purchases p WHERE p.user_id = u.id AND p.status = 'paid') as total_spent_paise
+            FROM users u
+            ORDER BY u.last_activity DESC
+            LIMIT 250
+        """)
         users_list = cursor.fetchall()
 
         # Official activity logs
@@ -10097,9 +10106,34 @@ def activity_monitor():
         except Exception:
             ai_activity = []
 
+        # Recent books published
+        try:
+            cursor.execute("""
+                SELECT b.id, b.title, b.catalog, b.is_paid, b.price_paise, b.created_at, u.username as author_name
+                FROM books b LEFT JOIN users u ON b.author_id = u.id
+                ORDER BY b.id DESC LIMIT 50
+            """)
+            recent_books = cursor.fetchall()
+        except Exception:
+            recent_books = []
+
+        # Recent paid purchases
+        try:
+            cursor.execute("""
+                SELECT p.id, p.amount_paise, p.razorpay_order_id, p.status, p.created_at, p.paid_at,
+                       u.username as buyer_name, b.title as book_title
+                FROM purchases p
+                LEFT JOIN users u ON p.user_id = u.id
+                LEFT JOIN books b ON p.book_id = b.id
+                ORDER BY p.id DESC LIMIT 50
+            """)
+            recent_purchases = cursor.fetchall()
+        except Exception:
+            recent_purchases = []
+
         # Recent registrations (last 30 days)
         try:
-            cursor.execute("SELECT username, email, role, created_at FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY created_at DESC")
+            cursor.execute("SELECT id, username, email, role, is_verified, created_at FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY created_at DESC LIMIT 50")
             recent_registrations = cursor.fetchall()
         except Exception:
             recent_registrations = []
@@ -10111,6 +10145,8 @@ def activity_monitor():
             official_logs=official_logs,
             top_readers=top_readers,
             ai_activity=ai_activity,
+            recent_books=recent_books,
+            recent_purchases=recent_purchases,
             recent_registrations=recent_registrations
         )
 
