@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Reading Book - PustakVerse</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* Prevents scrolling outside the iframe */
+            background-color: #333;
+        }
+        .header {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: sans-serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header a {
+            color: #e67e22;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        
+        .header a:hover {
+            color: #f39c12;
+        }
+
+        /* --- NEW: View Controls --- */
+        .view-controls {
+            display: flex;
+            gap: 8px;
+            background: #2c3e50;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .view-btn {
+            background: transparent;
+            color: #ecf0f1;
+            border: 1px solid transparent;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .view-btn:hover {
+            background: #34495e;
+            border-color: #7f8c8d;
+        }
+        .view-btn:active {
+            background: #e67e22;
+            color: white;
+        }
+
+        iframe {
+            width: 100%;
+            height: calc(100vh - 48px); /* Adjusted for header height */
+            border: none;
+        }
+        
+        /* Overlay to block transparent clicks if necessary */
+        #protection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            pointer-events: none; /* Let clicks pass through to the document */
+        }
+    </style>
+</head>
+<!-- Prevent Right Click entirely on the body -->
+<body oncontextmenu="return false;">
+
+    <div class="header">
+        <div class="header-left">
+            <span>📖 Reading: <strong id="book-title-display">Loading Book...</strong></span>
+            
+            <div class="view-controls" id="view-controls" style="display: none;">
+                <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
+                <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
+                <button class="view-btn" onclick="changeView('FitV')" title="Fit to screen height">Fit Height</button>
+            </div>
+        </div>
+        
+        <a href="/" id="back-link">← Back to Library</a>
+    </div>
+
+    <!-- Embed the Document with a default view of FitH (Fit Width) -->
+    <iframe id="pdf-frame" 
+            src="about:blank" 
+            sandbox="allow-scripts allow-same-origin">
+    </iframe>
+
+    <div id="protection-overlay"></div>
+
+    <!-- Advanced Protection & View Scripts -->
+    <script>
+        let currentPdfUrl = "";
+
+        function changeView(viewMode) {
+            const frame = document.getElementById('pdf-frame');
+            if (!currentPdfUrl) return;
+            frame.src = currentPdfUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
+        }
+
+        function setBook(title, pdfUrl) {
+            if (title) {
+                document.getElementById('book-title-display').textContent = title;
+                document.getElementById('page-title').textContent = 'Reading: ' + title + ' - PustakVerse';
+            }
+            if (pdfUrl) {
+                let cleanUrl = pdfUrl;
+                if (cleanUrl.includes('drive.google.com/file/d/') && cleanUrl.includes('/view')) {
+                    cleanUrl = cleanUrl.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
+                }
+                currentPdfUrl = cleanUrl;
+                const frame = document.getElementById('pdf-frame');
+                if (frame) {
+                    frame.src = cleanUrl;
+                }
+            }
+        }
+
+        // Disable common keyboard shortcuts used for saving/printing/inspecting
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey && e.key === 's') || 
+                (e.ctrlKey && e.key === 'p') || 
+                (e.key === 'F12') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C')) {
+                e.preventDefault();
+                alert('Downloading and Printing are disabled to protect author copyrights.');
+                return false;
+            }
+        });
+
+        // Prevent Dragging elements
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+        });
+
+        // Dynamic book loader for static / client-side views
+        document.addEventListener("DOMContentLoaded", async function() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id') || params.get('book_id');
+            const srcParam = params.get('src') || params.get('url');
+            const titleParam = params.get('title');
+
+            if (titleParam) {
+                document.getElementById('book-title-display').textContent = titleParam;
+                document.getElementById('page-title').textContent = 'Reading: ' + titleParam + ' - PustakVerse';
+            }
+
+            if (srcParam) {
+                setBook(titleParam, srcParam);
+                return;
+            }
+
+            if (id) {
+                try {
+                    const res = await fetch('/api/d1/books');
+                    if (res.ok) {
+                        const books = await res.json();
+                        const book = books.find(b => String(b.id) === String(id));
+                        if (book) {
+                            setBook(book.title, book.pdf_file);
+                            return;
+                        }
+                    }
+                } catch (_) {}
+            }
+
+            // Fallback default
+            if (!currentPdfUrl) {
+                document.getElementById('book-title-display').textContent = 'PustakVerse Library';
+            }
+        });
+    </script>
+</body>
+</html>

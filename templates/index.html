@@ -631,13 +631,13 @@
                     }
 
                     const priceText = b.is_paid ? `Buy ₹${(b.price_paise / 100).toFixed(2)}` : 'Read Free';
-                    let readHref = b.pdf_file || '#';
-                    if (readHref.includes('drive.google.com/file/d/') && readHref.includes('/view')) {
-                        readHref = readHref.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
+                    let readHref = b.id ? `/read_book/${b.id}` : (b.pdf_file || '#');
+                    if (window.location.hostname.endsWith('github.io') && b.id) {
+                        readHref = `viewer.html?id=${b.id}&title=${encodeURIComponent(b.title || '')}&src=${encodeURIComponent(b.pdf_file || '')}`;
                     }
 
                     card.innerHTML = `
-                        <a href="${readHref}" class="book-cover-link" target="_blank" rel="noopener">
+                        <a href="${readHref}" class="book-cover-link">
                             <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
                         </a>
                         <div class="book-info">
@@ -645,11 +645,11 @@
                                 <span class="book-tag">${b.catalog || 'General'}</span>
                                 ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ Featured</span>' : ''}
                             </div>
-                            <h3 class="book-title"><a href="${readHref}" target="_blank" rel="noopener">${b.title}</a></h3>
+                            <h3 class="book-title"><a href="${readHref}">${b.title}</a></h3>
                             <p class="book-author">By ${b.author_name || 'PustakVerse'}</p>
                             <div style="color: #f59e0b; margin-bottom: 15px;">★★★★★ <span style="color: #475569; font-size: 0.9em;">(5.0)</span></div>
                             <div class="book-actions">
-                                <a href="${readHref}" class="btn btn-read" target="_blank" rel="noopener">${priceText}</a>
+                                <a href="${readHref}" class="btn btn-read">${priceText}</a>
                             </div>
                         </div>
                     `;

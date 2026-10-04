@@ -33,7 +33,10 @@ const HTML_ROUTE_MAP = {
   "/dashboard/": "dashboard.html",
   "/ask_ai": "ask_ai.html",
   "/ask_ai/": "ask_ai.html",
-  "/granthmind": "ask_ai.html"
+  "/granthmind": "ask_ai.html",
+  "/viewer": "viewer.html",
+  "/viewer/": "viewer.html",
+  "/viewer.html": "viewer.html"
 };
 
 // ============================================================================
@@ -1204,14 +1207,18 @@ export default {
       }
     }
 
-    // 6B. Read Book / Secure Viewer Route: /read_book/:id, /viewer/:id, /read/:id
+    // 6B. Read Book / Secure Viewer Route: /read_book/:id, /viewer/:id, /read/:id, /viewer.html?id=...
     const readMatch = url.pathname.match(/^\/(?:read_book|viewer|read)\/(\d+)/);
-    if (readMatch && env.DB) {
-      const bookId = parseInt(readMatch[1], 10);
+    const queryId = (url.pathname.startsWith("/viewer") || url.pathname.startsWith("/read"))
+      ? (url.searchParams.get("id") || url.searchParams.get("book_id"))
+      : null;
+    const targetBookId = readMatch ? parseInt(readMatch[1], 10) : (queryId ? parseInt(queryId, 10) : null);
+
+    if (targetBookId && env.DB) {
       try {
         const book = await env.DB.prepare(
           "SELECT id, title, author_id, pdf_file, is_paid, cover_image FROM books WHERE id = ? LIMIT 1"
-        ).bind(bookId).first();
+        ).bind(targetBookId).first();
 
         if (book) {
           return new Response(renderEdgeViewerHtml(book), {
@@ -1219,6 +1226,14 @@ export default {
           });
         }
       } catch (_) {}
+    }
+
+    if ((url.pathname === "/viewer.html" || url.pathname === "/viewer" || url.pathname === "/read_book") && (url.searchParams.has("src") || url.searchParams.has("url"))) {
+      const src = url.searchParams.get("src") || url.searchParams.get("url");
+      const title = url.searchParams.get("title") || "Document";
+      return new Response(renderEdgeViewerHtml({ title, pdf_file: src }), {
+        headers: { "Content-Type": "text/html; charset=utf-8" }
+      });
     }
 
     // 7. Route to GitHub Pages or configured BACKEND_URL

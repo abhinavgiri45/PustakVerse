@@ -182,6 +182,14 @@ def build():
         if os.path.exists(dash_src):
             shutil.copy(dash_src, os.path.join(dash_dst_dir, "index.html"))
 
+        # Ensure viewer is available in _site for GitHub Pages
+        viewer_src = os.path.join(static_src, "viewer.html")
+        viewer_dst_dir = os.path.join(SITE_DIR, "viewer")
+        os.makedirs(viewer_dst_dir, exist_ok=True)
+        if os.path.exists(viewer_src):
+            shutil.copy(viewer_src, os.path.join(viewer_dst_dir, "index.html"))
+            shutil.copy(viewer_src, os.path.join(SITE_DIR, "viewer.html"))
+
     print("[SUCCESS] Static site generation complete!")
     print(f"Total files in _site: {len(os.listdir(SITE_DIR))}")
 
