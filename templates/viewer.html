@@ -84,6 +84,102 @@
             z-index: 9999;
             pointer-events: none; /* Let clicks pass through to the document */
         }
+
+        /* Mandatory Sign-in / Premium Lock Modal */
+        .gate-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .gate-modal-card {
+            background: #ffffff;
+            color: #0f172a;
+            max-width: 460px;
+            width: 100%;
+            border-radius: 18px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            padding: 32px 28px;
+            text-align: center;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            position: relative;
+        }
+        .gate-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        .gate-modal-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+        .gate-modal-desc {
+            font-size: 0.92rem;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .gate-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .gate-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.98rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .gate-btn-primary {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+        }
+        .gate-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+        }
+        .gate-btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+        }
+        .gate-btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        .gate-btn-pay {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+        .gate-btn-pay:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+        }
     </style>
 </head>
 <!-- Prevent Right Click entirely on the body -->
@@ -94,7 +190,7 @@
             <span>📖 Reading: <strong>{{ book.title }}</strong></span>
             
             <!-- Show view controls ONLY for securely uploaded internal PDFs -->
-            {% if not book.pdf_file.startswith('http') %}
+            {% if not book.pdf_file.startswith('http') and can_read %}
             <div class="view-controls">
                 <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
                 <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
@@ -103,25 +199,78 @@
             {% endif %}
         </div>
         
-        <a href="{{ request.referrer or url_for('index') }}">← Back to Library</a>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            {% if book.is_paid and not can_read %}
+            <a href="{{ url_for('buy_book', book_id=book.id) }}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;">
+                💳 Buy ₹{{ "%.2f"|format(book.price_paise/100) }} (Razorpay)
+            </a>
+            {% endif %}
+            <a href="{{ request.referrer or url_for('index') }}">← Back to Library</a>
+        </div>
     </div>
 
     <!-- Determine the correct URL based on if it's a Drive Link or Local Upload -->
     {% set pdf_url = '' %}
     
-    {% if book.pdf_file.startswith('http') %}
-        <!-- For Google Drive Links: replace /view with /preview to hide toolbars -->
-        {% set pdf_url = book.pdf_file.replace('/view', '/preview') %}
-    {% else %}
-        <!-- For Local Uploads: point to secure internal route -->
-        {% set pdf_url = url_for('serve_secure_pdf', book_id=book.id) %}
+    {% if can_read %}
+        {% if book.pdf_file.startswith('http') %}
+            <!-- For Google Drive Links: replace /view with /preview to hide toolbars -->
+            {% set pdf_url = book.pdf_file.replace('/view', '/preview') %}
+        {% else %}
+            <!-- For Local Uploads: point to secure internal route -->
+            {% set pdf_url = url_for('serve_secure_pdf', book_id=book.id) %}
+        {% endif %}
     {% endif %}
 
     <!-- Embed the Document with a default view of FitH (Fit Width) -->
     <iframe id="pdf-frame" 
-            src="{{ pdf_url }}{% if not book.pdf_file.startswith('http') %}#toolbar=0&navpanes=0&scrollbar=0&view=FitH{% endif %}" 
+            src="{{ pdf_url if can_read else 'about:blank' }}{% if can_read and not book.pdf_file.startswith('http') %}#toolbar=0&navpanes=0&scrollbar=0&view=FitH{% endif %}" 
             sandbox="allow-scripts allow-same-origin">
     </iframe>
+
+    <div id="protection-overlay"></div>
+
+    <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL -->
+    {% if not session.get('user_id') %}
+    <div class="gate-modal-backdrop" id="authGateModal">
+        <div class="gate-modal-card">
+            <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
+            <h2 class="gate-modal-title">Sign In Required to Read Free</h2>
+            <p class="gate-modal-desc">
+                PustakVerse is 100% free for readers! To read <strong>"{{ book.title }}"</strong>, please sign in or create your free reader account.
+            </p>
+            <div class="gate-btn-group">
+                <a href="{{ url_for('login', next=request.path) }}" class="gate-btn gate-btn-primary">
+                    <span>🔑 Sign In to Read Free</span>
+                </a>
+                <a href="{{ url_for('register', next=request.path) }}" class="gate-btn gate-btn-secondary">
+                    <span>✨ Create Free Account</span>
+                </a>
+                <a href="{{ request.referrer or url_for('index') }}" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none; margin-top: 6px;">
+                    Return to Library
+                </a>
+            </div>
+        </div>
+    </div>
+    {% elif book.is_paid and not can_read %}
+    <div class="gate-modal-backdrop" id="purchaseGateModal">
+        <div class="gate-modal-card">
+            <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
+            <h2 class="gate-modal-title">Premium Author Publication</h2>
+            <p class="gate-modal-desc">
+                This exclusive title is priced at <strong>₹{{ "%.2f"|format(book.price_paise/100) }}</strong>. 100% of reader payments directly support the author via Razorpay.
+            </p>
+            <div class="gate-btn-group">
+                <a href="{{ url_for('buy_book', book_id=book.id) }}" class="gate-btn gate-btn-pay">
+                    <span>⚡ Buy Now with Razorpay (₹{{ "%.2f"|format(book.price_paise/100) }})</span>
+                </a>
+                <a href="{{ request.referrer or url_for('index') }}" class="gate-btn gate-btn-secondary">
+                    <span>Browse Free Books Instead</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Advanced Protection & View Scripts -->
     <script>
@@ -129,6 +278,7 @@
         function changeView(viewMode) {
             const frame = document.getElementById('pdf-frame');
             const baseUrl = "{{ pdf_url }}";
+            if (!baseUrl) return;
             // Update the iframe source with the new view fragment identifier
             frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
         }

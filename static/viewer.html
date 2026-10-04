@@ -84,6 +84,102 @@
             z-index: 9999;
             pointer-events: none; /* Let clicks pass through to the document */
         }
+
+        /* Mandatory Sign-in / Premium Lock Modal */
+        .gate-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .gate-modal-card {
+            background: #ffffff;
+            color: #0f172a;
+            max-width: 460px;
+            width: 100%;
+            border-radius: 18px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            padding: 32px 28px;
+            text-align: center;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            position: relative;
+        }
+        .gate-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        .gate-modal-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+        .gate-modal-desc {
+            font-size: 0.92rem;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .gate-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .gate-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.98rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .gate-btn-primary {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+        }
+        .gate-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+        }
+        .gate-btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+        }
+        .gate-btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        .gate-btn-pay {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+        .gate-btn-pay:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+        }
     </style>
 </head>
 <!-- Prevent Right Click entirely on the body -->
@@ -100,7 +196,12 @@
             </div>
         </div>
         
-        <a href="/" id="back-link">← Back to Library</a>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <a href="#" id="header-buy-btn" class="gate-btn gate-btn-pay" style="display: none; padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;">
+                💳 Buy with Razorpay
+            </a>
+            <a href="/" id="back-link">← Back to Library</a>
+        </div>
     </div>
 
     <!-- Embed the Document with a default view of FitH (Fit Width) -->
@@ -110,6 +211,47 @@
     </iframe>
 
     <div id="protection-overlay"></div>
+
+    <!-- MANDATORY SIGN-IN GATING MODAL -->
+    <div class="gate-modal-backdrop" id="authGateModal">
+        <div class="gate-modal-card">
+            <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
+            <h2 class="gate-modal-title">Sign In Required to Read Free</h2>
+            <p class="gate-modal-desc">
+                PustakVerse is 100% free for readers! To read <strong id="auth-gate-book-title">this book</strong>, please sign in or create your free account.
+            </p>
+            <div class="gate-btn-group">
+                <a href="/login" id="auth-gate-login-btn" class="gate-btn gate-btn-primary">
+                    <span>🔑 Sign In to Read Free</span>
+                </a>
+                <a href="/register" id="auth-gate-register-btn" class="gate-btn gate-btn-secondary">
+                    <span>✨ Create Free Account</span>
+                </a>
+                <a href="/" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none; margin-top: 6px;">
+                    Return to Library
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREMIUM PURCHASE MODAL (CONNECT TO RAZORPAY) -->
+    <div class="gate-modal-backdrop" id="purchaseGateModal">
+        <div class="gate-modal-card">
+            <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
+            <h2 class="gate-modal-title">Premium Author Publication</h2>
+            <p class="gate-modal-desc">
+                This title is priced at <strong id="purchase-price-tag">₹0.00</strong>. 100% of reader payments directly support the author via Razorpay.
+            </p>
+            <div class="gate-btn-group">
+                <a href="#" id="purchase-razorpay-btn" class="gate-btn gate-btn-pay">
+                    <span>⚡ Buy Now with Razorpay</span>
+                </a>
+                <a href="/" class="gate-btn gate-btn-secondary">
+                    <span>Browse Free Books Instead</span>
+                </a>
+            </div>
+        </div>
+    </div>
 
     <!-- Advanced Protection & View Scripts -->
     <script>
@@ -157,35 +299,108 @@
             e.preventDefault();
         });
 
-        // Dynamic book loader for static / client-side views
+        // Dynamic book loader and authentication gating for static / client-side views
         document.addEventListener("DOMContentLoaded", async function() {
             const params = new URLSearchParams(window.location.search);
             const id = params.get('id') || params.get('book_id');
             const srcParam = params.get('src') || params.get('url');
-            const titleParam = params.get('title');
+            const titleParam = params.get('title') || 'Book';
 
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            const loginBtn = document.getElementById('auth-gate-login-btn');
+            const regBtn = document.getElementById('auth-gate-register-btn');
+            if (loginBtn) loginBtn.href = `/login?next=${returnUrl}`;
+            if (regBtn) regBtn.href = `/register?next=${returnUrl}`;
+
+            const titleSpan = document.getElementById('auth-gate-book-title');
+            if (titleSpan) titleSpan.textContent = `"${titleParam}"`;
+
+            // Check if user is logged in
+            let currentUser = null;
+            try {
+                const userRes = await fetch('/api/user/me');
+                if (userRes.ok) {
+                    const userData = await userRes.json();
+                    if (userData.logged_in && userData.user) {
+                        currentUser = userData.user;
+                    }
+                }
+            } catch (_) {}
+
+            if (!currentUser) {
+                // User is not signed in -> Mandatory sign-in gate
+                const authModal = document.getElementById('authGateModal');
+                if (authModal) authModal.style.display = 'flex';
+                document.getElementById('book-title-display').textContent = titleParam;
+                return;
+            }
+
+            // User is signed in! Check book details
             if (titleParam) {
                 document.getElementById('book-title-display').textContent = titleParam;
                 document.getElementById('page-title').textContent = 'Reading: ' + titleParam + ' - PustakVerse';
             }
 
-            if (srcParam) {
-                setBook(titleParam, srcParam);
-                return;
-            }
-
+            let targetBook = null;
             if (id) {
                 try {
                     const res = await fetch('/api/d1/books');
                     if (res.ok) {
                         const books = await res.json();
-                        const book = books.find(b => String(b.id) === String(id));
-                        if (book) {
-                            setBook(book.title, book.pdf_file);
-                            return;
-                        }
+                        targetBook = books.find(b => String(b.id) === String(id));
                     }
                 } catch (_) {}
+            }
+
+            if (targetBook) {
+                const isPaid = !!targetBook.is_paid && (targetBook.price_paise > 0);
+                const isAuthorOrDev = currentUser && (currentUser.id === targetBook.author_id || currentUser.role === 'developer');
+
+                if (isPaid && !isAuthorOrDev) {
+                    // Check if already purchased
+                    let hasPurchased = false;
+                    try {
+                        const pRes = await fetch(`/api/d1/check_purchase?book_id=${targetBook.id}`);
+                        if (pRes.ok) {
+                            const pData = await pRes.json();
+                            hasPurchased = !!pData.purchased;
+                        }
+                    } catch (_) {}
+
+                    if (!hasPurchased) {
+                        // Show purchase gate modal
+                        const pModal = document.getElementById('purchaseGateModal');
+                        const pPrice = document.getElementById('purchase-price-tag');
+                        const rzpBtn = document.getElementById('purchase-razorpay-btn');
+                        const hBuyBtn = document.getElementById('header-buy-btn');
+
+                        const priceFormatted = `₹${(targetBook.price_paise / 100).toFixed(2)}`;
+                        if (pPrice) pPrice.textContent = priceFormatted;
+                        if (rzpBtn) {
+                            rzpBtn.href = `/buy_book/${targetBook.id}`;
+                            rzpBtn.innerHTML = `<span>⚡ Buy Now with Razorpay (${priceFormatted})</span>`;
+                        }
+                        if (hBuyBtn) {
+                            hBuyBtn.href = `/buy_book/${targetBook.id}`;
+                            hBuyBtn.textContent = `💳 Buy ${priceFormatted} (Razorpay)`;
+                            hBuyBtn.style.display = 'inline-flex';
+                        }
+                        if (pModal) pModal.style.display = 'flex';
+                        return;
+                    }
+                }
+
+                setBook(targetBook.title, targetBook.pdf_file);
+                const viewControls = document.getElementById('view-controls');
+                if (viewControls && !targetBook.pdf_file.startsWith('http')) {
+                    viewControls.style.display = 'flex';
+                }
+                return;
+            }
+
+            if (srcParam) {
+                setBook(titleParam, srcParam);
+                return;
             }
 
             // Fallback default

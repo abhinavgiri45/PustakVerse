@@ -1603,6 +1603,596 @@ export default {
       }
     }
 
+    // 6A-1. Check Purchase Status API: GET /api/d1/check_purchase?book_id=...
+    if (url.pathname === "/api/d1/check_purchase" && env.DB) {
+      const bookId = parseInt(url.searchParams.get("book_id"), 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let user = null;
+      if (cookies.pv_session) {
+        try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!user || !bookId) {
+        return new Response(JSON.stringify({ purchased: false }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const purchase = await env.DB.prepare(
+          "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+        ).bind(user.id, bookId).first();
+
+        return new Response(JSON.stringify({ purchased: !!purchase }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (_) {
+        return new Response(JSON.stringify({ purchased: false }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6A-2. E-Commerce Buy Book / Checkout Page: GET /buy_book/:id or POST /buy_book/:id
+    const buyMatch = url.pathname.match(/^\/buy_book\/(\d+)/);
+    if (buyMatch && env.DB) {
+      const targetBookId = parseInt(buyMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        const redirectUrl = `${url.origin}/login?next=${encodeURIComponent(url.pathname)}`;
+        return Response.redirect(redirectUrl, 302);
+      }
+
+      try {
+        const book = await env.DB.prepare(
+          `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.catalog,
+                  b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret,
+                  u.username as author_name
+           FROM books b
+           LEFT JOIN users u ON b.author_id = u.id
+           WHERE b.id = ? LIMIT 1`
+        ).bind(targetBookId).first();
+
+        if (!book) {
+          return new Response("Book not found", { status: 404 });
+        }
+
+        // If free or zero price, grant access directly
+        if (!book.is_paid || !book.price_paise) {
+          try {
+            await env.DB.prepare(
+              "INSERT OR IGNORE INTO personal_library (user_id, book_id) VALUES (?, ?)"
+            ).bind(sessionUser.id, targetBookId).run();
+          } catch (_) {}
+          return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
+        }
+
+        // Check if already purchased
+        const existingPurchase = await env.DB.prepare(
+          "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+        ).bind(sessionUser.id, targetBookId).first();
+
+        if (existingPurchase) {
+          return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
+        }
+
+        // Get front page settings for donation & developer razorpay keys
+        let fps = {};
+        try {
+          fps = await env.DB.prepare(
+            "SELECT checkout_donation_active, donation_default_inr, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1"
+          ).first() || {};
+        } catch (_) {}
+
+        const checkoutDonationActive = fps.checkout_donation_active !== 0;
+        const defaultDonationInr = fps.donation_default_inr || 10;
+        const razorpayKey = fps.dev_key_id || book.author_key_id || env.RAZORPAY_KEY_ID || "rzp_test_pustakverse";
+
+        const checkoutHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Checkout · ${escapeHtml(book.title)} · PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ea580c;
+            --primary-dark: #c2410c;
+            --nav-bg: #0f172a;
+            --bg-canvas: #f8fafc;
+            --border-line: #e2e8f0;
+            --text-muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-canvas);
+            color: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+        .checkout-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border-line);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            width: 100%;
+            max-width: 450px;
+            padding: 32px 28px;
+            text-align: left;
+        }
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-line);
+        }
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-weight: 800;
+            color: var(--nav-bg);
+            font-size: 1.1rem;
+        }
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #166534;
+            background: #dcfce7;
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+        .book-preview {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid var(--border-line);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+        }
+        .book-thumb {
+            width: 48px;
+            height: 68px;
+            object-fit: cover;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            background: #cbd5e1;
+            flex-shrink: 0;
+        }
+        .book-info h3 {
+            font-size: 0.98rem;
+            font-weight: 800;
+            color: var(--nav-bg);
+            line-height: 1.3;
+            margin-bottom: 3px;
+        }
+        .book-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .donation-box {
+            background: #f0fdf4;
+            border: 1.5px solid #86efac;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+        }
+        .donation-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .donation-header input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: var(--primary-orange);
+            cursor: pointer;
+        }
+        .donation-title {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #166534;
+            display: block;
+        }
+        .donation-desc {
+            font-size: 0.78rem;
+            color: #475569;
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+        .donation-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding-left: 28px;
+        }
+        .donation-input {
+            width: 80px;
+            padding: 6px 10px;
+            border: 1.5px solid #86efac;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            text-align: center;
+            background: white;
+            color: #166534;
+            outline: none;
+        }
+        .breakdown { margin-bottom: 20px; }
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 0.88rem;
+            color: #475569;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0 6px;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--nav-bg);
+            border-top: 2px solid var(--nav-bg);
+            margin-top: 4px;
+        }
+        .btn-pay {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-pay:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.4);
+        }
+        .btn-pay:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-cancel {
+            display: block;
+            margin-top: 14px;
+            text-align: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="checkout-card">
+        <div class="brand-header">
+            <a href="/" class="brand-logo">
+                <img src="/static/PustakVerse.png" alt="PustakVerse" style="height: 32px; width: auto;">
+                <span>PustakVerse</span>
+            </a>
+            <span class="security-badge">🔒 256-Bit SSL Secure</span>
+        </div>
+
+        <div class="book-preview">
+            <img src="${escapeHtml(book.cover_image || '/static/PustakVerse.png')}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
+            <div class="book-info">
+                <h3>${escapeHtml(book.title)}</h3>
+                <p>By <strong>${escapeHtml(book.author_name || 'Author')}</strong> · ${escapeHtml(book.catalog || 'General')}</p>
+            </div>
+        </div>
+
+        ${checkoutDonationActive ? `
+        <div class="donation-box" id="donationContainer">
+            <label class="donation-header">
+                <input type="checkbox" id="donationCheckbox" checked onchange="handleDonationToggle()">
+                <div>
+                    <span class="donation-title">🎁 Donate to PustakVerse Team</span>
+                    <span class="donation-desc">Contribute to the developer team for servers, AI polymath models & cloud storage.</span>
+                </div>
+            </label>
+            <div class="donation-input-row" id="donationInputWrap">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #166534;">Contribution: ₹</span>
+                <input type="number" id="donationAmountInput" class="donation-input" value="${defaultDonationInr}" min="1" max="5000" step="1" oninput="calculateTotal()">
+                <span style="font-size: 0.75rem; color: #64748b;">(Optional, editable)</span>
+            </div>
+        </div>
+        ` : ""}
+
+        <div class="breakdown">
+            <div class="price-row">
+                <span>Book Price (Author Royalty)</span>
+                <span id="basePriceDisplay" style="font-weight: 700;">₹${(book.price_paise / 100).toFixed(2)}</span>
+            </div>
+            ${checkoutDonationActive ? `
+            <div class="price-row" id="donationSummaryRow">
+                <span>PustakVerse Team Donation</span>
+                <span id="donationDisplay" style="color: #166534; font-weight: 800;">₹${defaultDonationInr.toFixed(2)}</span>
+            </div>
+            ` : ""}
+            <div class="total-row">
+                <span>Total to Pay (One-Time)</span>
+                <span id="totalDisplay" style="color: var(--primary-orange);">₹${((book.price_paise + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span>
+            </div>
+        </div>
+
+        <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
+            <span>🔒 Pay <span id="payBtnAmount">₹${((book.price_paise + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
+        </button>
+
+        <a href="/read_book/${book.id}" class="btn-cancel">← Return to Book Page</a>
+    </div>
+
+    <form action="/payment/verify" method="POST" id="verifyForm">
+        <input type="hidden" name="razorpay_order_id" id="order_id">
+        <input type="hidden" name="razorpay_payment_id" id="payment_id">
+        <input type="hidden" name="razorpay_signature" id="signature">
+        <input type="hidden" name="book_id" value="${book.id}">
+    </form>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        const BASE_PRICE_PAISE = ${book.price_paise};
+        const DONATION_ENABLED = ${checkoutDonationActive ? "true" : "false"};
+        const BOOK_ID = ${book.id};
+
+        function handleDonationToggle() {
+            const cb = document.getElementById('donationCheckbox');
+            const wrap = document.getElementById('donationInputWrap');
+            if (cb && wrap) wrap.style.display = cb.checked ? 'flex' : 'none';
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let donationInr = 0;
+            const cb = document.getElementById('donationCheckbox');
+            const input = document.getElementById('donationAmountInput');
+            if (DONATION_ENABLED && cb && cb.checked && input) {
+                donationInr = Math.max(0, parseInt(input.value) || 0);
+            }
+            const totalPaise = BASE_PRICE_PAISE + (donationInr * 100);
+            const formattedTotal = '₹' + (totalPaise / 100).toFixed(2);
+            document.getElementById('totalDisplay').textContent = formattedTotal;
+            document.getElementById('payBtnAmount').textContent = formattedTotal;
+            const donRow = document.getElementById('donationSummaryRow');
+            if (donRow) {
+                donRow.style.display = (cb && cb.checked && donationInr > 0) ? 'flex' : 'none';
+                document.getElementById('donationDisplay').textContent = '₹' + donationInr.toFixed(2);
+            }
+            return { donationInr, totalPaise };
+        }
+
+        async function initiateSinglePayment() {
+            const btn = document.getElementById('payButton');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ Preparing Razorpay Gateway…</span>';
+            const { donationInr } = calculateTotal();
+
+            try {
+                const formData = new FormData();
+                formData.append('donation_inr', donationInr);
+                const res = await fetch(\`/api/checkout/create_order/\${BOOK_ID}\`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.error || 'Failed to initialize payment gateway.');
+                    btn.disabled = false;
+                    calculateTotal();
+                    return;
+                }
+
+                const options = {
+                    key: data.razorpay_key,
+                    amount: data.amount_paise,
+                    currency: "INR",
+                    name: "PustakVerse",
+                    description: \`Unlock "\${data.book_title}"\`,
+                    image: "/static/PustakVerse.png",
+                    order_id: data.order_id,
+                    handler: function (response) {
+                        btn.innerHTML = '<span>✓ Verifying Payment…</span>';
+                        document.getElementById('order_id').value = response.razorpay_order_id;
+                        document.getElementById('payment_id').value = response.razorpay_payment_id;
+                        document.getElementById('signature').value = response.razorpay_signature;
+                        document.getElementById('verifyForm').submit();
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            btn.disabled = false;
+                            calculateTotal();
+                        }
+                    },
+                    theme: { color: "#ea580c" }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } catch (err) {
+                alert('Network error initializing payment gateway.');
+                btn.disabled = false;
+                calculateTotal();
+            }
+        }
+    </script>
+</body>
+</html>`;
+
+        return new Response(checkoutHtml, {
+          headers: { "Content-Type": "text/html; charset=utf-8" }
+        });
+      } catch (err) {
+        return new Response(`Checkout error: ${err.message}`, { status: 500 });
+      }
+    }
+
+    // 6A-3. Edge Checkout Create Order API: POST /api/checkout/create_order/:id
+    const createOrderMatch = url.pathname.match(/^\/api\/checkout\/create_order\/(\d+)/);
+    if (createOrderMatch && request.method === "POST" && env.DB) {
+      const targetBookId = parseInt(createOrderMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        return new Response(JSON.stringify({ success: false, error: "Please sign in before purchasing." }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const formData = await request.formData().catch(() => new FormData());
+        const donationInr = Math.max(0, Math.min(5000, parseInt(formData.get("donation_inr") || "0", 10) || 0));
+
+        const book = await env.DB.prepare(
+          `SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret
+           FROM books b WHERE b.id = ? LIMIT 1`
+        ).bind(targetBookId).first();
+
+        if (!book) {
+          return new Response(JSON.stringify({ success: false, error: "Book not found." }), {
+            status: 404, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        let fps = {};
+        try {
+          fps = await env.DB.prepare(
+            "SELECT checkout_donation_active, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1"
+          ).first() || {};
+        } catch (_) {}
+
+        const activeDonation = fps.checkout_donation_active !== 0 ? donationInr : 0;
+        const gatewayKeyId = book.author_key_id || fps.dev_key_id || env.RAZORPAY_KEY_ID;
+        const gatewayKeySecret = book.author_key_secret || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
+
+        const totalPaise = book.price_paise + (activeDonation * 100);
+        const orderReceipt = `pv-${sessionUser.id}-${targetBookId}-${Math.floor(Date.now() / 1000)}`;
+
+        let razorpayOrderId = `order_${Math.random().toString(36).substring(2, 12)}`;
+
+        // If real Razorpay keys are configured, call Razorpay Orders API directly via fetch
+        if (gatewayKeyId && gatewayKeySecret) {
+          try {
+            const basicAuth = btoa(`${gatewayKeyId}:${gatewayKeySecret}`);
+            const rpRes = await fetch("https://api.razorpay.com/v1/orders", {
+              method: "POST",
+              headers: {
+                "Authorization": `Basic ${basicAuth}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                amount: totalPaise,
+                currency: "INR",
+                receipt: orderReceipt
+              })
+            });
+            if (rpRes.ok) {
+              const rpOrder = await rpRes.json();
+              if (rpOrder && rpOrder.id) razorpayOrderId = rpOrder.id;
+            }
+          } catch (_) {}
+        }
+
+        const feePaise = Math.round(book.price_paise * 0.0236);
+        const authorEarningPaise = Math.max(0, book.price_paise - feePaise);
+
+        try {
+          await env.DB.prepare(
+            `INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, author_earning_paise, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
+          ).bind(sessionUser.id, targetBookId, razorpayOrderId, totalPaise, activeDonation * 100, feePaise, authorEarningPaise).run();
+        } catch (_) {}
+
+        return new Response(JSON.stringify({
+          success: true,
+          order_id: razorpayOrderId,
+          amount_paise: totalPaise,
+          razorpay_key: gatewayKeyId || "rzp_test_pustakverse",
+          book_title: book.title
+        }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6A-4. Edge Payment Verification: POST /payment/verify
+    if (url.pathname === "/payment/verify" && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        return Response.redirect(`${url.origin}/login`, 302);
+      }
+
+      const formData = await request.formData().catch(() => new FormData());
+      const orderId = formData.get("razorpay_order_id") || "";
+      const paymentId = formData.get("razorpay_payment_id") || "";
+      const bookId = parseInt(formData.get("book_id") || "0", 10);
+
+      if (orderId) {
+        try {
+          await env.DB.prepare(
+            "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
+          ).bind(paymentId, orderId, sessionUser.id).run();
+
+          if (bookId) {
+            await env.DB.prepare(
+              "INSERT OR IGNORE INTO personal_library (user_id, book_id) VALUES (?, ?)"
+            ).bind(sessionUser.id, bookId).run();
+          }
+        } catch (_) {}
+      }
+
+      const dest = bookId ? `/read_book/${bookId}` : "/";
+      return Response.redirect(`${url.origin}${dest}`, 302);
+    }
+
     // 6B. Read Book / Secure Viewer Route: /read_book/:id, /viewer/:id, /read/:id, /viewer.html?id=...
     const readMatch = url.pathname.match(/^\/(?:read_book|viewer|read)\/(\d+)/);
     const queryId = (url.pathname.startsWith("/viewer") || url.pathname.startsWith("/read"))
@@ -1610,14 +2200,40 @@ export default {
       : null;
     const targetBookId = readMatch ? parseInt(readMatch[1], 10) : (queryId ? parseInt(queryId, 10) : null);
 
+    // Extract current user from session cookie if present
+    const reqCookies = parseCookies(request.headers.get("Cookie"));
+    let edgeCurrentUser = null;
+    if (reqCookies.pv_session) {
+      try {
+        edgeCurrentUser = JSON.parse(atob(reqCookies.pv_session));
+      } catch (_) {}
+    }
+
     if (targetBookId && env.DB) {
       try {
         const book = await env.DB.prepare(
-          "SELECT id, title, author_id, pdf_file, is_paid, cover_image FROM books WHERE id = ? LIMIT 1"
+          "SELECT id, title, author_id, pdf_file, is_paid, price_paise, cover_image FROM books WHERE id = ? LIMIT 1"
         ).bind(targetBookId).first();
 
         if (book) {
-          return new Response(renderEdgeViewerHtml(book), {
+          let canRead = true;
+          if (book.is_paid && book.price_paise > 0) {
+            canRead = false;
+            if (edgeCurrentUser) {
+              if (edgeCurrentUser.id === book.author_id || edgeCurrentUser.role === "developer") {
+                canRead = true;
+              } else {
+                try {
+                  const purchase = await env.DB.prepare(
+                    "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+                  ).bind(edgeCurrentUser.id, targetBookId).first();
+                  if (purchase) canRead = true;
+                } catch (_) {}
+              }
+            }
+          }
+
+          return new Response(renderEdgeViewerHtml(book, edgeCurrentUser, canRead), {
             headers: { "Content-Type": "text/html; charset=utf-8" }
           });
         }
@@ -1627,7 +2243,7 @@ export default {
     if ((url.pathname === "/viewer.html" || url.pathname === "/viewer" || url.pathname === "/read_book") && (url.searchParams.has("src") || url.searchParams.has("url"))) {
       const src = url.searchParams.get("src") || url.searchParams.get("url");
       const title = url.searchParams.get("title") || "Document";
-      return new Response(renderEdgeViewerHtml({ title, pdf_file: src }), {
+      return new Response(renderEdgeViewerHtml({ title, pdf_file: src }, edgeCurrentUser, true), {
         headers: { "Content-Type": "text/html; charset=utf-8" }
       });
     }
@@ -2365,15 +2981,19 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = []) {
   return out;
 }
 
-function renderEdgeViewerHtml(book) {
+function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
   const isHttp = (book.pdf_file || "").startsWith("http");
   let pdfUrl = book.pdf_file || "";
   if (isHttp && pdfUrl.includes("drive.google.com") && pdfUrl.includes("/view")) {
     pdfUrl = pdfUrl.replace("/view", "/preview");
   }
-  const iframeSrc = isHttp
-    ? pdfUrl
-    : (pdfUrl ? `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : "");
+  const iframeSrc = canRead
+    ? (isHttp ? pdfUrl : (pdfUrl ? `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : ""))
+    : "about:blank";
+
+  const pricePaise = book.price_paise || 0;
+  const priceFormatted = (pricePaise / 100).toFixed(2);
+  const isPaid = !!book.is_paid && pricePaise > 0;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -2417,7 +3037,7 @@ function renderEdgeViewerHtml(book) {
             color: #f39c12;
         }
 
-        /* --- NEW: View Controls --- */
+        /* --- View Controls --- */
         .view-controls {
             display: flex;
             gap: 8px;
@@ -2451,7 +3071,7 @@ function renderEdgeViewerHtml(book) {
             border: none;
         }
         
-        /* Overlay to block transparent clicks if necessary */
+        /* Overlay to block transparent clicks */
         #protection-overlay {
             position: absolute;
             top: 0;
@@ -2459,18 +3079,113 @@ function renderEdgeViewerHtml(book) {
             width: 100%;
             height: 100%;
             z-index: 9999;
-            pointer-events: none; /* Let clicks pass through to the document */
+            pointer-events: none;
+        }
+
+        /* Mandatory Sign-in / Premium Lock Modal */
+        .gate-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .gate-modal-card {
+            background: #ffffff;
+            color: #0f172a;
+            max-width: 460px;
+            width: 100%;
+            border-radius: 18px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            padding: 32px 28px;
+            text-align: center;
+            font-family: system-ui, -apple-system, sans-serif;
+            position: relative;
+        }
+        .gate-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        .gate-modal-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+        .gate-modal-desc {
+            font-size: 0.92rem;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .gate-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .gate-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.98rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .gate-btn-primary {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+        }
+        .gate-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+        }
+        .gate-btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+        }
+        .gate-btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        .gate-btn-pay {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+        .gate-btn-pay:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
         }
     </style>
 </head>
-<!-- Prevent Right Click entirely on the body -->
 <body oncontextmenu="return false;">
 
     <div class="header">
         <div class="header-left">
             <span>📖 Reading: <strong>${escapeHtml(book.title || "Book")}</strong></span>
             
-            ${!isHttp ? `
+            ${(!isHttp && canRead) ? `
             <div class="view-controls">
                 <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
                 <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
@@ -2479,10 +3194,17 @@ function renderEdgeViewerHtml(book) {
             ` : ""}
         </div>
         
-        <a href="/">← Back to Library</a>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            ${(isPaid && !canRead) ? `
+            <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;">
+                💳 Buy ₹${priceFormatted} (Razorpay)
+            </a>
+            ` : ""}
+            <a href="/">← Back to Library</a>
+        </div>
     </div>
 
-    <!-- Embed the Document with a default view of FitH (Fit Width) -->
+    <!-- Embed Document -->
     <iframe id="pdf-frame" 
             src="${escapeHtml(iframeSrc)}" 
             sandbox="allow-scripts allow-same-origin">
@@ -2490,19 +3212,58 @@ function renderEdgeViewerHtml(book) {
 
     <div id="protection-overlay"></div>
 
+    <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL -->
+    ${!currentUser ? `
+    <div class="gate-modal-backdrop" id="authGateModal">
+        <div class="gate-modal-card">
+            <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
+            <h2 class="gate-modal-title">Sign In Required to Read Free</h2>
+            <p class="gate-modal-desc">
+                PustakVerse is 100% free for readers! To read <strong>"${escapeHtml(book.title || "this book")}"</strong>, please sign in or create your free account.
+            </p>
+            <div class="gate-btn-group">
+                <a href="/login?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-primary">
+                    <span>🔑 Sign In to Read Free</span>
+                </a>
+                <a href="/register?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-secondary">
+                    <span>✨ Create Free Account</span>
+                </a>
+                <a href="/" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none; margin-top: 6px;">
+                    Return to Library
+                </a>
+            </div>
+        </div>
+    </div>
+    ` : ((isPaid && !canRead) ? `
+    <div class="gate-modal-backdrop" id="purchaseGateModal">
+        <div class="gate-modal-card">
+            <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
+            <h2 class="gate-modal-title">Premium Author Publication</h2>
+            <p class="gate-modal-desc">
+                This title is priced at <strong>₹${priceFormatted}</strong>. 100% of reader payments directly support the author via Razorpay.
+            </p>
+            <div class="gate-btn-group">
+                <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay">
+                    <span>⚡ Buy Now with Razorpay (₹${priceFormatted})</span>
+                </a>
+                <a href="/" class="gate-btn gate-btn-secondary">
+                    <span>Browse Free Books Instead</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    ` : "")}
+
     <!-- Advanced Protection & View Scripts -->
     <script>
-        // --- NEW: Function to dynamically change the PDF view mode ---
         function changeView(viewMode) {
             const frame = document.getElementById('pdf-frame');
             const baseUrl = "${escapeHtml(pdfUrl)}";
-            // Update the iframe source with the new view fragment identifier
+            if (!baseUrl) return;
             frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
         }
 
-        // --- EXISITNG: Disable common keyboard shortcuts used for saving/printing/inspecting ---
         document.addEventListener('keydown', function(e) {
-            // Block Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools), Ctrl+Shift+I, Ctrl+Shift+C
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -2514,7 +3275,6 @@ function renderEdgeViewerHtml(book) {
             }
         });
 
-        // --- EXISTING: Prevent Dragging elements (like images) ---
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();
         });
