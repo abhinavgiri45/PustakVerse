@@ -1828,66 +1828,70 @@
         
         
         <!-- DEVELOPER MASTER PANEL: Platform Health, Emergency Maintenance & FastCache -->
-        <div class="panel" style="border-left: 5px solid #ef4444; background: #fafafa;">
+        <div id="strictDeveloperSection" class="panel" style="border-left: 5px solid #ef4444; background: #fafafa;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div>
                     <h2 style="color: #b91c1c; margin: 0; display: flex; align-items: center; gap: 8px;">
                         <span>👑</span> Developer Master Platform Intelligence & Controls
                     </h2>
-                    <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0 0;">Live infrastructure health, emergency switches, and memory cache diagnostics.</p>
+                    <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0 0;">Live infrastructure health, scheduled maintenance engine with automated user email dispatch, emergency switches, and memory cache diagnostics.</p>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <!-- Emergency Maintenance Switch -->
-                    <form action="/developer/toggle_maintenance" method="POST">
-                        <button type="submit" class="btn-sm btn-red" style="padding: 8px 14px; font-weight: 700;">
-                            🚨 Enable Maintenance Mode
-                        </button>
-                    </form>
+                    <!-- Scheduled Maintenance Engine Button -->
+                    <button type="button" onclick="openMaintenanceModal()" id="devMaintenanceBtn" class="btn-sm btn-red" style="padding: 8px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                        🚨 Schedule Maintenance
+                    </button>
                     
                     <!-- Upload Freeze Switch -->
-                    <form action="/developer/toggle_upload_freeze" method="POST">
-                        <button type="submit" class="btn-sm btn-warn" style="padding: 8px 14px; font-weight: 700;">
+                    <form action="/developer/toggle_upload_freeze" method="POST" style="margin: 0;">
+                        <button type="submit" id="devUploadFreezeBtn" class="btn-sm btn-warn" style="padding: 8px 14px; font-weight: 700;">
                             ❄️ Freeze Uploads
                         </button>
                     </form>
 
                     <!-- FastMemoryCache Purge -->
-                    <form action="/developer/purge_cache" method="POST" onsubmit="return confirm('Purge in-memory FastCache across all routes?');">
+                    <form action="/developer/purge_cache" method="POST" onsubmit="return confirm('Purge in-memory FastCache across all routes?');" style="margin: 0;">
                         <button type="submit" class="btn-sm btn-dark" style="padding: 8px 14px; font-weight: 700;">
-                            🧹 Purge Cache (120 keys)
+                            🧹 Purge Cache (<span id="devMetricCacheKeys">120</span> keys)
                         </button>
                     </form>
                 </div>
             </div>
 
+            <!-- Maintenance Status Live Indicator (if active) -->
+            <div id="devMaintenanceLiveBanner" style="display: none; background: #fff7ed; border: 1.5px dashed #ea580c; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.88rem; color: #9a3412;">
+                <strong>⚠️ Maintenance Mode is Currently ACTIVE:</strong> Public visitors and normal readers see the maintenance screen. Developer, CTO, CEO, and technical staff maintain continuous bypass access.
+                <div id="devMaintenanceWindowDisplay" style="margin-top: 4px; font-weight: 600; color: #c2410c;"></div>
+            </div>
+
             <!-- Live Metrics Grid -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #1e293b;">0</div>
+                    <div id="devMetricTotalUsers" style="font-size: 1.3rem; font-weight: 800; color: #1e293b;">0</div>
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Users</div>
                 </div>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #2563eb;">0</div>
+                    <div id="devMetricReaders" style="font-size: 1.3rem; font-weight: 800; color: #2563eb;">0</div>
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Readers</div>
                 </div>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #d97706;">0</div>
+                    <div id="devMetricAuthors" style="font-size: 1.3rem; font-weight: 800; color: #d97706;">0</div>
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Authors</div>
                 </div>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #16a34a;">0</div>
+                    <div id="devMetricOfficials" style="font-size: 1.3rem; font-weight: 800; color: #16a34a;">0</div>
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Officials</div>
                 </div>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #9333ea;">0</div>
-                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Books (0 paid)</div>
+                    <div id="devMetricBooks" style="font-size: 1.3rem; font-weight: 800; color: #9333ea;">0</div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Books (<span id="devMetricPaidBooks">0</span> paid)</div>
                 </div>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #dc2626;">0</div>
+                    <div id="devMetricQuarantined" style="font-size: 1.3rem; font-weight: 800; color: #dc2626;">0</div>
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Quarantined</div>
                 </div>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #0891b2;">₹0.00</div>
+                    <div id="devMetricSales" style="font-size: 1.3rem; font-weight: 800; color: #0891b2;">₹0.00</div>
                     <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Sales Volume</div>
                 </div>
             </div>
@@ -2029,6 +2033,77 @@
 
         
 
+    </div>
+
+    <!-- SCHEDULE SYSTEM MAINTENANCE MODAL -->
+    <div id="scheduleMaintenanceModal" class="modal-overlay" style="display: none; z-index: 99999;">
+        <div class="modal-card" style="position: relative; max-width: 580px; border-top: 5px solid #ea580c; border-radius: 14px;">
+            <button type="button" onclick="closeMaintenanceModal()" style="position: absolute; top: 16px; right: 18px; border: none; background: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span style="font-size: 1.6rem;">🚨</span>
+                <h2 style="margin: 0; color: #0f172a; font-size: 1.35rem;">Schedule System Maintenance</h2>
+            </div>
+            <p style="color: #64748b; font-size: 0.86rem; margin: 0 0 16px 0; line-height: 1.5;">
+                Control platform maintenance windows. When activated, all public visitors and readers see the maintenance notice, while <strong>Developer, CTO, CEO, and Technical Staff</strong> maintain full bypass access.
+            </p>
+
+            <form id="maintenanceScheduleForm" onsubmit="submitMaintenanceSchedule(event)">
+                <!-- Quick Window Presets -->
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.04em; margin-bottom: 6px;">Quick Time Presets:</label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" onclick="setMaintenancePreset(1)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+1 Hour</button>
+                        <button type="button" onclick="setMaintenancePreset(2)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+2 Hours</button>
+                        <button type="button" onclick="setMaintenancePreset(4)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+4 Hours</button>
+                        <button type="button" onclick="setMaintenancePreset('tonight')" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">Tonight (11 PM - 3 AM)</button>
+                    </div>
+                </div>
+
+                <!-- Start and End Time -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Start Time / Date</label>
+                        <input type="text" id="maintStartTime" name="start_time" placeholder="e.g. Today 11:00 PM IST" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">End Time / Date</label>
+                        <input type="text" id="maintEndTime" name="end_time" placeholder="e.g. Tomorrow 03:00 AM IST" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
+                    </div>
+                </div>
+
+                <!-- Reason / Objective -->
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Maintenance Objective / Headline</label>
+                    <input type="text" id="maintReason" name="reason" placeholder="e.g. Database cluster migration and Girionix AI architecture enhancement" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
+                </div>
+
+                <!-- Notify Users Checkbox -->
+                <div style="background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 10px; padding: 12px 14px; margin-bottom: 18px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin: 0; font-size: 0.86rem; color: #92400e; font-weight: 600;">
+                        <input type="checkbox" id="maintNotifyUsers" name="notify_users" checked style="margin-top: 3px; accent-color: #ea580c; width: 16px; height: 16px;">
+                        <span>
+                            📧 <strong>Broadcast Maintenance Notice to All Registered Users via Email</strong>
+                            <span style="display: block; font-size: 0.78rem; font-weight: 400; color: #b45309; margin-top: 2px;">
+                                Automatically dispatches an official branded email alert specifying the exact maintenance window and guaranteeing data safety.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" id="btnDisableMaintenance" onclick="endMaintenanceMode()" class="btn-sm btn-dark" style="padding: 10px 16px; font-weight: 700; display: none;">
+                        🔓 End Maintenance (Set Live)
+                    </button>
+                    <div style="display: flex; gap: 8px; margin-left: auto;">
+                        <button type="button" onclick="closeMaintenanceModal()" class="btn-sm" style="background: #e2e8f0; color: #334155; font-weight: 600; padding: 10px 16px;">Cancel</button>
+                        <button type="submit" id="btnActivateMaintenance" class="btn-sm btn-red" style="padding: 10px 20px; font-weight: 800;">
+                            🚨 Activate Scheduled Maintenance
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Edit Modal Script -->
@@ -3782,7 +3857,7 @@
     // Global Key & Backdrop modal handlers
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            ['editLeaderModal', 'appointLeaderModal', 'editBookModal', 'addAiModelModal'].forEach(id => {
+            ['editLeaderModal', 'appointLeaderModal', 'editBookModal', 'addAiModelModal', 'scheduleMaintenanceModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) modal.style.display = 'none';
             });
@@ -3795,8 +3870,204 @@
         }
     });
 
+    // ========================================================
+    // DEVELOPER SCHEDULED MAINTENANCE ENGINE & SYSTEM METRICS
+    // ========================================================
+    let currentMaintenanceMode = false;
+
+    function openMaintenanceModal() {
+        const modal = document.getElementById('scheduleMaintenanceModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        // Prepopulate fields if available
+        if (!document.getElementById('maintStartTime').value) {
+            setMaintenancePreset(2);
+        }
+    }
+
+    function closeMaintenanceModal() {
+        const modal = document.getElementById('scheduleMaintenanceModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function setMaintenancePreset(preset) {
+        const now = new Date();
+        const formatTime = (d) => {
+            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' +
+                   d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST';
+        };
+
+        const startInput = document.getElementById('maintStartTime');
+        const endInput = document.getElementById('maintEndTime');
+        const reasonInput = document.getElementById('maintReason');
+
+        if (preset === 'tonight') {
+            const tonight11 = new Date();
+            tonight11.setHours(23, 0, 0, 0);
+            const tomorrow3 = new Date(tonight11.getTime() + 4 * 3600 * 1000);
+            startInput.value = formatTime(tonight11);
+            endInput.value = formatTime(tomorrow3);
+            if (!reasonInput.value) reasonInput.value = 'Planned core database migration and Girionix AI architecture scale';
+        } else {
+            const hrs = parseInt(preset, 10) || 1;
+            const end = new Date(now.getTime() + hrs * 3600 * 1000);
+            startInput.value = formatTime(now);
+            endInput.value = formatTime(end);
+            if (!reasonInput.value) reasonInput.value = 'Database infrastructure upgrade and Girionix AI computing nodes enhancement';
+        }
+    }
+
+    async function submitMaintenanceSchedule(e) {
+        if (e) e.preventDefault();
+        const start = document.getElementById('maintStartTime').value.trim();
+        const end = document.getElementById('maintEndTime').value.trim();
+        const reason = document.getElementById('maintReason').value.trim();
+        const notify = document.getElementById('maintNotifyUsers').checked;
+        const submitBtn = document.getElementById('btnActivateMaintenance');
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Activating & Broadcasting...';
+        }
+
+        try {
+            const res = await fetch('/developer/toggle_maintenance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    action: 'enable',
+                    start_time: start,
+                    end_time: end,
+                    reason: reason,
+                    notify_users: notify
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message || 'Scheduled System Maintenance Mode Activated.');
+                closeMaintenanceModal();
+                loadDeveloperSystemMetrics();
+            } else {
+                alert(data.message || 'Could not update maintenance mode.');
+            }
+        } catch (err) {
+            // Fallback submit regular form
+            const form = document.getElementById('maintenanceScheduleForm');
+            if (form) {
+                form.method = 'POST';
+                form.action = '/developer/toggle_maintenance';
+                form.submit();
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚨 Activate Scheduled Maintenance';
+            }
+        }
+    }
+
+    async function endMaintenanceMode() {
+        if (!confirm('Are you sure you want to end maintenance mode and set the platform completely LIVE for all users?')) return;
+        try {
+            const res = await fetch('/developer/toggle_maintenance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ action: 'disable' })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('Maintenance mode deactivated. Platform is live.');
+                closeMaintenanceModal();
+                loadDeveloperSystemMetrics();
+            } else {
+                alert(data.message || 'Could not end maintenance.');
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    async function loadDeveloperSystemMetrics() {
+        const sec = document.getElementById('strictDeveloperSection');
+        if (!sec) return;
+
+        try {
+            const res = await fetch('/api/developer/system_metrics');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.metrics) {
+                const m = data.metrics;
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = val;
+                };
+
+                setVal('devMetricTotalUsers', m.total_users ?? 0);
+                setVal('devMetricReaders', m.readers ?? 0);
+                setVal('devMetricAuthors', m.authors ?? 0);
+                setVal('devMetricOfficials', m.officials ?? 0);
+                setVal('devMetricBooks', m.total_books ?? 0);
+                setVal('devMetricPaidBooks', m.paid_books ?? 0);
+                setVal('devMetricQuarantined', m.quarantined_books ?? 0);
+                setVal('devMetricSales', '₹' + Number(m.sales_volume ?? 0).toFixed(2));
+
+                currentMaintenanceMode = Boolean(m.maintenance_mode);
+                const maintBtn = document.getElementById('devMaintenanceBtn');
+                const maintBanner = document.getElementById('devMaintenanceLiveBanner');
+                const maintWindowDisplay = document.getElementById('devMaintenanceWindowDisplay');
+                const btnDisable = document.getElementById('btnDisableMaintenance');
+
+                if (currentMaintenanceMode) {
+                    if (maintBtn) {
+                        maintBtn.className = 'btn-sm btn-green';
+                        maintBtn.textContent = '🔓 Maintenance Active (Configure / End)';
+                    }
+                    if (maintBanner) {
+                        maintBanner.style.display = 'block';
+                    }
+                    if (maintWindowDisplay) {
+                        maintWindowDisplay.textContent = 'Window: ' + (m.maintenance_start || 'Immediate') + ' ➜ ' + (m.maintenance_end || 'TBD') + ' | Reason: ' + (m.maintenance_reason || 'Optimization');
+                    }
+                    if (btnDisable) {
+                        btnDisable.style.display = 'inline-block';
+                    }
+                } else {
+                    if (maintBtn) {
+                        maintBtn.className = 'btn-sm btn-red';
+                        maintBtn.textContent = '🚨 Schedule Maintenance';
+                    }
+                    if (maintBanner) {
+                        maintBanner.style.display = 'none';
+                    }
+                    if (btnDisable) {
+                        btnDisable.style.display = 'none';
+                    }
+                }
+
+                const freezeBtn = document.getElementById('devUploadFreezeBtn');
+                if (freezeBtn) {
+                    if (m.upload_freeze) {
+                        freezeBtn.className = 'btn-sm btn-green';
+                        freezeBtn.textContent = '▶ Unfreeze Uploads';
+                    } else {
+                        freezeBtn.className = 'btn-sm btn-warn';
+                        freezeBtn.textContent = '❄️ Freeze Uploads';
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         updateUploadedCount();
+        loadDeveloperSystemMetrics();
     });
 </script>
 

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduled Maintenance - PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #f59e0b;
+            --primary-dark: #d97706;
+            --bg-dark: #090d16;
+            --card-bg: rgba(17, 24, 39, 0.88);
+            --border-color: rgba(245, 158, 11, 0.3);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #090d16 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+        .maintenance-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            max-width: 680px;
+            width: 100%;
+            padding: 42px 36px;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 50px rgba(245, 158, 11, 0.15);
+            animation: fadeIn 0.5s ease-out;
+            position: relative;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .gear-container {
+            width: 84px;
+            height: 84px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.12));
+            border: 2px solid rgba(245, 158, 11, 0.45);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.6rem;
+            color: #fbbf24;
+            animation: rotateGear 14s linear infinite;
+        }
+        @keyframes rotateGear {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fbbf24;
+            padding: 5px 16px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .description {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .window-box {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1.5px dashed rgba(245, 158, 11, 0.4);
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .window-title {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #fbbf24;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .window-times {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pill {
+            background: rgba(245, 158, 11, 0.18);
+            color: #fde68a;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            font-family: inherit;
+        }
+        .guarantees-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 28px;
+            text-align: left;
+        }
+        .guarantee-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .guarantee-card i {
+            font-size: 1.2rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .guarantee-card strong {
+            font-size: 0.85rem;
+            color: #ffffff;
+            display: block;
+            margin-bottom: 3px;
+        }
+        .guarantee-card p {
+            font-size: 0.76rem;
+            color: #94a3b8;
+            line-height: 1.4;
+            margin: 0;
+        }
+        .footer-links {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+        .tech-bypass-btn {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.2s;
+        }
+        .tech-bypass-btn:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="maintenance-card">
+        <div class="gear-container">
+            <i class="fas fa-screwdriver-wrench"></i>
+        </div>
+        <div class="brand-badge">
+            <span>🛡️</span> PustakVerse Infrastructure
+        </div>
+        <h1>System Under Scheduled Maintenance</h1>
+        <p class="description">
+            {{ reason or "We are performing scheduled infrastructure upgrades, database performance optimizations, and Girionix AI architecture enhancements. Normal public platform access will automatically resume as scheduled." }}
+        </p>
+
+        <div class="window-box">
+            <div class="window-title"><i class="far fa-clock"></i> Scheduled Maintenance Window</div>
+            <div class="window-times">
+                <span class="pill"><i class="fas fa-play" style="font-size: 0.75rem;"></i> From: {{ start or "In Progress" }}</span>
+                <span style="color: #f59e0b; font-weight: 900;">➜</span>
+                <span class="pill"><i class="fas fa-flag-checkered" style="font-size: 0.75rem;"></i> To: {{ end or "Shortly" }}</span>
+            </div>
+        </div>
+
+        <div class="guarantees-grid">
+            <div class="guarantee-card">
+                <i class="fas fa-shield-halved" style="color: #22c55e;"></i>
+                <strong>100% Data &amp; Library Security</strong>
+                <p>All books, user accounts, and personal reading notes are completely secure and intact.</p>
+            </div>
+            <div class="guarantee-card">
+                <i class="fas fa-bolt" style="color: #eab308;"></i>
+                <strong>Girionix AI Scaling</strong>
+                <p>Upgrading inference clusters for ultra-fast reading companion response and zero latency.</p>
+            </div>
+            <div class="guarantee-card">
+                <i class="fas fa-arrows-rotate" style="color: #38bdf8;"></i>
+                <strong>Automatic Re-opening</strong>
+                <p>Platform access will automatically restore the moment maintenance finishes.</p>
+            </div>
+        </div>
+
+        <div class="footer-links">
+            <span>Official Desk: support@pustakverse.com</span>
+            <a href="/login?ref=maintenance_bypass" class="tech-bypass-btn">
+                <span>🔑</span> Technical Staff Access (Developer, CTO, CEO) →
+            </a>
+        </div>
+    </div>
+</body>
+</html>

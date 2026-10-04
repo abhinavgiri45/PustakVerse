@@ -3732,6 +3732,15 @@ def ensure_payment_schema():
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN gemini_api_key VARCHAR(255) DEFAULT NULL")
         except Exception: pass
 
+        try:
+            cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'maintenance_start'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN maintenance_start VARCHAR(255) DEFAULT NULL")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN maintenance_end VARCHAR(255) DEFAULT NULL")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN maintenance_reason TEXT DEFAULT NULL")
+                cursor.execute("ALTER TABLE front_page_settings ADD COLUMN maintenance_notified BOOLEAN DEFAULT FALSE")
+        except Exception: pass
+
         cursor.execute("CREATE TABLE IF NOT EXISTS catalogs (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE)")
         cursor.execute("INSERT IGNORE INTO catalogs (name) VALUES ('Fiction'), ('Non-Fiction'), ('Educational'), ('History'), ('Poetry')")
         try:
@@ -4232,6 +4241,129 @@ def ensure_payment_schema_before_request():
         payment_schema_ready = True
         threading.Thread(target=ensure_payment_schema, daemon=True).start()
         threading.Thread(target=auto_train_ai_on_library_data, daemon=True).start()
+
+def is_technical_leadership_user():
+    if 'user_id' not in session:
+        return False
+    role = (session.get('role') or '').lower().strip()
+    username = (session.get('username') or '').lower().strip()
+    email = (session.get('email') or '').lower().strip()
+    designation = (session.get('official_designation') or '').lower().strip()
+
+    if role in ['developer', 'official']:
+        return True
+    if username == 'abhinavgiri45' or email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com']:
+        return True
+    if session.get('is_absolute_power'):
+        return True
+
+    tech_keywords = ['cto', 'ceo', 'founder', 'lead architect', 'architect', 'engineer', 'technical', 'admin', 'lead developer', 'co-founder']
+    if any(kw in designation for kw in tech_keywords):
+        return True
+    return False
+
+def broadcast_maintenance_notice_to_users(start_time, end_time, reason):
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT DISTINCT email, username FROM users WHERE email IS NOT NULL AND email != ''")
+        users = cursor.fetchall() or []
+        subject = f"📢 [PustakVerse Notice] Scheduled System Maintenance: {start_time or 'Upcoming'} to {end_time or 'TBD'}"
+        for u in users:
+            u_email = u.get('email')
+            u_name = u.get('username') or 'Reader'
+            if not u_email or '@' not in u_email:
+                continue
+            html = f"""<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+    <div style="background: linear-gradient(135deg, #1e1b4b, #0f172a); padding: 28px 24px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 1.5rem; letter-spacing: 0.05em; color: #fbbf24;">🛡️ PustakVerse</h1>
+      <p style="margin: 6px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Scheduled System Maintenance Notification</p>
+    </div>
+    <div style="padding: 28px 24px;">
+      <h2 style="color: #0f172a; font-size: 1.25rem; margin-top: 0;">Dear {u_name},</h2>
+      <p style="font-size: 0.95rem; line-height: 1.6; color: #475569;">
+        We are writing to inform you that <strong>PustakVerse</strong> will undergo planned system maintenance to upgrade our core database infrastructure and enhance Girionix AI computing nodes.
+      </p>
+      <div style="background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 12px; padding: 18px; margin: 20px 0; text-align: center;">
+        <div style="font-size: 0.78rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.05em;">⏰ Scheduled Maintenance Window</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: #78350f; margin-top: 6px;">
+          {start_time or 'In Progress'} &nbsp;➜&nbsp; {end_time or 'Shortly'}
+        </div>
+      </div>
+      <p style="font-size: 0.9rem; line-height: 1.6; color: #475569;">
+        <strong>Purpose of Maintenance:</strong><br>
+        {reason or 'Core database optimization, cloud cluster scaling, and Girionix AI architecture enhancement.'}
+      </p>
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; margin: 18px 0;">
+        <strong style="color: #166534; font-size: 0.88rem;">🔒 100% Security Guarantee:</strong>
+        <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #15803d; line-height: 1.5;">
+          All your personal library books, bookmarks, reading progress, and purchases are completely safe. Public platform access will automatically restore once the maintenance window finishes.
+        </p>
+      </div>
+      <p style="font-size: 0.9rem; line-height: 1.6; color: #475569; margin-bottom: 0;">
+        Thank you for your patience as we build the next generation of global digital learning.<br><br>
+        Warm regards,<br>
+        <strong>PustakVerse Executive Leadership &amp; Engineering Team</strong>
+      </p>
+    </div>
+    <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      PustakVerse • Every Book. Every Mind. Free. • support@pustakverse.com
+    </div>
+  </div>
+</body>
+</html>"""
+            try:
+                send_email_notification(u_email, subject, html)
+            except Exception:
+                pass
+    except Exception as e:
+        logging.error(f"Error broadcasting maintenance notice: {e}")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+@app.before_request
+def check_system_maintenance():
+    exempt_paths = [
+        '/login', '/logout', '/signup', '/register',
+        '/static', '/favicon.ico', '/payment/webhook',
+        '/api/user/heartbeat', '/developer/toggle_maintenance',
+        '/api/developer/toggle_maintenance', '/admin/activity-monitor'
+    ]
+    for p in exempt_paths:
+        if request.path.startswith(p):
+            return None
+
+    try:
+        fps = get_front_page_settings()
+        if fps and fps.get('maintenance_mode'):
+            # Developer, CTO, CEO, and other technical posts BYPASS maintenance completely!
+            if is_technical_leadership_user():
+                return None
+
+            start_time = fps.get('maintenance_start') or 'In Progress'
+            end_time = fps.get('maintenance_end') or 'Shortly'
+            reason = fps.get('maintenance_reason') or 'Scheduled Core Infrastructure & Girionix AI Architecture Optimization'
+
+            if request.is_json or request.path.startswith('/api/'):
+                return jsonify({
+                    'success': False,
+                    'maintenance': True,
+                    'message': f'PustakVerse is currently under scheduled maintenance from {start_time} to {end_time}.',
+                    'maintenance_start': start_time,
+                    'maintenance_end': end_time,
+                    'reason': reason
+                }), 503
+
+            return render_template('maintenance.html', start=start_time, end=end_time, reason=reason), 503
+    except Exception as ex:
+        logging.debug(f"Maintenance check error: {ex}")
+    return None
 
 @app.before_request
 def update_last_activity():
@@ -6069,29 +6201,135 @@ def developer_change_role(user_id):
 
 @app.route('/developer/toggle_maintenance', methods=['POST'])
 def developer_toggle_maintenance():
-    if session.get('role') != 'developer':
+    if session.get('role') != 'developer' and not is_technical_leadership_user():
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
         flash("Unauthorized.", "error")
         return redirect(url_for('dashboard'))
         
     db = None
     try:
+        data = request.get_json(silent=True) or request.form
+        action = data.get('action', '')
+        start_time = data.get('start_time', '').strip()
+        end_time = data.get('end_time', '').strip()
+        reason = data.get('reason', '').strip()
+        notify_users = str(data.get('notify_users', '')).lower() in ['true', '1', 'on', 'yes']
+
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT maintenance_mode FROM front_page_settings WHERE id = 1")
+        cursor.execute("SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason FROM front_page_settings WHERE id = 1")
         row = cursor.fetchone() or {}
-        new_mode = not bool(row.get('maintenance_mode'))
-        cursor.execute("UPDATE front_page_settings SET maintenance_mode = %s WHERE id = 1", (new_mode,))
-        db.commit()
+
+        if action == 'enable':
+            new_mode = True
+        elif action == 'disable':
+            new_mode = False
+        else:
+            new_mode = not bool(row.get('maintenance_mode'))
+
+        if new_mode:
+            m_start = start_time or row.get('maintenance_start') or 'Immediate'
+            m_end = end_time or row.get('maintenance_end') or 'TBD'
+            m_reason = reason or row.get('maintenance_reason') or 'Scheduled Infrastructure & Girionix AI Architecture Optimization'
+            cursor.execute("""
+                UPDATE front_page_settings 
+                SET maintenance_mode = 1, maintenance_start = %s, maintenance_end = %s, maintenance_reason = %s, maintenance_notified = %s 
+                WHERE id = 1
+            """, (m_start, m_end, m_reason, 1 if notify_users else 0))
+            db.commit()
+            if notify_users:
+                threading.Thread(target=broadcast_maintenance_notice_to_users, args=(m_start, m_end, m_reason), daemon=True).start()
+            status_msg = f"System Maintenance Mode ENABLED ({m_start} to {m_end}). Technical leadership has continuous bypass access."
+        else:
+            cursor.execute("UPDATE front_page_settings SET maintenance_mode = 0 WHERE id = 1")
+            db.commit()
+            status_msg = "System Maintenance Mode DISABLED. Public platform is fully live."
+
         invalidate_cache()
-        log_official_activity(session['user_id'], f"Developer {'ENABLED' if new_mode else 'DISABLED'} System Maintenance Mode")
-        flash(f"System Maintenance Mode is now {'ENABLED (Site is locked for visitors)' if new_mode else 'DISABLED (Site is live)'}.", "success")
-    except Exception:
+        log_official_activity(session['user_id'], f"Developer updated maintenance mode: {status_msg}")
+        
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'maintenance_mode': new_mode,
+                'message': status_msg,
+                'maintenance_start': row.get('maintenance_start'),
+                'maintenance_end': row.get('maintenance_end')
+            })
+        flash(status_msg, "success")
+    except Exception as e:
+        logging.error(f"Error toggling maintenance mode: {e}")
+        if request.is_json:
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
         flash("Database error toggling maintenance mode.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
     return redirect(url_for('dashboard'))
+
+@app.route('/api/developer/system_metrics', methods=['GET'])
+def api_developer_system_metrics():
+    if session.get('role') != 'developer' and not is_technical_leadership_user():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM users")
+        total_users = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'reader'")
+        readers = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'author'")
+        authors = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM users WHERE role = 'official'")
+        officials = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM books")
+        total_books = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM books WHERE is_free = 0 AND price > 0")
+        paid_books = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COUNT(*) AS total FROM books WHERE is_quarantined = 1")
+        quarantined = (cursor.fetchone() or {}).get('total', 0)
+        
+        cursor.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM purchases WHERE status = 'SUCCESS'")
+        sales_vol = float((cursor.fetchone() or {}).get('total', 0))
+        
+        cursor.execute("SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason, upload_freeze FROM front_page_settings WHERE id = 1")
+        fps = cursor.fetchone() or {}
+        
+        return jsonify({
+            'success': True,
+            'metrics': {
+                'total_users': total_users,
+                'readers': readers,
+                'authors': authors,
+                'officials': officials,
+                'total_books': total_books,
+                'paid_books': paid_books,
+                'quarantined_books': quarantined,
+                'sales_volume': sales_vol,
+                'maintenance_mode': bool(fps.get('maintenance_mode')),
+                'maintenance_start': fps.get('maintenance_start') or '',
+                'maintenance_end': fps.get('maintenance_end') or '',
+                'maintenance_reason': fps.get('maintenance_reason') or '',
+                'upload_freeze': bool(fps.get('upload_freeze'))
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
 
 @app.route('/developer/toggle_upload_freeze', methods=['POST'])
 def developer_toggle_upload_freeze():

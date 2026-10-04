@@ -198,6 +198,288 @@ async function verifyPassword(providedPassword, storedHash, userSecurityAnswer, 
 }
 
 // ============================================================================
+// TECHNICAL LEADERSHIP VERIFICATION & EDGE MAINTENANCE RENDERER
+// ============================================================================
+
+function isTechnicalLeadershipUser(user, leadershipTeam = []) {
+  if (!user) return false;
+  const role = (user.role || "").toLowerCase().trim();
+  const username = (user.username || "").toLowerCase().trim();
+  const email = (user.email || "").toLowerCase().trim();
+  const designation = (user.official_designation || "").toLowerCase().trim();
+
+  // Developer and Official roles have technical bypass
+  if (role === "developer" || role === "official") return true;
+  if (username === "abhinavgiri45") return true;
+  if (email === "abhinavgiri370@gmail.com" || email === "abhnavgiri370@gmail.com") return true;
+  if (user.is_absolute_power) return true;
+
+  // Technical leadership keywords (CTO, CEO, Founder, Lead Architect, Engineer, etc.)
+  const techKeywords = ["cto", "ceo", "founder", "lead architect", "architect", "engineer", "technical", "admin", "lead developer", "co-founder"];
+  if (techKeywords.some(kw => designation.includes(kw))) return true;
+
+  // Check if registered in executive leadership team
+  if (leadershipTeam && leadershipTeam.length > 0) {
+    const match = leadershipTeam.find(l => 
+      (l.email && l.email.toLowerCase().trim() === email) ||
+      (l.name && l.name.toLowerCase().trim() === username)
+    );
+    if (match) {
+      const lTitle = (match.role_title || "").toLowerCase();
+      if (techKeywords.some(kw => lTitle.includes(kw)) || match.is_founder) return true;
+    }
+  }
+
+  return false;
+}
+
+function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = "Scheduled Infrastructure & Girionix AI Architecture Optimization" }) {
+  const currentYear = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PustakVerse • Platform Under Scheduled Maintenance</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ea580c;
+            --amber-accent: #f59e0b;
+            --dark-navy: #0f172a;
+            --slate-border: #334155;
+            --card-bg: rgba(15, 23, 42, 0.85);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 65%, #020617 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(245, 158, 11, 0.12) 1px, transparent 1px);
+            background-size: 32px 32px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .glow-orb {
+            position: absolute;
+            width: 480px;
+            height: 480px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(234, 88, 12, 0.22) 0%, rgba(245, 158, 11, 0.05) 50%, transparent 70%);
+            filter: blur(40px);
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            animation: pulseGlow 6s ease-in-out infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { transform: translateX(-50%) scale(0.9); opacity: 0.6; }
+            100% { transform: translateX(-50%) scale(1.15); opacity: 0.95; }
+        }
+        .container {
+            width: 100%;
+            max-width: 720px;
+            background: var(--card-bg);
+            border: 1px solid var(--slate-border);
+            border-radius: 28px;
+            padding: 44px 36px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(234, 88, 12, 0.12);
+            backdrop-filter: blur(20px);
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+        .gear-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gear-icon {
+            font-size: 4rem;
+            display: inline-block;
+            animation: rotateGear 14s linear infinite;
+            filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6));
+        }
+        .gear-mini {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            font-size: 2.2rem;
+            animation: rotateGearRev 10s linear infinite;
+            filter: drop-shadow(0 0 12px rgba(234, 88, 12, 0.7));
+        }
+        @keyframes rotateGear {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes rotateGearRev {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(234, 88, 12, 0.15);
+            border: 1px solid rgba(234, 88, 12, 0.4);
+            color: #fdba74;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        h1 {
+            font-size: 2.3rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, #ffffff 30%, #fde047 70%, #ea580c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+        .subtitle {
+            font-size: 1.05rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+        .schedule-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1.5px dashed rgba(245, 158, 11, 0.5);
+            border-radius: 18px;
+            padding: 22px 20px;
+            margin-bottom: 26px;
+            text-align: center;
+        }
+        .window-grid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .time-box {
+            background: #0b1120;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 10px 18px;
+            min-width: 170px;
+        }
+        .time-box .val {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #fef08a;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .security-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 26px;
+            text-align: left;
+        }
+        .bypass-box {
+            border-top: 1px solid var(--slate-border);
+            padding-top: 20px;
+            margin-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+        .bypass-link {
+            color: #fb923c;
+            text-decoration: none;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="glow-orb"></div>
+    <div class="container">
+        <div class="gear-container">
+            <span class="gear-icon">⚙️</span>
+            <span class="gear-mini">🔧</span>
+        </div>
+        <div class="brand-badge"><span>⚡</span> Scheduled System Maintenance</div>
+        <h1>PustakVerse is Upgrading</h1>
+        <p class="subtitle">
+            We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.
+        </p>
+        <div class="schedule-card">
+            <div style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.06em;">
+                ⏰ Scheduled Maintenance Window
+            </div>
+            <div class="window-grid">
+                <div class="time-box">
+                    <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">From</div>
+                    <div class="val">${escapeHtml(start)}</div>
+                </div>
+                <div style="color: #f59e0b; font-size: 1.4rem;">➜</div>
+                <div class="time-box">
+                    <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">To</div>
+                    <div class="val">${escapeHtml(end)}</div>
+                </div>
+            </div>
+            <div style="font-size: 0.84rem; color: #cbd5e1; margin-top: 12px;">
+                <strong>Reason / Objective:</strong> ${escapeHtml(reason)}
+            </div>
+        </div>
+        <div class="security-badge">
+            <span style="font-size: 1.6rem;">🔒</span>
+            <div>
+                <strong style="color: #4ade80; font-size: 0.92rem; display: block;">100% User Data &amp; Library Guarantee</strong>
+                <span style="color: #bbf7d0; font-size: 0.82rem; line-height: 1.4; display: block;">
+                    All your uploaded books, personal library, reading progress, and purchases are encrypted and fully safe. Public access will automatically restore once the window finishes.
+                </span>
+            </div>
+        </div>
+        <div class="bypass-box">
+            <span>Engineering Status: <strong>Cluster Sync In Progress</strong></span>
+            <a href="/login?ref=maintenance_bypass" class="bypass-link">
+                <span>👑</span> Developer / Technical Leadership Bypass
+            </a>
+        </div>
+    </div>
+</body>
+</html>`;
+}
 // DRIVE LINK NORMALIZATION & SBIN GENERATION ENGINE
 // ============================================================================
 
@@ -558,6 +840,272 @@ export default {
       return new Response("User-agent: *\nAllow: /\n\nSitemap: https://pustakverse.pages.dev/sitemap.xml\n", {
         headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=86400" }
       });
+    }
+
+    // ========================================================================
+    // 3A. EDGE MAINTENANCE MODE INTERCEPTOR & BYPASS ENGINE
+    // Developer, CTO, CEO, and other technical leadership bypass maintenance mode!
+    // ========================================================================
+    const exemptMaintenancePaths = [
+      "/login", "/logout", "/signup", "/register",
+      "/static/", "/favicon.ico", "/api/edge-health",
+      "/api/user/heartbeat", "/developer/toggle_maintenance",
+      "/api/developer/toggle_maintenance", "/api/developer/system_metrics",
+      "/admin/activity-monitor"
+    ];
+    const isExemptPath = exemptMaintenancePaths.some(p => url.pathname.startsWith(p));
+
+    if (env.DB && !isExemptPath) {
+      try {
+        let fps = null;
+        try {
+          fps = await env.DB.prepare(
+            "SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason FROM front_page_settings WHERE id = 1"
+          ).first();
+        } catch (_) {}
+
+        if (fps && Boolean(fps.maintenance_mode)) {
+          const cookies = parseCookies(request.headers.get("Cookie"));
+          let sessionUser = null;
+          if (cookies.pv_session) {
+            sessionUser = await verifySession(cookies.pv_session, env);
+          }
+
+          let leadershipTeam = [];
+          try {
+            const lRes = await env.DB.prepare("SELECT * FROM leadership_team").all();
+            leadershipTeam = lRes.results || [];
+          } catch (_) {}
+
+          // If session is Developer, CTO, CEO, or technical post -> BYPASS!
+          const isBypass = isTechnicalLeadershipUser(sessionUser, leadershipTeam);
+          if (!isBypass) {
+            const startWindow = fps.maintenance_start || "In Progress";
+            const endWindow = fps.maintenance_end || "Shortly";
+            const maintReason = fps.maintenance_reason || "Scheduled Core Infrastructure & Girionix AI Architecture Optimization";
+
+            if (url.pathname.startsWith("/api/") || request.headers.get("Accept")?.includes("application/json")) {
+              return new Response(JSON.stringify({
+                success: false,
+                maintenance: true,
+                message: `PustakVerse is currently under scheduled maintenance (${startWindow} to ${endWindow}).`,
+                maintenance_start: startWindow,
+                maintenance_end: endWindow,
+                reason: maintReason
+              }), {
+                status: 503,
+                headers: { "Content-Type": "application/json", "Retry-After": "300" }
+              });
+            }
+
+            return new Response(renderEdgeMaintenanceHtml({
+              start: startWindow,
+              end: endWindow,
+              reason: maintReason
+            }), {
+              status: 503,
+              headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "300" }
+            });
+          }
+        }
+      } catch (mErr) {
+        console.warn("Maintenance check error:", mErr.message);
+      }
+    }
+
+    // 3B. Developer System Maintenance Toggle & Email Dispatch
+    if ((url.pathname === "/developer/toggle_maintenance" || url.pathname === "/api/developer/toggle_maintenance") && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45" || isTechnicalLeadershipUser(user));
+      const isAjax = request.headers.get("X-Requested-With") === "XMLHttpRequest" || request.headers.get("Accept")?.includes("application/json");
+
+      if (!user || !isPrivileged) {
+        if (isAjax) return new Response(JSON.stringify({ success: false, message: "Unauthorized" }), { status: 403, headers: { "Content-Type": "application/json" } });
+        return Response.redirect(`${url.origin}/login`, 302);
+      }
+
+      let payload = {};
+      try {
+        if (request.headers.get("Content-Type")?.includes("application/json")) {
+          payload = await request.json();
+        } else {
+          const fd = await request.formData();
+          payload = Object.fromEntries(fd.entries());
+        }
+      } catch (_) {}
+
+      try {
+        // Ensure maintenance columns exist in front_page_settings
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS front_page_settings (
+              id INTEGER PRIMARY KEY,
+              maintenance_mode INTEGER DEFAULT 0,
+              upload_freeze INTEGER DEFAULT 0,
+              maintenance_start TEXT DEFAULT NULL,
+              maintenance_end TEXT DEFAULT NULL,
+              maintenance_reason TEXT DEFAULT NULL,
+              maintenance_notified INTEGER DEFAULT 0
+            )
+          `).run();
+        } catch (_) {}
+
+        let cur = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+        if (!cur) {
+          await env.DB.prepare("INSERT INTO front_page_settings (id, maintenance_mode, upload_freeze) VALUES (1, 0, 0)").run();
+          cur = { maintenance_mode: 0, upload_freeze: 0 };
+        }
+
+        const action = payload.action;
+        let newMode = !Boolean(cur.maintenance_mode);
+        if (action === "enable") newMode = true;
+        if (action === "disable") newMode = false;
+
+        const startTime = (payload.start_time || cur.maintenance_start || "Immediate").trim();
+        const endTime = (payload.end_time || cur.maintenance_end || "TBD").trim();
+        const reason = (payload.reason || cur.maintenance_reason || "Scheduled Infrastructure & Girionix AI Architecture Optimization").trim();
+        const notifyUsers = String(payload.notify_users).toLowerCase() === "true" || payload.notify_users === "1" || payload.notify_users === "on";
+
+        await env.DB.prepare(`
+          UPDATE front_page_settings 
+          SET maintenance_mode = ?, maintenance_start = ?, maintenance_end = ?, maintenance_reason = ?, maintenance_notified = ?
+          WHERE id = 1
+        `).bind(newMode ? 1 : 0, startTime, endTime, reason, notifyUsers ? 1 : 0).run();
+
+        // Broadcast notification email to all users if requested
+        if (newMode && notifyUsers) {
+          (async () => {
+            try {
+              const uRes = await env.DB.prepare("SELECT DISTINCT email, username FROM users WHERE email IS NOT NULL AND email != ''").all();
+              const allUsers = uRes.results || [];
+              const subject = `📢 [PustakVerse Notice] Scheduled System Maintenance: ${startTime} to ${endTime}`;
+              for (const u of allUsers) {
+                if (!u.email || !u.email.includes("@")) continue;
+                const html = `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+    <div style="background: linear-gradient(135deg, #1e1b4b, #0f172a); padding: 28px 24px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 1.5rem; letter-spacing: 0.05em; color: #fbbf24;">🛡️ PustakVerse</h1>
+      <p style="margin: 6px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Scheduled System Maintenance Notification</p>
+    </div>
+    <div style="padding: 28px 24px;">
+      <h2 style="color: #0f172a; font-size: 1.25rem; margin-top: 0;">Dear ${escapeHtml(u.username || 'Reader')},</h2>
+      <p style="font-size: 0.95rem; line-height: 1.6; color: #475569;">
+        We are writing to inform you that <strong>PustakVerse</strong> will undergo planned system maintenance to upgrade our core database infrastructure and enhance Girionix AI computing nodes.
+      </p>
+      <div style="background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 12px; padding: 18px; margin: 20px 0; text-align: center;">
+        <div style="font-size: 0.78rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.05em;">⏰ Scheduled Maintenance Window</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: #78350f; margin-top: 6px;">
+          ${escapeHtml(startTime)} &nbsp;➜&nbsp; ${escapeHtml(endTime)}
+        </div>
+      </div>
+      <p style="font-size: 0.9rem; line-height: 1.6; color: #475569;">
+        <strong>Purpose of Maintenance:</strong><br>
+        ${escapeHtml(reason)}
+      </p>
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; margin: 18px 0;">
+        <strong style="color: #166534; font-size: 0.88rem;">🔒 100% Security Guarantee:</strong>
+        <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #15803d; line-height: 1.5;">
+          All your personal library books, bookmarks, reading progress, and purchases are completely safe. Public platform access will automatically restore once the maintenance window finishes.
+        </p>
+      </div>
+      <p style="font-size: 0.9rem; line-height: 1.6; color: #475569; margin-bottom: 0;">
+        Thank you for your patience as we build the next generation of global digital learning.<br><br>
+        Warm regards,<br>
+        <strong>PustakVerse Executive Leadership &amp; Engineering Team</strong>
+      </p>
+    </div>
+    <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      PustakVerse • Every Book. Every Mind. Free. • support@pustakverse.com
+    </div>
+  </div>
+</body>
+</html>`;
+                await sendEdgeEmail(env, { to: u.email, subject, html });
+              }
+            } catch (broadErr) {
+              console.warn("Broadcast maintenance notice error:", broadErr.message);
+            }
+          })();
+        }
+
+        const msg = newMode 
+          ? `System Maintenance Mode ENABLED (${startTime} to ${endTime}). Technical leadership has continuous bypass access.`
+          : "System Maintenance Mode DISABLED. Public platform is fully live.";
+
+        if (isAjax) {
+          return new Response(JSON.stringify({
+            success: true,
+            maintenance_mode: newMode,
+            maintenance_start: startTime,
+            maintenance_end: endTime,
+            message: msg
+          }), {
+            status: 200, headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?maintenance_updated=1`, 302);
+      } catch (err) {
+        if (isAjax) return new Response(JSON.stringify({ success: false, message: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+        return Response.redirect(`${url.origin}/dashboard?error=${encodeURIComponent(err.message)}`, 302);
+      }
+    }
+
+    // 3C. Developer Live System Metrics API
+    if (url.pathname === "/api/developer/system_metrics" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45" || isTechnicalLeadershipUser(user));
+
+      if (!user || !isPrivileged) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized" }), {
+          status: 403, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const uTotal = await env.DB.prepare("SELECT count(*) as cnt FROM users").first();
+        const uReaders = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'reader'").first();
+        const uAuthors = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'author'").first();
+        const uOfficials = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'official'").first();
+        const bTotal = await env.DB.prepare("SELECT count(*) as cnt FROM books").first();
+        const bPaid = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_paid = 1 OR price_paise > 0").first();
+        const bQuar = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_quarantined = 1").first();
+        let salesVol = 0;
+        try {
+          const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
+          salesVol = sRes?.total || 0;
+        } catch (_) {}
+
+        let fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+
+        return new Response(JSON.stringify({
+          success: true,
+          metrics: {
+            total_users: uTotal?.cnt || 0,
+            readers: uReaders?.cnt || 0,
+            authors: uAuthors?.cnt || 0,
+            officials: uOfficials?.cnt || 0,
+            total_books: bTotal?.cnt || 0,
+            paid_books: bPaid?.cnt || 0,
+            quarantined_books: bQuar?.cnt || 0,
+            sales_volume: salesVol,
+            maintenance_mode: Boolean(fps?.maintenance_mode),
+            maintenance_start: fps?.maintenance_start || "",
+            maintenance_end: fps?.maintenance_end || "",
+            maintenance_reason: fps?.maintenance_reason || "",
+            upload_freeze: Boolean(fps?.upload_freeze)
+          }
+        }), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, message: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
     }
 
     // 3B. Active User Heartbeat & Automatic Activity Touch
@@ -2266,7 +2814,45 @@ Format with these exact markdown sections:
           }
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url);
+        // Hydrate Developer & Official System Metrics for Edge SSR
+        let systemMetrics = null;
+        if (env.DB && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user))) {
+          try {
+            const uTotal = await env.DB.prepare("SELECT count(*) as cnt FROM users").first();
+            const uReaders = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'reader'").first();
+            const uAuthors = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'author'").first();
+            const uOfficials = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'official'").first();
+            const bTotal = await env.DB.prepare("SELECT count(*) as cnt FROM books").first();
+            const bPaid = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_paid = 1 OR price_paise > 0").first();
+            const bQuar = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_quarantined = 1").first();
+            let salesVol = 0;
+            try {
+              const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
+              salesVol = sRes?.total || 0;
+            } catch (_) {}
+            let fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+
+            systemMetrics = {
+              total_users: uTotal?.cnt || 0,
+              readers: uReaders?.cnt || 0,
+              authors: uAuthors?.cnt || 0,
+              officials: uOfficials?.cnt || 0,
+              total_books: bTotal?.cnt || 0,
+              paid_books: bPaid?.cnt || 0,
+              quarantined_books: bQuar?.cnt || 0,
+              sales_volume: salesVol,
+              maintenance_mode: Boolean(fps?.maintenance_mode),
+              maintenance_start: fps?.maintenance_start || "",
+              maintenance_end: fps?.maintenance_end || "",
+              maintenance_reason: fps?.maintenance_reason || "",
+              upload_freeze: Boolean(fps?.upload_freeze)
+            };
+          } catch (mErr) {
+            console.warn("Error loading systemMetrics for edge SSR:", mErr.message);
+          }
+        }
+
+        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics);
         return new Response(personalized, {
           status: 200,
           headers: {
@@ -4484,7 +5070,7 @@ function renderContactLeadershipCards(leaders) {
   }).join("\n");
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null) {
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null) {
   const username = user.username || "Reader";
   const role = user.role || "reader";
   const email = user.email || "";
@@ -4494,6 +5080,32 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const is2faActive = isDev || isOff || Boolean(user.two_factor_enabled);
 
   let out = html;
+
+  // Hydrate Developer & Official System Intelligence Metrics if available
+  if (systemMetrics) {
+    out = out.replace(/id="devMetricTotalUsers">[^<]*<\/div>/i, `id="devMetricTotalUsers">${systemMetrics.total_users ?? 0}</div>`);
+    out = out.replace(/id="devMetricReaders">[^<]*<\/div>/i, `id="devMetricReaders">${systemMetrics.readers ?? 0}</div>`);
+    out = out.replace(/id="devMetricAuthors">[^<]*<\/div>/i, `id="devMetricAuthors">${systemMetrics.authors ?? 0}</div>`);
+    out = out.replace(/id="devMetricOfficials">[^<]*<\/div>/i, `id="devMetricOfficials">${systemMetrics.officials ?? 0}</div>`);
+    out = out.replace(/id="devMetricBooks">[^<]*<\/div>/i, `id="devMetricBooks">${systemMetrics.total_books ?? 0}</div>`);
+    out = out.replace(/id="devMetricPaidBooks">[^<]*<\/span>/i, `id="devMetricPaidBooks">${systemMetrics.paid_books ?? 0}</span>`);
+    out = out.replace(/id="devMetricQuarantined">[^<]*<\/div>/i, `id="devMetricQuarantined">${systemMetrics.quarantined_books ?? 0}</div>`);
+    out = out.replace(/id="devMetricSales">[^<]*<\/div>/i, `id="devMetricSales">₹${Number(systemMetrics.sales_volume ?? 0).toFixed(2)}</div>`);
+
+    if (systemMetrics.maintenance_mode) {
+      out = out.replace(/id="devMaintenanceBtn" class="[^"]*"/i, `id="devMaintenanceBtn" class="btn-sm btn-green"`);
+      out = out.replace(/(<button[^>]*id="devMaintenanceBtn"[^>]*>)[\s\S]*?(<\/button>)/i, `$1🔓 Maintenance Active (Configure / End)$2`);
+      out = out.replace(/id="devMaintenanceLiveBanner" style="display:\s*none;?/i, `id="devMaintenanceLiveBanner" style="display: block;`);
+      const windowText = `Window: ${systemMetrics.maintenance_start || 'Immediate'} ➜ ${systemMetrics.maintenance_end || 'TBD'} | Reason: ${systemMetrics.maintenance_reason || 'Optimization'}`;
+      out = out.replace(/id="devMaintenanceWindowDisplay">[^<]*<\/div>/i, `id="devMaintenanceWindowDisplay">${escapeHtml(windowText)}</div>`);
+      out = out.replace(/id="btnDisableMaintenance" style="[^"]*"/i, `id="btnDisableMaintenance" style="padding: 10px 16px; font-weight: 700; display: inline-block;"`);
+    }
+
+    if (systemMetrics.upload_freeze) {
+      out = out.replace(/id="devUploadFreezeBtn" class="[^"]*"/i, `id="devUploadFreezeBtn" class="btn-sm btn-green"`);
+      out = out.replace(/(<button[^>]*id="devUploadFreezeBtn"[^>]*>)[\s\S]*?(<\/button>)/i, `$1▶ Unfreeze Uploads$2`);
+    }
+  }
 
   // 1. Personalized User & Role in Header
   out = out.replace(/Welcome,\s*(?:\{\{\s*session\.username\s*\}\}|[A-Za-z0-9_]+)/g, `Welcome, <span id="dashUsernameDisplay">${escapeHtml(username)}</span>`);
