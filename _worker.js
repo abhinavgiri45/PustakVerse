@@ -731,6 +731,57 @@ export default {
       });
     }
 
+    // 4E-bis. Promotional Coupon Eligible Books: GET /api/coupon_eligible_books
+    if (url.pathname === "/api/coupon_eligible_books" && request.method === "GET") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized. Please login.", books: [] }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: true, books: [], is_dev: false }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const username = (user.username || "").toLowerCase();
+        const isDev = user.role === "developer" || username === "abhinavgiri45";
+        let books = [];
+        if (isDev) {
+          // Developers can create coupons for ALL books on the platform
+          const res = await env.DB.prepare(
+            `SELECT b.id, b.title, b.catalog, b.cover_image, b.is_paid, b.price_paise, b.price, u.username as author_name, b.author_id
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             ORDER BY b.id DESC LIMIT 300`
+          ).all();
+          books = res.results || [];
+        } else {
+          // Authors and Officials can only create coupons for their own self-published books
+          const res = await env.DB.prepare(
+            `SELECT b.id, b.title, b.catalog, b.cover_image, b.is_paid, b.price_paise, b.price, u.username as author_name, b.author_id
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             WHERE b.author_id = ? OR LOWER(COALESCE(u.username, '')) = ? OR LOWER(COALESCE(b.author_name, '')) = ?
+             ORDER BY b.id DESC LIMIT 150`
+          ).bind(user.id, username, username).all();
+          books = res.results || [];
+        }
+
+        return new Response(JSON.stringify({ success: true, is_dev: isDev, books }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, message: err.message, books: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // 4F. Author Promotional Coupons: /author/coupons (GET, POST, DELETE)
     if (url.pathname === "/author/coupons") {
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -746,8 +797,9 @@ export default {
           return new Response(JSON.stringify({ success: true, coupons: [] }), { headers: { "Content-Type": "application/json" } });
         }
         try {
-          const isPrivileged = user.role === "developer" || user.role === "official";
-          const query = isPrivileged
+          const username = (user.username || "").toLowerCase();
+          const isDev = user.role === "developer" || username === "abhinavgiri45";
+          const query = isDev
             ? `SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.times_used as used_count, b.title as book_title
                FROM author_coupons c
                LEFT JOIN books b ON c.book_id = b.id
@@ -755,9 +807,9 @@ export default {
             : `SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.times_used as used_count, b.title as book_title
                FROM author_coupons c
                JOIN books b ON c.book_id = b.id
-               WHERE c.author_id = ? OR b.author_id = ?
+               WHERE c.author_id = ? OR b.author_id = ? OR LOWER(COALESCE(b.author_name, '')) = ?
                ORDER BY c.id DESC`;
-          const stmt = isPrivileged ? env.DB.prepare(query) : env.DB.prepare(query).bind(user.id, user.id);
+          const stmt = isDev ? env.DB.prepare(query) : env.DB.prepare(query).bind(user.id, user.id, username);
           const res = await stmt.all();
           return new Response(JSON.stringify({ success: true, coupons: res.results || [] }), {
             headers: { "Content-Type": "application/json" }
@@ -788,11 +840,13 @@ export default {
             });
           }
 
-          // Verify book ownership if not developer/official
-          if (user.role !== "developer" && user.role !== "official") {
-            const ownBook = await env.DB.prepare("SELECT id FROM books WHERE id = ? AND author_id = ?").bind(bookId, user.id).first();
+          // Verify book ownership: Developers can create for any book; Authors & Officials can only create for their own self-published books
+          const username = (user.username || "").toLowerCase();
+          const isDev = user.role === "developer" || username === "abhinavgiri45";
+          if (!isDev) {
+            const ownBook = await env.DB.prepare("SELECT id FROM books WHERE id = ? AND (author_id = ? OR LOWER(COALESCE(author_name, '')) = ?)").bind(bookId, user.id, username).first();
             if (!ownBook) {
-              return new Response(JSON.stringify({ success: false, message: "You can only generate promo codes for your own books." }), {
+              return new Response(JSON.stringify({ success: false, message: "You can only generate promo codes for your own self-published books." }), {
                 status: 403, headers: { "Content-Type": "application/json" }
               });
             }
@@ -829,7 +883,9 @@ export default {
             });
           }
 
-          if (user.role === "developer" || user.role === "official") {
+          const username = (user.username || "").toLowerCase();
+          const isDev = user.role === "developer" || username === "abhinavgiri45";
+          if (isDev) {
             await env.DB.prepare("DELETE FROM author_coupons WHERE id = ?").bind(couponId).run();
           } else {
             await env.DB.prepare("DELETE FROM author_coupons WHERE id = ? AND author_id = ?").bind(couponId, user.id).run();
@@ -4493,22 +4549,47 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     const myCount = myBooks.filter(b => b.author_id === user.id || (b.author_name && b.author_name.toLowerCase() === username.toLowerCase())).length;
     out = out.replace(/id="myUploadedCount">0<\/span>/g, `id="myUploadedCount">${myCount}</span>`);
 
-    // 5B. Hydrate Promotional Coupon Book Selector with live paid books
-    const paidBooks = myBooks.filter(b => b.is_paid && (b.author_id === user.id || isDev || isOff));
-    if (paidBooks.length > 0) {
-      const couponBookRows = paidBooks.map(b => `
-        <div class="coupon-book-opt" data-id="${b.id}" data-title="${escapeHtml((b.title || '').toLowerCase())}" onclick="selectCouponBook(this, '${b.id}', '${escapeHtml(b.title)}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
+    // 5B. Hydrate Promotional Coupon Book Selector
+    // Authors & Officials see only self-published books; Developer sees all books
+    const eligibleBooks = isDev
+      ? myBooks
+      : myBooks.filter(b => (String(b.author_id) === String(user.id)) || (b.author_name && b.author_name.toLowerCase() === username.toLowerCase()));
+
+    let couponBookRows = "";
+    if (eligibleBooks.length > 0) {
+      couponBookRows = eligibleBooks.map(b => {
+        const pricePaise = b.price_paise || (b.price ? Math.round(Number(b.price) * 100) : 0);
+        const isPaid = Boolean(b.is_paid === 1 || b.is_paid === true || pricePaise > 0);
+        const priceBadge = isPaid
+          ? `<span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e; font-weight: 700; white-space: nowrap;">₹${(pricePaise / 100).toFixed(2)}</span>`
+          : `<span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: #dcfce7; color: #166534; font-weight: 700; white-space: nowrap;">Free</span>`;
+        const authorSubtitle = (isDev && b.author_name)
+          ? `<span style="font-size: 0.72rem; color: #64748b;">Author: ${escapeHtml(b.author_name)}</span>`
+          : '';
+
+        return `
+        <div class="coupon-book-opt" data-id="${b.id}" data-title="${escapeHtml((b.title || '').toLowerCase())}" data-author="${escapeHtml((b.author_name || '').toLowerCase())}" onclick="selectCouponBook(this, '${b.id}', '${escapeHtml(b.title)}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
           <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
             <span style="font-size: 1rem;">📖</span>
-            <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">${escapeHtml(b.title)}</span>
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
+              <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">${escapeHtml(b.title)}</span>
+              ${authorSubtitle}
+            </div>
           </div>
-          <span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e; font-weight: 700; white-space: nowrap;">
-            ₹${((b.price_paise || 0) / 100).toFixed(2)}
-          </span>
-        </div>
-      `).join("");
-      out = out.replace(/<div id="couponBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="couponBookList" style="max-height: 130px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">${couponBookRows}</div>`);
+          ${priceBadge}
+        </div>`;
+      }).join("") + `
+        <div id="couponNoBooksMsg" style="display: none; padding: 12px; text-align: center; color: #94a3b8; font-size: 0.82rem;">
+          No matching books found.
+        </div>`;
+    } else {
+      couponBookRows = `
+        <div id="couponNoBooksMsg" style="padding: 14px; text-align: center; color: #64748b; font-size: 0.82rem;">
+          ${isDev ? 'No platform books available yet.' : 'No self-published books found yet. Upload a book using "Publish New Book" to create coupons!'}
+        </div>`;
     }
+
+    out = out.replace(/<div id="couponBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="couponBookList" style="max-height: 140px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">${couponBookRows}</div>`);
   }
 
   // 5C. Inject Leadership Table into Executive Leadership Management Suite
@@ -4662,6 +4743,11 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
         return false;
       }
     };
+  }
+
+  // Ensure promotional coupon eligible books are hydrated with accurate role permissions
+  if (typeof window.loadCouponEligibleBooks === 'function') {
+    try { window.loadCouponEligibleBooks(); } catch (e) { console.warn(e); }
   }
 })();
 </script>

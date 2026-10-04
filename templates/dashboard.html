@@ -1321,35 +1321,50 @@
                     <form onsubmit="createAuthorCoupon(event)" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
                         <!-- Book Selection Section -->
                         <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155;">
-                                1. Target Paid Book <span style="color: #ef4444;">*</span>
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: flex; justify-content: space-between; align-items: center;">
+                                <span>1. Target Book for Discount <span style="color: #ef4444;">*</span></span>
+                                <span style="font-size: 0.74rem; font-weight: 600; color: #64748b;">
+                                    {% if session.role == 'developer' %}All Platform Books Mode{% else %}Self-Published Books Mode{% endif %}
+                                </span>
                             </label>
                             <input type="hidden" id="couponBookSelect" required>
                             
                             <!-- Search & Quick Selection -->
                             <div style="position: relative;">
-                                <input type="text" id="couponBookSearch" placeholder="🔍 Type to filter your paid books..." onkeyup="filterCouponBookList()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#cbd5e1'">
+                                <input type="text" id="couponBookSearch" placeholder="{% if session.role == 'developer' %}🔍 Search all platform books by title or author...{% else %}🔍 Type to filter your self-published books...{% endif %}" onkeyup="filterCouponBookList()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#cbd5e1'">
                             </div>
 
                             <!-- Scrollable Book List -->
-                            <div id="couponBookList" style="max-height: 130px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">
-                                {% set paid_books_found = false %}
+                            <div id="couponBookList" style="max-height: 140px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">
+                                {% set eligible_books_found = false %}
                                 {% for b in my_books %}
-                                    {% if b.is_paid %}
-                                    {% set paid_books_found = true %}
-                                    <div class="coupon-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" onclick="selectCouponBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
-                                        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
-                                            <span style="font-size: 1rem;">📖</span>
-                                            <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">{{ b.title }}</span>
+                                    {% set is_mine = (b.author_id == session.user_id) or (user_profile and b.author_id == user_profile.id) or (b.author_name and session.username and b.author_name|lower == session.username|lower) %}
+                                    {% if session.role == 'developer' or is_mine %}
+                                        {% set eligible_books_found = true %}
+                                        {% set price_paise = b.price_paise or 0 %}
+                                        {% set is_paid_flag = b.is_paid or price_paise > 0 %}
+                                        <div class="coupon-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" data-author="{{ (b.author_name or '') | escape | lower }}" onclick="selectCouponBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
+                                            <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                                                <span style="font-size: 1rem;">📖</span>
+                                                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                                    <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">{{ b.title }}</span>
+                                                    {% if session.role == 'developer' and b.author_name %}
+                                                        <span style="font-size: 0.72rem; color: #64748b;">Author: {{ b.author_name }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: {% if is_paid_flag %}#fef3c7{% else %}#dcfce7{% endif %}; color: {% if is_paid_flag %}#92400e{% else %}#166534{% endif %}; font-weight: 700; white-space: nowrap;">
+                                                {% if is_paid_flag %}₹{{ "%.2f"|format(price_paise / 100) }}{% else %}Free{% endif %}
+                                            </span>
                                         </div>
-                                        <span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e; font-weight: 700; white-space: nowrap;">
-                                            ₹{{ (b.price_paise / 100)|round(2) }}
-                                        </span>
-                                    </div>
                                     {% endif %}
                                 {% endfor %}
-                                <div id="couponNoBooksMsg" style="display: none; padding: 12px; text-align: center; color: #94a3b8; font-size: 0.82rem;">
-                                    No matching paid books found.
+                                <div id="couponNoBooksMsg" style="{% if eligible_books_found %}display: none;{% endif %} padding: 14px; text-align: center; color: #64748b; font-size: 0.82rem;">
+                                    {% if session.role == 'developer' %}
+                                        No platform books available yet.
+                                    {% else %}
+                                        No self-published books found yet. Upload a book using "Publish New Book" to create coupons!
+                                    {% endif %}
                                 </div>
                             </div>
 
@@ -3058,7 +3073,8 @@
             let matchCount = 0;
             items.forEach(el => {
                 const title = (el.getAttribute('data-title') || '').toLowerCase();
-                if (!query || title.includes(query)) {
+                const author = (el.getAttribute('data-author') || '').toLowerCase();
+                if (!query || title.includes(query) || author.includes(query)) {
                     el.style.display = 'flex';
                     matchCount++;
                 } else {
@@ -3069,6 +3085,70 @@
             if (noMsg) {
                 noMsg.style.display = matchCount === 0 ? 'block' : 'none';
             }
+        }
+
+        function loadCouponEligibleBooks() {
+            const listContainer = document.getElementById('couponBookList');
+            if (!listContainer) return;
+
+            fetch('/api/coupon_eligible_books')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success || !Array.isArray(data.books)) return;
+                    const books = data.books;
+                    const isDev = !!data.is_dev;
+
+                    const searchInput = document.getElementById('couponBookSearch');
+                    if (searchInput) {
+                        searchInput.placeholder = isDev
+                            ? "🔍 Search all platform books by title or author..."
+                            : "🔍 Type to filter your self-published books...";
+                    }
+
+                    if (books.length === 0) {
+                        listContainer.innerHTML = `
+                            <div id="couponNoBooksMsg" style="padding: 14px; text-align: center; color: #64748b; font-size: 0.82rem;">
+                                ${isDev ? 'No platform books available yet.' : 'No self-published books found yet. Upload a book using "Publish New Book" to create coupons!'}
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    const rowsHtml = books.map(b => {
+                        const pricePaise = b.price_paise || 0;
+                        const isPaid = (b.is_paid === 1 || b.is_paid === true || pricePaise > 0);
+                        const priceBadge = isPaid ? `₹${(pricePaise / 100).toFixed(2)}` : 'Free';
+                        const badgeBg = isPaid ? '#fef3c7' : '#dcfce7';
+                        const badgeColor = isPaid ? '#92400e' : '#166534';
+                        const authorSubtitle = (isDev && b.author_name)
+                            ? `<span style="font-size: 0.72rem; color: #64748b;">Author: ${escapeHtml(b.author_name)}</span>`
+                            : '';
+
+                        return `
+                            <div class="coupon-book-opt" data-id="${b.id}" data-title="${escapeHtml((b.title || '').toLowerCase())}" data-author="${escapeHtml((b.author_name || '').toLowerCase())}" onclick="selectCouponBook(this, '${b.id}', '${escapeHtml(b.title)}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
+                                <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                                    <span style="font-size: 1rem;">📖</span>
+                                    <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                        <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">${escapeHtml(b.title)}</span>
+                                        ${authorSubtitle}
+                                    </div>
+                                </div>
+                                <span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: ${badgeBg}; color: ${badgeColor}; font-weight: 700; white-space: nowrap;">
+                                    ${priceBadge}
+                                </span>
+                            </div>
+                        `;
+                    }).join('');
+
+                    listContainer.innerHTML = rowsHtml + `
+                        <div id="couponNoBooksMsg" style="display: none; padding: 12px; text-align: center; color: #94a3b8; font-size: 0.82rem;">
+                            No matching books found.
+                        </div>
+                    `;
+                })
+                .catch(err => {
+                    console.warn("Could not load coupon books from API, keeping SSR books:", err);
+                });
         }
 
         function selectCouponBook(element, bookId, bookTitle) {
@@ -3220,11 +3300,15 @@
             });
         }
 
-        // Initialize coupons list when dashboard loads
+        // Initialize coupons and eligible books when dashboard loads
         if (typeof document !== 'undefined') {
             document.addEventListener('DOMContentLoaded', () => {
                 loadAuthorCouponsList();
+                loadCouponEligibleBooks();
             });
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                loadCouponEligibleBooks();
+            }
         }
 
         // Official: Announcements

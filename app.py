@@ -8447,22 +8447,78 @@ def api_book_requests():
         if db: db.close()
 
 # ------------------------------------------------------------------------------
-# 2. AUTHOR ENDPOINTS
+# 2. AUTHOR & PROMOTIONAL COUPON ENDPOINTS
 # ------------------------------------------------------------------------------
+@app.route('/api/coupon_eligible_books', methods=['GET'])
+def api_coupon_eligible_books():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized', 'books': []}), 401
+
+    role = session.get('role', 'reader')
+    user_id = session.get('user_id')
+    username = (session.get('username') or '').strip().lower()
+    is_dev = role == 'developer' or username == 'abhinavgiri45' or session.get('is_absolute_power')
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        if is_dev:
+            # Developers can create coupons for ALL books on the platform
+            cursor.execute("""
+                SELECT b.id, b.title, b.catalog, b.cover_image, b.is_paid, b.price_paise, u.username as author_name, b.author_id
+                FROM books b
+                LEFT JOIN users u ON b.author_id = u.id
+                ORDER BY b.id DESC LIMIT 300
+            """)
+        else:
+            # Authors and Officials can only create coupons for their own self-published books
+            cursor.execute("""
+                SELECT b.id, b.title, b.catalog, b.cover_image, b.is_paid, b.price_paise, u.username as author_name, b.author_id
+                FROM books b
+                LEFT JOIN users u ON b.author_id = u.id
+                WHERE b.author_id = %s OR LOWER(COALESCE(u.username, '')) = %s
+                ORDER BY b.id DESC LIMIT 100
+            """, (user_id, username))
+        books = cursor.fetchall()
+        return jsonify({'success': True, 'is_dev': bool(is_dev), 'books': books or []})
+    except Exception as e:
+        logging.error(f"Error fetching coupon eligible books: {e}")
+        return jsonify({'success': False, 'message': str(e), 'books': []}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 @app.route('/author/coupons', methods=['GET', 'POST', 'DELETE'])
 def author_coupons():
-    if session.get('role') not in ['author', 'developer']:
+    if session.get('role') not in ['author', 'developer', 'official']:
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
         
     user_id = session['user_id']
+    is_dev = session.get('role') == 'developer' or (session.get('username') or '').lower() == 'abhinavgiri45'
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         if request.method == 'GET':
-            cursor.execute("SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.used_count, c.expires_at, b.title as book_title FROM book_coupons c JOIN books b ON c.book_id = b.id WHERE b.author_id = %s OR %s = 'developer'", (user_id, session.get('role')))
+            if is_dev:
+                cursor.execute("""
+                    SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.used_count, c.expires_at, b.title as book_title 
+                    FROM book_coupons c 
+                    JOIN books b ON c.book_id = b.id 
+                    ORDER BY c.id DESC
+                """)
+            else:
+                cursor.execute("""
+                    SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.used_count, c.expires_at, b.title as book_title 
+                    FROM book_coupons c 
+                    JOIN books b ON c.book_id = b.id 
+                    WHERE b.author_id = %s 
+                    ORDER BY c.id DESC
+                """, (user_id,))
             coupons = cursor.fetchall()
-            return jsonify({'success': True, 'coupons': coupons})
+            return jsonify({'success': True, 'coupons': coupons or []})
             
         elif request.method == 'POST':
             data = request.json or request.form
@@ -8474,19 +8530,34 @@ def author_coupons():
             if not book_id or not code:
                 return jsonify({'success': False, 'message': 'Book ID and coupon code are required.'}), 400
                 
+            # Verify book ownership if not developer
+            if not is_dev:
+                cursor.execute("SELECT id FROM books WHERE id = %s AND author_id = %s", (book_id, user_id))
+                if not cursor.fetchone():
+                    return jsonify({'success': False, 'message': 'You can only generate promo codes for your own self-published books.'}), 403
+
             cursor.execute("INSERT INTO book_coupons (book_id, code, discount_percent, max_uses) VALUES (%s, %s, %s, %s)", (book_id, code, discount, max_uses))
             db.commit()
             return jsonify({'success': True, 'message': f'Coupon "{code}" created successfully!'})
             
         elif request.method == 'DELETE':
             coupon_id = request.args.get('coupon_id') or (request.json or {}).get('coupon_id')
-            cursor.execute("DELETE FROM book_coupons WHERE id = %s", (coupon_id,))
+            if is_dev:
+                cursor.execute("DELETE FROM book_coupons WHERE id = %s", (coupon_id,))
+            else:
+                cursor.execute("""
+                    DELETE c FROM book_coupons c 
+                    JOIN books b ON c.book_id = b.id 
+                    WHERE c.id = %s AND b.author_id = %s
+                """, (coupon_id, user_id))
             db.commit()
             return jsonify({'success': True, 'message': 'Coupon deleted.'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
-        if db: db.close()
+        if db:
+            try: db.close()
+            except: pass
 
 @app.route('/api/apply_coupon', methods=['POST'])
 def api_apply_coupon():
