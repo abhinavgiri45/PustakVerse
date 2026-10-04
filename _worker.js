@@ -634,6 +634,182 @@ export default {
       });
     }
 
+    // 4F. Author Promotional Coupons: /author/coupons (GET, POST, DELETE)
+    if (url.pathname === "/author/coupons") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized. Please login." }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (request.method === "GET") {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ success: true, coupons: [] }), { headers: { "Content-Type": "application/json" } });
+        }
+        try {
+          const isPrivileged = user.role === "developer" || user.role === "official";
+          const query = isPrivileged
+            ? `SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.times_used as used_count, b.title as book_title
+               FROM author_coupons c
+               LEFT JOIN books b ON c.book_id = b.id
+               ORDER BY c.id DESC`
+            : `SELECT c.id, c.book_id, c.code, c.discount_percent, c.max_uses, c.times_used as used_count, b.title as book_title
+               FROM author_coupons c
+               JOIN books b ON c.book_id = b.id
+               WHERE c.author_id = ? OR b.author_id = ?
+               ORDER BY c.id DESC`;
+          const stmt = isPrivileged ? env.DB.prepare(query) : env.DB.prepare(query).bind(user.id, user.id);
+          const res = await stmt.all();
+          return new Response(JSON.stringify({ success: true, coupons: res.results || [] }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: err.message, coupons: [] }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      if (request.method === "POST") {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ success: false, message: "Database unavailable." }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+        try {
+          const data = await request.json().catch(() => ({}));
+          const bookId = parseInt(data.book_id, 10);
+          const code = (data.code || "").trim().toUpperCase();
+          const discount = Math.max(5, Math.min(90, parseInt(data.discount_percent, 10) || 20));
+          const maxUses = Math.max(1, parseInt(data.max_uses, 10) || 100);
+
+          if (!bookId || !code) {
+            return new Response(JSON.stringify({ success: false, message: "Please select a book and specify a coupon code." }), {
+              status: 400, headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          // Verify book ownership if not developer/official
+          if (user.role !== "developer" && user.role !== "official") {
+            const ownBook = await env.DB.prepare("SELECT id FROM books WHERE id = ? AND author_id = ?").bind(bookId, user.id).first();
+            if (!ownBook) {
+              return new Response(JSON.stringify({ success: false, message: "You can only generate promo codes for your own books." }), {
+                status: 403, headers: { "Content-Type": "application/json" }
+              });
+            }
+          }
+
+          // Insert or update coupon in D1 author_coupons
+          await env.DB.prepare(
+            `INSERT INTO author_coupons (author_id, book_id, code, discount_percent, max_uses, times_used, is_active)
+             VALUES (?, ?, ?, ?, ?, 0, 1)
+             ON CONFLICT(code) DO UPDATE SET discount_percent = excluded.discount_percent, max_uses = excluded.max_uses, book_id = excluded.book_id, is_active = 1`
+          ).bind(user.id, bookId, code, discount, maxUses).run();
+
+          return new Response(JSON.stringify({ success: true, message: `Promo code "${code}" created successfully with ${discount}% discount!` }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: err.message }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      if (request.method === "DELETE") {
+        if (!env.DB) {
+          return new Response(JSON.stringify({ success: false, message: "Database unavailable." }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+        try {
+          const couponId = parseInt(url.searchParams.get("coupon_id"), 10);
+          if (!couponId) {
+            return new Response(JSON.stringify({ success: false, message: "Coupon ID is required." }), {
+              status: 400, headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          if (user.role === "developer" || user.role === "official") {
+            await env.DB.prepare("DELETE FROM author_coupons WHERE id = ?").bind(couponId).run();
+          } else {
+            await env.DB.prepare("DELETE FROM author_coupons WHERE id = ? AND author_id = ?").bind(couponId, user.id).run();
+          }
+
+          return new Response(JSON.stringify({ success: true, message: "Coupon deleted successfully." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: err.message }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+    }
+
+    // 4G. Edge Checkout Apply Coupon: POST /api/apply_coupon
+    if (url.pathname === "/api/apply_coupon" && request.method === "POST") {
+      const data = await request.json().catch(() => ({}));
+      const bookId = parseInt(data.book_id, 10);
+      const code = (data.code || "").trim().toUpperCase();
+
+      if (!bookId || !code) {
+        return new Response(JSON.stringify({ success: false, valid: false, message: "Please enter a valid promo code." }), {
+          status: 400, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, valid: false, message: "Checkout service currently unavailable." }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const coupon = await env.DB.prepare(
+          "SELECT * FROM author_coupons WHERE book_id = ? AND code = ? AND is_active = 1 LIMIT 1"
+        ).bind(bookId, code).first();
+
+        if (!coupon) {
+          return new Response(JSON.stringify({ success: false, valid: false, message: "Invalid promo code for this title." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if ((coupon.times_used || 0) >= (coupon.max_uses || 100)) {
+          return new Response(JSON.stringify({ success: false, valid: false, message: "This promo code has reached its maximum redemptions." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        const book = await env.DB.prepare("SELECT price_paise FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
+        const origPrice = book ? (book.price_paise || 0) : 0;
+        const discountPct = coupon.discount_percent || 20;
+        const newPrice = Math.max(0, Math.floor(origPrice * (100 - discountPct) / 100));
+
+        return new Response(JSON.stringify({
+          success: true,
+          valid: true,
+          code,
+          discount_percent: discountPct,
+          original_price: origPrice,
+          original_price_inr: (origPrice / 100).toFixed(2),
+          discounted_price: newPrice,
+          discounted_price_inr: (newPrice / 100).toFixed(2),
+          message: `🎉 Promo code "${code}" applied! ${discountPct}% discount granted.`
+        }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, valid: false, message: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+
     // ========================================================================
     // 5. SERVERLESS AUTHENTICATION ENGINE (Direct Cloudflare D1 SQL)
     // ========================================================================
@@ -2546,6 +2722,7 @@ export default {
       try {
         const formData = await request.formData().catch(() => new FormData());
         const donationInr = Math.max(0, Math.min(5000, parseInt(formData.get("donation_inr") || "0", 10) || 0));
+        const couponCode = (formData.get("coupon_code") || "").trim().toUpperCase();
 
         const book = await env.DB.prepare(
           `SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret
@@ -2556,6 +2733,23 @@ export default {
           return new Response(JSON.stringify({ success: false, error: "Book not found." }), {
             status: 404, headers: { "Content-Type": "application/json" }
           });
+        }
+
+        let effectiveBookPricePaise = book.price_paise || 0;
+        let appliedCouponId = null;
+
+        if (couponCode) {
+          try {
+            const couponRow = await env.DB.prepare(
+              "SELECT id, discount_percent, max_uses, times_used FROM author_coupons WHERE book_id = ? AND code = ? AND is_active = 1 LIMIT 1"
+            ).bind(targetBookId, couponCode).first();
+
+            if (couponRow && (couponRow.times_used || 0) < (couponRow.max_uses || 100)) {
+              appliedCouponId = couponRow.id;
+              const discountPct = couponRow.discount_percent || 20;
+              effectiveBookPricePaise = Math.max(0, Math.floor(effectiveBookPricePaise * (100 - discountPct) / 100));
+            }
+          } catch (_) {}
         }
 
         let fps = {};
@@ -2569,7 +2763,7 @@ export default {
         const gatewayKeyId = book.author_key_id || fps.dev_key_id || env.RAZORPAY_KEY_ID;
         const gatewayKeySecret = book.author_key_secret || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
 
-        const totalPaise = book.price_paise + (activeDonation * 100);
+        const totalPaise = effectiveBookPricePaise + (activeDonation * 100);
         const orderReceipt = `pv-${sessionUser.id}-${targetBookId}-${Math.floor(Date.now() / 1000)}`;
 
         let razorpayOrderId = `order_${Math.random().toString(36).substring(2, 12)}`;
@@ -2597,8 +2791,14 @@ export default {
           } catch (_) {}
         }
 
-        const feePaise = Math.round(book.price_paise * 0.0236);
-        const authorEarningPaise = Math.max(0, book.price_paise - feePaise);
+        if (appliedCouponId) {
+          try {
+            await env.DB.prepare("UPDATE author_coupons SET times_used = times_used + 1 WHERE id = ?").bind(appliedCouponId).run();
+          } catch (_) {}
+        }
+
+        const feePaise = Math.round(effectiveBookPricePaise * 0.0236);
+        const authorEarningPaise = Math.max(0, effectiveBookPricePaise - feePaise);
 
         try {
           await env.DB.prepare(
@@ -3633,6 +3833,23 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     out = out.replace(/📚 All Books \(\d+\)/g, `📚 All Books (${myBooks.length})`);
     const myCount = myBooks.filter(b => b.author_id === user.id || (b.author_name && b.author_name.toLowerCase() === username.toLowerCase())).length;
     out = out.replace(/id="myUploadedCount">0<\/span>/g, `id="myUploadedCount">${myCount}</span>`);
+
+    // 5B. Hydrate Promotional Coupon Book Selector with live paid books
+    const paidBooks = myBooks.filter(b => b.is_paid && (b.author_id === user.id || isDev || isOff));
+    if (paidBooks.length > 0) {
+      const couponBookRows = paidBooks.map(b => `
+        <div class="coupon-book-opt" data-id="${b.id}" data-title="${escapeHtml((b.title || '').toLowerCase())}" onclick="selectCouponBook(this, '${b.id}', '${escapeHtml(b.title)}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
+          <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+            <span style="font-size: 1rem;">📖</span>
+            <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">${escapeHtml(b.title)}</span>
+          </div>
+          <span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e; font-weight: 700; white-space: nowrap;">
+            ₹${((b.price_paise || 0) / 100).toFixed(2)}
+          </span>
+        </div>
+      `).join("");
+      out = out.replace(/<div id="couponBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="couponBookList" style="max-height: 130px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">${couponBookRows}</div>`);
+    }
   }
 
   // 6. Append edge live sync script before </body>

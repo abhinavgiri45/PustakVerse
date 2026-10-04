@@ -1295,39 +1295,109 @@
                 </div>
 
                 <!-- 2. Promotional Discount Coupon Engine -->
-                <div class="panel" style="border-left: 4px solid #f59e0b;">
-                    <h2 style="color: #d97706; display: flex; align-items: center; gap: 8px;">
-                        <span>🎟️</span> Promotional Coupon & Discount Engine
-                    </h2>
-                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Create promotional discount promo codes for your paid books to boost student and reader engagement.</p>
-                    <form onsubmit="createAuthorCoupon(event)" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px;">
+                <div class="panel" style="border-left: 4px solid #f59e0b; background: #ffffff; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 22px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <h2 style="color: #d97706; display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.25rem;">
+                                <span>🎟️</span> Promotional Coupon & Discount Engine
+                            </h2>
+                            <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0;">Create limited-time discount codes for your paid books to boost student and reader engagement.</p>
+                        </div>
+                        <span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 12px; font-size: 0.76rem; font-weight: 700;">
+                            Live Checkout Sync
+                        </span>
+                    </div>
+
+                    <form onsubmit="createAuthorCoupon(event)" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+                        <!-- Book Selection Section -->
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-size: 0.82rem; font-weight: 700; color: #334155;">
+                                1. Target Paid Book <span style="color: #ef4444;">*</span>
+                            </label>
                             <input type="hidden" id="couponBookSelect" required>
-                            <div style="display: flex; gap: 8px;">
-                                <input type="text" id="couponBookSearch" placeholder="🔍 Search paid book title..." onkeyup="filterCouponBookList()" style="flex: 1; padding: 8px 10px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; margin: 0; box-sizing: border-box;">
-                                <input type="text" id="couponCodeInput" placeholder="Code (e.g. SAVE30)" required style="width: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; text-transform: uppercase; margin: 0;">
+                            
+                            <!-- Search & Quick Selection -->
+                            <div style="position: relative;">
+                                <input type="text" id="couponBookSearch" placeholder="🔍 Type to filter your paid books..." onkeyup="filterCouponBookList()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#cbd5e1'">
                             </div>
-                            <div id="couponBookList" style="max-height: 140px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; background: white; padding: 4px; scrollbar-width: thin;">
+
+                            <!-- Scrollable Book List -->
+                            <div id="couponBookList" style="max-height: 130px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">
+                                {% set paid_books_found = false %}
                                 {% for b in my_books %}
                                     {% if b.is_paid %}
-                                    <div class="coupon-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" onclick="selectCouponBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 6px 10px; font-size: 0.82rem; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; margin-bottom: 2px;">
-                                        <span style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px;">{{ b.title }}</span>
-                                        <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-weight: 700;">
+                                    {% set paid_books_found = true %}
+                                    <div class="coupon-book-opt" data-id="{{ b.id }}" data-title="{{ b.title | escape | lower }}" onclick="selectCouponBook(this, '{{ b.id }}', '{{ b.title | escape }}')" style="padding: 8px 12px; font-size: 0.84rem; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; margin-bottom: 3px; background: #ffffff; border: 1px solid #f1f5f9;">
+                                        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                                            <span style="font-size: 1rem;">📖</span>
+                                            <span class="coupon-book-title-text" style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">{{ b.title }}</span>
+                                        </div>
+                                        <span style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: #fef3c7; color: #92400e; font-weight: 700; white-space: nowrap;">
                                             ₹{{ (b.price_paise / 100)|round(2) }}
                                         </span>
                                     </div>
                                     {% endif %}
                                 {% endfor %}
+                                <div id="couponNoBooksMsg" style="display: none; padding: 12px; text-align: center; color: #94a3b8; font-size: 0.82rem;">
+                                    No matching paid books found.
+                                </div>
                             </div>
-                            <div id="couponSelectedBadge" style="display: none; font-size: 0.78rem; font-weight: 700; color: #b45309; padding: 4px 8px; background: #fef3c7; border-radius: 4px;"></div>
+
+                            <!-- Selected Book Badge -->
+                            <div id="couponSelectedBadge" style="display: none; align-items: center; justify-content: space-between; font-size: 0.82rem; font-weight: 700; color: #92400e; padding: 8px 12px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; margin-top: 2px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span>✓ Selected:</span>
+                                    <span id="couponSelectedBookTitle" style="color: #78350f;"></span>
+                                </div>
+                                <span onclick="clearSelectedCouponBook()" style="cursor: pointer; color: #b45309; text-decoration: underline; font-size: 0.76rem;">Change</span>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="number" id="couponDiscountInput" min="5" max="90" value="25" placeholder="Discount %" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
-                            <input type="number" id="couponMaxUses" min="1" max="1000" value="100" placeholder="Max Redemptions" required style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;">
-                            <button type="submit" class="btn-sm btn-orange" style="padding: 8px 16px;">Create Coupon</button>
+
+                        <!-- Coupon Code, Discount & Redemptions -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Promo Code <span style="color: #ef4444;">*</span></label>
+                                <div style="position: relative;">
+                                    <input type="text" id="couponCodeInput" placeholder="e.g. FESTIVE30" maxlength="20" required style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; outline: none;" oninput="this.value = this.value.toUpperCase()">
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Discount (%) <span style="color: #ef4444;">*</span></label>
+                                <div style="display: flex; align-items: center; position: relative;">
+                                    <input type="number" id="couponDiscountInput" min="5" max="90" value="25" placeholder="25" required style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #0f172a; outline: none;">
+                                    <span style="position: absolute; right: 10px; color: #94a3b8; font-weight: 700; font-size: 0.82rem; pointer-events: none;">%</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #475569;">Max Claims <span style="color: #ef4444;">*</span></label>
+                                <input type="number" id="couponMaxUses" min="1" max="10000" value="100" placeholder="100" required style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #0f172a; outline: none;">
+                            </div>
+                        </div>
+
+                        <!-- Action Button & Status -->
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
+                            <button type="submit" id="btnCreateCoupon" class="btn-sm btn-orange" style="padding: 10px 20px; font-weight: 700; font-size: 0.88rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                                <span>🏷️</span> Create Coupon
+                            </button>
+                            <button type="button" onclick="loadAuthorCouponsList()" style="background: none; border: none; color: #64748b; font-size: 0.82rem; cursor: pointer; text-decoration: underline; padding: 6px;">
+                                Refresh Active Coupons
+                            </button>
                         </div>
                     </form>
-                    <div id="couponStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
+
+                    <!-- Status Notification Div -->
+                    <div id="couponStatusMsg" style="display: none; margin-top: 12px; font-size: 0.85rem; font-weight: 600; padding: 10px 14px; border-radius: 8px; transition: all 0.2s;"></div>
+
+                    <!-- Active Coupons Table / List -->
+                    <div style="margin-top: 18px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Your Active Promo Codes</span>
+                            <span id="couponCountBadge" style="font-size: 0.75rem; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 12px; font-weight: 700;">0 Active</span>
+                        </div>
+                        <div id="activeCouponsContainer" style="max-height: 160px; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="color: #94a3b8; font-size: 0.82rem; text-align: center; padding: 12px;">Loading active coupons...</div>
+                        </div>
+                    </div>
                 </div>
 
                 
@@ -2957,29 +3027,180 @@
         }
 
         // Author: Promotional Coupons
+        // Author: Promotional Coupons Engine Logic
+        function filterCouponBookList() {
+            const query = (document.getElementById('couponBookSearch')?.value || '').trim().toLowerCase();
+            const items = document.querySelectorAll('#couponBookList .coupon-book-opt');
+            let matchCount = 0;
+            items.forEach(el => {
+                const title = (el.getAttribute('data-title') || '').toLowerCase();
+                if (!query || title.includes(query)) {
+                    el.style.display = 'flex';
+                    matchCount++;
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+            const noMsg = document.getElementById('couponNoBooksMsg');
+            if (noMsg) {
+                noMsg.style.display = matchCount === 0 ? 'block' : 'none';
+            }
+        }
+
+        function selectCouponBook(element, bookId, bookTitle) {
+            const hiddenInput = document.getElementById('couponBookSelect');
+            if (hiddenInput) hiddenInput.value = bookId;
+
+            // Highlight chosen item in list
+            document.querySelectorAll('#couponBookList .coupon-book-opt').forEach(el => {
+                el.style.borderColor = '#f1f5f9';
+                el.style.background = '#ffffff';
+            });
+            if (element) {
+                element.style.borderColor = '#f59e0b';
+                element.style.background = '#fffbeb';
+            }
+
+            // Show selected badge
+            const badge = document.getElementById('couponSelectedBadge');
+            const titleSpan = document.getElementById('couponSelectedBookTitle');
+            if (badge && titleSpan) {
+                titleSpan.textContent = bookTitle;
+                badge.style.display = 'flex';
+            }
+        }
+
+        function clearSelectedCouponBook() {
+            const hiddenInput = document.getElementById('couponBookSelect');
+            if (hiddenInput) hiddenInput.value = '';
+
+            const badge = document.getElementById('couponSelectedBadge');
+            if (badge) badge.style.display = 'none';
+
+            document.querySelectorAll('#couponBookList .coupon-book-opt').forEach(el => {
+                el.style.borderColor = '#f1f5f9';
+                el.style.background = '#ffffff';
+            });
+
+            const searchInput = document.getElementById('couponBookSearch');
+            if (searchInput) {
+                searchInput.value = '';
+                filterCouponBookList();
+                searchInput.focus();
+            }
+        }
+
+        function loadAuthorCouponsList() {
+            const container = document.getElementById('activeCouponsContainer');
+            const badge = document.getElementById('couponCountBadge');
+            if (!container) return;
+
+            fetch('/author/coupons')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success || !data.coupons || data.coupons.length === 0) {
+                        container.innerHTML = '<div style="color: #94a3b8; font-size: 0.82rem; text-align: center; padding: 12px; background: #f8fafc; border-radius: 8px;">No active promo codes created yet.</div>';
+                        if (badge) badge.textContent = '0 Active';
+                        return;
+                    }
+
+                    if (badge) badge.textContent = `${data.coupons.length} Active`;
+
+                    container.innerHTML = data.coupons.map(c => `
+                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; transition: all 0.15s;">
+                            <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <strong style="font-family: monospace; font-size: 0.95rem; color: #d97706; background: #fef3c7; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;">${escapeHtml(c.code)}</strong>
+                                    <span style="font-size: 0.76rem; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${c.discount_percent}% OFF</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px;">
+                                    Book: <strong>${escapeHtml(c.book_title || 'Target Book')}</strong>
+                                </div>
+                                <div style="font-size: 0.72rem; color: #94a3b8;">
+                                    Used: <strong>${c.used_count || c.times_used || 0}</strong> / ${c.max_uses || 100} claims
+                                </div>
+                            </div>
+                            <button type="button" onclick="deleteAuthorCoupon(${c.id})" title="Delete Promo Code" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    `).join('');
+                })
+                .catch(() => {
+                    container.innerHTML = '<div style="color: #ef4444; font-size: 0.8rem; text-align: center; padding: 8px;">Error loading coupons.</div>';
+                });
+        }
+
+        function deleteAuthorCoupon(couponId) {
+            if (!confirm('Are you sure you want to deactivate and remove this promo code?')) return;
+            fetch(`/author/coupons?coupon_id=${couponId}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                const statusDiv = document.getElementById('couponStatusMsg');
+                if (statusDiv) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
+                    statusDiv.style.color = data.success ? '#166534' : '#991b1b';
+                    statusDiv.textContent = data.message || 'Coupon updated.';
+                    setTimeout(() => { statusDiv.style.display = 'none'; }, 4000);
+                }
+                loadAuthorCouponsList();
+            })
+            .catch(() => {});
+        }
+
         function createAuthorCoupon(e) {
             e.preventDefault();
             const bookId = document.getElementById('couponBookSelect').value;
-            const code = document.getElementById('couponCodeInput').value.trim();
+            const code = document.getElementById('couponCodeInput').value.trim().toUpperCase();
             const discount = document.getElementById('couponDiscountInput').value;
             const maxUses = document.getElementById('couponMaxUses').value;
             const statusDiv = document.getElementById('couponStatusMsg');
+            const submitBtn = document.getElementById('btnCreateCoupon');
+
+            if (!bookId) {
+                if (statusDiv) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#fef2f2';
+                    statusDiv.style.color = '#991b1b';
+                    statusDiv.style.border = '1px solid #fecaca';
+                    statusDiv.textContent = '⚠️ Please select a target paid book from the list above first.';
+                }
+                return;
+            }
+
+            if (submitBtn) submitBtn.disabled = true;
 
             fetch('/author/coupons', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
                 body: JSON.stringify({ book_id: bookId, code: code, discount_percent: discount, max_uses: maxUses })
             }).then(r => r.json()).then(data => {
+                if (submitBtn) submitBtn.disabled = false;
                 if (statusDiv) {
                     statusDiv.style.display = 'block';
                     statusDiv.style.background = data.success ? '#dcfce7' : '#fee2e2';
                     statusDiv.style.color = data.success ? '#166534' : '#991b1b';
-                    statusDiv.textContent = data.message || 'Coupon generated!';
+                    statusDiv.style.border = data.success ? '1px solid #bbf7d0' : '1px solid #fecaca';
+                    statusDiv.textContent = data.message || (data.success ? '🎉 Coupon created successfully!' : 'Could not create coupon.');
                     if (data.success) {
                         document.getElementById('couponCodeInput').value = '';
+                        loadAuthorCouponsList();
                     }
                 }
-            }).catch(() => {});
+            }).catch(() => {
+                if (submitBtn) submitBtn.disabled = false;
+            });
+        }
+
+        // Initialize coupons list when dashboard loads
+        if (typeof document !== 'undefined') {
+            document.addEventListener('DOMContentLoaded', () => {
+                loadAuthorCouponsList();
+            });
         }
 
         // Official: Announcements
