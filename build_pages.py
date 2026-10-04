@@ -24,6 +24,7 @@ STATIC_ROUTES = [
     ("/login", "login/index.html"),
     ("/register", "register/index.html"),
     ("/forgot_password", "forgot_password/index.html"),
+    ("/forgot-password", "forgot-password/index.html"),
     ("/ask_ai", "ask_ai/index.html"),
     ("/google8a9af3f8fe8a3567.html", "google8a9af3f8fe8a3567.html"),
     ("/sitemap.xml", "sitemap.xml"),
