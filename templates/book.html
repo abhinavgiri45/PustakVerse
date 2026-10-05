@@ -22,13 +22,17 @@
     <meta name="twitter:title" content="{{ book.title }} — by {{ book.author_name }}">
     <meta name="twitter:description" content="{{ (book.description or 'Read ' ~ book.title ~ ' on PustakVerse.') | striptags | truncate(200) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
                 }
             } catch(e) {}
@@ -389,6 +393,7 @@
             </a>
         </div>
         <div class="navbar-links" style="display: flex; align-items: center; gap: 14px;">
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/" style="text-decoration: none; color: inherit; font-weight: 600;">← Back to Library</a>
             <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" style="color: #c084fc; font-weight: 800;">🧠 Girionix AI ↗</a>
         </div>

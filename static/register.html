@@ -24,13 +24,17 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="/static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <script src="/static/theme.js"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
                 }
             } catch(e) {}
@@ -106,6 +110,7 @@
             
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             <span id="baseStreakBadge" style="background: rgba(246, 109, 47, 0.15); color: #f66d2f; border: 1px solid rgba(246, 109, 47, 0.3); padding: 4px 10px; border-radius: 16px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Daily Reading Streak">
                 🔥 <span id="baseStreakCount">1</span>d
             </span>
@@ -222,7 +227,7 @@
             </p>
             <div id="twoFactorAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
             <form action="/login" method="POST" id="twoFactorForm" onsubmit="handleTwoFactorSubmit(event)">
-                <input type="hidden" name="csrf_token" value="a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7">
+                <input type="hidden" name="csrf_token" value="bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67">
                 <input type="hidden" name="action" value="verify_2fa">
                 <div class="form-group">
                     <label>Verification Code</label>
@@ -248,7 +253,7 @@
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
-                    <input type="hidden" name="csrf_token" value="a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7">
+                    <input type="hidden" name="csrf_token" value="bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -284,7 +289,7 @@
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
-                    <input type="hidden" name="csrf_token" value="a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7">
+                    <input type="hidden" name="csrf_token" value="bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -465,7 +470,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -529,7 +534,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -564,7 +569,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -594,7 +599,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();
@@ -916,23 +921,10 @@
         function openNav() { document.getElementById('mySidebar').style.width = '300px'; document.getElementById('sidebarOverlay').style.display = 'block'; }
         function closeNav() { document.getElementById('mySidebar').style.width = '0'; document.getElementById('sidebarOverlay').style.display = 'none'; }
         function dismissPopup() { const popup = document.getElementById('tgPopup'); if (popup) { popup.classList.remove('is-visible'); popup.setAttribute('aria-hidden', 'true'); } localStorage.setItem('pustakverse_tg_seen', 'true'); }
-        // System Theme Controller (Defaults automatically to system preferences)
-        function applySystemTheme() {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                document.documentElement.classList.add('dark-theme');
-                if (document.body) document.body.classList.add('dark-theme');
-            } else {
-                document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                if (document.body) document.body.classList.remove('dark-theme', 'sepia-theme');
-            }
+        // System Theme Controller (Delegates to universal theme.js engine)
+        if (typeof applyTheme === 'function') {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'system');
         }
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                applySystemTheme();
-            });
-        }
-        applySystemTheme();
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
         function syncGlobalSession() {

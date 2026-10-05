@@ -8,25 +8,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                }
-                if (window.matchMedia) {
-                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                        if (e.matches) {
-                            document.documentElement.classList.add('dark-theme');
-                            if (document.body) document.body.classList.add('dark-theme');
-                        } else {
-                            document.documentElement.classList.remove('dark-theme');
-                            if (document.body) document.body.classList.remove('dark-theme');
-                        }
-                    });
                 }
             } catch(e) {}
         })();
@@ -315,6 +309,7 @@
                 </p>
             </div>
             <div class="nav-links">
+                <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
                 <a href="/my-library" class="btn-nav"><span>📚</span> My Library</a>
                 <a href="/dashboard" class="btn-nav btn-nav-outline"><span>🏠</span> Dashboard</a>
             </div>
@@ -380,7 +375,7 @@
         <!-- EMPTY STATE -->
         <div id="paymentsEmptyState" class="empty-state" style="display: none;">
             <div style="font-size: 2.6rem; margin-bottom: 12px;">🛍️</div>
-            <h3 id="emptyTitle" style="color: var(--nav-bg); margin-bottom: 6px; font-weight: 700; font-size: 1.2rem;">No Purchases Found</h3>
+            <h3 id="emptyTitle" style="color: var(--text-dark); margin-bottom: 6px; font-weight: 700; font-size: 1.2rem;">No Purchases Found</h3>
             <p id="emptyText" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 18px; max-width: 420px; margin-left: auto; margin-right: auto; line-height: 1.5;">
                 You haven't purchased any premium books yet. Explore our digital catalog to buy your first book!
             </p>
@@ -573,11 +568,11 @@
                                 ${escapeHtml(formattedDate)}
                             </td>
                             <td>
-                                <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">${escapeHtml(p.book_title || 'Purchased Book')}</div>
+                                <div style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">${escapeHtml(p.book_title || 'Purchased Book')}</div>
                                 ${p.author_name ? `<div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">by ${escapeHtml(p.author_name)}</div>` : ''}
                             </td>
                             <td>
-                                <div style="font-family: monospace; font-size: 0.82rem; color: #0f172a; font-weight: 600;">${escapeHtml(p.razorpay_order_id)}</div>
+                                <div style="font-family: monospace; font-size: 0.82rem; color: var(--text-dark); font-weight: 600;">${escapeHtml(p.razorpay_order_id)}</div>
                                 ${p.razorpay_payment_id ? `<div style="font-family: monospace; font-size: 0.74rem; color: #059669; margin-top: 2px;">Ref: ${escapeHtml(p.razorpay_payment_id)}</div>` : ''}
                             </td>
                             <td>

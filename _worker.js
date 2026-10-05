@@ -6952,7 +6952,18 @@ function renderActivityMonitorEdgeHtml({
     ` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>';
 
     return `
-      <tr class="user-row">
+      <tr class="user-row"
+          data-username="${escapeHtml((u.username || '').toLowerCase())}"
+          data-email="${escapeHtml((u.email || '').toLowerCase())}"
+          data-role="${escapeHtml((u.role || 'reader').toLowerCase())}"
+          data-purchases="${u.purchases_count || 0}"
+          data-spent="${u.total_spent_paise || 0}"
+          data-created="${escapeHtml(u.created_at || '')}"
+          data-last-activity="${escapeHtml(u.last_activity || '')}"
+          data-is-reading="${(u.currently_reading && u.currently_reading.length > 0) ? 1 : 0}"
+          data-completed="${(u.has_read && u.has_read.length > 0) ? u.has_read.length : 0}"
+          data-is-locked="${u.locked_until ? 1 : 0}"
+          data-is-verified="${u.is_verified ? 1 : 0}">
         <td>${idx + 1}</td>
         <td>
           <strong>${escapeHtml(u.username || '')}</strong>
@@ -6973,7 +6984,14 @@ function renderActivityMonitorEdgeHtml({
         <td>${u.saved_books_count > 0 ? `<span class="metric-pill metric-pill-blue">📑 ${u.saved_books_count}</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}</td>
         <td>${u.purchases_count > 0 ? `<span class="metric-pill metric-pill-purple">💳 ${u.purchases_count}</span>` : '<span style="color:var(--am-muted);font-size:0.8rem;">0</span>'}</td>
         <td>${u.total_spent_paise > 0 ? `<strong style="color:#34d399;">₹${((u.total_spent_paise || 0) / 100).toFixed(2)}</strong>` : '<span style="color:var(--am-muted);font-size:0.8rem;">₹0</span>'}</td>
-        <td><span class="rel-time" data-ts="${escapeHtml(u.created_at || '')}">${escapeHtml(u.created_at || '—')}</span></td>
+        <td>
+          <div style="font-weight:600;color:#f8fafc;font-size:0.82rem;white-space:nowrap;">
+            📅 <span class="exact-date" data-ts="${escapeHtml(u.created_at || '')}">${escapeHtml(u.created_at || '—')}</span>
+          </div>
+          <div style="font-size:0.72rem;color:var(--am-muted);margin-top:2px;">
+            <span class="rel-time" data-ts="${escapeHtml(u.created_at || '')}"></span>
+          </div>
+        </td>
         <td>${u.is_verified ? '<span style="color:#34d399;font-size:0.78rem;font-weight:700;">✓ Verified</span>' : '<span style="color:var(--am-muted);font-size:0.78rem;">Regular</span>'}</td>
       </tr>
     `;
@@ -7280,10 +7298,45 @@ function renderActivityMonitorEdgeHtml({
         <div class="am-section-header">
             <h2>
                 <span>👥 Comprehensive User Activity &amp; Live Reading Telemetry</span>
-                <span class="section-count-badge">${(users || []).length} Records</span>
+                <span class="section-count-badge" id="userTotalBadge">${(users || []).length} Records</span>
             </h2>
-            <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search username, email, or role..." oninput="filterUsers()">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <input type="text" class="am-search" id="userSearch" placeholder="🔍 Search username, email, or role..." oninput="applyUserSortingAndFiltering()" style="min-width:240px;margin:0;">
+                <select id="userSortSelect" class="am-select" onchange="applyUserSortingAndFiltering()" style="background:rgba(15,23,42,0.7);color:#f1f5f9;border:1px solid var(--am-border);border-radius:8px;padding:7px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+                    <option value="default">↕️ Sort: Default</option>
+                    <option value="purchases_desc" selected>💳 Sort by Purchases (High → Low)</option>
+                    <option value="purchases_asc">💳 Sort by Purchases (Low → High)</option>
+                    <option value="spent_desc">💰 Sort by Total Spent (High → Low)</option>
+                    <option value="spent_asc">💰 Sort by Total Spent (Low → High)</option>
+                    <option value="created_desc">📅 Registered: Newest First</option>
+                    <option value="created_asc">📅 Registered: Oldest First</option>
+                    <option value="reading_desc">📖 Currently Reading (Active First)</option>
+                    <option value="completed_desc">✅ Completed Books (Most First)</option>
+                    <option value="username_asc">🔤 Username (A → Z)</option>
+                </select>
+                <select id="userRoleFilterSelect" class="am-select" onchange="applyUserSortingAndFiltering()" style="background:rgba(15,23,42,0.7);color:#f1f5f9;border:1px solid var(--am-border);border-radius:8px;padding:7px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+                    <option value="all">👥 All Roles</option>
+                    <option value="reader">Reader</option>
+                    <option value="author">Author</option>
+                    <option value="official">Official</option>
+                    <option value="admin">Admin / Dev</option>
+                </select>
+            </div>
         </div>
+
+        <!-- Quick Filter Toolbar with Category Pills and Dynamic Counter Badge -->
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:4px 2px;">
+            <span style="font-size:0.8rem;color:var(--am-muted);font-weight:600;">Quick Filter:</span>
+            <button type="button" class="am-tool-pill user-filter-pill active" data-filter="all" onclick="setUserFilterPill('all', this)">All Users</button>
+            <button type="button" class="am-tool-pill user-filter-pill" data-filter="buyers" onclick="setUserFilterPill('buyers', this)">🛒 Buyers Only (Orders &gt; 0)</button>
+            <button type="button" class="am-tool-pill user-filter-pill" data-filter="spenders" onclick="setUserFilterPill('spenders', this)">💎 Top Spenders (Spent &gt; ₹0)</button>
+            <button type="button" class="am-tool-pill user-filter-pill" data-filter="reading" onclick="setUserFilterPill('reading', this)">📖 Reading Now</button>
+            <button type="button" class="am-tool-pill user-filter-pill" data-filter="online" onclick="setUserFilterPill('online', this)">🟢 Online Now</button>
+            <button type="button" class="am-tool-pill user-filter-pill" data-filter="verified" onclick="setUserFilterPill('verified', this)">✓ Verified</button>
+            <button type="button" class="am-tool-pill user-filter-pill" data-filter="locked" onclick="setUserFilterPill('locked', this)">🔒 Locked Accounts</button>
+            <span id="userFilterStatsBadge" class="section-count-badge" style="margin-left:auto;background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.35);">Showing ${(users || []).length} of ${(users || []).length} Users</span>
+        </div>
+
         <div class="am-scroll-box am-scroll-box-tall">
             <table class="am-table" id="userTable">
                 <thead>
@@ -7299,7 +7352,7 @@ function renderActivityMonitorEdgeHtml({
                         <th>Library Saved</th>
                         <th>Purchases</th>
                         <th>Total Spent</th>
-                        <th>Registered</th>
+                        <th>Exact Registration Date</th>
                         <th>Health</th>
                     </tr>
                 </thead>
@@ -7553,12 +7606,37 @@ function relTime(ts) {
     if (diff < 172800) return 'Yesterday';
     if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
     return d.toLocaleDateString();
+function formatExactDateTime(ts) {
+    if (!ts || ts === '—' || ts === 'None' || ts === 'null') return '—';
+    const d = parseUtcDate(ts);
+    if (!d || isNaN(d.getTime())) return ts;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedHours = String(hours).padStart(2, '0');
+    return `${day} ${month} ${year}, ${formattedHours}:${minutes} ${ampm}`;
 }
-document.querySelectorAll('.rel-time').forEach(el => {
-    const ts = el.dataset.ts;
-    if (ts && ts !== 'None') el.textContent = relTime(ts);
-    else el.textContent = '—';
-});
+
+function refreshAllTimestamps() {
+    document.querySelectorAll('.rel-time').forEach(el => {
+        const ts = el.dataset.ts;
+        if (ts && ts !== 'None') el.textContent = '(' + relTime(ts) + ')';
+        else el.textContent = '';
+    });
+    document.querySelectorAll('.exact-date').forEach(el => {
+        const ts = el.dataset.ts;
+        if (ts && ts !== 'None') el.textContent = formatExactDateTime(ts);
+        else el.textContent = '—';
+    });
+}
+refreshAllTimestamps();
+
 document.querySelectorAll('.status-indicator').forEach(el => {
     const ts = el.dataset.ts;
     const d = parseUtcDate(ts);
@@ -7577,22 +7655,139 @@ document.querySelectorAll('.status-indicator').forEach(el => {
         el.innerHTML = '<span class="status-offline">⚪ Offline</span>';
     }
 });
-function filterUsers() {
-    const q = (document.getElementById('userSearch')?.value || '').toLowerCase();
-    document.querySelectorAll('#userTable .user-row').forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+
+let activeUserFilterPill = 'all';
+
+function setUserFilterPill(filterType, btn) {
+    activeUserFilterPill = filterType;
+    document.querySelectorAll('.user-filter-pill').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    applyUserSortingAndFiltering();
 }
-(function(){
+
+function applyUserSortingAndFiltering() {
+    const q = (document.getElementById('userSearch')?.value || '').toLowerCase().trim();
+    const sortVal = document.getElementById('userSortSelect')?.value || 'purchases_desc';
+    const roleVal = (document.getElementById('userRoleFilterSelect')?.value || 'all').toLowerCase();
+
+    const tbody = document.querySelector('#userTable tbody');
+    if (!tbody) return;
+    const allRows = Array.from(tbody.querySelectorAll('.user-row'));
+    const totalUsers = allRows.length;
+
+    let visibleRows = [];
+
+    allRows.forEach(row => {
+        const username = (row.dataset.username || '').toLowerCase();
+        const email = (row.dataset.email || '').toLowerCase();
+        const role = (row.dataset.role || '').toLowerCase();
+        const purchases = parseInt(row.dataset.purchases || '0', 10);
+        const spent = parseInt(row.dataset.spent || '0', 10);
+        const isReading = parseInt(row.dataset.isReading || '0', 10);
+        const isLocked = parseInt(row.dataset.isLocked || '0', 10);
+        const isVerified = parseInt(row.dataset.isVerified || '0', 10);
+        const lastActivity = row.dataset.lastActivity;
+
+        let matchesSearch = true;
+        if (q) {
+            const rowText = row.textContent.toLowerCase();
+            matchesSearch = username.includes(q) || email.includes(q) || role.includes(q) || rowText.includes(q);
+        }
+
+        let matchesRole = true;
+        if (roleVal !== 'all') {
+            matchesRole = role.includes(roleVal);
+        }
+
+        let matchesPill = true;
+        if (activeUserFilterPill === 'buyers') {
+            matchesPill = purchases > 0;
+        } else if (activeUserFilterPill === 'spenders') {
+            matchesPill = spent > 0;
+        } else if (activeUserFilterPill === 'reading') {
+            matchesPill = isReading === 1;
+        } else if (activeUserFilterPill === 'online') {
+            if (!lastActivity || lastActivity === 'None') matchesPill = false;
+            else {
+                const actD = parseUtcDate(lastActivity);
+                matchesPill = actD && ((Date.now() - actD.getTime()) / 1000) < 900;
+            }
+        } else if (activeUserFilterPill === 'verified') {
+            matchesPill = isVerified === 1;
+        } else if (activeUserFilterPill === 'locked') {
+            matchesPill = isLocked === 1;
+        }
+
+        if (matchesSearch && matchesRole && matchesPill) {
+            visibleRows.push(row);
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    if (sortVal !== 'default') {
+        visibleRows.sort((a, b) => {
+            const pA = parseInt(a.dataset.purchases || '0', 10);
+            const pB = parseInt(b.dataset.purchases || '0', 10);
+            const sA = parseInt(a.dataset.spent || '0', 10);
+            const sB = parseInt(b.dataset.spent || '0', 10);
+            const cA = parseUtcDate(a.dataset.created)?.getTime() || 0;
+            const cB = parseUtcDate(b.dataset.created)?.getTime() || 0;
+            const rA = parseInt(a.dataset.isReading || '0', 10);
+            const rB = parseInt(b.dataset.isReading || '0', 10);
+            const doneA = parseInt(a.dataset.completed || '0', 10);
+            const doneB = parseInt(b.dataset.completed || '0', 10);
+            const uA = (a.dataset.username || '').toLowerCase();
+            const uB = (b.dataset.username || '').toLowerCase();
+
+            switch (sortVal) {
+                case 'purchases_desc': return pB - pA;
+                case 'purchases_asc': return pA - pB;
+                case 'spent_desc': return sB - sA;
+                case 'spent_asc': return sA - sB;
+                case 'created_desc': return cB - cA;
+                case 'created_asc': return cA - cB;
+                case 'reading_desc': return rB - rA;
+                case 'completed_desc': return doneB - doneA;
+                case 'username_asc': return uA.localeCompare(uB);
+                default: return 0;
+            }
+        });
+
+        visibleRows.forEach(r => tbody.appendChild(r));
+    }
+
+    const badge = document.getElementById('userFilterStatsBadge');
+    if (badge) {
+        badge.textContent = `Showing ${visibleRows.length} of ${totalUsers} Users`;
+    }
+
+    paginateUserRows(visibleRows);
+}
+
+function paginateUserRows(visibleRows) {
     const PAGE_SIZE = 50;
-    const rows = Array.from(document.querySelectorAll('#userTable .user-row'));
-    const totalPages = Math.ceil(rows.length / PAGE_SIZE);
-    if (totalPages <= 1) return;
-    let currentPage = 1;
     const pag = document.getElementById('userPagination');
+    if (!pag) return;
+
+    if (visibleRows.length <= PAGE_SIZE) {
+        visibleRows.forEach(r => r.style.display = '');
+        pag.innerHTML = '';
+        return;
+    }
+
+    const totalPages = Math.ceil(visibleRows.length / PAGE_SIZE);
+    let currentPage = 1;
+
     function showPage(p) {
         currentPage = p;
-        rows.forEach((r, i) => { r.style.display = (i >= (p-1)*PAGE_SIZE && i < p*PAGE_SIZE) ? '' : 'none'; });
+        visibleRows.forEach((r, idx) => {
+            r.style.display = (idx >= (p - 1) * PAGE_SIZE && idx < p * PAGE_SIZE) ? '' : 'none';
+        });
+        renderPageButtons();
+    }
+
+    function renderPageButtons() {
         pag.innerHTML = '';
         for (let i = 1; i <= totalPages; i++) {
             const btn = document.createElement('button');
@@ -7602,8 +7797,12 @@ function filterUsers() {
             pag.appendChild(btn);
         }
     }
+
     showPage(1);
-})();
+}
+
+const filterUsers = applyUserSortingAndFiltering;
+applyUserSortingAndFiltering();
 
 const userReadingRepo = ${JSON.stringify((users || []).reduce((acc, u) => {
   acc[u.id] = {

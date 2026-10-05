@@ -7,13 +7,17 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
                 }
             } catch(e) {}
@@ -360,6 +364,7 @@
             {% if session.role in ['developer', 'official'] %}
             <a href="{{ url_for('management_self_published_books') }}" style="color: #fb923c; font-weight: 700;">📖 Manage Books</a>
             {% endif %}
+            <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             <a href="{{ url_for('logout') }}">
                 <button class="btn-logout">Logout</button>
             </a>
@@ -3954,21 +3959,9 @@
             }
         }
 
-        // System Theme Controller (Defaults automatically to system preferences)
-        function applySystemTheme() {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                document.documentElement.classList.add('dark-theme');
-                if (document.body) document.body.classList.add('dark-theme');
-            } else {
-                document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                if (document.body) document.body.classList.remove('dark-theme', 'sepia-theme');
-            }
-        }
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                applySystemTheme();
-            });
+        // System Theme Controller (Delegates to universal theme.js engine)
+        if (typeof applyTheme === 'function') {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'system');
         }
 
         document.addEventListener('DOMContentLoaded', function() {

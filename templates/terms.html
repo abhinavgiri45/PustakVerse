@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms & Conditions - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <script>
+        (function() {
+            try {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
+                    document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
+                } else {
+                    document.documentElement.classList.add('light-theme');
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f7fafc; color: #2d3748; margin: 0; padding: 0; }
         .container { max-width: 900px; margin: 40px auto; padding: 50px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
@@ -19,6 +36,16 @@
         p { margin-top: 5px; margin-bottom: 15px; }
         .date { font-weight: bold; color: #718096; margin-bottom: 30px; display: block; }
         
+        .dark-theme body, html.dark-theme body { background-color: #0b0f19 !important; color: #f1f5f9 !important; }
+        .dark-theme .container, html.dark-theme .container { background: #1e293b !important; border-color: rgba(255,255,255,0.12) !important; color: #f1f5f9 !important; }
+        .dark-theme h1, html.dark-theme h1 { color: #f8fafc !important; border-bottom-color: rgba(255,255,255,0.12) !important; }
+        .dark-theme h2, html.dark-theme h2 { color: #93c5fd !important; }
+        .dark-theme .alert-box, html.dark-theme .alert-box { background-color: rgba(153, 27, 27, 0.25) !important; border-left-color: #f87171 !important; color: #fca5a5 !important; }
+        .dark-theme .alert-box h2, html.dark-theme .alert-box h2 { color: #fca5a5 !important; }
+        .dark-theme .highlight-box, html.dark-theme .highlight-box { background-color: rgba(6, 78, 59, 0.25) !important; border-left-color: #34d399 !important; color: #a7f3d0 !important; }
+        .dark-theme .highlight-box h2, html.dark-theme .highlight-box h2 { color: #6ee7b7 !important; }
+        .dark-theme .date, html.dark-theme .date { color: #94a3b8 !important; }
+
         /* SMART GO BACK BUTTON STYLES */
         .back-link { display: inline-flex; align-items: center; margin-bottom: 20px; color: #ffffff; background-color: #2d3748; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; border: none; font-family: inherit; font-size: 1rem; cursor: pointer; }
         .back-link:hover { background-color: #f66d2f; transform: translateY(-2px); }
@@ -27,8 +54,11 @@
 <body>
     <div class="container">
         
-        <!-- SMART GO BACK BUTTON -->
-        <button onclick="smartGoBack()" class="back-link">← Go Back To Home Screen</button>
+        <!-- TOP ACTIONS BAR -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <button onclick="smartGoBack()" class="back-link" style="margin-bottom: 0;">← Go Back To Home Screen</button>
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
+        </div>
 
         {% if role == 'author' %}
             <h1>Terms and Conditions for Authors on PustakVerse</h1>

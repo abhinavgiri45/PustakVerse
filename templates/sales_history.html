@@ -9,25 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                }
-                if (window.matchMedia) {
-                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                        if (e.matches) {
-                            document.documentElement.classList.add('dark-theme');
-                            if (document.body) document.body.classList.add('dark-theme');
-                        } else {
-                            document.documentElement.classList.remove('dark-theme');
-                            if (document.body) document.body.classList.remove('dark-theme');
-                        }
-                    });
                 }
             } catch(e) {}
         })();
@@ -254,7 +248,8 @@
                     Book: <strong>{{ book.title }}</strong> · Published on {{ book.created_at.strftime('%d %b %Y') if book.created_at else 'Recent' }}
                 </div>
             </div>
-            <div class="header-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="header-actions" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
                 <a href="{{ url_for('export_book_sales_csv', book_id=book.id, range=filter_range, start_date=start_date, end_date=end_date) }}" class="btn-action" style="background: #16a34a;">
                     <span>📥</span> Download CSV
                 </a>

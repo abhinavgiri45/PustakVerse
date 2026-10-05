@@ -26,6 +26,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
+    <script>
+        (function() {
+            try {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
+                    document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
+                } else {
+                    document.documentElement.classList.add('light-theme');
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         :root {
             --primary-orange: #ea580c;
@@ -191,6 +208,7 @@
             <a href="/"><img src="/static/PustakVerse.png" alt="Logo"></a>
         </div>
         <div class="nav-links">
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/">🏠 Home</a>
             <a href="/my-library">📚 My Library</a>
             <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" style="color: #c084fc; font-weight: 800;">🧠 Girionix AI ↗</a>
@@ -566,7 +584,7 @@
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': 'a9d9972c5f0a4f8089f7531357b11fa63ba708798e9762895289a89d6a4689f7'
+                    'X-CSRF-Token': 'bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67'
                 },
                 body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
             })

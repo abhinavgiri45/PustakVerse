@@ -16,25 +16,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                }
-                if (window.matchMedia) {
-                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                        if (e.matches) {
-                            document.documentElement.classList.add('dark-theme');
-                            if (document.body) document.body.classList.add('dark-theme');
-                        } else {
-                            document.documentElement.classList.remove('dark-theme');
-                            if (document.body) document.body.classList.remove('dark-theme');
-                        }
-                    });
                 }
             } catch(e) {}
         })();
@@ -497,6 +491,7 @@
             <span>PustakVerse</span>
         </a>
         <div class="nav-actions">
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/" class="nav-link">← Back to Library</a>
             <a href="/my_library" class="nav-link">📚 My Library</a>
             <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-girionix-nav">🧠 Girionix AI ↗</a>

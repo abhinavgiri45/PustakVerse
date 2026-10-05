@@ -8,25 +8,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                }
-                if (window.matchMedia) {
-                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                        if (e.matches) {
-                            document.documentElement.classList.add('dark-theme');
-                            if (document.body) document.body.classList.add('dark-theme');
-                        } else {
-                            document.documentElement.classList.remove('dark-theme');
-                            if (document.body) document.body.classList.remove('dark-theme');
-                        }
-                    });
                 }
             } catch(e) {}
         })();
@@ -306,7 +300,10 @@
                 <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" style="height: 32px; width: auto;">
                 <span>PustakVerse</span>
             </a>
-            <span class="security-badge">🔒 256-Bit SSL Secure</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
+                <span class="security-badge">🔒 256-Bit SSL Secure</span>
+            </div>
         </div>
 
         <div class="book-preview">

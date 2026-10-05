@@ -9,13 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
                 }
             } catch(e) {}
@@ -450,6 +454,7 @@
             <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-girionix-nav">🧠 Girionix AI ↗</a>
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
             <a href="{{ url_for('payment_history') }}">Payment History</a>
+            <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             <a href="{{ url_for('logout') }}" style="color: #ef4444 !important;">Logout</a>
         </div>
     </header>
@@ -683,23 +688,10 @@
             alert('✓ Notes saved securely in your browser!');
         }
 
-        // System Theme Controller (Defaults automatically to system preferences)
-        function applySystemTheme() {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                document.documentElement.classList.add('dark-theme');
-                if (document.body) document.body.classList.add('dark-theme');
-            } else {
-                document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                if (document.body) document.body.classList.remove('dark-theme', 'sepia-theme');
-            }
+        // System Theme Controller (Delegates to universal theme.js engine)
+        if (typeof applyTheme === 'function') {
+            applyTheme(localStorage.getItem('pustakverse_theme') || 'system');
         }
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                applySystemTheme();
-            });
-        }
-        applySystemTheme();
 
         // Dynamic client-side personal library hydration from Cloudflare D1
         async function hydrateLibraryFromD1() {

@@ -44,11 +44,22 @@
     <link rel="icon" type="image/png" href="/static/PustakVerse.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/PustakVerse.png">
     <link rel="stylesheet" href="/static/style.css">
-    
-    <link rel="preconnect" href="https://drive.google.com">
-    <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
-    <link rel="dns-prefetch" href="https://drive.google.com">
-    <link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
+    <script src="/static/theme.js"></script>
+    <script>
+        (function() {
+            try {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
+                    document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme');
+                } else {
+                    document.documentElement.classList.add('light-theme');
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
 
     <link rel="preload" as="image" href="/static/PustakVerse.png" fetchpriority="high">
     
@@ -424,6 +435,7 @@
             <a href="/tools">🛠️ Tools</a>
             <a href="/contact">Contact</a>
             <a href="/my-library">📚 My Library</a>
+            <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             
                 <a href="/login" style="background: #992b00; border-radius: 25px;">Sign In / Login</a>
             

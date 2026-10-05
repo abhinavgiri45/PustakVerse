@@ -6,25 +6,18 @@
     <title>{{ page_title }} - PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                }
-                if (window.matchMedia) {
-                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                        if (e.matches) {
-                            document.documentElement.classList.add('dark-theme');
-                            if (document.body) document.body.classList.add('dark-theme');
-                        } else {
-                            document.documentElement.classList.remove('dark-theme');
-                            if (document.body) document.body.classList.remove('dark-theme');
-                        }
-                    });
                 }
             } catch(e) {}
         })();
@@ -350,6 +343,7 @@
             </a>
         </div>
         <div class="navbar-links" style="display: flex; align-items: center; gap: 12px;">
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/">← Back to Library</a>
             {% if session.user_id %}
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>

@@ -8,6 +8,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <script>
+        (function() {
+            try {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
+                    document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
+                } else {
+                    document.documentElement.classList.add('light-theme');
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         :root {
             --primary-orange: #ea580c;
@@ -390,6 +407,7 @@
         </div>
 
         <div class="nav-links">
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
             <a href="{{ url_for('index') }}">Global Library</a>
             <a href="{{ url_for('management_export_self_published_csv') }}" class="btn-pill btn-pill-dark" title="Export CSV list of all self-published books">
