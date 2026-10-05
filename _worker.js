@@ -5102,7 +5102,7 @@ function renderEdgeDashboardHtml(user) {
     </a>
     <nav class="dash-nav-links">
       <a href="/">📚 Library</a>
-      <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener">🧠 Girionix AI ↗</a>
+      <a href="/my-library">📚 My Library</a>
       <a href="/tools">🛠️ Tools</a>
       <a href="/logout" class="btn-logout">Logout</a>
     </nav>
@@ -5144,10 +5144,10 @@ function renderEdgeDashboardHtml(user) {
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">🧠</div>
+        <div class="stat-icon">🌐</div>
         <div>
-          <div class="stat-val">Girionix AI</div>
-          <div class="stat-label">AI Research Companion</div>
+          <div class="stat-val">100% Free</div>
+          <div class="stat-label">Open Digital Access</div>
         </div>
       </div>
       <div class="stat-card">
@@ -5170,13 +5170,13 @@ function renderEdgeDashboardHtml(user) {
         <div class="hub-link-text">Open Library Catalog →</div>
       </a>
 
-      <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="hub-card">
+      <a href="/my-library" class="hub-card">
         <div>
-          <div class="hub-icon">🧠</div>
-          <h3>Girionix AI Companion</h3>
-          <p>Interact with our next-generation AI intelligence system. Ask deep philosophical, historical, or academic questions.</p>
+          <div class="hub-icon">🔖</div>
+          <h3>My Personal Library</h3>
+          <p>Access all your saved titles, continuous reading progress, and customized bookshelves in one place.</p>
         </div>
-        <div class="hub-link-text">Launch Girionix AI ↗</div>
+        <div class="hub-link-text">Open My Library →</div>
       </a>
 
       <a href="/tools" class="hub-card">

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Girionix AI Study Suite · {{ book.title }}</title>
+    <title>AI Study Suite · {{ book.title }} · PustakVerse</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -486,7 +486,6 @@
         </a>
         <div class="study-nav-links">
             <a href="{{ url_for('view_book', book_id=book.id) }}">← Back to Book</a>
-            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-girionix-nav">🧠 Girionix AI ↗</a>
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
         </div>
     </nav>
@@ -504,7 +503,7 @@
                     <img src="{{ url_for('static', filename='uploads/covers/' ~ cover) }}" alt="{{ book.title }}" class="book-thumb">
                 {% endif %}
                 <div>
-                    <span class="study-badge">🧠 Girionix AI Study Suite</span>
+                    <span class="study-badge">🧠 AI Study Suite</span>
                     <h1 class="study-title">{{ book.title }}</h1>
                     <p class="study-sub">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %} · Deep Concept Breakdown &amp; Practice Questions</p>
                 </div>
@@ -546,11 +545,8 @@
                 <!-- ACTION BUTTONS -->
                 <div class="concept-actions-row">
                     <button type="submit" class="btn-explain-concept">
-                        <span>✨</span> Explain with Girionix AI
+                        <span>✨</span> Explain with AI
                     </button>
-                    <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-live-chat-concept">
-                        <span>💬</span> Open in Girionix AI Workspace ↗
-                    </a>
                 </div>
             </form>
         </div>
@@ -628,12 +624,12 @@
                 </div>
 
                 <div class="side-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%); border-color: rgba(139, 92, 246, 0.3);">
-                    <h3 class="side-card-title" style="color: #c084fc;"><span>🤖</span> Ask Girionix AI Live</h3>
+                    <h3 class="side-card-title" style="color: #c084fc;"><span>🤖</span> Ask AI Assistant</h3>
                     <p style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
-                        Need deeper derivations, multi-step math solutions, or custom code examples for this concept?
+                        Need deeper derivations, multi-step math solutions, or custom explanations for this concept?
                     </p>
-                    <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn-live-chat-concept" style="width: 100%; justify-content: center; box-sizing: border-box;">
-                        Launch Girionix AI ↗
+                    <a href="{{ url_for('ask_ai') }}" class="btn-live-chat-concept" style="width: 100%; justify-content: center; box-sizing: border-box;">
+                        Ask AI Assistant →
                     </a>
                 </div>
             </div>

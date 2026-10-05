@@ -395,7 +395,6 @@
         <div class="navbar-links" style="display: flex; align-items: center; gap: 14px;">
             <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/" style="text-decoration: none; color: inherit; font-weight: 600;">← Back to Library</a>
-            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" style="color: #c084fc; font-weight: 800;">🧠 Girionix AI ↗</a>
         </div>
     </nav>
 
@@ -506,7 +505,7 @@
                         </div>
                     {% endif %}
                     <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">🤖 Learn with Girionix AI ↗</a>
+                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">📖 AI Study Companion</a>
                         <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="btn btn-outline" style="flex: 1; background: #f0fdf4; color: #15803d; border: 1px solid #86efac;">🎓 Claim Certificate</a>
                     </div>
                 </div>

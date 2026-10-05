@@ -211,7 +211,6 @@
             <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/">🏠 Home</a>
             <a href="/my-library">📚 My Library</a>
-            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" style="color: #c084fc; font-weight: 800;">🧠 Girionix AI ↗</a>
             <a href="/dashboard">👤 Dashboard</a>
             <a href="/contact">🏛️ Contact</a>
         </div>
@@ -577,14 +576,14 @@
                 resArea.style.display = 'block';
                 resArea.style.background = '#fdf4ff';
                 resArea.style.borderColor = '#f5d0fe';
-                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with Girionix AI...</span>';
+                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with AI Intelligence...</span>';
             }
 
             fetch('/api/author/ai_enhance_blurb', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': 'bb432f9f446796854e757f273b5335e35250512a1a686e516ecd5bc2036a5c67'
+                    'X-CSRF-Token': 'b7d6ae3255c3e00080cb159826983aad9d55136b3e3920ae114132bbdfd8fa2e'
                 },
                 body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
             })

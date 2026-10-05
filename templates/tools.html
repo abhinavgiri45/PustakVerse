@@ -204,7 +204,6 @@
             <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/">🏠 Home</a>
             <a href="{{ url_for('my_library') }}">📚 My Library</a>
-            <a href="http://girionix-ai.pages.dev/" target="_blank" rel="noopener" style="color: #c084fc; font-weight: 800;">🧠 Girionix AI ↗</a>
             <a href="{{ url_for('dashboard') }}">👤 Dashboard</a>
             <a href="{{ url_for('contact') }}">🏛️ Contact</a>
         </div>
@@ -371,7 +370,7 @@
                 <div class="tool-card" style="border: 2px solid #c084fc;">
                     <div>
                         <h3 style="color: #7c3aed;"><span>🪄</span> Author AI Book Blurb & Synopsis Enhancer</h3>
-                        <p>Generate captivating marketing synopses, audience hooks, and SEO keywords for your new book drafts using Girionix AI.</p>
+                        <p>Generate captivating marketing synopses, audience hooks, and SEO keywords for your new book drafts using AI publishing intelligence.</p>
                         <input type="text" id="aiBlurbTitle" placeholder="Draft Book Title *">
                         <input type="text" id="aiBlurbCatalog" placeholder="Category (e.g. Science, Fiction, Technology)">
                         <textarea id="aiBlurbNotes" rows="3" placeholder="Rough plot summary, main thesis, target audience, or key concepts..."></textarea>
@@ -682,7 +681,7 @@
                 resArea.style.display = 'block';
                 resArea.style.background = '#fdf4ff';
                 resArea.style.borderColor = '#f5d0fe';
-                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with Girionix AI...</span>';
+                resArea.innerHTML = '<span style="color: #9333ea; font-weight: 700;">⏳ Generating professional synopsis, marketing hook, and SEO tags with AI Intelligence...</span>';
             }
 
             fetch('/api/author/ai_enhance_blurb', {
