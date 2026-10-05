@@ -231,7 +231,7 @@
             <div class="invoice-badge-title">
                 <div class="invoice-type">Tax Invoice / Receipt</div>
                 <div class="meta-text">Invoice Ref: <strong>{{ purchase.razorpay_order_id }}</strong></div>
-                <div class="meta-text">Payment Date: {{ purchase.paid_at.strftime('%d %B %Y, %I:%M %p') if purchase.paid_at else 'N/A' }}</div>
+                <div class="meta-text">Payment Date: {{ (purchase.paid_at.strftime('%d %B %Y, %I:%M %p') if purchase.paid_at and purchase.paid_at.strftime is defined else purchase.paid_at) if purchase.paid_at else 'N/A' }}</div>
             </div>
         </div>
 
@@ -260,12 +260,12 @@
             <tbody>
                 <tr>
                     <td>
-                        <strong style="color: #0f172a; font-size: 0.98rem;">{{ book.title }}</strong>
-                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Digital eBook License (Lifetime Personal Library Access) · {{ book.catalog }}</div>
+                        <strong style="color: #0f172a; font-size: 0.98rem;">{{ book.title if book else 'Digital eBook Access' }}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Digital eBook License (Lifetime Personal Library Access) · {{ book.catalog if book else 'General Literature' }}</div>
                     </td>
                     <td style="font-family: monospace; font-size: 0.85rem; color: #64748b;">998431</td>
                     <td>1</td>
-                    <td style="text-align: right; font-weight: 800; font-size: 0.98rem;">₹{{ "%.2f"|format(book.price_paise/100) }}</td>
+                    <td style="text-align: right; font-weight: 800; font-size: 0.98rem;">₹{{ "%.2f"|format(((book.price_paise if book else (purchase.amount_paise - (purchase.donation_paise or 0)))/100)) }}</td>
                 </tr>
                 {% if purchase.donation_paise and purchase.donation_paise > 0 %}
                 <tr>
@@ -284,7 +284,7 @@
         <div class="total-box">
             <div class="total-row">
                 <span>Book Retail Price:</span>
-                <span>₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                <span>₹{{ "%.2f"|format(((book.price_paise if book else (purchase.amount_paise - (purchase.donation_paise or 0)))/100)) }}</span>
             </div>
             {% if purchase.donation_paise and purchase.donation_paise > 0 %}
             <div class="total-row">

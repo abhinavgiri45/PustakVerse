@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Payment History · PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') if url_for is defined else '/static/PustakVerse.png' }}">
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
@@ -322,51 +322,7 @@
                     </tr>
                 </thead>
                 <tbody id="paymentsTableBody">
-                    {% if payments %}
-                        {% for payment in payments %}
-                        <tr class="payment-row"
-                            data-title="{{ payment.book_title | escape }}"
-                            data-order="{{ payment.razorpay_order_id | escape }}"
-                            data-status="{{ payment.status }}"
-                            data-amount="{{ payment.amount_paise or 0 }}">
-                            <td style="color: #64748b; font-size: 0.82rem; white-space: nowrap;">
-                                {{ (payment.paid_at.strftime('%d %b %Y, %I:%M %p') if payment.paid_at and payment.paid_at.strftime is defined else payment.paid_at) if payment.paid_at else ((payment.created_at.strftime('%d %b %Y, %I:%M %p') if payment.created_at and payment.created_at.strftime is defined else payment.created_at) if payment.created_at else 'N/A') }}
-                            </td>
-                            <td>
-                                <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{{ payment.book_title }}</div>
-                                {% if payment.author_name %}
-                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">by {{ payment.author_name }}</div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div style="font-family: monospace; font-size: 0.82rem; color: #0f172a; font-weight: 600;">{{ payment.razorpay_order_id }}</div>
-                                {% if payment.razorpay_payment_id %}
-                                <div style="font-family: monospace; font-size: 0.74rem; color: #059669; margin-top: 2px;">Ref: {{ payment.razorpay_payment_id }}</div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div style="font-weight: 800; color: #166534; font-size: 0.98rem;">₹{{ "%.2f"|format((payment.amount_paise or 0)/100) }}</div>
-                                {% if payment.donation_paise and payment.donation_paise > 0 %}
-                                <div style="font-size: 0.72rem; color: #d97706; margin-top: 2px;">(incl. ₹{{ "%.2f"|format(payment.donation_paise/100) }} donation)</div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="status-badge {% if payment.status == 'paid' %}status-paid{% elif payment.status == 'pending' %}status-pending{% else %}status-failed{% endif %}">
-                                    {{ payment.status|capitalize }}
-                                </span>
-                            </td>
-                            <td style="text-align: right;">
-                                {% if payment.status == 'paid' %}
-                                <a href="/invoice/{{ payment.razorpay_order_id }}" target="_blank" class="btn-invoice">
-                                    <span>📄</span> Invoice
-                                </a>
-                                {% else %}
-                                <span style="color: #94a3b8; font-size: 0.78rem;">Pending</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% endif %}
+                    
                 </tbody>
             </table>
         </div>

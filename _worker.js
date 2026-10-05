@@ -35,6 +35,10 @@ const HTML_ROUTE_MAP = {
   "/my-library/": "my_library.html",
   "/my_library": "my_library.html",
   "/my_library/": "my_library.html",
+  "/payment_history": "payment_history.html",
+  "/payment_history/": "payment_history.html",
+  "/payment-history": "payment_history.html",
+  "/payment-history/": "payment_history.html",
   "/ask_ai": "ask_ai.html",
   "/ask_ai/": "ask_ai.html",
   "/granthmind": "ask_ai.html",
@@ -4514,6 +4518,103 @@ Format with these exact markdown sections:
       }
     }
 
+    // 6A-7a. User Payment History API: GET /api/user/payment_history
+    if ((url.pathname === "/api/user/payment_history" || url.pathname === "/api/user/payment-history") && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized", purchases: [] }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const pRes = await env.DB.prepare(`
+          SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, p.donation_paise,
+                 p.status, p.paid_at, p.created_at, b.id as book_id,
+                 COALESCE(b.title, 'Purchased Book') as book_title,
+                 COALESCE(u.username, 'Author') as author_name,
+                 b.cover_image
+          FROM purchases p
+          LEFT JOIN books b ON p.book_id = b.id
+          LEFT JOIN users u ON b.author_id = u.id
+          WHERE p.user_id = ?
+          ORDER BY p.id DESC
+        `).bind(sessionUser.id).all();
+
+        return new Response(JSON.stringify({
+          success: true,
+          purchases: pRes?.results || [],
+          username: sessionUser.username
+        }), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message, purchases: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6A-7b. Payment History Edge Auth Proxy: /payment_history & /payment-history
+    if ((url.pathname === "/payment_history" || url.pathname === "/payment_history/" ||
+         url.pathname === "/payment-history" || url.pathname === "/payment-history/") && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      if (!cookies.pv_session) {
+        return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
+      }
+    }
+
+    // 6A-7c. Edge Invoice Route: /invoice/:order_id
+    const invoiceMatch = url.pathname.match(/^\/invoice\/([^\/]+)/);
+    if (invoiceMatch && env.DB) {
+      const orderId = decodeURIComponent(invoiceMatch[1]);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      if (cookies.pv_session) {
+        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      if (!sessionUser) {
+        return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
+      }
+
+      try {
+        const purchase = await env.DB.prepare(`
+          SELECT p.id, p.user_id, p.book_id, p.razorpay_order_id, p.razorpay_payment_id,
+                 p.amount_paise, p.donation_paise, p.fee_paise, p.status, p.paid_at, p.created_at,
+                 u.username as buyer_username, u.email as buyer_email,
+                 b.title as book_title, b.catalog as book_catalog, b.price_paise as book_price_paise,
+                 a.username as author_name
+          FROM purchases p
+          LEFT JOIN users u ON p.user_id = u.id
+          LEFT JOIN books b ON p.book_id = b.id
+          LEFT JOIN users a ON b.author_id = a.id
+          WHERE p.razorpay_order_id = ?
+        `).bind(orderId).first();
+
+        if (!purchase) {
+          return new Response("Invoice not found.", { status: 404, headers: { "Content-Type": "text/plain" } });
+        }
+
+        const isManager = sessionUser.role === "developer" || sessionUser.role === "official";
+        if (purchase.user_id !== sessionUser.id && !isManager) {
+          return new Response("Unauthorized access to invoice.", { status: 403, headers: { "Content-Type": "text/plain" } });
+        }
+
+        const invHtml = renderEdgeInvoiceHtml(purchase);
+        return new Response(invHtml, {
+          headers: { "Content-Type": "text/html; charset=utf-8" }
+        });
+      } catch (err) {
+        return new Response("Error generating invoice: " + err.message, { status: 500, headers: { "Content-Type": "text/plain" } });
+      }
+    }
+
     // 6B. Read Book / Secure Viewer Route: /read_book/:id, /viewer/:id, /read/:id, /viewer.html?id=...
     const readMatch = url.pathname.match(/^\/(?:read_book|viewer|read)\/(\d+)/);
     const queryId = (url.pathname.startsWith("/viewer") || url.pathname.startsWith("/read"))
@@ -5837,6 +5938,347 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   out = out.replace("</body>", `${edgeSyncScript}\n</body>`);
 
   return out;
+}
+
+function renderEdgeInvoiceHtml(p) {
+  const orderId = escapeHtml(p.razorpay_order_id || "");
+  const paymentId = escapeHtml(p.razorpay_payment_id || "PAID");
+  const buyerUser = escapeHtml(p.buyer_username || "Reader");
+  const buyerEmail = escapeHtml(p.buyer_email || "");
+  const authorName = escapeHtml(p.author_name || "Author");
+  const bookTitle = escapeHtml(p.book_title || "Digital eBook Access");
+  const bookCatalog = escapeHtml(p.book_catalog || "General Literature");
+  
+  const totalAmountPaise = p.amount_paise || 0;
+  const donationPaise = p.donation_paise || 0;
+  const bookPricePaise = p.book_price_paise !== undefined ? p.book_price_paise : (totalAmountPaise - donationPaise);
+
+  let dateStr = "N/A";
+  if (p.paid_at || p.created_at) {
+    try {
+      const d = new Date(p.paid_at || p.created_at);
+      if (!isNaN(d.getTime())) {
+        dateStr = d.toLocaleDateString("en-IN", {
+          day: "2-digit", month: "long", year: "numeric",
+          hour: "2-digit", minute: "2-digit", hour12: true
+        });
+      } else {
+        dateStr = escapeHtml(String(p.paid_at || p.created_at));
+      }
+    } catch (_) {
+      dateStr = escapeHtml(String(p.paid_at || p.created_at));
+    }
+  }
+
+  const donationRow = donationPaise > 0 ? `
+    <tr>
+      <td>
+        <strong style="color: #166534; font-size: 0.95rem;">🎁 Voluntary Platform Support Donation</strong>
+        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Contribution for PustakVerse cloud servers, storage & polymath AI tutoring</div>
+      </td>
+      <td style="font-family: monospace; font-size: 0.85rem; color: #64748b;">998319</td>
+      <td>1</td>
+      <td style="text-align: right; font-weight: 800; color: #166534;">₹${(donationPaise / 100).toFixed(2)}</td>
+    </tr>
+  ` : "";
+
+  const donationTotalRow = donationPaise > 0 ? `
+    <div class="total-row">
+      <span>Platform Donation:</span>
+      <span>₹${(donationPaise / 100).toFixed(2)}</span>
+    </div>
+  ` : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax Invoice #${orderId} · PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 40px 16px;
+            min-height: 100vh;
+        }
+        .invoice-card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.06);
+            padding: 48px;
+            position: relative;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-25deg);
+            font-size: 5.5rem;
+            font-weight: 900;
+            color: rgba(22, 101, 52, 0.04);
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-family: 'Outfit', sans-serif;
+            white-space: nowrap;
+        }
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+        }
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .brand-block img {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .brand-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+        .invoice-badge-title {
+            text-align: right;
+        }
+        .invoice-type {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #ea580c;
+            background: #fff7ed;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+        .meta-text {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 3px;
+        }
+        .grid-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 36px;
+            background: #f8fafc;
+            padding: 24px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-title {
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+        .info-val {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 28px;
+        }
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        th {
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .total-box {
+            max-width: 320px;
+            margin-left: auto;
+            margin-bottom: 36px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.92rem;
+            color: #475569;
+        }
+        .grand-total {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #166534;
+        }
+        .stamp-box {
+            background: #f0fdf4;
+            border: 1.5px dashed #86efac;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 36px;
+        }
+        .stamp-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #15803d;
+        }
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 24px;
+        }
+        .btn-print {
+            background: #ea580c;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+            transition: all 0.2s;
+        }
+        .btn-print:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.35);
+        }
+        .back-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+        .back-link:hover { color: #0f172a; }
+        @media print {
+            body { background: white; padding: 0; }
+            .invoice-card { border: none; box-shadow: none; padding: 20px; }
+            .actions-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-card">
+        <div class="watermark">PAID & VERIFIED</div>
+        <div class="invoice-header">
+            <div class="brand-block">
+                <img src="/static/PustakVerse.png" alt="PustakVerse">
+                <div>
+                    <div class="brand-name">PustakVerse</div>
+                    <div style="font-size: 0.78rem; color: #64748b;">Global Digital Publishing Platform</div>
+                </div>
+            </div>
+            <div class="invoice-badge-title">
+                <div class="invoice-type">Tax Invoice / Receipt</div>
+                <div class="meta-text">Invoice Ref: <strong>\${orderId}</strong></div>
+                <div class="meta-text">Payment Date: \${dateStr}</div>
+            </div>
+        </div>
+        <div class="grid-info">
+            <div>
+                <div class="info-title">Billed To (Reader)</div>
+                <div class="info-val">\${buyerUser}</div>
+                <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">\${buyerEmail}</div>
+            </div>
+            <div>
+                <div class="info-title">Author / Content Creator</div>
+                <div class="info-val">\${authorName}</div>
+                <div style="font-size: 0.82rem; color: #166534; font-weight: 700; margin-top: 2px;">✓ Direct Author Settlement via Razorpay</div>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    <th>HSN / SAC</th>
+                    <th>Qty</th>
+                    <th style="text-align: right;">Amount (INR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong style="color: #0f172a; font-size: 0.98rem;">\${bookTitle}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Digital eBook License (Lifetime Personal Library Access) · \${bookCatalog}</div>
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.85rem; color: #64748b;">998431</td>
+                    <td>1</td>
+                    <td style="text-align: right; font-weight: 800; font-size: 0.98rem;">₹\${(bookPricePaise / 100).toFixed(2)}</td>
+                </tr>
+                \${donationRow}
+            </tbody>
+        </table>
+        <div class="total-box">
+            <div class="total-row">
+                <span>Book Retail Price:</span>
+                <span>₹\${(bookPricePaise / 100).toFixed(2)}</span>
+            </div>
+            \${donationTotalRow}
+            <div class="total-row" style="border-top: 1.5px dashed #cbd5e1; padding-top: 8px; margin-top: 4px;">
+                <strong style="font-size: 1.05rem; color: #0f172a;">Grand Total Paid:</strong>
+                <strong class="grand-total">₹\${(totalAmountPaise / 100).toFixed(2)}</strong>
+            </div>
+        </div>
+        <div class="stamp-box">
+            <div class="stamp-badge">
+                <span style="font-size: 1.2rem;">🔒</span>
+                <span>PUSTAKVERSE VERIFIED PURCHASE · 100% SECURE TRANSACTION</span>
+            </div>
+            <div style="font-size: 0.78rem; color: #475569; font-family: monospace;">
+                Razorpay ID: <strong>\${paymentId}</strong>
+            </div>
+        </div>
+        <div class="actions-bar">
+            <a href="/payment_history" class="back-link">← Return to Payment History</a>
+            <button onclick="window.print()" class="btn-print">
+                <span>🖨️</span> Download / Print Tax Invoice
+            </button>
+        </div>
+    </div>
+</body>
+</html>\`;
 }
 
 function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {

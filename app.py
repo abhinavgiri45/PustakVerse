@@ -6814,24 +6814,80 @@ def verify_payment():
             except: pass
 
 @app.route('/payment_history')
+@app.route('/payment-history')
 def payment_history():
     if 'user_id' not in session: 
-        return redirect(url_for('login'))
+        return redirect(url_for('login', next=request.path))
         
     db = None
     payments = []
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT p.razorpay_order_id, p.amount_paise, p.status, p.paid_at, b.title as book_title FROM purchases p JOIN books b ON p.book_id = b.id WHERE p.user_id = %s ORDER BY p.created_at DESC", (session['user_id'],))
-        payments = cursor.fetchall()
-    except Exception: 
+        cursor.execute("""
+            SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, p.donation_paise,
+                   p.status, p.paid_at, p.created_at, b.id as book_id,
+                   COALESCE(b.title, 'Purchased Book') as book_title,
+                   COALESCE(u.username, 'Author') as author_name,
+                   b.cover_image
+            FROM purchases p
+            LEFT JOIN books b ON p.book_id = b.id
+            LEFT JOIN users u ON b.author_id = u.id
+            WHERE p.user_id = %s
+            ORDER BY p.id DESC
+        """, (session['user_id'],))
+        payments = cursor.fetchall() or []
+    except Exception as e: 
+        logging.error(f"Error loading payment history: {e}")
         flash("Could not load payment history.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
     return render_template('payment_history.html', payments=payments)
+
+@app.route('/api/user/payment_history', methods=['GET'])
+@app.route('/api/user/payment-history', methods=['GET'])
+def api_user_payment_history():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized', 'purchases': []}), 401
+    
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, p.donation_paise,
+                   p.status, p.paid_at, p.created_at, b.id as book_id,
+                   COALESCE(b.title, 'Purchased Book') as book_title,
+                   COALESCE(u.username, 'Author') as author_name,
+                   b.cover_image
+            FROM purchases p
+            LEFT JOIN books b ON p.book_id = b.id
+            LEFT JOIN users u ON b.author_id = u.id
+            WHERE p.user_id = %s
+            ORDER BY p.id DESC
+        """, (session['user_id'],))
+        raw_purchases = cursor.fetchall() or []
+        purchases = []
+        for p in raw_purchases:
+            item = dict(p)
+            if item.get('paid_at'):
+                item['paid_at'] = str(item['paid_at'])
+            if item.get('created_at'):
+                item['created_at'] = str(item['created_at'])
+            purchases.append(item)
+        return jsonify({
+            'success': True,
+            'purchases': purchases,
+            'username': session.get('username')
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'purchases': []}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
 
 
 @app.route('/book_sales/<int:book_id>')

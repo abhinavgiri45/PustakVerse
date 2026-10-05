@@ -276,6 +276,25 @@ def build():
         os.makedirs(lib_alt_dst, exist_ok=True)
         shutil.copy(lib_path, os.path.join(lib_alt_dst, "index.html"))
 
+        # 4E. Render authentic payment_history from templates/payment_history.html
+        print("[+] Rendering authentic payment_history from templates/payment_history.html...")
+        with app.test_request_context():
+            session['user_id'] = 1
+            session['username'] = 'abhinavgiri45'
+            session['role'] = 'developer'
+            master_pay_html = render_template('payment_history.html', payments=[])
+            pay_path = os.path.join(static_src, "payment_history.html")
+            with open(pay_path, "w", encoding="utf-8") as f:
+                f.write(master_pay_html)
+
+        # Ensure payment_history is available in _site for GitHub Pages
+        pay_dst_dir = os.path.join(SITE_DIR, "payment_history")
+        os.makedirs(pay_dst_dir, exist_ok=True)
+        shutil.copy(pay_path, os.path.join(pay_dst_dir, "index.html"))
+        pay_alt_dst = os.path.join(SITE_DIR, "payment-history")
+        os.makedirs(pay_alt_dst, exist_ok=True)
+        shutil.copy(pay_path, os.path.join(pay_alt_dst, "index.html"))
+
         # 4D. Render activity monitor template
         print("[+] Rendering activity monitor template...")
         with app.test_request_context():
