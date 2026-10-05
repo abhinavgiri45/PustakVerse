@@ -3454,6 +3454,7 @@ Format with these exact markdown sections:
       }
 
       // Gather Live Data from Cloudflare D1
+      const logsRange = url.searchParams.get("logs_range") || "all";
       let stats = {
         total_users: 0,
         active_today: 0,
@@ -3465,6 +3466,8 @@ Format with these exact markdown sections:
       let officialLogs = [];
       let topReaders = [];
       let recentRegistrations = [];
+      let recentBooks = [];
+      let recentPurchases = [];
       let activeReadingStream = [];
       let completedReadingStream = [];
       let flaggedSecurityUsers = [];
@@ -3571,7 +3574,6 @@ Format with these exact markdown sections:
         });
         securityStats.total_flagged = flaggedSecurityUsers.length;
 
-        const logsRange = url.searchParams.get("logs_range") || "all";
         let dateFilterClause = "";
         if (logsRange === "7d") {
           dateFilterClause = "WHERE oa.timestamp >= datetime('now', '-7 days') ";
@@ -3608,7 +3610,7 @@ Format with these exact markdown sections:
         } catch (_) {}
 
         // Books published activity stream
-        let recentBooks = [];
+        recentBooks = [];
         try {
           const bRes = await env.DB.prepare(`
             SELECT b.id, b.title, b.catalog, b.is_paid, b.price_paise, b.created_at, u.username as author_name
@@ -3620,7 +3622,7 @@ Format with these exact markdown sections:
         } catch (_) {}
 
         // Paid transactions stream
-        let recentPurchases = [];
+        recentPurchases = [];
         try {
           const pRes = await env.DB.prepare(`
             SELECT p.id, p.amount_paise, p.razorpay_order_id, p.status, p.created_at, p.paid_at,
