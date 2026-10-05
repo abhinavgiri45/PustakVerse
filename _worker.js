@@ -3733,14 +3733,34 @@ Format with these exact markdown sections:
     }
 
     // ========================================================================
+    // 5B. RANDOM BOOK DISCOVERY REDIRECT: GET /random_book
+    // ========================================================================
+    if (url.pathname === "/random_book") {
+      try {
+        if (env.DB) {
+          await ensureBooksTable(env);
+          const randRes = await env.DB.prepare(
+            `SELECT id FROM books WHERE is_quarantined = 0 ORDER BY RANDOM() LIMIT 1`
+          ).first();
+          if (randRes && randRes.id) {
+            return Response.redirect(`${url.origin}/book/${randRes.id}`, 302);
+          }
+        }
+      } catch (_) {}
+      return Response.redirect(`${url.origin}/`, 302);
+    }
+
+    // ========================================================================
     // 6. NATIVE CLOUDFLARE D1 BOOKS API (Serves Library Data to Frontend)
     // ========================================================================
     if (url.pathname === "/api/d1/books" && env.DB) {
       try {
+        await ensureBooksTable(env);
+        await ensureBadgesTable(env);
         let results = [];
         try {
           const res = await env.DB.prepare(
-            `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description
+            `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description, b.is_featured, b.is_quarantined
              FROM books b
              LEFT JOIN users u ON b.author_id = u.id
              ORDER BY b.id DESC LIMIT 50`
@@ -3748,10 +3768,26 @@ Format with these exact markdown sections:
           results = res.results || [];
         } catch (_) {
           const fallbackRes = await env.DB.prepare(
-            `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid FROM books ORDER BY id DESC LIMIT 50`
+            `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined FROM books ORDER BY id DESC LIMIT 50`
           ).all();
           results = fallbackRes.results || [];
         }
+
+        // Attach custom badges
+        try {
+          const allBadgesRes = await env.DB.prepare(
+            `SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC`
+          ).all();
+          const badgesByBook = {};
+          (allBadgesRes?.results || []).forEach(bg => {
+            if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
+            badgesByBook[bg.book_id].push(bg);
+          });
+          results = results.map(b => ({
+            ...b,
+            custom_badges: badgesByBook[b.id] || []
+          }));
+        } catch (_) {}
 
         return new Response(JSON.stringify(results), {
           headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" }
@@ -3778,6 +3814,7 @@ Format with these exact markdown sections:
         }
 
         await ensureBooksTable(env);
+        await ensureBadgesTable(env);
         const isPrivileged = user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user);
         let results = [];
         try {
@@ -3796,6 +3833,22 @@ Format with these exact markdown sections:
           results = fbRes?.results || [];
         }
 
+        // Attach custom badges
+        try {
+          const allBadgesRes = await env.DB.prepare(
+            `SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC`
+          ).all();
+          const badgesByBook = {};
+          (allBadgesRes?.results || []).forEach(bg => {
+            if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
+            badgesByBook[bg.book_id].push(bg);
+          });
+          results = results.map(b => ({
+            ...b,
+            custom_badges: badgesByBook[b.id] || []
+          }));
+        } catch (_) {}
+
         return new Response(JSON.stringify({
           success: true,
           books: results,
@@ -3806,6 +3859,130 @@ Format with these exact markdown sections:
         });
       } catch (err) {
         return new Response(JSON.stringify({ success: false, error: err.message, books: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6-ter. Book Badges API: GET /api/books/:id/badges
+    const bookBadgesMatch = url.pathname.match(/^\/api\/books\/(\d+)\/badges$/);
+    if (bookBadgesMatch && env.DB) {
+      try {
+        await ensureBadgesTable(env);
+        const targetBookId = parseInt(bookBadgesMatch[1], 10);
+        let badgesList = [];
+        try {
+          const bRes = await env.DB.prepare(
+            `SELECT b.*, COALESCE(u.username, 'Official') as granted_by_name
+             FROM book_custom_badges b
+             LEFT JOIN users u ON b.granted_by = u.id
+             WHERE b.book_id = ?
+             ORDER BY b.id ASC`
+          ).bind(targetBookId).all();
+          badgesList = bRes?.results || [];
+        } catch (_) {}
+
+        return new Response(JSON.stringify({
+          success: true,
+          book_id: targetBookId,
+          badges: badgesList
+        }), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message, badges: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6-quater. Executive Grant Badge: POST /executive/powers/grant_badge
+    if (url.pathname === "/executive/powers/grant_badge" && request.method === "POST" && env.DB) {
+      try {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        let user = null;
+        if (cookies.pv_session) {
+          try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+        }
+        const isPrivileged = user && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user));
+        if (!isPrivileged) {
+          return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+            status: 403, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        await ensureBadgesTable(env);
+        const contentType = request.headers.get("content-type") || "";
+        let bookId, badgeLabel, badgeColor, nextUrl;
+
+        if (contentType.includes("application/json")) {
+          const body = await request.json();
+          bookId = body.book_id;
+          badgeLabel = body.custom_badge_label && body.badge_label === "__custom__" ? body.custom_badge_label : body.badge_label;
+          badgeColor = body.badge_color || "gold";
+          nextUrl = body.next;
+        } else {
+          const formData = await request.formData();
+          bookId = formData.get("book_id");
+          const custom = (formData.get("custom_badge_label") || "").toString().trim();
+          const preset = (formData.get("badge_label") || "").toString().trim();
+          badgeLabel = (preset === "__custom__" && custom) ? custom : (custom || preset);
+          badgeColor = (formData.get("badge_color") || "gold").toString().trim();
+          nextUrl = (formData.get("next") || "").toString().trim();
+        }
+
+        const validColors = ["gold", "emerald", "crimson", "indigo", "violet", "orange"];
+        if (!validColors.includes(badgeColor)) badgeColor = "gold";
+
+        if (bookId && badgeLabel) {
+          await env.DB.prepare(
+            `INSERT INTO book_custom_badges (book_id, badge_label, badge_color, granted_by) VALUES (?, ?, ?, ?)`
+          ).bind(parseInt(bookId, 10), badgeLabel, badgeColor, user.id).run();
+        }
+
+        const wantsJson = (request.headers.get("Accept") || "").includes("application/json");
+        if (wantsJson) {
+          return new Response(JSON.stringify({ success: true, message: `Conferred badge "${badgeLabel}" successfully!` }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(nextUrl || `${url.origin}/book/${bookId}`, 302);
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6-quinquies. Executive Remove Badge: POST /executive/powers/remove_badge/:id
+    const removeBadgeMatch = url.pathname.match(/^\/executive\/powers\/remove_badge\/(\d+)$/);
+    if (removeBadgeMatch && request.method === "POST" && env.DB) {
+      try {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        let user = null;
+        if (cookies.pv_session) {
+          try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+        }
+        const isPrivileged = user && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user));
+        if (!isPrivileged) {
+          return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+            status: 403, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        await ensureBadgesTable(env);
+        const targetBadgeId = parseInt(removeBadgeMatch[1], 10);
+        await env.DB.prepare(`DELETE FROM book_custom_badges WHERE id = ?`).bind(targetBadgeId).run();
+
+        const wantsJson = (request.headers.get("Accept") || "").includes("application/json");
+        if (wantsJson) {
+          return new Response(JSON.stringify({ success: true, message: "Badge revoked successfully." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(request.headers.get("Referer") || `${url.origin}/dashboard`, 302);
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
           status: 500, headers: { "Content-Type": "application/json" }
         });
       }
@@ -5417,6 +5594,22 @@ async function ensureBooksTable(env) {
       await env.DB.prepare(`ALTER TABLE books ADD COLUMN ${col} ${colType}`).run();
     } catch (_) {}
   }
+}
+
+async function ensureBadgesTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS book_custom_badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id INTEGER NOT NULL,
+        badge_label TEXT NOT NULL,
+        badge_color TEXT DEFAULT 'gold',
+        granted_by INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (_) {}
 }
 
 async function ensureLeadershipTable(env) {

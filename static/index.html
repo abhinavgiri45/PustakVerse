@@ -416,6 +416,91 @@
             contain-intrinsic-size: 380px;
         }
 
+        /* Surprise Me Button & Animations */
+        .btn-surprise-me {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+            color: #ffffff !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            border-radius: 999px;
+            padding: 9px 20px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            user-select: none;
+            text-decoration: none;
+        }
+        .btn-surprise-me:hover {
+            transform: translateY(-2px) scale(1.03);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
+            border-color: rgba(251, 191, 36, 0.8);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+        .btn-surprise-me:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        .btn-surprise-me .surprise-dice-icon {
+            display: inline-block;
+            font-size: 1.15rem;
+            transition: transform 0.4s ease;
+        }
+        .btn-surprise-me.rolling .surprise-dice-icon {
+            animation: pvDiceRoll 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+        }
+        @keyframes pvDiceRoll {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.3); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        .btn-surprise-me .surprise-kbd-badge {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #fef08a;
+            font-size: 0.68rem;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: 800;
+            margin-left: 2px;
+        }
+        @keyframes pvHighlightPulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.85); transform: scale(1); }
+            50% { box-shadow: 0 0 35px 8px rgba(245, 158, 11, 0.65); transform: scale(1.03); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); transform: scale(1); }
+        }
+        .book-card-highlighted {
+            animation: pvHighlightPulse 1.8s ease-in-out 2 !important;
+            border: 2px solid #f59e0b !important;
+            z-index: 10 !important;
+        }
+
+        /* Accolade & Custom Badge Chips */
+        .badge-accolade-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2.5px 8px;
+            border-radius: 8px;
+            letter-spacing: 0.02em;
+            line-height: 1.3;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .badge-color-gold { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .badge-color-emerald { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .badge-color-crimson { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .badge-color-indigo { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
+        .badge-color-violet { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+        .badge-color-orange { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+
 </style>
 </head>
 <body>
@@ -451,11 +536,13 @@
             </button>
         </form>
 
-        <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-            <button type="button" onclick="discoverRandomBook()" style="background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; padding: 8px 18px; font-size: 0.9rem; font-weight: 700; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.2s;">
-                🎲 Surprise Me (Random Book)
+        <div style="margin-top: 22px; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <button type="button" class="btn-surprise-me" onclick="discoverRandomBook(event)" title="Discover a random book from the collection [Press R]">
+                <span class="surprise-dice-icon">🎲</span>
+                <span>Surprise Me</span>
+                <span class="surprise-kbd-badge" title="Shortcut key: R">R</span>
             </button>
-            <span id="heroStreakContainer" style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">
+            <span id="heroStreakContainer" style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 9px 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
                 📖 <span id="heroStreakDisplay">Open a Book to Start Streak</span>
             </span>
         </div>
@@ -711,11 +798,33 @@
                         `;
                     }
 
+                    let badgesHtml = '';
+                    if (b.bestseller_badge) {
+                        const bgStyle = b.bestseller_badge.bg || '#d97706';
+                        const borderStyle = b.bestseller_badge.border || '#b45309';
+                        const text = b.bestseller_badge.text || '⭐ Bestseller';
+                        badgesHtml += `
+                            <div style="margin-bottom: 6px;">
+                                <span style="background: ${bgStyle}; color: #ffffff; border: 1px solid ${borderStyle}; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
+                                    ${text}
+                                </span>
+                            </div>
+                        `;
+                    }
+                    if (Array.isArray(b.custom_badges) && b.custom_badges.length > 0) {
+                        badgesHtml += `
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
+                                ${b.custom_badges.map(bg => `<span class="badge-accolade-chip badge-color-${bg.badge_color || 'gold'}">${bg.badge_label}</span>`).join('')}
+                            </div>
+                        `;
+                    }
+
                     card.innerHTML = `
                         <a href="${readHref}" class="book-cover-link">
                             <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
                         </a>
                         <div class="book-info">
+                            ${badgesHtml}
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span class="book-tag">${b.catalog || 'General'}</span>
                                 ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ Featured</span>' : ''}
@@ -860,9 +969,42 @@
             micBtn.style.display = 'none'; 
         }
 
-        // Random Book Discovery
-        function discoverRandomBook() {
-            window.location.href = "/random_book";
+        // Enhanced Interactive Random Book Discovery
+        function discoverRandomBook(event) {
+            const btn = document.querySelector('.btn-surprise-me') || (event ? event.currentTarget : null);
+            if (btn) btn.classList.add('rolling');
+
+            // Find all visible book cards on current page
+            const allCards = Array.from(document.querySelectorAll('.book-card'));
+            const visibleCards = allCards.filter(c => {
+                return window.getComputedStyle(c).display !== 'none';
+            });
+
+            if (visibleCards.length > 0 && !(event && event.shiftKey)) {
+                // Clear any previous highlights
+                document.querySelectorAll('.book-card-highlighted').forEach(el => el.classList.remove('book-card-highlighted'));
+
+                const pickedCard = visibleCards[Math.floor(Math.random() * visibleCards.length)];
+
+                setTimeout(() => {
+                    if (btn) btn.classList.remove('rolling');
+
+                    pickedCard.classList.add('book-card-highlighted');
+                    pickedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    const bookTitle = pickedCard.querySelector('.book-title a')?.textContent?.trim() || 'Selected Book';
+                    if (typeof showPvToast === 'function') {
+                        showPvToast(`🎲 Surprise Pick: "${bookTitle}"`, 'success');
+                    }
+                }, 400);
+                return;
+            }
+
+            // Fallback for empty collections or direct navigation
+            setTimeout(() => {
+                if (btn) btn.classList.remove('rolling');
+                window.location.href = "/random_book";
+            }, 300);
         }
 
         // Synchronize Daily Reading Streak (Only increments when a book is ACTUALLY read)

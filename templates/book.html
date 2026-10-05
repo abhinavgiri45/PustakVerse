@@ -251,6 +251,52 @@
             color: var(--text-muted); 
         }
 
+        /* RESTORED BOOK ACCOLADE & BADGE SYSTEM */
+        .book-badges-strip {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .badge-accolade-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 1.5px solid rgba(255,255,255,0.3);
+            letter-spacing: 0.02em;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .badge-accolade-item:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .badge-gold { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-color: #fbbf24; }
+        .badge-emerald { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #34d399; }
+        .badge-crimson { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border-color: #f87171; }
+        .badge-indigo { background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-color: #818cf8; }
+        .badge-violet { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-color: #a78bfa; }
+        .badge-orange { background: linear-gradient(135deg, #f97316 0%, #c2410c 100%); border-color: #fb923c; }
+        .badge-btn-remove {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 900;
+            line-height: 1;
+            padding: 0 0 0 4px;
+            opacity: 0.8;
+            transition: opacity 0.15s;
+        }
+        .badge-btn-remove:hover { opacity: 1; color: #fee2e2; }
+
         .review-form { 
             background: var(--surface-card); 
             padding: 25px; 
@@ -413,7 +459,42 @@
             </div>
             
             <div class="book-details">
-                <span class="tag">{{ book.catalog }}</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                    <span class="tag">{{ book.catalog }}</span>
+                    {% if book.is_featured %}
+                        <span class="badge-accolade-item badge-gold">⭐ Staff Pick</span>
+                    {% endif %}
+                </div>
+
+                <!-- RESTORED BOOK ACCREDITATION & BADGE SYSTEM -->
+                <div class="book-badges-strip">
+                    {% if bestseller_badge or book.bestseller_badge %}
+                        {% set bsb = bestseller_badge or book.bestseller_badge %}
+                        <span class="badge-accolade-item" style="background: {{ bsb.bg }}; border-color: {{ bsb.border }};">
+                            {{ bsb.text }}
+                        </span>
+                    {% endif %}
+                    {% if custom_badges %}
+                        {% for badge in custom_badges %}
+                            <span class="badge-accolade-item badge-{{ badge.badge_color or 'gold' }}">
+                                <span>{{ badge.badge_label }}</span>
+                                {% if session.role in ['developer', 'official'] or session.is_absolute_power %}
+                                    <form action="{{ url_for('executive_remove_badge', badge_id=badge.id) }}" method="POST" style="display:inline; margin:0;" onsubmit="return confirm('Remove badge \'{{ badge.badge_label | escape }}\' from this book?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="next" value="{{ url_for('view_book', book_id=book.id) }}">
+                                        <button type="submit" class="badge-btn-remove" title="Remove Badge">&times;</button>
+                                    </form>
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    {% endif %}
+                    {% if session.role in ['developer', 'official'] or session.is_absolute_power %}
+                        <button type="button" onclick="openGrantBadgeModal()" style="background: rgba(249, 115, 22, 0.12); color: var(--primary-orange); border: 1.5px dashed var(--primary-orange); border-radius: 20px; padding: 4px 12px; font-size: 0.76rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                            ➕ Concur Badge
+                        </button>
+                    {% endif %}
+                </div>
+
                 <h1>{{ book.title }}</h1>
                 <div class="author" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                     <span>By <a href="{{ url_for('public_author_profile', username=book.author_name) }}" style="color: var(--primary-orange); font-weight: 700; text-decoration: none;" title="View Author Showcase & Published Works">{{ book.author_name }}</a></span>
@@ -797,7 +878,89 @@
         }
     </script>
 
-    
+    <!-- GRANT BADGE MODAL FOR THIS SPECIFIC BOOK -->
+    {% if session.role in ['developer', 'official'] or session.is_absolute_power %}
+    <div id="grantBadgeModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 999999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px);">
+        <div style="background: var(--surface-card); color: var(--text-primary); border-radius: 20px; width: 100%; max-width: 460px; padding: 26px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); border: 1px solid var(--border-subtle);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <span>🏷️</span> Concur Badge on {{ book.title }}
+                </h3>
+                <button type="button" onclick="closeGrantBadgeModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+            </div>
+            <form action="{{ url_for('executive_grant_badge') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="book_id" value="{{ book.id }}">
+                <input type="hidden" name="next" value="{{ url_for('view_book', book_id=book.id) }}">
+                
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">Preset Accolade / Badge:</label>
+                <select id="presetBadgeSelect" onchange="onBadgePresetChange(this.value)" style="width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-primary); margin-bottom: 12px; font-size: 0.88rem; font-weight: 600;">
+                    <option value="⭐ PustakVerse BestSeller">⭐ PustakVerse BestSeller</option>
+                    <option value="🏆 Award Winning Creator">🏆 Award Winning Creator</option>
+                    <option value="🌟 Scholarly Masterpiece">🌟 Scholarly Masterpiece</option>
+                    <option value="🔥 Trending Sensation">🔥 Trending Sensation</option>
+                    <option value="💎 Editor's Gold Selection">💎 Editor's Gold Selection</option>
+                    <option value="🎓 Academic Excellence">🎓 Academic Excellence</option>
+                    <option value="🚀 Rising Literary Star">🚀 Rising Literary Star</option>
+                    <option value="CUSTOM">✍️ Custom Accolade Label...</option>
+                </select>
+
+                <div id="customBadgeInputContainer" style="display: none; margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">Custom Badge Label:</label>
+                    <input type="text" id="customBadgeInput" name="badge_label" value="⭐ PustakVerse BestSeller" style="width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-primary); font-size: 0.88rem; font-weight: 600;">
+                </div>
+
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">Badge Color Theme:</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 10px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #d97706;">
+                        <input type="radio" name="badge_color" value="gold" checked> Gold
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #059669;">
+                        <input type="radio" name="badge_color" value="emerald"> Emerald
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 10px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
+                        <input type="radio" name="badge_color" value="crimson"> Crimson
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 10px; border-radius: 6px; background: rgba(99, 102, 241, 0.15); color: #4f46e5;">
+                        <input type="radio" name="badge_color" value="indigo"> Indigo
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 10px; border-radius: 6px; background: rgba(139, 92, 246, 0.15); color: #7c3aed;">
+                        <input type="radio" name="badge_color" value="violet"> Violet
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 10px; border-radius: 6px; background: rgba(249, 115, 22, 0.15); color: #ea580c;">
+                        <input type="radio" name="badge_color" value="orange"> Orange
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeGrantBadgeModal()" class="btn btn-outline" style="padding: 9px 18px;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 9px 22px; font-weight: 800; background: var(--primary-orange); color: white;">Confer Badge</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    function openGrantBadgeModal() {
+        var m = document.getElementById('grantBadgeModal');
+        if (m) m.style.display = 'flex';
+    }
+    function closeGrantBadgeModal() {
+        var m = document.getElementById('grantBadgeModal');
+        if (m) m.style.display = 'none';
+    }
+    function onBadgePresetChange(val) {
+        var c = document.getElementById('customBadgeInputContainer');
+        var input = document.getElementById('customBadgeInput');
+        if (val === 'CUSTOM') {
+            if (c) c.style.display = 'block';
+            if (input) { input.value = ''; input.focus(); }
+        } else {
+            if (c) c.style.display = 'none';
+            if (input) input.value = val;
+        }
+    }
+    </script>
+    {% endif %}
 
 </body>
 </html>

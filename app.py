@@ -573,6 +573,7 @@ def clean_book_data(books):
         
         # 6-Month (Red) and 3-Month (Orange) Bestseller Badges
         b['bestseller_badge'] = get_dynamic_bestseller_badge(b, book_index=idx)
+        b['custom_badges'] = b.get('custom_badges') or []
     return books
 
 STOP_WORDS = {
@@ -4512,7 +4513,17 @@ def index():
             LIMIT 50
         """)
         books = clean_book_data(cursor.fetchall())
-        fast_cache.set('books_index', books, ttl=60) # 10-minute high-speed memory cache
+        try:
+            cursor.execute("SELECT * FROM book_custom_badges")
+            all_b_badges = cursor.fetchall() or []
+            badges_map = {}
+            for bg in all_b_badges:
+                badges_map.setdefault(bg['book_id'], []).append(bg)
+            for b in books:
+                b['custom_badges'] = badges_map.get(b['id'], [])
+        except Exception:
+            pass
+        fast_cache.set('books_index', books, ttl=60)
 
         # Consolidated single-trip platform metrics
         try:
@@ -4668,8 +4679,25 @@ def view_book(book_id):
             else:
                 cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
                 can_read = bool(cursor.fetchone())
+
+        # BADGE SYSTEM: Query custom conferred badges for this specific book
+        cursor.execute("SELECT * FROM book_custom_badges WHERE book_id = %s ORDER BY id DESC", (book_id,))
+        custom_badges = cursor.fetchall() or []
+        book['custom_badges'] = custom_badges
+
+        # BADGE SYSTEM: Dynamic Bestseller Accreditation
+        bestseller_badge = PERSISTENT_BESTSELLER_REGISTRY.get(str(book_id))
+        if not bestseller_badge:
+            try:
+                cursor.execute("SELECT id FROM books WHERE is_quarantined = FALSE ORDER BY id DESC LIMIT 2")
+                top_two = [str(r['id']) for r in cursor.fetchall()]
+                if str(book_id) in top_two:
+                    bestseller_badge = get_dynamic_bestseller_badge(book, book_index=top_two.index(str(book_id)))
+            except Exception:
+                pass
+        book['bestseller_badge'] = bestseller_badge
                 
-        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts)
+        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge)
     except Exception as e:
         import logging
         logging.exception(f"Error loading book details for book {book_id}: {e}")
@@ -7638,6 +7666,16 @@ def dashboard():
             
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
+            try:
+                cursor.execute("SELECT * FROM book_custom_badges")
+                all_b_badges = cursor.fetchall() or []
+                badges_map = {}
+                for bg in all_b_badges:
+                    badges_map.setdefault(bg['book_id'], []).append(bg)
+                for b in my_books:
+                    b['custom_badges'] = badges_map.get(b.get('id'), [])
+            except Exception:
+                pass
             
             # Real-time System Metrics for Developer
             cursor.execute("SELECT COUNT(*) as total_users, SUM(role='reader') as readers, SUM(role='author') as authors, SUM(role='official') as officials FROM users")
@@ -7702,6 +7740,16 @@ def dashboard():
             
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
+            try:
+                cursor.execute("SELECT * FROM book_custom_badges")
+                all_b_badges = cursor.fetchall() or []
+                badges_map = {}
+                for bg in all_b_badges:
+                    badges_map.setdefault(bg['book_id'], []).append(bg)
+                for b in my_books:
+                    b['custom_badges'] = badges_map.get(b.get('id'), [])
+            except Exception:
+                pass
             exec_info = get_user_executive_status(user_profile, cursor)
             session['official_designation'] = exec_info['designation']
             session['is_absolute_power'] = exec_info['is_absolute']
@@ -10175,78 +10223,148 @@ def executive_grant_license():
     return redirect(url_for('dashboard'))
 
 
-# POWER 2: GRANT EXCLUSIVE BADGES TO BOOKS (Founder, CEO, CTO, CPO, CCO)
+# POWER 2: GRANT EXCLUSIVE BADGES TO BOOKS (Founder, CEO, CTO, CPO, CCO, Officials, Developers)
 @app.route('/executive/powers/grant_badge', methods=['POST'])
-def executive_grant_badge():
+@app.route('/api/books/<int:book_id>/grant_badge', methods=['POST'])
+def executive_grant_badge(book_id=None):
+    is_json = request.is_json or 'application/json' in request.headers.get('Accept', '')
     role = session.get('role')
     is_absolute = session.get('is_absolute_power')
-    post_tier = session.get('post_tier')
 
-    if role != 'developer' and not is_absolute and post_tier not in ['product', 'content', 'operations']:
-        flash('Unauthorized. Requires Executive, Product, or Editorial clearance.', 'error')
+    if role not in ['developer', 'official'] and not is_absolute:
+        msg = 'Unauthorized. Requires Official or Developer clearance.'
+        if is_json:
+            return jsonify({'success': False, 'message': msg}), 403
+        flash(msg, 'error')
         return redirect(url_for('dashboard'))
 
-    book_id = request.form.get('book_id')
-    badge_label = request.form.get('badge_label', '⭐ Staff Masterpiece').strip()
-    badge_color = request.form.get('badge_color', 'gold').strip()
+    req_data = request.get_json(silent=True) or {}
+    target_book_id = book_id or request.form.get('book_id') or req_data.get('book_id')
+    badge_label = (request.form.get('badge_label') or req_data.get('badge_label') or '⭐ Staff Masterpiece').strip()
+    badge_color = (request.form.get('badge_color') or req_data.get('badge_color') or 'gold').strip()
 
-    if not book_id or not badge_label:
-        flash('Please select a book and badge label.', 'error')
+    if not target_book_id or not badge_label:
+        msg = 'Please select a book and badge label.'
+        if is_json:
+            return jsonify({'success': False, 'message': msg}), 400
+        flash(msg, 'error')
         return redirect(url_for('dashboard'))
 
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id, title FROM books WHERE id = %s", (book_id,))
+        cursor.execute("SELECT id, title FROM books WHERE id = %s", (target_book_id,))
         book = cursor.fetchone()
         if not book:
-            flash("Book not found.", "error")
+            msg = "Book not found."
+            if is_json:
+                return jsonify({'success': False, 'message': msg}), 404
+            flash(msg, "error")
             return redirect(url_for('dashboard'))
 
         cursor.execute("""
             INSERT INTO book_custom_badges (book_id, badge_label, badge_color, granted_by)
             VALUES (%s, %s, %s, %s)
-        """, (book_id, badge_label, badge_color, session['user_id']))
+        """, (target_book_id, badge_label, badge_color, session.get('user_id') or 1))
+        badge_id = cursor.lastrowid
         db.commit()
 
-        log_official_activity(session['user_id'], f"Conferred badge '{badge_label}' onto book #{book_id} ({book['title']})")
-        flash(f"Conferred badge '{badge_label}' onto '{book['title']}'!", "success")
+        log_official_activity(session.get('user_id') or 1, f"Conferred badge '{badge_label}' onto book #{target_book_id} ({book['title']})")
+        msg = f"Conferred badge '{badge_label}' onto '{book['title']}'!"
+        if is_json:
+            return jsonify({
+                'success': True,
+                'message': msg,
+                'badge': {
+                    'id': badge_id,
+                    'book_id': target_book_id,
+                    'badge_label': badge_label,
+                    'badge_color': badge_color
+                }
+            })
+        flash(msg, "success")
     except Exception as e:
         logging.error(f"Error granting badge: {e}")
+        if is_json:
+            return jsonify({'success': False, 'message': f"Could not award badge: {str(e)}"}), 500
         flash("Could not award badge.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
 
-    return redirect(url_for('dashboard'))
+    next_url = request.form.get('next') or request.referrer or url_for('view_book', book_id=target_book_id)
+    return redirect(next_url)
 
 
 # POWER 3: REMOVE BADGE
 @app.route('/executive/powers/remove_badge/<int:badge_id>', methods=['POST'])
+@app.route('/api/books/badges/<int:badge_id>/delete', methods=['POST'])
 def executive_remove_badge(badge_id):
-    if session.get('role') not in ['developer', 'official']:
-        flash('Unauthorized.', 'error')
+    is_json = request.is_json or 'application/json' in request.headers.get('Accept', '')
+    if session.get('role') not in ['developer', 'official'] and not session.get('is_absolute_power'):
+        msg = 'Unauthorized. Official or Developer clearance required.'
+        if is_json:
+            return jsonify({'success': False, 'message': msg}), 403
+        flash(msg, 'error')
         return redirect(url_for('dashboard'))
 
     db = None
+    target_book_id = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT book_id FROM book_custom_badges WHERE id = %s", (badge_id,))
+        b_row = cursor.fetchone()
+        if b_row:
+            target_book_id = b_row['book_id']
+
         cursor.execute("DELETE FROM book_custom_badges WHERE id = %s", (badge_id,))
         db.commit()
-        log_official_activity(session['user_id'], f"Removed custom badge #{badge_id}")
-        flash("Badge removed.", "success")
+        log_official_activity(session.get('user_id') or 1, f"Removed custom badge #{badge_id}")
+        msg = "Badge removed."
+        if is_json:
+            return jsonify({'success': True, 'message': msg, 'badge_id': badge_id})
+        flash(msg, "success")
     except Exception as e:
         logging.error(f"Error deleting badge: {e}")
+        if is_json:
+            return jsonify({'success': False, 'message': f"Could not remove badge: {str(e)}"}), 500
         flash("Could not remove badge.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
 
-    return redirect(url_for('dashboard'))
+    next_url = request.form.get('next') or request.referrer
+    if not next_url and target_book_id:
+        next_url = url_for('view_book', book_id=target_book_id)
+    return redirect(next_url or url_for('dashboard'))
+
+
+# GET ALL BADGES FOR A SPECIFIC BOOK (API)
+@app.route('/api/books/<int:book_id>/badges', methods=['GET'])
+def api_get_book_badges(book_id):
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM book_custom_badges WHERE book_id = %s ORDER BY id DESC", (book_id,))
+        badges = cursor.fetchall() or []
+        bestseller_badge = PERSISTENT_BESTSELLER_REGISTRY.get(str(book_id))
+        return jsonify({
+            'success': True,
+            'book_id': book_id,
+            'badges': badges,
+            'bestseller_badge': bestseller_badge
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'badges': []}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
 
 
 # POWER 4: GLOBAL TOP BANNER TICKER BROADCASTER (Founder, CEO, CTO, COO)
