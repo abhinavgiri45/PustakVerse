@@ -1264,13 +1264,23 @@
         <!-- OFFICIAL ACTIONS LOG -->
         <div class="am-section">
             <div class="am-section-header">
-                <h2>
-                    <span>🛡️ Official Moderation Actions Log</span>
-                    <span class="section-count-badge">{{ official_logs|length }} Events</span>
-                </h2>
+                <div>
+                    <h2>
+                        <span>🛡️ Official Moderation Actions Log</span>
+                        <span class="section-count-badge" id="officialLogsBadge">{{ official_logs|length }} Events</span>
+                    </h2>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <div class="logs-filter-group" style="display:inline-flex;background:rgba(15,23,42,0.8);padding:3px;border-radius:10px;border:1px solid var(--am-border);">
+                        <a href="?logs_range=all" class="logs-pill {% if logs_range == 'all' or not logs_range %}active{% endif %}" style="padding:4px 10px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;color:{% if logs_range == 'all' or not logs_range %}#fff{% else %}var(--am-muted){% endif %};background:{% if logs_range == 'all' or not logs_range %}var(--am-accent){% else %}transparent{% endif %};">All Logs</a>
+                        <a href="?logs_range=7d" class="logs-pill {% if logs_range == '7d' %}active{% endif %}" style="padding:4px 10px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;color:{% if logs_range == '7d' %}#fff{% else %}var(--am-muted){% endif %};background:{% if logs_range == '7d' %}var(--am-accent){% else %}transparent{% endif %};">📅 Last 7 Days</a>
+                        <a href="?logs_range=24h" class="logs-pill {% if logs_range == '24h' %}active{% endif %}" style="padding:4px 10px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;color:{% if logs_range == '24h' %}#fff{% else %}var(--am-muted){% endif %};background:{% if logs_range == '24h' %}var(--am-accent){% else %}transparent{% endif %};">⚡ 24 Hours</a>
+                    </div>
+                    <input type="text" id="officialLogsSearch" placeholder="Search official logs..." style="padding:5px 10px;border:1px solid var(--am-border);border-radius:8px;background:rgba(15,23,42,0.8);color:#fff;font-size:0.78rem;outline:none;max-width:150px;" oninput="filterOfficialLogs(this.value)">
+                </div>
             </div>
             <div class="am-scroll-box am-scroll-box-short">
-                <table class="am-table">
+                <table class="am-table" id="officialLogsTable">
                     <thead>
                         <tr>
                             <th>Action Executed</th>
@@ -1278,16 +1288,16 @@
                             <th>Timestamp</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="officialLogsBody">
                         {% for log in official_logs %}
-                        <tr>
+                        <tr class="official-log-row">
                             <td>{{ log.action }}</td>
                             <td><strong>{{ log.username }}</strong></td>
                             <td><span class="rel-time" data-ts="{{ log.timestamp }}">{{ log.timestamp }}</span></td>
                         </tr>
                         {% endfor %}
                         {% if not official_logs %}
-                        <tr><td colspan="3" style="text-align:center;color:var(--am-muted);padding:30px;">No official actions recorded.</td></tr>
+                        <tr><td colspan="3" style="text-align:center;color:var(--am-muted);padding:30px;">No official actions recorded {% if logs_range == '7d' %}in the last 7 days{% elif logs_range == '24h' %}in the last 24 hours{% endif %}.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
@@ -1764,6 +1774,24 @@ document.querySelectorAll('.am-modal-overlay').forEach(ov => {
         if (e.target === this) this.style.display = 'none';
     });
 });
+
+// ── Official Logs Real-Time Filter ──
+function filterOfficialLogs(query) {
+    const q = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#officialLogsBody tr.official-log-row');
+    let count = 0;
+    rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        if (!q || text.includes(q)) {
+            r.style.display = '';
+            count++;
+        } else {
+            r.style.display = 'none';
+        }
+    });
+    const badge = document.getElementById('officialLogsBadge');
+    if (badge) badge.textContent = count + ' Events';
+}
 
 // ── Real-Time Auto-Refresh every 60 seconds ──
 setTimeout(() => location.reload(), 60000);

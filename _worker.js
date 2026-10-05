@@ -3571,12 +3571,32 @@ Format with these exact markdown sections:
         });
         securityStats.total_flagged = flaggedSecurityUsers.length;
 
+        const logsRange = url.searchParams.get("logs_range") || "all";
+        let dateFilterClause = "";
+        if (logsRange === "7d") {
+          dateFilterClause = "WHERE oa.timestamp >= datetime('now', '-7 days') ";
+        } else if (logsRange === "24h") {
+          dateFilterClause = "WHERE oa.timestamp >= datetime('now', '-1 day') ";
+        }
+
         try {
           const lRes = await env.DB.prepare(
-            "SELECT action, username, timestamp FROM official_activity_logs ORDER BY timestamp DESC LIMIT 100"
+            `SELECT oa.action, oa.timestamp, COALESCE(u.username, 'Official #' || oa.official_id) as username
+             FROM official_activities oa
+             LEFT JOIN users u ON oa.official_id = u.id
+             ${dateFilterClause}
+             ORDER BY oa.timestamp DESC LIMIT 200`
           ).all();
           officialLogs = lRes.results || [];
-        } catch (_) {}
+        } catch (_) {
+          try {
+            let fallbackWhere = logsRange === "7d" ? "WHERE timestamp >= datetime('now', '-7 days') " : (logsRange === "24h" ? "WHERE timestamp >= datetime('now', '-1 day') " : "");
+            const lRes2 = await env.DB.prepare(
+              `SELECT action, username, timestamp FROM official_activity_logs ${fallbackWhere}ORDER BY timestamp DESC LIMIT 200`
+            ).all();
+            officialLogs = lRes2.results || [];
+          } catch (e2) {}
+        }
 
         try {
           const trRes = await env.DB.prepare(
@@ -3633,7 +3653,8 @@ Format with these exact markdown sections:
         top_readers: topReaders,
         recent_books: recentBooks || [],
         recent_purchases: recentPurchases || [],
-        recent_registrations: recentRegistrations
+        recent_registrations: recentRegistrations,
+        logs_range: logsRange
       });
 
       const resHeaders = new Headers({ "Content-Type": "text/html; charset=utf-8" });
@@ -6212,19 +6233,19 @@ function renderEdgeInvoiceHtml(p) {
             </div>
             <div class="invoice-badge-title">
                 <div class="invoice-type">Tax Invoice / Receipt</div>
-                <div class="meta-text">Invoice Ref: <strong>\${orderId}</strong></div>
-                <div class="meta-text">Payment Date: \${dateStr}</div>
+                <div class="meta-text">Invoice Ref: <strong>${orderId}</strong></div>
+                <div class="meta-text">Payment Date: ${dateStr}</div>
             </div>
         </div>
         <div class="grid-info">
             <div>
                 <div class="info-title">Billed To (Reader)</div>
-                <div class="info-val">\${buyerUser}</div>
-                <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">\${buyerEmail}</div>
+                <div class="info-val">${buyerUser}</div>
+                <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">${buyerEmail}</div>
             </div>
             <div>
                 <div class="info-title">Author / Content Creator</div>
-                <div class="info-val">\${authorName}</div>
+                <div class="info-val">${authorName}</div>
                 <div style="font-size: 0.82rem; color: #166534; font-weight: 700; margin-top: 2px;">✓ Direct Author Settlement via Razorpay</div>
             </div>
         </div>
@@ -6240,25 +6261,25 @@ function renderEdgeInvoiceHtml(p) {
             <tbody>
                 <tr>
                     <td>
-                        <strong style="color: #0f172a; font-size: 0.98rem;">\${bookTitle}</strong>
-                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Digital eBook License (Lifetime Personal Library Access) · \${bookCatalog}</div>
+                        <strong style="color: #0f172a; font-size: 0.98rem;">${bookTitle}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Digital eBook License (Lifetime Personal Library Access) · ${bookCatalog}</div>
                     </td>
                     <td style="font-family: monospace; font-size: 0.85rem; color: #64748b;">998431</td>
                     <td>1</td>
-                    <td style="text-align: right; font-weight: 800; font-size: 0.98rem;">₹\${(bookPricePaise / 100).toFixed(2)}</td>
+                    <td style="text-align: right; font-weight: 800; font-size: 0.98rem;">₹${(bookPricePaise / 100).toFixed(2)}</td>
                 </tr>
-                \${donationRow}
+                ${donationRow}
             </tbody>
         </table>
         <div class="total-box">
             <div class="total-row">
                 <span>Book Retail Price:</span>
-                <span>₹\${(bookPricePaise / 100).toFixed(2)}</span>
+                <span>₹${(bookPricePaise / 100).toFixed(2)}</span>
             </div>
-            \${donationTotalRow}
+            ${donationTotalRow}
             <div class="total-row" style="border-top: 1.5px dashed #cbd5e1; padding-top: 8px; margin-top: 4px;">
                 <strong style="font-size: 1.05rem; color: #0f172a;">Grand Total Paid:</strong>
-                <strong class="grand-total">₹\${(totalAmountPaise / 100).toFixed(2)}</strong>
+                <strong class="grand-total">₹${(totalAmountPaise / 100).toFixed(2)}</strong>
             </div>
         </div>
         <div class="stamp-box">
@@ -6267,7 +6288,7 @@ function renderEdgeInvoiceHtml(p) {
                 <span>PUSTAKVERSE VERIFIED PURCHASE · 100% SECURE TRANSACTION</span>
             </div>
             <div style="font-size: 0.78rem; color: #475569; font-family: monospace;">
-                Razorpay ID: <strong>\${paymentId}</strong>
+                Razorpay ID: <strong>${paymentId}</strong>
             </div>
         </div>
         <div class="actions-bar">
@@ -6278,7 +6299,7 @@ function renderEdgeInvoiceHtml(p) {
         </div>
     </div>
 </body>
-</html>\`;
+</html>`;
 }
 
 function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
@@ -6605,7 +6626,8 @@ function renderActivityMonitorEdgeHtml({
   top_readers = [],
   recent_books = [],
   recent_purchases = [],
-  recent_registrations = []
+  recent_registrations = [],
+  logs_range = 'all'
 }) {
   if (!pin_verified) {
     if (is_locked) {
@@ -6914,12 +6936,12 @@ function renderActivityMonitorEdgeHtml({
   `).join("") || '<tr><td colspan="5" style="text-align:center;color:var(--am-muted);padding:30px;">No transaction logs found.</td></tr>';
 
   const officialRowsHtml = (official_logs || []).map(l => `
-    <tr>
+    <tr class="official-log-row">
       <td>${escapeHtml(l.action || '')}</td>
       <td><strong>${escapeHtml(l.username || '')}</strong></td>
       <td><span class="rel-time" data-ts="${escapeHtml(l.timestamp || '')}">${escapeHtml(l.timestamp || '')}</span></td>
     </tr>
-  `).join("") || '<tr><td colspan="3" style="text-align:center;color:var(--am-muted);padding:30px;">No official actions recorded yet.</td></tr>';
+  `).join("") || ('<tr><td colspan="3" style="text-align:center;color:var(--am-muted);padding:30px;">No official actions recorded ' + (logs_range === '7d' ? 'in the last 7 days' : (logs_range === '24h' ? 'in the last 24 hours' : 'yet')) + '.</td></tr>');
 
   const recentBooksHtml = (recent_books || []).map(b => `
     <tr>
@@ -7302,13 +7324,23 @@ function renderActivityMonitorEdgeHtml({
     <div class="am-two-col">
         <div class="am-section">
             <div class="am-section-header">
-                <h2>
-                    <span>🛡️ Official Moderation Actions Log</span>
-                    <span class="section-count-badge">${(official_logs || []).length} Events</span>
-                </h2>
+                <div>
+                    <h2>
+                        <span>🛡️ Official Moderation Actions Log</span>
+                        <span class="section-count-badge" id="officialLogsBadge">${(official_logs || []).length} Events</span>
+                    </h2>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <div style="display:inline-flex;background:rgba(15,23,42,0.8);padding:3px;border-radius:10px;border:1px solid var(--am-border);">
+                        <a href="?logs_range=all" style="padding:4px 10px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;color:${logs_range === 'all' ? '#fff' : 'var(--am-muted)'};background:${logs_range === 'all' ? 'var(--am-accent)' : 'transparent'};">All Logs</a>
+                        <a href="?logs_range=7d" style="padding:4px 10px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;color:${logs_range === '7d' ? '#fff' : 'var(--am-muted)'};background:${logs_range === '7d' ? 'var(--am-accent)' : 'transparent'};">📅 Last 7 Days</a>
+                        <a href="?logs_range=24h" style="padding:4px 10px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;color:${logs_range === '24h' ? '#fff' : 'var(--am-muted)'};background:${logs_range === '24h' ? 'var(--am-accent)' : 'transparent'};">⚡ 24 Hours</a>
+                    </div>
+                    <input type="text" id="officialLogsSearch" placeholder="Search logs..." style="padding:5px 10px;border:1px solid var(--am-border);border-radius:8px;background:rgba(15,23,42,0.85);color:#fff;font-size:0.78rem;outline:none;width:130px;" oninput="filterOfficialLogs(this.value)">
+                </div>
             </div>
             <div class="am-scroll-box am-scroll-box-short">
-                <table class="am-table">
+                <table class="am-table" id="officialLogsTable">
                     <thead>
                         <tr>
                             <th>Action Executed</th>
@@ -7316,7 +7348,7 @@ function renderActivityMonitorEdgeHtml({
                             <th>Timestamp</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="officialLogsBody">
                         ${officialRowsHtml}
                     </tbody>
                 </table>
@@ -7496,41 +7528,41 @@ function openUserReadingModal(uid) {
     if (!data.currently_reading || data.currently_reading.length === 0) {
         curList.innerHTML = '<div style="color:var(--am-muted);font-size:0.86rem;padding:12px;background:rgba(15,23,42,0.5);border-radius:8px;">No books currently in progress.</div>';
     } else {
-        curList.innerHTML = data.currently_reading.map(b => `
-            <div style="background: rgba(15,23,42,0.6); border: 1px solid var(--am-border); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <strong style="color:#fff; font-size:0.92rem;">\${b.book_title || 'Book'}</strong>
-                    <span class="badge badge-reader">Page \${b.current_page || 1} of \${b.total_pages || 1}</span>
-                </div>
-                <div class="progress-bar-bg" style="height: 8px; margin-bottom: 6px;">
-                    <div class="progress-bar-fill" style="width: \${Math.round(b.percent_completed || 0)}%;"></div>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted);">
-                    <span>\${Math.round(b.percent_completed || 0)}% Completed</span>
-                    <span>Study Time: \${Math.floor((b.reading_seconds||0)/60)}m \${(b.reading_seconds||0)%60}s</span>
-                    <span>Last read: \${relTime(b.last_read_at)}</span>
-                </div>
-            </div>
-        `).join('');
+        curList.innerHTML = data.currently_reading.map(function(b) {
+            return '<div style="background: rgba(15,23,42,0.6); border: 1px solid var(--am-border); border-radius: 10px; padding: 12px; margin-bottom: 8px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+                    '<strong style="color:#fff; font-size:0.92rem;">' + (b.book_title || 'Book') + '</strong>' +
+                    '<span class="badge badge-reader">Page ' + (b.current_page || 1) + ' of ' + (b.total_pages || 1) + '</span>' +
+                '</div>' +
+                '<div class="progress-bar-bg" style="height: 8px; margin-bottom: 6px;">' +
+                    '<div class="progress-bar-fill" style="width: ' + Math.round(b.percent_completed || 0) + '%;"></div>' +
+                '</div>' +
+                '<div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted);">' +
+                    '<span>' + Math.round(b.percent_completed || 0) + '% Completed</span>' +
+                    '<span>Study Time: ' + Math.floor((b.reading_seconds||0)/60) + 'm ' + ((b.reading_seconds||0)%60) + 's</span>' +
+                    '<span>Last read: ' + relTime(b.last_read_at) + '</span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
     }
 
     const compList = document.getElementById('modalCompletedBooksList');
     if (!data.has_read || data.has_read.length === 0) {
         compList.innerHTML = '<div style="color:var(--am-muted);font-size:0.86rem;padding:12px;background:rgba(15,23,42,0.5);border-radius:8px;">No books completed yet.</div>';
     } else {
-        compList.innerHTML = data.has_read.map(b => `
-            <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 12px; margin-bottom: 8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <strong style="color:#6ee7b7; font-size:0.92rem;">✓ \${b.book_title || 'Book'}</strong>
-                    <span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">VERIFIED FINISHED</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted); margin-top:4px;">
-                    <span>Finished: \${relTime(b.completed_at || b.last_read_at)}</span>
-                    <span>Total Pages: \${b.total_pages || 'Complete'}</span>
-                    <span>Study Time: \${Math.floor((b.reading_seconds||0)/3600)}h \${Math.floor(((b.reading_seconds||0)%3600)/60)}m</span>
-                </div>
-            </div>
-        `).join('');
+        compList.innerHTML = data.has_read.map(function(b) {
+            return '<div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 12px; margin-bottom: 8px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+                    '<strong style="color:#6ee7b7; font-size:0.92rem;">✓ ' + (b.book_title || 'Book') + '</strong>' +
+                    '<span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">VERIFIED FINISHED</span>' +
+                '</div>' +
+                '<div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--am-muted); margin-top:4px;">' +
+                    '<span>Finished: ' + relTime(b.completed_at || b.last_read_at) + '</span>' +
+                    '<span>Total Pages: ' + (b.total_pages || 'Complete') + '</span>' +
+                    '<span>Study Time: ' + Math.floor((b.reading_seconds||0)/3600) + 'h ' + Math.floor(((b.reading_seconds||0)%3600)/60) + 'm</span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
     }
 
     document.getElementById('readingPortfolioModal').style.display = 'flex';
@@ -7545,6 +7577,23 @@ document.querySelectorAll('.am-modal-overlay').forEach(ov => {
         if (e.target === this) this.style.display = 'none';
     });
 });
+
+function filterOfficialLogs(query) {
+    const q = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#officialLogsBody tr.official-log-row');
+    let count = 0;
+    rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        if (!q || text.includes(q)) {
+            r.style.display = '';
+            count++;
+        } else {
+            r.style.display = 'none';
+        }
+    });
+    const badge = document.getElementById('officialLogsBadge');
+    if (badge) badge.textContent = count + ' Events';
+}
 
 setTimeout(() => location.reload(), 60000);
 </script>

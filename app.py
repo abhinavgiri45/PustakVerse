@@ -10879,9 +10879,32 @@ def activity_monitor():
             "anomalies_count": len(scraping_anomalies)
         }
 
-        # Official activity logs
+        # Official activity logs (with 7-day and 24-hour filter support)
+        logs_range = request.args.get('logs_range', 'all')
         try:
-            cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 200")
+            if logs_range == '7d':
+                cursor.execute("""
+                    SELECT oa.action, oa.timestamp, u.username 
+                    FROM official_activities oa 
+                    JOIN users u ON oa.official_id = u.id 
+                    WHERE oa.timestamp >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    ORDER BY oa.timestamp DESC LIMIT 300
+                """)
+            elif logs_range == '24h':
+                cursor.execute("""
+                    SELECT oa.action, oa.timestamp, u.username 
+                    FROM official_activities oa 
+                    JOIN users u ON oa.official_id = u.id 
+                    WHERE oa.timestamp >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                    ORDER BY oa.timestamp DESC LIMIT 300
+                """)
+            else:
+                cursor.execute("""
+                    SELECT oa.action, oa.timestamp, u.username 
+                    FROM official_activities oa 
+                    JOIN users u ON oa.official_id = u.id 
+                    ORDER BY oa.timestamp DESC LIMIT 200
+                """)
             official_logs = cursor.fetchall()
         except Exception:
             official_logs = []
@@ -10963,7 +10986,8 @@ def activity_monitor():
             ai_activity=ai_activity,
             recent_books=recent_books,
             recent_purchases=recent_purchases,
-            recent_registrations=recent_registrations
+            recent_registrations=recent_registrations,
+            logs_range=logs_range
         )
 
     except Exception as e:
