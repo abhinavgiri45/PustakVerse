@@ -93,7 +93,7 @@
         .pin-card h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 8px; color: #fff; }
         .pin-card p { color: var(--am-muted); margin-bottom: 28px; font-size: 0.95rem; }
         .pin-card .lock-icon { font-size: 3.2rem; margin-bottom: 16px; filter: drop-shadow(0 0 12px #6366f1); }
-        .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
+        .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; transition: filter 0.25s; }
         .pin-inputs input {
             width: 44px;
             height: 54px;
@@ -111,6 +111,61 @@
             border-color: var(--am-accent);
             box-shadow: 0 0 16px var(--am-accent-glow);
             transform: scale(1.05);
+        }
+        /* PIN Masking & Privacy Controls */
+        .pin-inputs.masked input {
+            -webkit-text-security: disc;
+            letter-spacing: 2px;
+        }
+        .pin-inputs.discreet-shield {
+            filter: blur(5px);
+        }
+        .pin-inputs.discreet-shield:hover,
+        .pin-inputs.discreet-shield:focus-within {
+            filter: blur(0px);
+        }
+        .pin-controls-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .pin-tool-btn {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--am-border);
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+        .pin-tool-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--am-accent);
+            color: #fff;
+        }
+        .pin-tool-btn.active {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: #6366f1;
+            color: #a5b4fc;
+        }
+        .caps-lock-warning {
+            display: none;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: #fbbf24;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-bottom: 14px;
         }
         .pin-btn {
             width: 100%;
@@ -137,6 +192,262 @@
             font-size: 0.9rem;
             margin-bottom: 18px;
             font-weight: 600;
+        }
+
+        /* ── AM ACTION TOOLBAR (FEATURES 2, 3, 4, 12, 13, 15, 16) ── */
+        .am-toolbar {
+            background: var(--am-card);
+            border: 1px solid var(--am-border);
+            border-radius: 18px;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        }
+        .am-toolbar-left, .am-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .am-tool-pill {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--am-border);
+            color: #e2e8f0;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+        .am-tool-pill:hover {
+            border-color: var(--am-accent);
+            background: rgba(99, 102, 241, 0.2);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        .am-tool-pill.danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+        .am-tool-pill.danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+        .am-tool-pill.active {
+            background: var(--am-accent);
+            border-color: var(--am-accent);
+            color: #fff;
+            box-shadow: 0 0 12px var(--am-accent-glow);
+        }
+        .am-tool-select {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--am-border);
+            color: #fff;
+            padding: 7px 10px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+        }
+        .am-tool-select:focus {
+            border-color: var(--am-accent);
+        }
+
+        /* ── THREAT & HEALTH RADAR BANNER (FEATURE 5) ── */
+        .am-threat-radar-banner {
+            background: linear-gradient(90deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 1px solid var(--am-border);
+            border-radius: 16px;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .radar-defcon-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .defcon-5 { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .defcon-3 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .defcon-1 { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); animation: pulse 1.5s infinite; }
+
+        /* ── ANALYTICAL METRIC BARS & PROGRESS GAUGES (FEATURES 6, 7, 8, 9, 10, 11) ── */
+        .am-card-subhead {
+            font-size: 0.78rem;
+            color: var(--am-muted);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+        .meter-row { margin-bottom: 12px; }
+        .meter-row:last-child { margin-bottom: 0; }
+        .meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .meter-track {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            height: 7px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s ease;
+        }
+        .meter-fill-indigo { background: linear-gradient(90deg, #6366f1, #818cf8); }
+        .meter-fill-emerald { background: linear-gradient(90deg, #10b981, #34d399); }
+        .meter-fill-amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .meter-fill-purple { background: linear-gradient(90deg, #a855f7, #c084fc); }
+        .meter-fill-rose { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+        .meter-fill-cyan { background: linear-gradient(90deg, #06b6d4, #38bdf8); }
+
+        /* 24-HOUR HEATMAP (FEATURE 10) */
+        .hourly-heatmap-container {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+        .heatmap-bar {
+            height: 52px;
+            border-radius: 6px;
+            background: rgba(99, 102, 241, 0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 3px 0;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .heatmap-bar:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+            z-index: 5;
+        }
+        .heatmap-bar-fill {
+            width: 80%;
+            border-radius: 3px;
+            background: linear-gradient(180deg, #818cf8, #6366f1);
+            min-height: 4px;
+            transition: height 0.3s;
+        }
+        .heatmap-bar.is-peak .heatmap-bar-fill {
+            background: linear-gradient(180deg, #34d399, #10b981);
+            box-shadow: 0 0 8px #10b981;
+        }
+        .heatmap-bar.is-current {
+            border: 1px solid #fbbf24;
+        }
+        .heatmap-hour-label {
+            font-size: 0.62rem;
+            color: #94a3b8;
+            margin-top: 2px;
+            font-weight: 700;
+        }
+
+        /* ── TOAST NOTIFICATIONS ── */
+        .am-toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .am-toast {
+            background: #1e293b;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--am-border);
+            font-size: 0.88rem;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            animation: slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 380px;
+        }
+        @keyframes slideInToast {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .am-toast.success { border-color: rgba(16, 185, 129, 0.5); background: #064e3b; }
+        .am-toast.danger { border-color: rgba(239, 68, 68, 0.5); background: #7f1d1d; }
+        .am-toast.info { border-color: rgba(99, 102, 241, 0.5); background: #1e1b4b; }
+
+        /* ── NOC WALL / DISPLAY MODE (FEATURE 15) ── */
+        body.noc-mode {
+            background: #030712 !important;
+        }
+        body.noc-mode .am-header {
+            padding: 12px 24px;
+            background: #0f172a;
+        }
+        body.noc-mode .stat-card {
+            border-width: 2px;
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.25);
+        }
+        body.noc-mode .stat-num {
+            font-size: 2.6rem;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        body.noc-mode .am-section {
+            border-width: 2px;
+        }
+
+        /* ── BUTTON COPY JSON (FEATURE 14) ── */
+        .btn-copy-json {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            color: #c7d2fe;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-copy-json:hover {
+            background: #6366f1;
+            color: #fff;
+            transform: scale(1.05);
         }
 
         /* ── DASHBOARD HEADER ── */
@@ -627,25 +938,46 @@
         
 
         <form method="POST" id="pinForm">
-            <div class="pin-inputs">
+            <div class="pin-inputs masked" id="pinInputsContainer">
                 
-                <input type="text" name="pin_1" id="pin_1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_1" id="pin_1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_2" id="pin_2" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_2" id="pin_2" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_3" id="pin_3" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_3" id="pin_3" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_4" id="pin_4" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_4" id="pin_4" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_5" id="pin_5" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_5" id="pin_5" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_6" id="pin_6" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_6" id="pin_6" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_7" id="pin_7" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_7" id="pin_7" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
-                <input type="text" name="pin_8" id="pin_8" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
+                <input type="password" name="pin_8" id="pin_8" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
                 
             </div>
+
+            <!-- PIN Masking & Privacy Controls (Feature 1) -->
+            <div class="pin-controls-bar">
+                <button type="button" class="pin-tool-btn active" id="btnTogglePinMask" onclick="togglePinMask()">
+                    <span id="pinMaskIcon">🙈</span> <span id="pinMaskText">PIN Hidden (Masked)</span>
+                </button>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" class="pin-tool-btn" onclick="clearPinInputs()" title="Clear all digits">
+                        <span>🧹</span> Clear
+                    </button>
+                    <button type="button" class="pin-tool-btn" onclick="pastePinFromClipboard()" title="Paste PIN">
+                        <span>📋</span> Paste
+                    </button>
+                    <label class="pin-tool-btn" style="cursor:pointer;" title="Shoulder-Surfing Privacy Shield">
+                        <input type="checkbox" id="shieldToggle" onchange="toggleDiscreetShield(this.checked)" style="margin-right:4px;">
+                        <span>🛡️ Shield</span>
+                    </label>
+                </div>
+            </div>
+            <div id="capsLockAlert" class="caps-lock-warning">⚠️ Caps Lock is active</div>
+
             <button type="submit" class="pin-btn">Verify &amp; Enter Activity Monitor</button>
             <div style="margin-top: 20px;">
                 <a href="/dashboard" style="color: var(--am-muted); text-decoration: none; font-size: 0.88rem; font-weight: 600;">← Back to Dashboard</a>
@@ -655,7 +987,74 @@
 
     <script>
     (function(){
+        const container = document.getElementById('pinInputsContainer');
         const inputs = document.querySelectorAll('.pin-inputs input');
+        const maskBtn = document.getElementById('btnTogglePinMask');
+        const maskIcon = document.getElementById('pinMaskIcon');
+        const maskText = document.getElementById('pinMaskText');
+        const capsAlert = document.getElementById('capsLockAlert');
+
+        // Restore mask preference (default to true = hidden/masked)
+        let isMasked = localStorage.getItem('pv_pin_masked') !== 'false';
+        applyMaskState(isMasked);
+
+        window.togglePinMask = function() {
+            isMasked = !isMasked;
+            localStorage.setItem('pv_pin_masked', isMasked);
+            applyMaskState(isMasked);
+        };
+
+        function applyMaskState(masked) {
+            inputs.forEach(inp => {
+                inp.type = masked ? 'password' : 'text';
+            });
+            if (container) {
+                if (masked) container.classList.add('masked');
+                else container.classList.remove('masked');
+            }
+            if (maskIcon && maskText) {
+                if (masked) {
+                    maskIcon.textContent = '🙈';
+                    maskText.textContent = 'PIN Hidden (Masked)';
+                    if (maskBtn) maskBtn.classList.add('active');
+                } else {
+                    maskIcon.textContent = '👁️';
+                    maskText.textContent = 'PIN Visible';
+                    if (maskBtn) maskBtn.classList.remove('active');
+                }
+            }
+        }
+
+        window.clearPinInputs = function() {
+            inputs.forEach(inp => inp.value = '');
+            if (inputs[0]) inputs[0].focus();
+        };
+
+        window.pastePinFromClipboard = async function() {
+            try {
+                const text = (await navigator.clipboard.readText()).replace(/\D/g, '').slice(0, 8);
+                if (text) {
+                    for (let j = 0; j < text.length && j < inputs.length; j++) { inputs[j].value = text[j]; }
+                    if (inputs[Math.min(text.length, inputs.length) - 1]) inputs[Math.min(text.length, inputs.length) - 1].focus();
+                }
+            } catch(e) {}
+        };
+
+        window.toggleDiscreetShield = function(enable) {
+            if (container) {
+                if (enable) container.classList.add('discreet-shield');
+                else container.classList.remove('discreet-shield');
+            }
+        };
+
+        window.addEventListener('keydown', function(e) {
+            if (e.getModifierState && e.getModifierState('CapsLock')) {
+                if (capsAlert) capsAlert.style.display = 'block';
+            } else {
+                if (capsAlert) capsAlert.style.display = 'none';
+            }
+        });
+
         inputs.forEach((inp, i) => {
             inp.addEventListener('input', function() {
                 this.value = this.value.replace(/\D/g, '').slice(0,1);

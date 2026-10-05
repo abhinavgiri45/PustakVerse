@@ -6734,9 +6734,17 @@ function renderActivityMonitorEdgeHtml({
         .pin-card h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 8px; color: var(--am-text); }
         .pin-card p { color: var(--am-muted); margin-bottom: 24px; font-size: .95rem; }
         .pin-card .lock-icon { font-size: 3.2rem; margin-bottom: 16px; filter: drop-shadow(0 0 12px #6366f1); }
-        .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
+        .pin-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; transition: filter 0.25s; }
         .pin-inputs input { width: 44px; height: 54px; text-align: center; font-size: 1.4rem; font-weight: 800; border: 2px solid var(--am-border); border-radius: 12px; background: rgba(15,23,42,.8); color: #fff; outline: none; transition: all .2s; }
         .pin-inputs input:focus { border-color: var(--am-accent); box-shadow: 0 0 16px rgba(99,102,241,.3); transform: scale(1.05); }
+        .pin-inputs.masked input { -webkit-text-security: disc; letter-spacing: 2px; }
+        .pin-inputs.discreet-shield { filter: blur(5px); }
+        .pin-inputs.discreet-shield:hover, .pin-inputs.discreet-shield:focus-within { filter: blur(0px); }
+        .pin-controls-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .pin-tool-btn { background: rgba(15, 23, 42, 0.7); border: 1px solid var(--am-border); color: #cbd5e1; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+        .pin-tool-btn:hover { background: rgba(99, 102, 241, 0.2); border-color: var(--am-accent); color: #fff; }
+        .pin-tool-btn.active { background: rgba(99, 102, 241, 0.25); border-color: #6366f1; color: #a5b4fc; }
+        .caps-lock-warning { display: none; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; padding: 6px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 700; margin-bottom: 14px; }
         .pin-btn { width: 100%; padding: 14px; font-size: 1rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 12px; cursor: pointer; transition: transform .15s; }
         .pin-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,.5); }
         .pin-error { color: #fca5a5; font-size: .88rem; margin-bottom: 18px; font-weight: 600; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.35); padding: 12px; border-radius: 10px; text-align: left; }
@@ -6761,9 +6769,30 @@ function renderActivityMonitorEdgeHtml({
         </div>
         ` : ''}
         <form method="POST" id="pinForm">
-            <div class="pin-inputs">
-                ${[1,2,3,4,5,6,7,8].map(i => `<input type="text" name="pin_${i}" id="pin_${i}" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>`).join('')}
+            <div class="pin-inputs masked" id="pinInputsContainer">
+                ${[1,2,3,4,5,6,7,8].map(i => `<input type="password" name="pin_${i}" id="pin_${i}" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>`).join('')}
             </div>
+
+            <!-- PIN Masking & Privacy Controls -->
+            <div class="pin-controls-bar">
+                <button type="button" class="pin-tool-btn active" id="btnTogglePinMask" onclick="togglePinMask()">
+                    <span id="pinMaskIcon">🙈</span> <span id="pinMaskText">PIN Hidden (Masked)</span>
+                </button>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" class="pin-tool-btn" onclick="clearPinInputs()" title="Clear all digits">
+                        <span>🧹</span> Clear
+                    </button>
+                    <button type="button" class="pin-tool-btn" onclick="pastePinFromClipboard()" title="Paste PIN">
+                        <span>📋</span> Paste
+                    </button>
+                    <label class="pin-tool-btn" style="cursor:pointer;" title="Shoulder-Surfing Privacy Shield">
+                        <input type="checkbox" id="shieldToggle" onchange="toggleDiscreetShield(this.checked)" style="margin-right:4px;">
+                        <span>🛡️ Shield</span>
+                    </label>
+                </div>
+            </div>
+            <div id="capsLockAlert" class="caps-lock-warning">⚠️ Caps Lock is active</div>
+
             <button type="submit" class="pin-btn">Verify & Enter Activity Monitor</button>
             <div style="margin-top: 20px;">
                 <a href="/dashboard" style="color: var(--am-muted); text-decoration: none; font-size: 0.88rem; font-weight: 600;">← Back to Dashboard</a>
@@ -6773,7 +6802,73 @@ function renderActivityMonitorEdgeHtml({
 </div>
 <script>
 (function(){
+    const container = document.getElementById('pinInputsContainer');
     const inputs = document.querySelectorAll('.pin-inputs input');
+    const maskBtn = document.getElementById('btnTogglePinMask');
+    const maskIcon = document.getElementById('pinMaskIcon');
+    const maskText = document.getElementById('pinMaskText');
+    const capsAlert = document.getElementById('capsLockAlert');
+
+    let isMasked = localStorage.getItem('pv_pin_masked') !== 'false';
+    applyMaskState(isMasked);
+
+    window.togglePinMask = function() {
+        isMasked = !isMasked;
+        localStorage.setItem('pv_pin_masked', isMasked);
+        applyMaskState(isMasked);
+    };
+
+    function applyMaskState(masked) {
+        inputs.forEach(inp => {
+            inp.type = masked ? 'password' : 'text';
+        });
+        if (container) {
+            if (masked) container.classList.add('masked');
+            else container.classList.remove('masked');
+        }
+        if (maskIcon && maskText) {
+            if (masked) {
+                maskIcon.textContent = '🙈';
+                maskText.textContent = 'PIN Hidden (Masked)';
+                if (maskBtn) maskBtn.classList.add('active');
+            } else {
+                maskIcon.textContent = '👁️';
+                maskText.textContent = 'PIN Visible';
+                if (maskBtn) maskBtn.classList.remove('active');
+            }
+        }
+    }
+
+    window.clearPinInputs = function() {
+        inputs.forEach(inp => inp.value = '');
+        if (inputs[0]) inputs[0].focus();
+    };
+
+    window.pastePinFromClipboard = async function() {
+        try {
+            const text = (await navigator.clipboard.readText()).replace(/\\D/g, '').slice(0, 8);
+            if (text) {
+                for (let j = 0; j < text.length && j < inputs.length; j++) { inputs[j].value = text[j]; }
+                if (inputs[Math.min(text.length, inputs.length) - 1]) inputs[Math.min(text.length, inputs.length) - 1].focus();
+            }
+        } catch(e) {}
+    };
+
+    window.toggleDiscreetShield = function(enable) {
+        if (container) {
+            if (enable) container.classList.add('discreet-shield');
+            else container.classList.remove('discreet-shield');
+        }
+    };
+
+    window.addEventListener('keydown', function(e) {
+        if (e.getModifierState && e.getModifierState('CapsLock')) {
+            if (capsAlert) capsAlert.style.display = 'block';
+        } else {
+            if (capsAlert) capsAlert.style.display = 'none';
+        }
+    });
+
     inputs.forEach((inp, i) => {
         inp.addEventListener('input', function() {
             this.value = this.value.replace(/\\D/g, '').slice(0,1);
