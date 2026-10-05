@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Self-Published Book Management · PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') if url_for is defined else '/static/PustakVerse.png' }}">
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') if url_for is defined else '/static/style.css' }}">
-    <script src="{{ url_for('static', filename='theme.js') if url_for is defined else '/static/theme.js' }}"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
     <script>
         (function() {
             try {
@@ -471,7 +471,7 @@
             <div>
                 <h1>
                     <span>📖</span> Self-Published Book Management Hub
-                    <span class="badge-role" id="headerUserRoleBadge">{{ session.role if session is defined and session.role else 'Official' }} Level</span>
+                    <span class="badge-role" id="headerUserRoleBadge">developer Level</span>
                 </h1>
                 <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 4px;">
                     Comprehensive oversight, curation, accolade badging, content moderation, and monetization controls for author-submitted works.
@@ -489,69 +489,77 @@
         <div class="metrics-grid">
             <div class="metric-card" style="border-left: 4px solid var(--primary-orange);">
                 <span class="metric-title">Total Self-Published</span>
-                <span class="metric-val" id="metricTotalSelfPublished">{{ stats.total_books if stats is defined and stats.total_books is defined else 0 }}</span>
-                <span class="metric-sub"><span id="metricTotalAuthors">{{ stats.total_authors if stats is defined and stats.total_authors is defined else 0 }}</span> Active Authors</span>
+                <span class="metric-val" id="metricTotalSelfPublished">0</span>
+                <span class="metric-sub"><span id="metricTotalAuthors">0</span> Active Authors</span>
             </div>
 
             <div class="metric-card" style="border-left: 4px solid #10b981;">
                 <span class="metric-title">Live & Active</span>
-                <span class="metric-val" id="metricActiveSelfPublished">{{ stats.active_books if stats is defined and stats.active_books is defined else 0 }}</span>
-                <span class="metric-sub"><span id="metricFreeSelfPublished">{{ stats.free_books if stats is defined and stats.free_books is defined else 0 }}</span> Free · <span id="metricPaidSelfPublished">{{ stats.paid_books if stats is defined and stats.paid_books is defined else 0 }}</span> Paid</span>
+                <span class="metric-val" id="metricActiveSelfPublished">0</span>
+                <span class="metric-sub"><span id="metricFreeSelfPublished">0</span> Free · <span id="metricPaidSelfPublished">0</span> Paid</span>
             </div>
 
             <div class="metric-card" style="border-left: 4px solid #ef4444;">
                 <span class="metric-title">Quarantined / Hidden</span>
-                <span class="metric-val" id="metricQuarantinedSelfPublished">{{ stats.quarantined_books if stats is defined and stats.quarantined_books is defined else 0 }}</span>
+                <span class="metric-val" id="metricQuarantinedSelfPublished">0</span>
                 <span class="metric-sub">Soft-quarantined from discovery</span>
             </div>
 
             <div class="metric-card" style="border-left: 4px solid #eab308;">
                 <span class="metric-title">Staff Picks / Featured</span>
-                <span class="metric-val" id="metricFeaturedSelfPublished">{{ stats.featured_books if stats is defined and stats.featured_books is defined else 0 }}</span>
+                <span class="metric-val" id="metricFeaturedSelfPublished">0</span>
                 <span class="metric-sub">Promoted on homepage showcase</span>
             </div>
 
             <div class="metric-card" style="border-left: 4px solid #6366f1;">
                 <span class="metric-title">Author Sales Volume</span>
-                <span class="metric-val" id="metricRevenueSelfPublished">₹{{ "%.2f"|format(stats.total_revenue_inr) if stats is defined and stats.total_revenue_inr is defined else "0.00" }}</span>
-                <span class="metric-sub"><span id="metricSalesSelfPublished">{{ stats.total_sales if stats is defined and stats.total_sales is defined else 0 }}</span> Verified Orders</span>
+                <span class="metric-val" id="metricRevenueSelfPublished">₹0.00</span>
+                <span class="metric-sub"><span id="metricSalesSelfPublished">0</span> Verified Orders</span>
             </div>
         </div>
 
         <!-- SEARCH & ADVANCED FILTER BAR -->
         <div class="filter-panel">
             <div class="filter-row">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search by book title, author username, ID, or description…" value="{{ filters.search if filters is defined and filters.search else '' }}" oninput="filterBooks()">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by book title, author username, ID, or description…" value="" oninput="filterBooks()">
                 
                 <select id="catalogFilter" class="filter-select" onchange="filterBooks()">
                     <option value="all">All Categories</option>
-                    {% if catalogs %}
-                        {% for cat in catalogs %}
-                            <option value="{{ cat.name }}" {% if filters is defined and filters.catalog == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                        {% endfor %}
-                    {% endif %}
+                    
+                        
+                            <option value="Fiction" >Fiction</option>
+                        
+                            <option value="Non-Fiction" >Non-Fiction</option>
+                        
+                            <option value="Philosophy" >Philosophy</option>
+                        
+                            <option value="Academic" >Academic</option>
+                        
+                            <option value="Science" >Science</option>
+                        
+                    
                 </select>
 
                 <select id="typeFilter" class="filter-select" onchange="filterBooks()">
-                    <option value="all" {% if filters is defined and filters.type == 'all' %}selected{% endif %}>All Pricing</option>
-                    <option value="free" {% if filters is defined and filters.type == 'free' %}selected{% endif %}>Free Books Only</option>
-                    <option value="paid" {% if filters is defined and filters.type == 'paid' %}selected{% endif %}>Paid Books Only</option>
+                    <option value="all" selected>All Pricing</option>
+                    <option value="free" >Free Books Only</option>
+                    <option value="paid" >Paid Books Only</option>
                 </select>
 
                 <select id="statusFilter" class="filter-select" onchange="filterBooks()">
-                    <option value="all" {% if filters is defined and filters.status == 'all' %}selected{% endif %}>All Statuses</option>
-                    <option value="active" {% if filters is defined and filters.status == 'active' %}selected{% endif %}>Active / Live Only</option>
-                    <option value="quarantined" {% if filters is defined and filters.status == 'quarantined' %}selected{% endif %}>Quarantined Only</option>
-                    <option value="featured" {% if filters is defined and filters.status == 'featured' %}selected{% endif %}>Staff Picks Only</option>
+                    <option value="all" selected>All Statuses</option>
+                    <option value="active" >Active / Live Only</option>
+                    <option value="quarantined" >Quarantined Only</option>
+                    <option value="featured" >Staff Picks Only</option>
                 </select>
 
                 <select id="sortFilter" class="filter-select" onchange="filterBooks()">
-                    <option value="newest" {% if filters is defined and filters.sort == 'newest' %}selected{% endif %}>Newest First</option>
-                    <option value="oldest" {% if filters is defined and filters.sort == 'oldest' %}selected{% endif %}>Oldest First</option>
-                    <option value="price_desc" {% if filters is defined and filters.sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
-                    <option value="price_asc" {% if filters is defined and filters.sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
-                    <option value="title" {% if filters is defined and filters.sort == 'title' %}selected{% endif %}>Title (A-Z)</option>
-                    <option value="sales" {% if filters is defined and filters.sort == 'sales' %}selected{% endif %}>Most Sales</option>
+                    <option value="newest" selected>Newest First</option>
+                    <option value="oldest" >Oldest First</option>
+                    <option value="price_desc" >Price: High to Low</option>
+                    <option value="price_asc" >Price: Low to High</option>
+                    <option value="title" >Title (A-Z)</option>
+                    <option value="sales" >Most Sales</option>
                 </select>
 
                 <button type="button" class="btn-pill btn-pill-dark" onclick="resetFilters()">
@@ -581,137 +589,7 @@
                         </tr>
                     </thead>
                     <tbody id="selfPublishedTableBody">
-                        {% if books %}
-                            {% for book in books %}
-                            <tr id="bookRow_{{ book.id }}" class="book-manage-row"
-                                data-id="{{ book.id }}"
-                                data-title="{{ (book.title or '') | escape | lower }}"
-                                data-author="{{ (book.author_name or '') | escape | lower }}"
-                                data-desc="{{ (book.description or '') | escape | lower }}"
-                                data-catalog="{{ (book.catalog or '') | escape | lower }}"
-                                data-ispaid="{{ 'true' if book.is_paid else 'false' }}"
-                                data-price="{{ book.price_paise or 0 }}"
-                                data-quarantined="{{ 'true' if book.is_quarantined else 'false' }}"
-                                data-featured="{{ 'true' if book.is_featured else 'false' }}"
-                                data-created="{{ book.created_at or '' }}"
-                                data-sales="{{ book.sales_count or 0 }}">
-                                <td>
-                                    <div class="book-cell">
-                                        <a href="/read_book/{{ book.id }}" target="_blank" title="Preview in Reader">
-                                            <img src="{{ book.cover_image | drive_img if (book.cover_image and book.cover_image.startswith('http')) else (url_for('static', filename='uploads/covers/' + book.cover_image) if (book.cover_image and url_for is defined) else (book.cover_image or '/static/PustakVerse.png')) }}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
-                                        </a>
-                                        <div class="book-details">
-                                            <a href="/read_book/{{ book.id }}" target="_blank" class="book-title-text" style="text-decoration: none;">
-                                                {{ book.title }}
-                                            </a>
-                                            <div class="book-meta-sub">
-                                                <span>👤 <strong>{{ book.author_name }}</strong> ({{ book.author_role or 'Author' }})</span>
-                                                <span>•</span>
-                                                <span>ID: #{{ book.id }}</span>
-                                            </div>
-                                            {% if book.custom_badges %}
-                                            <div class="book-badges-mini" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
-                                                {% for bg in book.custom_badges %}
-                                                    <span class="badge-accolade-chip badge-color-{{ bg.badge_color or 'gold' }}">
-                                                        {{ bg.badge_label }}
-                                                    </span>
-                                                {% endfor %}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <span style="font-weight: 700; color: #475569; background: var(--bg-canvas); border: 1px solid var(--border-line); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">
-                                        {{ book.catalog }}
-                                    </span>
-                                </td>
-
-                                <td>
-                                    {% if book.is_paid %}
-                                        <div style="font-weight: 800; color: #166534; font-size: 0.95rem;">
-                                            ₹{{ "%.2f"|format(book.price_paise/100) }}
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
-                                            {% if book.rp_verified %}
-                                                <span class="badge badge-live">✓ Razorpay Valid</span>
-                                            {% else %}
-                                                <span class="badge badge-quarantine">⚠ Unverified Key</span>
-                                            {% endif %}
-                                            {% if book.sales_count %}
-                                                <span style="margin-left: 4px; font-weight: 700; color: var(--text-dark);">{{ book.sales_count }} sales</span>
-                                            {% endif %}
-                                        </div>
-                                    {% else %}
-                                        <span class="badge badge-free">Free Open-Access</span>
-                                    {% endif %}
-                                </td>
-
-                                <td>
-                                    <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
-                                        <span class="badge-status-pill badge {{ 'badge-quarantine' if book.is_quarantined else 'badge-live' }}">
-                                            {{ '🔒 Quarantined' if book.is_quarantined else '🟢 Live Public' }}
-                                        </span>
-
-                                        {% if book.is_featured %}
-                                            <span class="badge-featured-pill badge badge-featured">⭐ Staff Pick</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-
-                                <td style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">
-                                    {{ book.created_at.strftime('%d %b %Y') if (book.created_at and book.created_at.strftime is defined) else (book.created_at or '—') }}
-                                </td>
-
-                                <td>
-                                    <div class="action-btns" style="justify-content: flex-end;">
-                                        <!-- Quick Read -->
-                                        <a href="/read_book/{{ book.id }}" target="_blank" class="btn-act btn-act-read" title="Open in PustakVerse Reader">
-                                            👁️ Preview
-                                        </a>
-
-                                        <!-- Badge Accolade Award Trigger -->
-                                        <button type="button" class="btn-act btn-act-badge" onclick="openBadgeModal({{ book.id }}, '{{ book.title | escape }}')" title="Accredit & Confer Badge">
-                                            🏷️ Badge
-                                        </button>
-
-                                        <!-- Edit Modal Trigger -->
-                                        <button type="button" class="btn-act btn-act-edit" 
-                                                data-id="{{ book.id }}"
-                                                data-title="{{ book.title | escape }}"
-                                                data-catalog="{{ book.catalog }}"
-                                                data-ispaid="{{ 'true' if book.is_paid else 'false' }}"
-                                                data-price="{{ book.price_paise }}"
-                                                data-preview="{{ book.preview_pages }}"
-                                                data-desc="{{ (book.description or '') | escape }}"
-                                                onclick="openEditModal(this)"
-                                                title="Quick Edit Details">
-                                            ✏️ Edit
-                                        </button>
-
-                                        <!-- Quarantine Toggle -->
-                                        <button type="button" class="btn-act {{ 'btn-act-unquarantine' if book.is_quarantined else 'btn-act-quarantine' }}" onclick="toggleQuarantineAjax(this, {{ book.id }})" title="Toggle visibility in Global Library">
-                                            {{ '🔓 Restore' if book.is_quarantined else '🔒 Quarantine' }}
-                                        </button>
-
-                                        <!-- Staff Pick Toggle -->
-                                        <button type="button" class="btn-act btn-act-feature" onclick="toggleFeaturedAjax(this, {{ book.id }})" title="Toggle Staff Pick badge">
-                                            {{ '⭐ Unfeature' if book.is_featured else '⭐ Feature' }}
-                                        </button>
-
-                                        <!-- Deletion -->
-                                        <form action="/delete_book/{{ book.id }}" method="POST" onsubmit="return confirm('Force delete \'{{ book.title | escape }}\' permanently?');" style="display:inline;">
-                                            <input type="hidden" name="reason" value="Administrative deletion by Official.">
-                                            <button type="submit" class="btn-act btn-act-del" title="Delete Book Permanently">
-                                                🗑️ Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
+                        
                             <tr id="emptyPlaceholderRow">
                                 <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
                                     <div style="font-size: 2.5rem; margin-bottom: 10px;">📭</div>
@@ -719,7 +597,7 @@
                                     <p style="font-size: 0.85rem;">Retrieving live works and author submissions from edge catalog.</p>
                                 </td>
                             </tr>
-                        {% endif %}
+                        
                     </tbody>
                 </table>
             </div>

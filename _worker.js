@@ -44,7 +44,13 @@ const HTML_ROUTE_MAP = {
   "/granthmind": "ask_ai.html",
   "/viewer": "viewer.html",
   "/viewer/": "viewer.html",
-  "/viewer.html": "viewer.html"
+  "/viewer.html": "viewer.html",
+  "/official/self_published_books": "manage_self_published_books.html",
+  "/official/self_published_books/": "manage_self_published_books.html",
+  "/management/self_published_books": "manage_self_published_books.html",
+  "/management/self_published_books/": "manage_self_published_books.html",
+  "/management_self_published_books": "manage_self_published_books.html",
+  "/management_self_published_books/": "manage_self_published_books.html"
 };
 
 // ============================================================================
@@ -3719,9 +3725,229 @@ Format with these exact markdown sections:
       });
     }
 
-    // Management Hub Redirect
-    if (url.pathname === "/management_self_published_books" || url.pathname === "/management_self_published_books/") {
+    // ========================================================================
+    // 5A. SELF-PUBLISHED BOOKS MANAGEMENT HUB & APIS
+    // ========================================================================
+    if (url.pathname === "/official/self_published_books" || url.pathname === "/official/self_published_books/" ||
+        url.pathname === "/management/self_published_books" || url.pathname === "/management/self_published_books/" ||
+        url.pathname === "/management_self_published_books" || url.pathname === "/management_self_published_books/") {
+      
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let user = null;
+      if (cookies.pv_session) {
+        try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      }
+
+      // Read manage_self_published_books.html from env.ASSETS or fallback
+      let html = null;
+      try {
+        if (env.ASSETS) {
+          const aResp = await env.ASSETS.fetch(new Request(`${url.origin}/static/manage_self_published_books.html`));
+          if (aResp && aResp.status === 200) {
+            html = await aResp.text();
+          }
+        }
+      } catch (_) {}
+
+      if (!html) {
+        try {
+          const ghResp = await fetch(`${RAW_GITHUB_STATIC_BASE}/manage_self_published_books.html`, {
+            headers: { "User-Agent": "PustakVerse-Edge-Proxy" }
+          });
+          if (ghResp && ghResp.status === 200) {
+            html = await ghResp.text();
+          }
+        } catch (_) {}
+      }
+
+      if (html) {
+        const role = user ? (user.role || "Official") : "Official";
+        const username = user ? (user.username || "Staff") : "Staff";
+        html = html.replace(/\{\{\s*session\.role\s*\}\}/g, role);
+        html = html.replace(/\{\{\s*session\.username\s*\}\}/g, username);
+        return new Response(html, {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-cache" }
+        });
+      }
+
       return Response.redirect(`${url.origin}/dashboard#books`, 302);
+    }
+
+    // Edge API: GET /api/self_published_books
+    if (url.pathname === "/api/self_published_books" && env.DB) {
+      try {
+        await ensureBooksTable(env);
+        await ensureBadgesTable(env);
+
+        let books = [];
+        try {
+          const res = await env.DB.prepare(
+            `SELECT b.*, COALESCE(u.username, 'Author') as author_name, u.email as author_email, u.role as author_role
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             WHERE b.catalog != 'Archives'
+             ORDER BY b.id DESC LIMIT 300`
+          ).all();
+          books = res?.results || [];
+        } catch (_) {
+          const fb = await env.DB.prepare(
+            `SELECT * FROM books WHERE catalog != 'Archives' ORDER BY id DESC LIMIT 300`
+          ).all();
+          books = fb?.results || [];
+        }
+
+        // Attach custom badges
+        try {
+          const allBadgesRes = await env.DB.prepare(
+            `SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC`
+          ).all();
+          const badgesByBook = {};
+          (allBadgesRes?.results || []).forEach(bg => {
+            if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
+            badgesByBook[bg.book_id].push(bg);
+          });
+          books = books.map(b => ({
+            ...b,
+            custom_badges: badgesByBook[b.id] || []
+          }));
+        } catch (_) {}
+
+        // Compute metrics
+        const total_books = books.length;
+        const authorSet = new Set(books.map(b => b.author_id || b.author_name));
+        const total_authors = authorSet.size;
+        const paid_books = books.filter(b => b.is_paid && (b.price_paise > 0)).length;
+        const free_books = total_books - paid_books;
+        const quarantined_books = books.filter(b => !!b.is_quarantined).length;
+        const featured_books = books.filter(b => !!b.is_featured).length;
+        const active_books = total_books - quarantined_books;
+
+        return new Response(JSON.stringify({
+          success: true,
+          books,
+          stats: {
+            total_books,
+            total_authors,
+            paid_books,
+            free_books,
+            quarantined_books,
+            featured_books,
+            active_books,
+            total_sales: 0,
+            total_revenue_inr: 0
+          }
+        }), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message, books: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // Quick Update for Self-Published Book: POST /api/self_published_books/quick_update/:id
+    const quickUpdateMatch = url.pathname.match(/^\/api\/self_published_books\/quick_update\/(\d+)$/);
+    if (quickUpdateMatch && request.method === "POST" && env.DB) {
+      try {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        let user = null;
+        if (cookies.pv_session) {
+          try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+        }
+        const isPrivileged = user && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user));
+        if (!isPrivileged) {
+          return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+            status: 403, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        await ensureBooksTable(env);
+        const bookId = parseInt(quickUpdateMatch[1], 10);
+        let title = "", catalog = "", description = "", price_inr = null, preview_pages = null;
+
+        const contentType = request.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const body = await request.json().catch(() => ({}));
+          title = (body.title || "").trim();
+          catalog = (body.catalog || "").trim();
+          description = (body.description || "").trim();
+          price_inr = body.price_inr;
+          preview_pages = body.preview_pages;
+        } else {
+          const formData = await request.formData().catch(() => new FormData());
+          title = (formData.get("title") || "").toString().trim();
+          catalog = (formData.get("catalog") || "").toString().trim();
+          description = (formData.get("description") || "").toString().trim();
+          price_inr = formData.get("price_inr");
+          preview_pages = formData.get("preview_pages");
+        }
+
+        if (!title) {
+          return new Response(JSON.stringify({ success: false, error: "Title cannot be empty" }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        let price_paise = 0, is_paid = 0;
+        if (price_inr !== null && price_inr !== undefined && String(price_inr).trim() !== "") {
+          const num = parseFloat(price_inr);
+          if (!isNaN(num) && num > 0) {
+            price_paise = Math.round(num * 100);
+            is_paid = 1;
+          }
+        }
+        let prevPages = 5;
+        if (preview_pages !== null && preview_pages !== undefined) {
+          const p = parseInt(preview_pages, 10);
+          if (!isNaN(p) && p >= 1) prevPages = Math.min(10, p);
+        }
+
+        await env.DB.prepare(
+          `UPDATE books SET title = ?, catalog = ?, description = ?, price_paise = ?, is_paid = ?, preview_pages = ? WHERE id = ?`
+        ).bind(title, catalog, description, price_paise, is_paid, prevPages, bookId).run();
+
+        return new Response(JSON.stringify({ success: true, message: "Book updated successfully." }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // CSV Export: GET /management/self_published_books/export_csv or /official/self_published_books/export_csv
+    if ((url.pathname === "/management/self_published_books/export_csv" || url.pathname === "/official/self_published_books/export_csv") && env.DB) {
+      try {
+        await ensureBooksTable(env);
+        const res = await env.DB.prepare(
+          `SELECT b.id, b.title, COALESCE(u.username, 'Author') as author_name, b.catalog, b.price_paise, b.is_paid, b.is_quarantined, b.is_featured, b.created_at
+           FROM books b
+           LEFT JOIN users u ON b.author_id = u.id
+           WHERE b.catalog != 'Archives'
+           ORDER BY b.id DESC LIMIT 500`
+        ).all();
+        const rows = res?.results || [];
+        let csv = "Book ID,Title,Author,Category,Price (INR),Quarantined,Featured,Created Date\n";
+        for (const b of rows) {
+          const price = b.is_paid ? ((b.price_paise || 0) / 100).toFixed(2) : "0.00";
+          const titleEsc = `"${(b.title || '').replace(/"/g, '""')}"`;
+          const authorEsc = `"${(b.author_name || '').replace(/"/g, '""')}"`;
+          const catEsc = `"${(b.catalog || '').replace(/"/g, '""')}"`;
+          const quaran = b.is_quarantined ? "YES" : "NO";
+          const feat = b.is_featured ? "YES" : "NO";
+          const dt = (b.created_at || '').slice(0, 10);
+          csv += `${b.id},${titleEsc},${authorEsc},${catEsc},${price},${quaran},${feat},${dt}\n`;
+        }
+        return new Response(csv, {
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="pustakverse_self_published_books_${new Date().toISOString().slice(0, 10)}.csv"`
+          }
+        });
+      } catch (_) {}
     }
 
     // Logout from all devices

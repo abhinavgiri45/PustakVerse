@@ -9708,6 +9708,22 @@ def management_self_published_books():
         cursor.execute(query, tuple(params))
         books = clean_book_data(cursor.fetchall())
 
+        # Attach custom badges
+        try:
+            cursor.execute("SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC")
+            b_badges = cursor.fetchall() or []
+            badge_map = {}
+            for bg in b_badges:
+                b_id = bg.get('book_id')
+                if b_id not in badge_map:
+                    badge_map[b_id] = []
+                badge_map[b_id].append(bg)
+            for b in books:
+                b['custom_badges'] = badge_map.get(b['id'], [])
+        except Exception:
+            for b in books:
+                b['custom_badges'] = []
+
         # 3. Aggregate Platform-Wide Self-Published Metrics
         cursor.execute("""
             SELECT 
@@ -9840,9 +9856,30 @@ def api_self_published_quick_update(book_id):
         if not title:
             return jsonify({'success': False, 'error': 'Title cannot be empty'}), 400
 
+        price_inr = data.get('price_inr')
+        preview_pages = data.get('preview_pages')
+        try:
+            price_paise = int(float(price_inr) * 100) if price_inr is not None and str(price_inr).strip() != '' else None
+        except (ValueError, TypeError):
+            price_paise = None
+        try:
+            preview_pages = int(preview_pages) if preview_pages is not None and str(preview_pages).strip() != '' else None
+        except (ValueError, TypeError):
+            preview_pages = None
+
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("UPDATE books SET title = %s, catalog = %s, description = %s, sbin_no = %s, isbn = %s WHERE id = %s", (title, catalog, description, book_id))
+        if price_paise is not None and preview_pages is not None:
+            is_paid = 1 if price_paise > 0 else 0
+            cursor.execute(
+                "UPDATE books SET title = %s, catalog = %s, description = %s, price_paise = %s, is_paid = %s, preview_pages = %s WHERE id = %s",
+                (title, catalog, description, price_paise, is_paid, preview_pages, book_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE books SET title = %s, catalog = %s, description = %s WHERE id = %s",
+                (title, catalog, description, book_id)
+            )
         db.commit()
         invalidate_books_cache()
 

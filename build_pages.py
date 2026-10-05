@@ -325,6 +325,49 @@ def build():
             shutil.copy(viewer_src, os.path.join(viewer_dst_dir, "index.html"))
             shutil.copy(viewer_src, os.path.join(SITE_DIR, "viewer.html"))
 
+        # 4F. Render authentic manage_self_published_books from templates/manage_self_published_books.html
+        print("[+] Rendering self-published book management hub...")
+        with app.test_request_context():
+            session['user_id'] = 1
+            session['username'] = 'abhinavgiri45'
+            session['role'] = 'developer'
+            master_spb_html = render_template('manage_self_published_books.html',
+                books=[],
+                stats={
+                    'total_books': 0,
+                    'total_authors': 0,
+                    'paid_books': 0,
+                    'free_books': 0,
+                    'quarantined_books': 0,
+                    'featured_books': 0,
+                    'active_books': 0,
+                    'total_sales': 0,
+                    'total_revenue_inr': 0.0
+                },
+                catalogs=[
+                    {'id': 1, 'name': 'Fiction'},
+                    {'id': 2, 'name': 'Non-Fiction'},
+                    {'id': 3, 'name': 'Philosophy'},
+                    {'id': 4, 'name': 'Academic'},
+                    {'id': 5, 'name': 'Science'}
+                ],
+                filters={'search': '', 'catalog': 'all', 'type': 'all', 'status': 'all', 'sort': 'newest'}
+            )
+            spb_path = os.path.join(static_src, "manage_self_published_books.html")
+            with open(spb_path, "w", encoding="utf-8") as f:
+                f.write(master_spb_html)
+
+        # Copy to official/self_published_books and management/self_published_books
+        spb_official_dst = os.path.join(SITE_DIR, "official", "self_published_books")
+        os.makedirs(spb_official_dst, exist_ok=True)
+        shutil.copy(spb_path, os.path.join(spb_official_dst, "index.html"))
+
+        spb_manage_dst = os.path.join(SITE_DIR, "management", "self_published_books")
+        os.makedirs(spb_manage_dst, exist_ok=True)
+        shutil.copy(spb_path, os.path.join(spb_manage_dst, "index.html"))
+
+        shutil.copy(spb_path, os.path.join(SITE_DIR, "manage_self_published_books.html"))
+
     print("[SUCCESS] Static site generation complete!")
     print(f"Total files in _site: {len(os.listdir(SITE_DIR))}")
 
