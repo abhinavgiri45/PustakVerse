@@ -8,6 +8,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            try {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (prefersDark) {
+                    document.documentElement.classList.add('dark-theme');
+                } else {
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+                if (window.matchMedia) {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                        if (e.matches) {
+                            document.documentElement.classList.add('dark-theme');
+                            if (document.body) document.body.classList.add('dark-theme');
+                        } else {
+                            document.documentElement.classList.remove('dark-theme');
+                            if (document.body) document.body.classList.remove('dark-theme');
+                        }
+                    });
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         :root {
             --primary-orange: #ea580c;
@@ -18,6 +41,26 @@
             --text-dark: #0f172a;
             --text-muted: #64748b;
             --border-line: #e2e8f0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not(.light-theme) {
+                --card-bg: #1e293b;
+                --bg-canvas: #0b0f19;
+                --text-dark: #f1f5f9;
+                --text-muted: #94a3b8;
+                --border-line: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
+            --card-bg: #1e293b;
+            --bg-canvas: #0b0f19;
+            --text-dark: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-line: rgba(255, 255, 255, 0.1);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,7 +89,7 @@
         }
 
         .author-header-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: 16px;
             border: 1px solid var(--border-line);
             padding: 36px;
@@ -74,7 +117,7 @@
         .author-name {
             font-size: 1.8rem;
             font-weight: 800;
-            color: var(--nav-bg);
+            color: var(--text-dark);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -89,7 +132,7 @@
             font-weight: 700;
         }
         .author-bio {
-            color: #475569;
+            color: var(--text-muted);
             font-size: 0.95rem;
             line-height: 1.6;
             margin: 12px 0 16px;
@@ -101,8 +144,9 @@
             flex-wrap: wrap;
         }
         .social-chip {
-            background: #f1f5f9;
-            color: #334155;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            border: 1px solid var(--border-line);
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 0.82rem;
@@ -113,12 +157,12 @@
             gap: 6px;
             transition: all 0.2s;
         }
-        .social-chip:hover { background: #e2e8f0; color: var(--primary-orange); }
+        .social-chip:hover { background: rgba(234, 88, 12, 0.1); color: var(--primary-orange); }
 
         .section-title {
             font-size: 1.4rem;
             font-weight: 800;
-            color: var(--nav-bg);
+            color: var(--text-dark);
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -131,7 +175,7 @@
             gap: 24px;
         }
         .book-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: 12px;
             border: 1px solid var(--border-line);
             overflow: hidden;
@@ -161,7 +205,7 @@
         .book-card-title {
             font-size: 0.95rem;
             font-weight: 700;
-            color: var(--nav-bg);
+            color: var(--text-dark);
             margin-bottom: 4px;
             line-height: 1.3;
         }

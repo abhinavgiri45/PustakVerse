@@ -15,12 +15,74 @@
                 } else {
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
                 }
+                if (window.matchMedia) {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                        if (e.matches) {
+                            document.documentElement.classList.add('dark-theme');
+                            if (document.body) document.body.classList.add('dark-theme');
+                        } else {
+                            document.documentElement.classList.remove('dark-theme');
+                            if (document.body) document.body.classList.remove('dark-theme');
+                        }
+                    });
+                }
             } catch(e) {}
         })();
     </script>
     <style>
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
+        :root {
+            --pv-bg: #f4f6f9;
+            --pv-surface: #ffffff;
+            --pv-text: #1e293b;
+            --pv-text-muted: #64748b;
+            --pv-card-bg: #ffffff;
+            --pv-card-border: #e2e8f0;
+            --pv-card-title: #0f172a;
+            --pv-card-author: #475569;
+            --pv-btn-save-bg: #edf2f7;
+            --pv-btn-save-text: #1e293b;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not(.light-theme) {
+                --pv-bg: #0b0f19;
+                --pv-surface: #1e293b;
+                --pv-text: #f1f5f9;
+                --pv-text-muted: #94a3b8;
+                --pv-card-bg: #1e293b;
+                --pv-card-border: rgba(255,255,255,0.12);
+                --pv-card-title: #ffffff;
+                --pv-card-author: #cbd5e1;
+                --pv-btn-save-bg: #334155;
+                --pv-btn-save-text: #f8fafc;
+            }
+        }
+
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
+            --pv-bg: #0b0f19;
+            --pv-surface: #1e293b;
+            --pv-text: #f1f5f9;
+            --pv-text-muted: #94a3b8;
+            --pv-card-bg: #1e293b;
+            --pv-card-border: rgba(255,255,255,0.12);
+            --pv-card-title: #ffffff;
+            --pv-card-author: #cbd5e1;
+            --pv-btn-save-bg: #334155;
+            --pv-btn-save-text: #f8fafc;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: var(--pv-bg);
+            color: var(--pv-text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
         .navbar-brand img, .logo-img { 
             height: 48px; 
             width: auto;
@@ -75,10 +137,11 @@
             margin: 24px auto 0 auto; 
             display: flex; 
             align-items: center; 
-            background: white; 
+            background: var(--pv-surface); 
             border-radius: 999px; 
             padding: 6px 12px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+            border: 1px solid var(--pv-card-border);
         }
 
         .search-container input { 
@@ -87,12 +150,12 @@
             outline: none; 
             padding: 12px 10px; 
             font-size: 1rem; 
-            color: #1e293b; 
+            color: var(--pv-text); 
             background: transparent; 
         }
 
         .search-container input::placeholder { 
-            color: #64748b; 
+            color: var(--pv-text-muted); 
             opacity: 1; 
         }
 
@@ -100,7 +163,7 @@
             background: none; 
             border: none; 
             cursor: pointer; 
-            color: #334155; 
+            color: var(--pv-text-muted); 
             min-width: 44px; 
             min-height: 44px; 
             display: flex; 
@@ -128,13 +191,13 @@
         }
         
         .book-card { 
-            background: white; 
+            background: var(--pv-card-bg); 
             border-radius: 10px; 
             overflow: hidden; 
             display: flex; 
             flex-direction: column; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            border: 1px solid #e2e8f0; 
+            border: 1px solid var(--pv-card-border); 
             transition: transform 0.2s; 
         }
         
@@ -174,14 +237,14 @@
         
         .book-title { 
             font-size: 1.15rem; 
-            color: #1e293b; 
+            color: var(--pv-card-title); 
             margin: 0 0 5px 0; 
             font-weight: bold; 
             line-height: 1.3; 
         }
         
         .book-title a { 
-            color: inherit; 
+            color: var(--pv-card-title); 
             text-decoration: none; 
         }
         
@@ -191,7 +254,7 @@
         
         .book-author { 
             font-size: 1rem; 
-            color: #334155; 
+            color: var(--pv-card-author); 
             margin: 0 0 20px 0; 
         }
         
@@ -229,8 +292,9 @@
         }
         
         .btn-save { 
-            background-color: #edf2f7; 
-            color: #1e293b; 
+            background-color: var(--pv-btn-save-bg); 
+            color: var(--pv-btn-save-text); 
+            border: 1px solid var(--pv-card-border);
         }
         
         .btn-premium { 
@@ -257,13 +321,13 @@
         }
 
         .no-results h2 { 
-            color: #1e293b; 
+            color: var(--pv-card-title); 
             margin-bottom: 10px; 
             font-size: 1.8rem; 
         }
 
         .no-results p { 
-            color: #334155; 
+            color: var(--pv-text-muted); 
         }
 
         @media (max-width: 768px) {

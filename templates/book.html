@@ -41,6 +41,40 @@
             --bg-light: #f8fafc; 
             --text-dark: #0f172a; 
             --text-light: #64748b; 
+            --surface: #ffffff;
+            --surface-card: #ffffff;
+            --border-subtle: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not(.light-theme) {
+                --bg-light: #0b0f19;
+                --surface: #1e293b;
+                --surface-card: #1e293b;
+                --border-subtle: rgba(255, 255, 255, 0.1);
+                --text-primary: #ffffff;
+                --text-secondary: #cbd5e1;
+                --text-muted: #94a3b8;
+                --text-dark: #ffffff;
+                --text-light: #94a3b8;
+            }
+        }
+
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
+            --bg-light: #0b0f19;
+            --surface: #1e293b;
+            --surface-card: #1e293b;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --text-dark: #ffffff;
+            --text-light: #94a3b8;
         }
         
         .book-header { 
@@ -135,7 +169,7 @@
         }
         
         .reviews-section { 
-            color: #0f172a; 
+            color: var(--text-primary); 
             margin-bottom: 30px; 
         }
         
@@ -144,10 +178,10 @@
             display: flex; 
             gap: 40px; 
             margin-bottom: 40px; 
-            background: #f8fafc; 
+            background: var(--surface-card); 
             padding: 30px; 
             border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
+            border: 1px solid var(--border-subtle); 
             align-items: center; 
         }
         
@@ -159,7 +193,7 @@
         .summary-score .big-number { 
             font-size: 4rem; 
             font-weight: bold; 
-            color: #0f172a; 
+            color: var(--text-primary); 
             line-height: 1; 
         }
         
@@ -170,7 +204,7 @@
         }
         
         .summary-score .total-text { 
-            color: #64748b; 
+            color: var(--text-muted); 
             font-size: 0.9rem; 
         }
         
@@ -186,7 +220,7 @@
             align-items: center; 
             gap: 10px; 
             font-size: 0.9rem; 
-            color: #475569; 
+            color: var(--text-secondary); 
         }
         
         .bar-label { 
@@ -196,7 +230,7 @@
         .bar-outer { 
             flex: 1; 
             height: 12px; 
-            background: #e2e8f0; 
+            background: var(--border-subtle); 
             border-radius: 6px; 
             overflow: hidden; 
         }
@@ -210,22 +244,24 @@
         .bar-count { 
             min-width: 40px; 
             text-align: right; 
-            color: #94a3b8; 
+            color: var(--text-muted); 
         }
 
         .review-form { 
-            background: #ffffff; 
+            background: var(--surface-card); 
             padding: 25px; 
             border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
+            border: 1px solid var(--border-subtle); 
             margin-bottom: 30px; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.02); 
+            color: var(--text-primary);
         }
         
         .review-form label { 
             display: block; 
             font-weight: bold; 
             margin-bottom: 8px; 
+            color: var(--text-primary);
         }
         
         .review-form select, 
@@ -233,15 +269,17 @@
             width: 100%; 
             padding: 12px; 
             margin-bottom: 15px; 
-            border: 1px solid #cbd5e1; 
+            border: 1px solid var(--border-subtle); 
             border-radius: 6px; 
             box-sizing: border-box; 
             font-family: inherit;
+            background: var(--surface);
+            color: var(--text-primary);
         }
         
         .review-card { 
             padding: 25px 0; 
-            border-bottom: 1px solid #f1f5f9; 
+            border-bottom: 1px solid var(--border-subtle); 
         }
         
         .review-header { 
@@ -253,12 +291,12 @@
         
         .reviewer-name { 
             font-weight: bold; 
-            color: #334155; 
+            color: var(--text-primary); 
             font-size: 1.1rem; 
         }
         
         .review-date { 
-            color: #94a3b8; 
+            color: var(--text-muted); 
             font-size: 0.85rem; 
         }
         
@@ -269,7 +307,7 @@
         }
         
         .review-text { 
-            color: #475569; 
+            color: var(--text-secondary); 
             line-height: 1.6; 
             margin: 0; 
             font-size: 1.05rem; 

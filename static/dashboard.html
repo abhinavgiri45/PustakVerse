@@ -27,6 +27,33 @@
             --text-dark: #2d3748; 
             --text-light: #718096; 
             --card-bg: #ffffff; 
+            --border-line: #edf2f7;
+            --input-bg: #f8fafc;
+            --input-border: #e2e8f0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not(.light-theme) {
+                --bg-light: #0b0f19;
+                --card-bg: #1e293b;
+                --text-dark: #f1f5f9;
+                --text-light: #94a3b8;
+                --border-line: rgba(255, 255, 255, 0.1);
+                --input-bg: #0f172a;
+                --input-border: rgba(255, 255, 255, 0.15);
+            }
+        }
+
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
+            --bg-light: #0b0f19;
+            --card-bg: #1e293b;
+            --text-dark: #f1f5f9;
+            --text-light: #94a3b8;
+            --border-line: rgba(255, 255, 255, 0.1);
+            --input-bg: #0f172a;
+            --input-border: rgba(255, 255, 255, 0.15);
         }
         
         body, html { 
@@ -51,7 +78,7 @@
             width: auto;
             max-width: 220px;
             object-fit: contain; 
-            display: block;
+            display: block; 
         }
         
         .navbar-links { 
@@ -88,8 +115,8 @@
         }
         
         .dashboard-header { 
-            background: white; 
-            border-bottom: 1px solid #e2e8f0; 
+            background: var(--card-bg); 
+            border-bottom: 1px solid var(--border-line); 
             padding: 30px 40px; 
             margin-bottom: 30px; 
         }
@@ -97,7 +124,7 @@
         .dashboard-header h1 { 
             margin: 0; 
             font-size: 2rem; 
-            color: var(--nav-bg); 
+            color: var(--text-dark); 
         }
         
         .container { 
@@ -112,27 +139,27 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
             padding: 30px; 
             margin-bottom: 30px; 
-            border: 1px solid #edf2f7; 
+            border: 1px solid var(--border-line); 
         }
         
         .panel h2 { 
             margin-top: 0; 
-            border-bottom: 2px solid #edf2f7; 
+            border-bottom: 2px solid var(--border-line); 
             padding-bottom: 10px; 
             margin-bottom: 20px; 
-            color: var(--nav-bg); 
+            color: var(--text-dark); 
         }
 
         .table-scroll-container {
             max-height: 420px;
             overflow-y: auto;
             overflow-x: auto;
-            border: 1.5px solid #e2e8f0;
+            border: 1.5px solid var(--border-line);
             border-radius: 10px;
             scrollbar-width: thin;
             scrollbar-color: #94a3b8 #f1f5f9;
             -webkit-overflow-scrolling: touch;
-            background: #ffffff;
+            background: var(--card-bg);
         }
         
         .table-scroll-container::-webkit-scrollbar { 
@@ -171,19 +198,20 @@
         th, td { 
             padding: 15px; 
             text-align: left; 
-            border-bottom: 1px solid #edf2f7; 
+            border-bottom: 1px solid var(--border-line); 
             vertical-align: middle;
+            color: var(--text-dark);
         }
         
         th { 
-            background: #f8fafc; 
+            background: var(--bg-light); 
             color: var(--text-light); 
             text-transform: uppercase; 
             font-size: 0.85rem; 
             position: sticky; 
             top: 0; 
             z-index: 10; 
-            box-shadow: 0 1px 0 #edf2f7;
+            box-shadow: 0 1px 0 var(--border-line);
         }
         
         .btn-sm { 
@@ -210,6 +238,7 @@
             margin-bottom: 8px; 
             font-weight: 600; 
             font-size: 0.9rem; 
+            color: var(--text-dark);
         }
         
         input[type="text"], 
@@ -220,10 +249,11 @@
         textarea { 
             width: 100%; 
             padding: 12px; 
-            border: 1px solid #e2e8f0; 
+            border: 1px solid var(--input-border); 
             border-radius: 6px; 
             box-sizing: border-box; 
-            background: #f8fafc; 
+            background: var(--input-bg); 
+            color: var(--text-dark);
             font-family: inherit; 
         }
         

@@ -9,6 +9,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            try {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (prefersDark) {
+                    document.documentElement.classList.add('dark-theme');
+                } else {
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
+                if (window.matchMedia) {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                        if (e.matches) {
+                            document.documentElement.classList.add('dark-theme');
+                            if (document.body) document.body.classList.add('dark-theme');
+                        } else {
+                            document.documentElement.classList.remove('dark-theme');
+                            if (document.body) document.body.classList.remove('dark-theme');
+                        }
+                    });
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
         :root {
             --primary-orange: #ea580c;
@@ -20,6 +43,26 @@
             --text-muted: #64748b;
             --border-line: #e2e8f0;
             --accent-purple: #8b5cf6;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not(.light-theme) {
+                --card-bg: #1e293b;
+                --bg-canvas: #0b0f19;
+                --border-line: rgba(255, 255, 255, 0.1);
+                --text-dark: #f1f5f9;
+                --text-muted: #94a3b8;
+            }
+        }
+
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
+            --card-bg: #1e293b;
+            --bg-canvas: #0b0f19;
+            --border-line: rgba(255, 255, 255, 0.1);
+            --text-dark: #f1f5f9;
+            --text-muted: #94a3b8;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
