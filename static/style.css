@@ -840,6 +840,51 @@ html.dark-theme [style*="background:#eff6ff"] {
     color: #f8fafc !important;
 }
 
+/* UNIVERSAL HIGH-CONTRAST TYPOGRAPHY SAFEGUARDS */
+html.light-theme .book-title,
+html.light-theme .book-title a,
+html.light-theme .book-card h3,
+html.light-theme .book-card h3 a,
+html.light-theme .book-card-title,
+body.light-theme .book-title,
+body.light-theme .book-title a,
+body.light-theme .book-card h3,
+body.light-theme .book-card h3 a,
+body.light-theme .book-card-title {
+    color: #0f172a !important;
+}
+
+html.light-theme .book-author,
+html.light-theme .book-card .book-author,
+html.light-theme .author,
+body.light-theme .book-author,
+body.light-theme .book-card .book-author,
+body.light-theme .author {
+    color: #475569 !important;
+}
+
+html.dark-theme .book-title,
+html.dark-theme .book-title a,
+html.dark-theme .book-card h3,
+html.dark-theme .book-card h3 a,
+html.dark-theme .book-card-title,
+body.dark-theme .book-title,
+body.dark-theme .book-title a,
+body.dark-theme .book-card h3,
+body.dark-theme .book-card h3 a,
+body.dark-theme .book-card-title {
+    color: #f8fafc !important;
+}
+
+html.dark-theme .book-author,
+html.dark-theme .book-card .book-author,
+html.dark-theme .author,
+body.dark-theme .book-author,
+body.dark-theme .book-card .book-author,
+body.dark-theme .author {
+    color: #cbd5e1 !important;
+}
+
 @media (prefers-color-scheme: dark) {
     :root:not(.light-theme) {
         --surface: #1e293b;
