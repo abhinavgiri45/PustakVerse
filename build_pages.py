@@ -20,6 +20,8 @@ STATIC_ROUTES = [
     ("/", "index.html"),
     ("/contact", "contact/index.html"),
     ("/terms", "terms/index.html"),
+    ("/terms/author", "terms/author/index.html"),
+    ("/terms/reader", "terms/reader/index.html"),
     ("/tools", "tools/index.html"),
     ("/login", "login/index.html"),
     ("/register", "register/index.html"),

@@ -5012,8 +5012,15 @@ def contact():
     return render_template('contact.html', leaders=leaders)
 
 @app.route('/terms')
+@app.route('/terms/author')
+@app.route('/terms/reader')
 def terms():
-    role = request.args.get('role', 'reader')
+    role = request.args.get('role')
+    if not role:
+        if request.path.endswith('/author'):
+            role = 'author'
+        else:
+            role = 'reader'
     return render_template('terms.html', role=role)
 
 # ==========================================

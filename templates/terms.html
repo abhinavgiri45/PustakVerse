@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms & Conditions - PustakVerse</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') if url_for is defined else '/static/PustakVerse.png' }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') if url_for is defined else '/static/style.css' }}">
+    <script src="{{ url_for('static', filename='theme.js') if url_for is defined else '/static/theme.js' }}"></script>
     <script>
         (function() {
             try {
@@ -23,32 +23,263 @@
         })();
     </script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background-color: #f7fafc; color: #2d3748; margin: 0; padding: 0; }
-        .container { max-width: 900px; margin: 40px auto; padding: 50px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; border-top: 6px solid #f66d2f; }
-        h1 { color: #1a202c; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; font-size: 2.2rem; margin-top: 0;}
-        h2 { color: #2b6cb0; margin-top: 35px; font-size: 1.3rem; margin-bottom: 10px; }
-        .alert-box { background-color: #fff5f5; border-left: 5px solid #e53e3e; padding: 20px; margin: 30px 0; border-radius: 4px; }
-        .alert-box h2 { color: #c53030; margin-top: 0; }
-        .highlight-box { background-color: #f0fdf4; border-left: 5px solid #16a34a; padding: 20px; margin: 25px 0; border-radius: 4px; }
-        .highlight-box h2 { color: #15803d; margin-top: 0; }
-        ul, ol { padding-left: 20px; margin-top: 5px; }
-        li { margin-bottom: 10px; }
-        p { margin-top: 5px; margin-bottom: 15px; }
-        .date { font-weight: bold; color: #718096; margin-bottom: 30px; display: block; }
-        
-        .dark-theme body, html.dark-theme body { background-color: #0b0f19 !important; color: #f1f5f9 !important; }
-        .dark-theme .container, html.dark-theme .container { background: #1e293b !important; border-color: rgba(255,255,255,0.12) !important; color: #f1f5f9 !important; }
-        .dark-theme h1, html.dark-theme h1 { color: #f8fafc !important; border-bottom-color: rgba(255,255,255,0.12) !important; }
-        .dark-theme h2, html.dark-theme h2 { color: #93c5fd !important; }
-        .dark-theme .alert-box, html.dark-theme .alert-box { background-color: rgba(153, 27, 27, 0.25) !important; border-left-color: #f87171 !important; color: #fca5a5 !important; }
-        .dark-theme .alert-box h2, html.dark-theme .alert-box h2 { color: #fca5a5 !important; }
-        .dark-theme .highlight-box, html.dark-theme .highlight-box { background-color: rgba(6, 78, 59, 0.25) !important; border-left-color: #34d399 !important; color: #a7f3d0 !important; }
-        .dark-theme .highlight-box h2, html.dark-theme .highlight-box h2 { color: #6ee7b7 !important; }
-        .dark-theme .date, html.dark-theme .date { color: #94a3b8 !important; }
+        :root {
+            --pv-primary: #ea580c;
+            --pv-secondary: #0284c7;
+            --pv-card-bg: #ffffff;
+            --pv-canvas-bg: #f8fafc;
+            --pv-text-main: #0f172a;
+            --pv-text-muted: #64748b;
+            --pv-border-color: #e2e8f0;
+            --pv-alert-bg: #fff5f5;
+            --pv-alert-border: #ef4444;
+            --pv-alert-text: #991b1b;
+            --pv-highlight-bg: #f0fdf4;
+            --pv-highlight-border: #16a34a;
+            --pv-highlight-text: #166534;
+        }
 
-        /* SMART GO BACK BUTTON STYLES */
-        .back-link { display: inline-flex; align-items: center; margin-bottom: 20px; color: #ffffff; background-color: #2d3748; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; border: none; font-family: inherit; font-size: 1rem; cursor: pointer; }
-        .back-link:hover { background-color: #f66d2f; transform: translateY(-2px); }
+        html.dark-theme, .dark-theme {
+            --pv-card-bg: #1e293b;
+            --pv-canvas-bg: #0b0f19;
+            --pv-text-main: #f8fafc;
+            --pv-text-muted: #94a3b8;
+            --pv-border-color: #334155;
+            --pv-alert-bg: rgba(153, 27, 27, 0.22);
+            --pv-alert-border: #f87171;
+            --pv-alert-text: #fca5a5;
+            --pv-highlight-bg: rgba(6, 78, 59, 0.22);
+            --pv-highlight-border: #34d399;
+            --pv-highlight-text: #a7f3d0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            background-color: var(--pv-canvas-bg);
+            color: var(--pv-text-main);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 35px auto 60px;
+            padding: 40px 45px;
+            background: var(--pv-card-bg);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+            border-radius: 16px;
+            border: 1px solid var(--pv-border-color);
+            border-top: 6px solid var(--pv-primary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 15px 12px 40px;
+                padding: 24px 20px;
+            }
+        }
+
+        h1 {
+            color: var(--pv-text-main);
+            border-bottom: 2px solid var(--pv-border-color);
+            padding-bottom: 15px;
+            font-size: 2.1rem;
+            margin-top: 15px;
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
+        h2 {
+            color: var(--pv-secondary);
+            margin-top: 36px;
+            font-size: 1.32rem;
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px dashed var(--pv-border-color);
+            padding-bottom: 6px;
+        }
+
+        h3 {
+            color: var(--pv-text-main);
+            font-size: 1.1rem;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        .alert-box {
+            background-color: var(--pv-alert-bg);
+            border-left: 5px solid var(--pv-alert-border);
+            padding: 20px 24px;
+            margin: 25px 0;
+            border-radius: 8px;
+            color: var(--pv-alert-text);
+        }
+        .alert-box h2, .alert-box h3 {
+            color: var(--pv-alert-text);
+            border-bottom: none;
+            margin-top: 0;
+        }
+
+        .highlight-box {
+            background-color: var(--pv-highlight-bg);
+            border-left: 5px solid var(--pv-highlight-border);
+            padding: 20px 24px;
+            margin: 25px 0;
+            border-radius: 8px;
+            color: var(--pv-highlight-text);
+        }
+        .highlight-box h2, .highlight-box h3 {
+            color: var(--pv-highlight-text);
+            border-bottom: none;
+            margin-top: 0;
+        }
+
+        ul, ol {
+            padding-left: 24px;
+            margin-top: 8px;
+            margin-bottom: 18px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-top: 6px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+        }
+
+        .date-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: var(--pv-text-muted);
+            background: rgba(148, 163, 184, 0.12);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+        }
+
+        /* SMART GO BACK BUTTON */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+            background-color: #1e293b;
+            padding: 9px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            border: 1px solid #334155;
+            font-family: inherit;
+            font-size: 0.92rem;
+            cursor: pointer;
+        }
+        .back-link:hover {
+            background-color: var(--pv-primary);
+            border-color: var(--pv-primary);
+            transform: translateY(-1px);
+        }
+
+        /* ROLE SWITCHER TABS */
+        .terms-tab-bar {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0 30px;
+            background: rgba(148, 163, 184, 0.08);
+            padding: 6px;
+            border-radius: 14px;
+            border: 1px solid var(--pv-border-color);
+        }
+
+        .terms-tab-btn {
+            flex: 1;
+            padding: 14px 18px;
+            font-size: 1rem;
+            font-family: inherit;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: var(--pv-text-muted);
+            font-weight: 600;
+        }
+
+        .terms-tab-btn.active-author {
+            background: var(--pv-primary);
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+            border-color: var(--pv-primary);
+        }
+
+        .terms-tab-btn.active-reader {
+            background: var(--pv-secondary);
+            color: #ffffff !important;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+            border-color: var(--pv-secondary);
+        }
+
+        .terms-tab-btn:hover:not(.active-author):not(.active-reader) {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--pv-text-main);
+        }
+
+        .section-header-banner {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .banner-author {
+            background: linear-gradient(135deg, rgba(234, 88, 12, 0.12), rgba(249, 115, 22, 0.04));
+            border: 1.5px solid rgba(234, 88, 12, 0.3);
+        }
+        .banner-reader {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(56, 189, 248, 0.04));
+            border: 1.5px solid rgba(2, 132, 199, 0.3);
+        }
+
+        .clause-tag {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--pv-text-muted);
+            margin-left: auto;
+        }
+
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background: rgba(148, 163, 184, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -56,172 +287,292 @@
         
         <!-- TOP ACTIONS BAR -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-            <button onclick="smartGoBack()" class="back-link" style="margin-bottom: 0;">← Go Back To Home Screen</button>
-            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
+            <button onclick="smartGoBack()" class="back-link" style="margin-bottom: 0;">← Go Back</button>
+            <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme" style="background: var(--pv-border-color); color: var(--pv-text-main); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer;">🌙 Theme</button>
         </div>
 
-        {% if role == 'author' %}
-            <h1>Terms and Conditions for Authors on PustakVerse</h1>
-            <span class="date">Last Updated: August 21, 2026</span>
-            
-            <h2>1. Introduction and Definitions</h2>
-            <p>Welcome to Pustak Verse. This document governs your relationship with Pustak Verse as an author, writer, or content creator uploading materials to the platform.</p>
-            <ul>
-                <li>"Platform" refers to the Pustak Verse website, applications, and associated services.</li>
-                <li>"Owner/Developer" explicitly refers to Abhinav Giri, who owns, developed, and operates Pustak Verse.</li>
-                <li>"Author" refers to you, the individual or entity uploading and selling books or content on the Platform.</li>
-                <li>"User/Reader" refers to individuals accessing the platform to read or purchase content.</li>
-            </ul>
+        <!-- TERMS ROLE SELECTOR TABS -->
+        <div class="terms-tab-bar" role="tablist" aria-label="Select terms agreement type">
+            <button type="button" id="tabAuthorBtn" onclick="switchTermsRole('author')" class="terms-tab-btn" role="tab" aria-selected="false" aria-controls="authorTermsSection">
+                <span>✍️</span> <strong>Author Terms & Publishing Agreement</strong>
+            </button>
+            <button type="button" id="tabReaderBtn" onclick="switchTermsRole('reader')" class="terms-tab-btn" role="tab" aria-selected="false" aria-controls="readerTermsSection">
+                <span>📖</span> <strong>Reader & Consumer Terms of Service</strong>
+            </button>
+        </div>
 
-            <h2>2. Eligibility of Authors</h2>
-            <p>To publish on Pustak Verse, you must be at least 18 years of age or the age of legal majority in your jurisdiction. If you are a minor, you may only publish under the direct supervision and through the registered account of a parent or legal guardian who agrees to be bound by these Terms.</p>
-
-            <h2>3. Author Registration Requirements</h2>
-            <p>Authors must provide accurate, current, and complete information during the registration process, including their real name, contact details, and valid payment information. Impersonation or the use of pseudonyms to deceive the platform or readers regarding your legal identity for payment purposes is strictly prohibited.</p>
-
-            <h2>4. Account Security</h2>
-            <p>You are solely responsible for maintaining the confidentiality of your account credentials (username and password). Pustak Verse is not liable for any loss or damage arising from your failure to secure your account. You must notify us immediately if you suspect unauthorized access to your account.</p>
-
-            <h2>5. Author Rights & Non-Exclusivity</h2>
-            <p>You retain all ownership rights, including copyrights, to the original content you submit, upload, or publish on Pustak Verse. By uploading your work, you grant Pustak Verse a <strong>non-exclusive</strong>, worldwide, royalty-free license to display, distribute, and facilitate the sale of your book to readers on the Platform. Because this is non-exclusive, you are completely free to publish and sell your work on other platforms, websites, or in physical print simultaneously.</p>
-
-            <h2>6. Platform Marketing and Promotional Rights</h2>
-            <p>By publishing your book on Pustak Verse, you grant the Platform the right to use your book's title, cover image, author name, and short excerpts (snippets) for the purpose of marketing and promoting Pustak Verse. This includes, but is not limited to, featuring your book on the homepage, in email newsletters, or on official social media channels, without requiring additional explicit permission.</p>
-
-            <h2>7. Author Responsibilities</h2>
-            <p>Authors are responsible for ensuring their uploaded content is lawful, accurate, and free of malicious software. You are responsible for marketing your work, maintaining correct metadata, and engaging respectfully with the Pustak Verse community.</p>
-
-            <h2>8. Original Content Declaration</h2>
-            <p>By publishing on Pustak Verse, you declare that the content is your original creation or that you possess the explicit legal rights to publish and monetize it.</p>
-
-            <h2>9. Third-Party Content Rules</h2>
-            <p>If your book contains third-party content (e.g., quotes, lyrics, images, or translated materials), you must ensure you have secured the necessary licenses or permissions, or that the use falls strictly under "Fair Use" guidelines.</p>
-
-            <div class="alert-box">
-                <h2>10. Developer and Pustak Verse Not Responsible for Copyright Infringement</h2>
-                <p>The developer, Abhinav Giri, and Pustak Verse shall not be responsible for any book uploaded without proper copyright permission. The Platform acts purely as an intermediary host. <strong>The entire legal, financial, and moral responsibility for any unauthorized, infringing, or illegal content remains solely with the uploading author.</strong></p>
+        <!-- ======================================================================== -->
+        <!-- 1. AUTHOR TERMS & PUBLISHING AGREEMENT (COMPREHENSIVE DETAILED VERSION)   -->
+        <!-- ======================================================================== -->
+        <div id="authorTermsSection" style="display: none;">
+            <div class="section-header-banner banner-author">
+                <div>
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #c2410c; text-transform: uppercase; letter-spacing: 0.05em;">PustakVerse Creator Governance</span>
+                    <h3 style="margin: 3px 0 0; color: #c2410c; font-size: 1.15rem; font-weight: 800;">Master Author & Content Publishing Agreement</h3>
+                </div>
+                <span class="date-badge" style="margin-bottom: 0;">Effective: August 21, 2026</span>
             </div>
 
-            <h2>11. Copyright Complaint and Takedown Policy</h2>
-            <p>Pustak Verse respects intellectual property rights. If a valid copyright claim or DMCA notice is filed against an author's work, Pustak Verse reserves the right to immediately remove the disputed content pending investigation. Repeat infringers will face permanent account termination.</p>
+            <h1>Terms and Conditions for Authors on PustakVerse</h1>
+            <p style="font-size: 1.05rem; color: var(--pv-text-muted);">This Master Publishing Agreement governs the legal relationship between you as an author, writer, academic creator, or publisher ("Author," "Creator," "You") and PustakVerse. Please review each clause meticulously before publishing literary or educational works.</p>
+
+            <h2>1. Preamble, Platform Architecture & Sole Governance <span class="clause-tag">Governance</span></h2>
+            <p>PustakVerse ("Platform," "We," "Us," "Our") is a state-of-the-art digital literature and AI-assisted educational publishing ecosystem. The entire intellectual infrastructure, codebase, edge nodes, security protocols, and proprietary technologies of PustakVerse are solely owned, designed, and operated by <strong>Abhinav Giri</strong> ("Founder & Lead Architect"). By registering an Author account, submitting a manuscript, setting book pricing, or utilizing any publishing and distribution features, you enter into a legally binding contract with PustakVerse.</p>
+
+            <h2>2. Author Legal Eligibility & Capacity <span class="clause-tag">Eligibility</span></h2>
+            <p>To publish works and receive financial settlements on PustakVerse, you must be at least 18 years of age or the age of legal majority in your country or state of residence. If you are under 18 years old, you may only publish under the active supervision, consent, and registered account of a parent or legal guardian who executes this Agreement on your behalf and assumes full legal and financial responsibility for your uploaded content and transactions.</p>
+
+            <h2>3. Author Registration, Identity Verification & KYC Requirements <span class="clause-tag">KYC & Compliance</span></h2>
+            <p>Transparency is foundational to PustakVerse's publishing integrity. When registering as an Author, you covenant to provide accurate, truthful, and verifiable personal data, including your legal name, permanent email address, telephone contact, and bank settlement details. While you are welcome to publish under a pseudonym, pen name, or literary alias for public readership, your underlying identity and tax details registered with PustakVerse and our payment processor (Razorpay) must correspond to your verifiable legal identity. The creation of deceptive accounts, bot networks, or fraudulent aliases to circumvent administrative sanctions is strictly prohibited.</p>
+
+            <h2>4. Account Security, Credential Safeguards & Breach Notification <span class="clause-tag">Security</span></h2>
+            <p>You bear exclusive personal responsibility for safeguarding your account credentials, passwords, session tokens, and Two-Factor Authentication (2FA) devices. PustakVerse shall not be held liable for any damages, unauthorized manuscript modifications, price changes, or financial defalcation arising from compromised author credentials. If you suspect or discover that your account credentials have been leaked, phished, or accessed by an unauthorized third party, you are required to notify PustakVerse Technical Support within twenty-four (24) hours.</p>
+
+            <h2>5. Non-Exclusive Publishing License & 100% Copyright Retention <span class="clause-tag">Rights & Ownership</span></h2>
+            <p>PustakVerse strongly believes in creator freedom. <strong>You retain 100% of your copyright, moral rights, and intellectual ownership</strong> in and to every original manuscript, poem, textbook, article, illustration, and cover artwork you upload to the platform. By uploading your work to PustakVerse, you grant us a <strong>non-exclusive, worldwide, royalty-free, transferable license</strong> solely for the purpose of hosting, caching, displaying, formatting, rendering within the PustakVerse online reader, and facilitating authorized distribution and sales to readers.</p>
+            <p>Because this publishing grant is strictly <strong>non-exclusive</strong>, you retain full liberty to print, publish, license, or sell your book on any other physical or digital platforms (such as Amazon Kindle, Apple Books, Google Play Books, personal websites, or independent bookstores) without restriction or penalty.</p>
+
+            <h2>6. Platform Marketing and Promotional Rights <span class="clause-tag">Promotion</span></h2>
+            <p>By publishing on PustakVerse, you grant the Platform the right to showcase your book title, cover image, author name, public synopsis, and brief excerpt passages (up to 10% of the manuscript text) across PustakVerse storefront showcases, search catalogs, newsletters, curated reading lists, social media channels, and press releases for the legitimate purpose of promoting your work and the PustakVerse reading community. No additional royalties or licensing fees shall be owed for promotional snippets.</p>
+
+            <h2>7. Author Warranties of Originality & Content Integrity <span class="clause-tag">Warranties</span></h2>
+            <p>As an author publishing on PustakVerse, you formally warrant and covenant that:</p>
+            <ul>
+                <li>You are the sole and exclusive author and copyright owner of the work, or you hold verified written legal licenses to publish and monetize the submitted text and art.</li>
+                <li>The manuscript does not contain any malicious software, computer viruses, Trojan horses, macro exploits, spyware, hidden tracking scripts, or links directing readers to phishing websites.</li>
+                <li>The content does not infringe upon any copyright, trademark, patent, trade secret, privacy right, publicity right, or proprietary interest of any individual or entity.</li>
+            </ul>
+
+            <h2>8. Third-Party Content, Quotes, Fair Use & Commercial Clearance <span class="clause-tag">Permissions</span></h2>
+            <p>If your manuscript incorporates excerpts, song lyrics, poetry stanzas, extensive quotes, photographs, illustrations, or translated material authored by third parties, you are solely responsible for ensuring that such inclusion either qualifies legitimately under statutory "Fair Use" (or "Fair Dealing" under Indian Copyright Law) for commentary, criticism, or education, or has been formally cleared through written permissions from the copyright holder. You must maintain written proof of all commercial clearances.</p>
+
+            <div class="alert-box">
+                <h2>9. Strict Zero-Tolerance Copyright Infringement & Intermediary Host Immunity</h2>
+                <p><strong>The developer, Abhinav Giri, and the PustakVerse platform act exclusively as intermediary technological conduits and hosting providers under Section 79 of the Information Technology Act, 2000 (India) and the Digital Millennium Copyright Act (DMCA).</strong></p>
+                <p>PustakVerse does not pre-screen every page uploaded by independent authors. <strong>The entire legal, financial, civil, and criminal responsibility for any unauthorized, copied, pirated, or infringing manuscript uploaded to the platform rests exclusively upon the uploading author.</strong> If you upload infringing content, you agree to bear all legal consequences, damages, and statutory penalties.</p>
+            </div>
+
+            <h2>10. Copyright Complaint, DMCA Takedown & Counter-Notice Protocol <span class="clause-tag">Takedown</span></h2>
+            <p>PustakVerse maintains an uncompromising commitment to copyright protection. Upon receiving a bona fide notification of alleged copyright infringement complying with statutory notice requirements:</p>
+            <ul>
+                <li>The disputed manuscript will be immediately soft-quarantined or removed from public discovery pending prompt investigation.</li>
+                <li>The author will be formally notified via registered email with details of the complaint.</li>
+                <li>The author may submit a formal counter-notification demonstrating valid copyright ownership or legal authorization.</li>
+                <li>Repeat infringers who receive multiple substantiated copyright strikes will be permanently banned from the platform, and all accrued, unpaid payouts derived from infringing works will be forfeited or refunded to affected readers.</li>
+            </ul>
+
+            <h2>11. Defamation, Libel, Slander, Hate Speech & Public Order <span class="clause-tag">Prohibited Content</span></h2>
+            <p>Authors may not upload or disseminate content that:</p>
+            <ul>
+                <li>Constitutes actionable libel, slander, or malicious defamation targeting identifiable living individuals, public figures, private citizens, or registered business entities.</li>
+                <li>Promotes hatred, systemic violence, discrimination, or harassment against any individual or protected group based on religion, race, caste, ethnicity, gender, sexual orientation, disability, or nationality.</li>
+                <li>Incites unlawful violence, terrorism, riots, insurrection, or the breach of public tranquility and national security under the Indian Penal Code or applicable international penal statutes.</li>
+            </ul>
+
+            <div class="alert-box">
+                <h2>12. Absolute Prohibition on Child Exploitation & Illegal Content (CSAM)</h2>
+                <p>PustakVerse enforces a mandatory, zero-tolerance prohibition against Child Sexual Abuse Material (CSAM), child sexual exploitation, non-consensual explicit sexual media, human trafficking, and dangerous illegal contraband. <strong>Any account attempting to publish, distribute, or store such illicit material will face instant permanent termination, immediate blacklisting of identity, and immediate reporting to the National Cyber Crime Reporting Portal (cybercrime.gov.in), CERT-In, INTERPOL, and relevant statutory law enforcement agencies with complete connection logs and IP history.</strong></p>
+            </div>
+
+            <h2>13. Book Pricing Autonomy, Currency & Threshold Limits <span class="clause-tag">Pricing</span></h2>
+            <p>Authors enjoy comprehensive autonomy to set the retail sale price for their self-published works in Indian Rupees (INR). However, to prevent catalog spam, payment gateway abuse, and money-laundering vectors, PustakVerse establishes reasonable floor and ceiling pricing parameters (e.g., minimum price ₹0 for open-access titles, and minimum ₹9.00 up to ₹9,999.00 for premium paid titles). Authors may modify their pricing via their Creator Dashboard at any time; changes take effect immediately for future reader purchases.</p>
 
             <div class="highlight-box">
-                <h2>12. Razorpay Gateway Convenience Fee, Single Checkout & Author Royalty Settlement</h2>
-                <p>All book purchases on Pustak Verse are executed via a single, one-time checkout transaction to ensure a frictionless experience for readers. The financial terms for author book sales and transactions are defined as follows:</p>
+                <h2>14. Revenue Share, 0% Platform Commission & Razorpay Gateway Fee Processing</h2>
+                <p>PustakVerse is built on creator-first economics. We do not extract hefty 30% or 50% commission cuts from independent writers:</p>
                 <ul>
-                    <li><strong>Razorpay Payment Gateway Convenience / Processing Fee:</strong> In accordance with standard payment gateway policies, the transaction processing fee charged by Razorpay (standard 2% + 18% GST on the fee = 2.36% total) is charged on the book sale and deducted from the author's gross earnings.</li>
-                    <li><strong>0% Platform Commission Policy:</strong> Pustak Verse charges 0% additional platform commission. Authors receive 100% of their set retail book price minus the unavoidable Razorpay gateway convenience fee and applicable government taxes:
-                        <br><code>Author Net Royalty = Retail Book Price - Razorpay Gateway Processing Fee (2% + GST)</code>.
+                    <li><strong>0% Platform Commission:</strong> PustakVerse charges <strong>0% platform commission</strong> on author book sales. Every rupee of retail book revenue belongs to the author.</li>
+                    <li><strong>Razorpay Payment Gateway Convenience / Processing Fee:</strong> All digital transactions are securely processed via Razorpay. The standard banking gateway fee charged by Razorpay (2.00% plus 18% GST on the fee = 2.36% net) is deducted from the gross transaction value.</li>
+                    <li><strong>Author Net Royalty Settlement Formula:</strong>
+                        <br><code>Net Author Royalty = Retail Book Price - Razorpay Gateway Processing Fee (2% + GST)</code>.
                     </li>
-                    <li><strong>Voluntary Reader Team Donations:</strong> Any voluntary team donations made by readers during checkout are allocated 100% directly to the Developer Account to fund platform operational costs, cloud servers, and polymath AI tutoring capabilities, and are completely independent from author royalties.</li>
+                    <li><strong>Voluntary Team Support Donations:</strong> Optional voluntary tips or donations contributed by readers at checkout go 100% directly to the developer infrastructure fund to pay for edge hosting, D1 database clusters, and Girionix AI model inference costs, and are entirely independent of author book royalties.</li>
                 </ul>
             </div>
 
-            <h2>13. Payout Thresholds and Schedules</h2>
-            <p>To minimize transaction fees for both the Platform and the Author, payments will be processed on a regular, predefined schedule (e.g., the first week of every month) only after an author's earnings reach the platform's minimum payout threshold (e.g., ₹500 INR or equivalent). If your earnings have not reached this threshold by the payout date, they will roll over to the next month.</p>
+            <h2>15. Payout Schedules, Banking Verification & Minimum Settlement Threshold <span class="clause-tag">Payouts</span></h2>
+            <p>Author royalties are disbursed via direct electronic bank transfer (NEFT, IMPS, RTGS, or Razorpay Linked Accounts) in Indian Rupees. To prevent disproportionate micro-transaction processing fees, payouts are subject to a standard minimum clearance threshold of <strong>₹500 INR</strong>. Royalties accumulate in the author's verified platform balance; once the threshold is attained, settlements are executed on the first week of the subsequent calendar month. Balances below ₹500 INR safely roll over indefinitely until the threshold is crossed.</p>
 
-            <h2>14. Book Pricing</h2>
-            <p>Authors have the complete freedom to set the retail price of their books within the minimum and maximum parameters established by the Platform to prevent spam or system abuse.</p>
+            <h2>16. Anti-Money Laundering (AML), Self-Purchasing & Financial Fraud <span class="clause-tag">AML & Anti-Fraud</span></h2>
+            <p>Authors are strictly prohibited from using PustakVerse as a mechanism for financial misconduct, credit card arbitrage, manufactured transaction volume, or money laundering. Specific prohibited activities include: purchasing your own paid books using stolen cards, colluding with third parties to launder illicit capital through micro-transactions, or artificially inflating sales statistics via unauthorized automation. Any account detected engaging in transaction fraud will have all balances permanently frozen and will be reported to financial authorities.</p>
 
-            <h2>15. Taxes and Government Deductions</h2>
-            <p>Authors are solely responsible for declaring and paying their own income taxes based on their local jurisdiction. Where legally mandated, Pustak Verse may be required to collect and remit certain taxes (e.g., GST, VAT, or withholding tax) on sales, which will be deducted prior to the author's payout.</p>
+            <h2>17. Strict Plagiarism Policy & Content Authenticity <span class="clause-tag">Plagiarism</span></h2>
+            <p>PustakVerse maintains an uncompromising anti-plagiarism standard. Submitting manuscripts copied from other authors, scraped from blogs or fanfiction archives, or compiled from copyrighted books without legal authorization is an explicit breach of contract. Plagiarized books will be deleted immediately, and the author's account will be permanently terminated with forfeiture of unpaid royalties.</p>
 
-            <h2>16. Prohibited Content</h2>
-            <p>Authors may not upload content that is illegal, incites violence, promotes hate speech, contains Child Sexual Abuse Material (CSAM), or constitutes non-consensual explicit media. Any violation of this clause will result in immediate termination and reporting to law enforcement.</p>
+            <h2>18. Artificial Intelligence (AI) Policy & Synthetic Content Disclosure <span class="clause-tag">AI Guidelines</span></h2>
+            <p>PustakVerse embraces technological innovation while demanding transparent disclosure for readers:</p>
+            <ul>
+                <li><strong>Mandatory Disclosure:</strong> If a manuscript, textbook, or cover illustration was substantially or entirely generated using synthetic generative AI models (such as GPT, Claude, Gemini, Midjourney, etc.), the author <strong>must explicitly disclose this</strong> in the book's metadata, category tags, or public synopsis.</li>
+                <li><strong>Style Scraping & Copyright:</strong> AI-generated works that deliberately mimic, scrape, or counterfeit the recognizable proprietary characters or distinctive prose style of specific living authors without permission are subject to immediate removal upon complaint.</li>
+                <li><strong>Human Editorial Oversight:</strong> AI-assisted educational or scientific literature must be carefully fact-checked by the author; hallucinations or dangerous factual errors remain the sole legal responsibility of the uploading author.</li>
+            </ul>
 
-            <h2>17. Plagiarism Policy</h2>
-            <p>Pustak Verse maintains a strict zero-tolerance policy for plagiarism. Submitting content copied from other authors, websites, or published materials without permission will result in account suspension and forfeiture of unpaid royalties.</p>
+            <h2>19. Public Domain Works & Value-Add Requirement <span class="clause-tag">Public Domain</span></h2>
+            <p>Authors may publish works in the public domain only if they have contributed <strong>substantial, original, creative, or academic value-add</strong>—such as a modern original translation, comprehensive critical annotations, scholarly introductions, chapter study guides, or bespoke professional illustrations. Re-uploading raw, unmodified, publicly available text files copied verbatim from Project Gutenberg or Internet Archive is strictly prohibited to prevent catalog spam.</p>
 
-            <h2>18. AI-Generated Content Policy</h2>
-            <p>If a book is primarily generated using Artificial Intelligence, the author must explicitly disclose this in the book's metadata or description. AI-generated works that closely mimic or scrape the copyrighted style of specific human authors without permission may be subject to removal.</p>
+            <h2>20. Academic, Educational & Scientific Accuracy Standards <span class="clause-tag">Academic Quality</span></h2>
+            <p>Non-fiction, academic, competitive examination (UPSC, JEE, NEET, GATE), medical, and financial guides must strive for rigorous factual integrity. Content that promotes dangerous pseudoscientific medical treatments, fraudulent financial get-rich-quick schemes, or malicious legal disinformation will be removed to protect the reading public.</p>
 
-            <h2>19. Public Domain Books Policy</h2>
-            <p>Authors may publish public domain content only if they have added significant, original value (e.g., original translations, extensive annotations, or original illustrations). Identical copies of widely available public domain texts are prohibited to prevent platform spam.</p>
+            <h2>21. Manuscript Formatting, Typography & Reader Experience Standards <span class="clause-tag">Formatting</span></h2>
+            <p>To uphold PustakVerse's premier reading experience, all manuscripts submitted in PDF format must be cleanly compiled, legible, correctly oriented, and formatted with proper margins and readable typography. Corrupted PDFs, unreadable scans, password-protected files, or blank documents will be quarantined until corrected by the author.</p>
 
-            <h2>20. Educational Content Policy</h2>
-            <p>Educational, factual, and non-fiction content must strive for accuracy. Pustak Verse reserves the right to remove content that spreads dangerous misinformation, particularly regarding medical advice, financial schemes, or legal counsel.</p>
+            <h2>22. Metadata Integrity & Anti-Spam Guidelines <span class="clause-tag">Metadata</span></h2>
+            <p>Titles, subtitles, author names, descriptions, categories, and tags must faithfully and accurately represent the contents of the book. Keyword stuffing, deceptive categorization, clickbait titles mimicking renowned bestsellers, or attempting to manipulate the PustakVerse search algorithm is strictly forbidden and may result in catalog de-ranking or suspension.</p>
 
-            <h2>21. Book Quality Standards</h2>
-            <p>Books must meet basic quality standards to ensure a good reader experience. This includes proper formatting, legible typography, and a reasonable standard of spelling and grammar. Books formatted as illegible blocks of text may be hidden from the storefront.</p>
+            <h2>23. Cover Image Design, File Size & Content Guidelines <span class="clause-tag">Cover Art</span></h2>
+            <p>Book covers serve as the primary storefront visual. Covers must be clean, appropriately compressed (under 500 KB, with optimal thumbnail size around 50 KB), and free from third-party copyright or trademark infringement. Covers featuring explicit pornography, gratuitous graphic violence, or watermarked stock photos will be rejected.</p>
 
-            <h2>22. Metadata Requirements</h2>
-            <p>Titles, descriptions, categories, and tags must accurately represent the content of the book. Keyword stuffing, misleading metadata, or attempting to manipulate search algorithms is strictly prohibited.</p>
+            <h2>24. Customer Reviews, Community Ethics & Astroturfing Ban <span class="clause-tag">Reviews & Ethics</span></h2>
+            <p>Authors must engage with readers with professional integrity. You are strictly forbidden from purchasing paid reviews, organizing review-bombing campaigns against peer authors, fabricating sockpuppet reader accounts to post deceptive glowing ratings on your own books, or harassing readers who leave critical reviews. Manipulated reviews will be purged and offending accounts disciplined.</p>
 
-            <h2>23. Cover Image Guidelines</h2>
-            <p>Cover images must be high-quality, appropriately sized (maximum 50 KB), and free of copyright infringement. Covers must not contain explicit, pornographic, or excessively violent imagery that violates community guidelines.</p>
+            <h2>25. Account Suspension, Soft-Quarantine & Permanent Deactivation <span class="clause-tag">Enforcement</span></h2>
+            <p>PustakVerse employs a proportionate, transparent enforcement framework:</p>
+            <ul>
+                <li><strong>Informational Notice / Warning:</strong> For minor technical, typographical, or formatting issues.</li>
+                <li><strong>Soft-Quarantine:</strong> Temporarily hiding a title from search and storefront exploration while copyright permissions, broken links, or metadata discrepancies are clarified with the author.</li>
+                <li><strong>Permanent Termination:</strong> For severe violations, including piracy, plagiarism, fraud, harassment, or CSAM, leading to account closure and permanent forfeiture of privileges.</li>
+            </ul>
 
-            <h2>24. Account Suspension and Termination</h2>
-            <p>Pustak Verse reserves the right to suspend or permanently terminate an author's account for severe or repeated violations of these Terms and Conditions. In cases of fraud or copyright theft, unpaid balances may be withheld to refund defrauded readers.</p>
-            
-            <h2>25. Content Removal Policy</h2>
-            <p>Authors may remove their books from the platform at any time. However, readers who have already purchased the book will retain access to their purchased copy in their digital libraries.</p>
+            <h2>26. Book Delisting & Perpetual Access for Prior Purchasers <span class="clause-tag">Delisting</span></h2>
+            <p>Authors have the right to unpublish or delete their books from public sale at any time via the Creator Dashboard. However, in accordance with digital consumer protection laws, <strong>readers who have previously purchased your paid book prior to delisting retain perpetual digital access</strong> to view and read their acquired copy inside their personal PustakVerse Library.</p>
 
-            <h2>26. Refund and Cancellation Rules</h2>
-            <p>All digital book sales on Pustak Verse are final. In exceptional cases of verified system failure or corrupted files, refunds may be issued by the platform and deducted from pending balances.</p>
+            <h2>27. Digital Sales Finality & Chargeback Liability <span class="clause-tag">Chargebacks</span></h2>
+            <p>All digital book sales on PustakVerse are strictly final. In the rare event that a reader's credit card institution or bank executes a formal fraud dispute or payment gateway chargeback, the net disputed transaction amount and any mandatory banking dispute penalties shall be debited against the author's unsettled royalty balance.</p>
 
-            <h2>27. Intellectual Property of Pustak Verse</h2>
-            <p>The Pustak Verse platform itself including its code, logo, brand name, design, and proprietary algorithms is the exclusive intellectual property of Abhinav Giri. Authors may not use the Pustak Verse logo or branding to imply official endorsement without written permission.</p>
+            <h2>28. Intellectual Property of PustakVerse & Girionix AI <span class="clause-tag">Platform IP</span></h2>
+            <p>The PustakVerse name, brand identity, domain names, mobile applications, software architecture, reader engines, user interface design, and Girionix AI models (including study tutors and Review Consensus engines) are the exclusive intellectual property of <strong>Abhinav Giri</strong>. Authors are not permitted to copy, reverse-engineer, modify, or commercially exploit platform software without express written authorization.</p>
 
-            <h2>28. Limitation of Liability</h2>
-            <p>Pustak Verse is provided on an "as is" and "as available" basis. Abhinav Giri and Pustak Verse shall not be liable for any indirect, incidental, or consequential damages, including loss of data, loss of anticipated profits, or technical downtime affecting book sales.</p>
+            <h2>29. Platform Availability, Maintenance Windows & Disclaimer of Warranties <span class="clause-tag">Disclaimers</span></h2>
+            <p>PustakVerse is provided on an "AS IS" and "AS AVAILABLE" basis. While our engineering team strives for 99.9% system uptime, we do not guarantee uninterrupted, error-free service during scheduled infrastructure upgrades, database migrations, cloud outages, or emergency maintenance. PustakVerse disclaims all implied warranties of merchantability, fitness for a particular purpose, or specific book sales volume.</p>
 
-            <h2>29. Indemnification Clause</h2>
-            <p>Authors agree to fully indemnify, defend, and hold harmless Pustak Verse and its owner, Abhinav Giri, against any and all claims, damages, liabilities, costs, and expenses (including legal fees) arising from any copyright infringement, plagiarism, trademark violation, or intellectual property claims resulting from their uploaded content.</p>
+            <h2>30. Comprehensive Limitation of Liability <span class="clause-tag">Liability</span></h2>
+            <p>To the fullest extent permitted under applicable law, in no event shall PustakVerse, its founder Abhinav Giri, or its technical contributors be liable to any author for indirect, incidental, consequential, special, or punitive damages, including loss of anticipated book royalties, lost data, or business interruption, regardless of the legal theory invoked.</p>
 
-            <h2>30. Governing Law (India)</h2>
-            <p>These Terms and Conditions shall be governed by and construed in accordance with the laws of India, without regard to its conflict of law principles.</p>
+            <h2>31. Comprehensive Author Indemnification Agreement <span class="clause-tag">Indemnification</span></h2>
+            <p><strong>You expressly agree to indemnify, defend, and hold completely harmless PustakVerse, its founder Abhinav Giri, and platform administrators</strong> from and against any and all claims, lawsuits, damages, liabilities, losses, judgments, settlements, costs, and expenses (including reasonable attorney fees and court costs) arising out of or related to: (a) your uploaded manuscripts or artwork; (b) any infringement of copyright, trademark, or intellectual property; (c) any defamatory, obscene, or unlawful statements within your books; or (d) your violation of any provision of this Agreement.</p>
 
-            <h2>31. Contact Information</h2>
-            <p>For any questions, concerns, or legal notices regarding these Terms, authors may contact the support team via the official Pustak Verse contact channels provided on the website.</p>
+            <h2>32. Governing Law, Dispute Resolution & Exclusive Jurisdiction <span class="clause-tag">Jurisdiction</span></h2>
+            <p>This Master Agreement and all author interactions shall be governed by, construed, and enforced in accordance with the <strong>laws of the Republic of India</strong>, without regard to conflict of law principles. Any legal claim, dispute, or proceeding arising under or in connection with this Agreement shall be subject to the exclusive personal and subject-matter jurisdiction of the <strong>competent courts situated in Greater Noida / Gautam Buddha Nagar, Uttar Pradesh, India</strong>.</p>
 
-            <h2>32. Acceptance of Terms</h2>
-            <p>By creating an author account, uploading a manuscript, or utilizing any publishing features on Pustak Verse, you explicitly acknowledge that you have read, understood, and agreed to be bound by all the provisions within these Terms and Conditions.</p>
+            <h2>33. Severability, Entire Agreement & Future Modifications <span class="clause-tag">Amendments</span></h2>
+            <p>If any clause of this Agreement is held by a competent court to be invalid, illegal, or unenforceable, the remaining provisions shall continue in full force and effect. This Agreement constitutes the complete and exclusive understanding between you and PustakVerse. PustakVerse reserves the right to modify these terms upon posting revised terms with an updated effective date. Continued use of author services constitutes full acceptance of updated terms.</p>
 
-        {% else %}
+            <h2>34. Official Legal Notices, Author Support & Communication <span class="clause-tag">Support</span></h2>
+            <p>For questions regarding author publishing, copyright claims, or royalty settlements, you may reach our official administrative and legal channels via our platform Contact Center at <code>https://pustakverse.pages.dev/contact</code> or by emailing <code>abhinavgiri370@gmail.com</code>.</p>
+        </div>
+
+        <!-- ======================================================================== -->
+        <!-- 2. READER TERMS & CONSUMER SERVICES (COMPREHENSIVE DETAILED VERSION)     -->
+        <!-- ======================================================================== -->
+        <div id="readerTermsSection" style="display: none;">
+            <div class="section-header-banner banner-reader">
+                <div>
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em;">PustakVerse Consumer Agreement</span>
+                    <h3 style="margin: 3px 0 0; color: #0284c7; font-size: 1.15rem; font-weight: 800;">Reader Terms of Service & Digital Content License</h3>
+                </div>
+                <span class="date-badge" style="margin-bottom: 0;">Effective: August 21, 2026</span>
+            </div>
+
             <h1>Terms and Conditions for Readers on PustakVerse</h1>
-            <span class="date">Effective Date: August 21, 2026</span>
-            
-            <h2>1. Introduction and Acceptance of Terms</h2>
-            <p>Welcome to Pustak Verse! These Terms and Conditions ("Terms," "Agreement") constitute a legally binding contract between you, the user or reader ("You," "User," "Reader"), and Pustak Verse ("Platform," "We," "Us," "Our"), which is proudly owned, developed, and operated by Abhinav Giri.</p>
-            <p>By accessing, browsing, registering for an account, purchasing digital content, or reading materials on Pustak Verse, you explicitly acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree with any part of these Terms, you must immediately cease all use of the Platform.</p>
+            <p style="font-size: 1.05rem; color: var(--pv-text-muted);">Welcome to PustakVerse. These Terms of Service constitute a legally binding agreement between you as a reader, student, academic researcher, or user ("Reader," "User," "You") and PustakVerse. Please review these detailed terms governing your access to our digital literature and reading tools.</p>
 
-            <h2>2. Definitions</h2>
-            <p>To ensure absolute clarity throughout this Agreement, the following terms are defined as follows:</p>
+            <h2>1. Introduction, Platform Governance & Acceptance of Terms <span class="clause-tag">Acceptance</span></h2>
+            <p>PustakVerse ("Platform," "We," "Us," "Our") is dedicated to democratizing high-quality literature, textbooks, research papers, and AI-powered learning resources worldwide. The platform is solely conceived, engineered, and operated by <strong>Abhinav Giri</strong> ("Founder & Lead Architect"). By browsing our website, registering an account, accessing free open-access books, purchasing digital content, or interacting with our community features, you explicitly acknowledge that you have read, understood, and agreed to be legally bound by these Terms of Service. If you do not agree, you must immediately discontinue using PustakVerse.</p>
+
+            <h2>2. Essential Definitions & Interpretations <span class="clause-tag">Definitions</span></h2>
+            <p>To ensure total clarity throughout this Agreement:</p>
             <ul>
-                <li><strong>"Platform":</strong> The Pustak Verse website, mobile applications, reading interfaces, and all associated digital infrastructure.</li>
-                <li><strong>"Owner/Developer":</strong> Specifically refers to Abhinav Giri, the sole proprietor and developer of the Pustak Verse ecosystem.</li>
-                <li><strong>"Author":</strong> A third-party creator who utilizes Pustak Verse to publish, distribute, and monetize their literary works.</li>
-                <li><strong>"Digital Content":</strong> eBooks, serials, audiobooks, chapters, cover art, and any other digital media available for consumption on the Platform.</li>
-                <li><strong>"Library":</strong> The digital space within your Pustak Verse account where your purchased or saved Digital Content is stored for your personal access.</li>
+                <li><strong>"Digital Content":</strong> eBooks, PDF manuscripts, academic papers, chapters, cover images, summaries, audio, and metadata available on the Platform.</li>
+                <li><strong>"Library" / "My Library":</strong> The authenticated personal account area on PustakVerse where your purchased, saved, or bookmarked Digital Content is stored for continuous access.</li>
+                <li><strong>"One-Time Checkout":</strong> The unified, single-transaction checkout payment flow enabling readers to purchase premium digital books and optionally contribute voluntary development support in a single seamless Razorpay payment.</li>
+                <li><strong>"Girionix AI":</strong> The integrated artificial intelligence models and features on PustakVerse, including the Book Learning Assistant, Chapter Tutoring, and AI Review Consensus synthesizer.</li>
+                <li><strong>"Author":</strong> An independent writer, scholar, educator, or publisher utilizing PustakVerse to distribute literature to readers.</li>
             </ul>
 
-            <h2>3. Platform Ownership and Administration</h2>
-            <p>Pustak Verse is the exclusive intellectual property of Abhinav Giri. All fundamental platform elements, including but not limited to the source code, user interface, branding, logos, reading algorithms, and platform design, are protected by international copyright and trademark laws.</p>
+            <h2>3. Reader Eligibility & Minor Account Policies <span class="clause-tag">Eligibility</span></h2>
+            <p>PustakVerse is welcoming to readers worldwide. You must be at least 13 years of age to register an independent account. Readers between 13 and 18 years of age may browse and read books with parental or guardian consent. To execute paid digital transactions, enter into binding contracts, or utilize credit/debit payment cards on our platform, you must be at least 18 years of age or the age of majority in your jurisdiction, or act under the direct authorization of a parent or legal guardian.</p>
 
-            <h2>4. Purchasing, Payments, and Strict No-Refund Policy</h2>
-            <p>Pustak Verse partners with secure third-party payment processors (Razorpay) to handle transactions seamlessly in a single one-time payment:</p>
+            <h2>4. Account Security, Credential Safeguards & Single Identity <span class="clause-tag">Security</span></h2>
+            <p>When creating a PustakVerse account, you agree to provide accurate and truthful registration information. You are solely responsible for maintaining the confidentiality of your login credentials (username, password, and session access). You may not share, sell, lease, or transfer your account credentials to third parties. If you detect any unauthorized access to your account or personal reading library, you must notify PustakVerse support immediately.</p>
+
+            <h2>5. Grant of Limited Digital License (License to Read vs Physical Ownership) <span class="clause-tag">License</span></h2>
+            <p>When you purchase or access a digital book on PustakVerse, <strong>you are purchasing a non-exclusive, non-transferable, revocable, personal license to view, read, and study the Digital Content</strong> within your authorized PustakVerse account via our secure reading interfaces. A digital purchase on PustakVerse conveys a reading license; it does not transfer copyright, intellectual property, or commercial distribution rights from the author or platform to you.</p>
+
+            <h2>6. Absolute Prohibition on Scraping, Downloading, Copying & DRM Bypassing <span class="clause-tag">DRM Protection</span></h2>
+            <p>To safeguard the intellectual property of our authors, the following activities are strictly prohibited and constitute a violation of cyber law:</p>
             <ul>
-                <li><strong>One-Time Checkout:</strong> Readers pay the full purchase amount (book price plus any optional voluntary team support donation) in a single unified Razorpay payment.</li>
-                <li><strong>Voluntary Team Support Donations:</strong> Readers may voluntarily choose to include an optional donation to support the PustakVerse development team. This contribution goes 100% toward maintaining high-performance servers, AI tutoring models, and open-access library books.</li>
-                <li><strong>NO REFUNDS:</strong> All sales of Digital Content on Pustak Verse are final. Due to the immediate access and digital nature of the content provided on the Platform, we do not offer refunds, returns, or cancellations under any circumstances once a purchase is successfully completed.</li>
+                <li>Extracting, downloading, or reverse-engineering raw PDF manuscript streams, vectors, or canvas assets beyond authorized reader functionality.</li>
+                <li>Utilizing automated web scrapers, bots, crawlers, headless browsers, or data extraction scripts to harvest books, reader reviews, or catalog databases.</li>
+                <li>Bypassing, disabling, altering, or circumventing any Digital Rights Management (DRM), watermarks, encryption, or security protocols implemented on PustakVerse.</li>
+                <li>Redistributing, broadcasting, re-uploading, mirroring, selling, or publicly displaying PustakVerse Digital Content on torrent networks, Telegram channels, file-sharing sites, or other forums.</li>
             </ul>
 
-            <h2>5. Content Consumption and License to Read (Digital Ownership)</h2>
-            <p>When you purchase a premium book on Pustak Verse, you are purchasing a non-exclusive, non-transferable, revocable <strong>license to access and view the Digital Content</strong> through your personal Library on our platform.</p>
+            <h2>7. Purchasing Digital Books & Secure One-Time Checkout Flow <span class="clause-tag">Payments</span></h2>
+            <p>All financial transactions on PustakVerse are securely handled through certified third-party payment gateways (Razorpay) utilizing industry-standard 256-bit SSL encryption and tokenization. PustakVerse does not directly store your credit card numbers, CVVs, or banking PINs. Payment amounts are displayed in Indian Rupees (INR) and are inclusive of all applicable taxes. Once payment is confirmed, access to the purchased Digital Content is instantly unlocked in your account's "My Library" space.</p>
+
+            <div class="alert-box">
+                <h2>8. Strict Finality of Sales & Absolute NO REFUND Policy</h2>
+                <p><strong>Due to the immediate digital fulfillment and consumable nature of digital literature and online reader access, ALL SALES ON PUSTAKVERSE ARE STRICTLY FINAL, NON-REFUNDABLE, AND NON-CANCELLABLE.</strong></p>
+                <p>Once a purchase is successfully processed and the digital book is unlocked in your personal Library, no returns, exchanges, chargebacks, or refunds will be granted for change of mind, accidental purchases, or subjective dissatisfaction with the plot or writing style. We strongly encourage readers to review the book's description, sample preview pages, genre tags, and Girionix AI Review Consensus before completing a purchase.</p>
+            </div>
+
+            <h2>9. Voluntary Platform & Developer Team Support Donations <span class="clause-tag">Support Donations</span></h2>
+            <p>During the single one-time checkout process, readers may voluntarily choose to include an optional donation (e.g., ₹10 INR or custom amount) to support the PustakVerse engineering and maintenance fund. 100% of voluntary team support donations are channeled directly toward platform server hosting, edge cache networks, free open-access student book repositories, and Girionix AI computing power. Voluntary team contributions are entirely non-refundable.</p>
+
+            <h2>10. Perpetual Digital Access & Book Delisting Safeguards <span class="clause-tag">Access Guarantee</span></h2>
+            <p>When you legitimately purchase a digital book, PustakVerse covenants that you shall enjoy continuous access to read that title in your Library for as long as your account remains active and in good standing. Even if the contributing author subsequently unpublishes or delists the book from the public storefront, your personal purchased copy will remain accessible in your digital library under our perpetual access archive policy.</p>
+
+            <h2>11. Community Reviews, Ratings & Code of Conduct <span class="clause-tag">Community Conduct</span></h2>
+            <p>PustakVerse encourages vibrant, authentic discourse through reader reviews, star ratings, and discussion comments. When participating in community features, you covenant that:</p>
             <ul>
-                <li>You may not download, copy, scrape, distribute, broadcast, or publicly display the Digital Content.</li>
-                <li>You may not attempt to bypass, modify, or defeat any Digital Rights Management (DRM) protocols implemented on the Platform.</li>
+                <li>Your reviews are genuine, based on your actual reading experience, and not posted in exchange for financial compensation or coercion.</li>
+                <li>Your submissions are respectful and free from hate speech, harassment, vulgarity, obscenity, personal attacks, or defamatory accusations against authors or other readers.</li>
+                <li>You will mark any major plot spoilers clearly with appropriate spoiler warnings.</li>
+                <li>You will not post unsolicited commercial spam, advertising links, or repetitive promotional messages.</li>
             </ul>
 
-            <h2>6. Governing Law and Jurisdiction (India)</h2>
-            <p>These Terms and Conditions shall be governed by and construed in accordance with the laws of India. Any legal action or proceeding arising under these Terms will be brought exclusively in the competent courts of India.</p>
+            <h2>12. Girionix AI Reading Assistant & Review Consensus Usage <span class="clause-tag">AI Assistance</span></h2>
+            <p>PustakVerse features cutting-edge artificial intelligence capabilities powered by Girionix AI, including on-demand book Q&A, chapter summaries, personalized study guides, and executive review consensus syntheses. While Girionix AI is trained to provide highly accurate, contextual assistance, you acknowledge that generative AI responses are advisory tools designed for study enhancement and may occasionally contain approximations. Authors, PustakVerse, and Abhinav Giri make no warranties of infallibility for AI-generated study aids.</p>
 
-            <h2>7. Contact Information</h2>
-            <p>If you have any questions, concerns, or feedback regarding these Terms and Conditions, please contact us via the official support channels listed on the Pustak Verse website.</p>
-        {% endif %}
+            <h2>13. Prohibited User Activities & Platform Integrity <span class="clause-tag">Platform Protection</span></h2>
+            <p>Users shall not engage in any activity that compromises the security, stability, or integrity of PustakVerse, including but not limited to:</p>
+            <ul>
+                <li>Attempting unauthorized access, penetration testing, SQL injection, Denial of Service (DoS/DDoS) attacks, or vulnerability scanning of platform servers.</li>
+                <li>Impersonating platform developers, administrative officials, authors, or other community members.</li>
+                <li>Creating multiple fraudulent accounts to manipulate reader review averages, game referral badges, or execute coordinated harassment.</li>
+            </ul>
+
+            <h2>14. Reader Privacy, Data Protection & Cookie Policies <span class="clause-tag">Privacy</span></h2>
+            <p>We respect your privacy. PustakVerse collects only necessary account details, authentication cookies, reading progress markers, and transaction logs required to provide a seamless reading experience. We do not sell or trade your personal reading history or private reading notes to third-party ad brokers. For full details on our data protection protocols, consult our Privacy Policy.</p>
+
+            <h2>15. Service Availability, Maintenance Windows & Downtime <span class="clause-tag">Maintenance</span></h2>
+            <p>PustakVerse strives to deliver round-the-clock platform availability. However, occasional system maintenance, server optimizations, or edge routing upgrades may cause brief temporary interruptions. PustakVerse shall not be held liable for any temporary unavailability of the website, reader interface, or network latency during such maintenance periods.</p>
+
+            <h2>16. User-Generated Notes, Bookmarks & Cloud Synchronization <span class="clause-tag">Study Tools</span></h2>
+            <p>PustakVerse provides digital tools allowing readers to highlight text, create personal study notes, and set reading bookmarks. While notes are synchronized to your cloud profile, readers are encouraged to export critical personal academic research notes independently. PustakVerse does not guarantee infinite cloud storage of ephemeral annotations in the event of account closure.</p>
+
+            <h2>17. Account Suspension, Strike System & Inappropriate Conduct <span class="clause-tag">Sanctions</span></h2>
+            <p>PustakVerse reserves the right to issue warnings, apply account strikes, temporarily suspend, or permanently terminate reader accounts found engaging in piracy, DRM circumvention, payment fraud, malicious harassment, or hate speech. Terminated accounts lose all access to digital libraries without entitlement to refund.</p>
+
+            <h2>18. Intellectual Property of Platform & Contributing Authors <span class="clause-tag">Intellectual Property</span></h2>
+            <p>All books, literature, cover graphics, and descriptions available on PustakVerse are the protected intellectual property of their respective authors and copyright owners. The PustakVerse platform, reader application, logo, brand design, and Girionix AI algorithms are the exclusive property of <strong>Abhinav Giri</strong>. You receive no ownership rights in any platform technology or author content.</p>
+
+            <h2>19. Limitation of Liability & Consumer Recourse <span class="clause-tag">Liability</span></h2>
+            <p>To the maximum extent permissible by law, in no event shall PustakVerse, its founder Abhinav Giri, or platform contributors be liable for any indirect, incidental, punitive, or consequential damages resulting from your use of or inability to use the platform. In any event, PustakVerse's total aggregate liability to you for any cause whatsoever shall be strictly limited to the amount paid by you for the specific digital book transaction giving rise to the dispute.</p>
+
+            <h2>20. Governing Law, Dispute Resolution & Exclusive Jurisdiction <span class="clause-tag">Jurisdiction</span></h2>
+            <p>These Reader Terms of Service shall be governed by, construed, and enforced in accordance with the <strong>laws of the Republic of India</strong>. Any dispute, controversy, or legal proceeding arising out of or relating to your use of PustakVerse shall be subject to the exclusive jurisdiction of the <strong>competent courts situated in Greater Noida / Gautam Buddha Nagar, Uttar Pradesh, India</strong>.</p>
+
+            <h2>21. Amendments & Modifications to Reader Terms <span class="clause-tag">Updates</span></h2>
+            <p>PustakVerse reserves the right to update or amend these Terms of Service at any time. When updates are published, the "Effective Date" at the top of this document will be updated. Continued use of the platform following the publication of revised terms constitutes your binding acceptance of the updated terms.</p>
+
+            <h2>22. Grievance Redressal, Customer Support & Official Inquiries <span class="clause-tag">Contact</span></h2>
+            <p>If you have any questions, transaction inquiries, or grievances regarding your PustakVerse reader experience, you may contact our dedicated support team via our official Contact Center at <code>https://pustakverse.pages.dev/contact</code> or directly email our administrative office at <code>abhinavgiri370@gmail.com</code>.</p>
+        </div>
+
     </div>
 
-    <!-- SMART GO BACK SCRIPT -->
+    <!-- SMART GO BACK & ROLE SWITCHING SCRIPTS -->
     <script>
         function smartGoBack() {
             if (window.history.length > 1 && document.referrer !== "") {
@@ -230,6 +581,70 @@
                 window.location.href = '/';
             }
         }
+
+        function switchTermsRole(role) {
+            const authorSec = document.getElementById('authorTermsSection');
+            const readerSec = document.getElementById('readerTermsSection');
+            const authorBtn = document.getElementById('tabAuthorBtn');
+            const readerBtn = document.getElementById('tabReaderBtn');
+            
+            if (role === 'author') {
+                if (authorSec) authorSec.style.display = 'block';
+                if (readerSec) readerSec.style.display = 'none';
+                if (authorBtn) {
+                    authorBtn.className = 'terms-tab-btn active-author';
+                    authorBtn.setAttribute('aria-selected', 'true');
+                }
+                if (readerBtn) {
+                    readerBtn.className = 'terms-tab-btn';
+                    readerBtn.setAttribute('aria-selected', 'false');
+                }
+                document.title = "Author Terms & Publishing Agreement - PustakVerse";
+                try {
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('role', 'author');
+                    window.history.replaceState({ role: 'author' }, '', newUrl.toString());
+                } catch (_) {}
+            } else {
+                if (authorSec) authorSec.style.display = 'none';
+                if (readerSec) readerSec.style.display = 'block';
+                if (readerBtn) {
+                    readerBtn.className = 'terms-tab-btn active-reader';
+                    readerBtn.setAttribute('aria-selected', 'true');
+                }
+                if (authorBtn) {
+                    authorBtn.className = 'terms-tab-btn';
+                    authorBtn.setAttribute('aria-selected', 'false');
+                }
+                document.title = "Reader & Consumer Terms of Service - PustakVerse";
+                try {
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('role', 'reader');
+                    window.history.replaceState({ role: 'reader' }, '', newUrl.toString());
+                } catch (_) {}
+            }
+        }
+
+        // Initialize based on URL query param, hash, path, or server-injected role
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const roleParam = (params.get('role') || '').toLowerCase();
+            const hash = (window.location.hash || '').toLowerCase();
+            const path = window.location.pathname.toLowerCase();
+            
+            // Server-injected role from Flask template context
+            const serverRole = "{{ role|default('reader') }}".toLowerCase();
+            
+            if (roleParam === 'author' || hash === '#author' || path.includes('/author')) {
+                switchTermsRole('author');
+            } else if (roleParam === 'reader' || hash === '#reader' || path.includes('/reader')) {
+                switchTermsRole('reader');
+            } else if (serverRole === 'author') {
+                switchTermsRole('author');
+            } else {
+                switchTermsRole('reader');
+            }
+        });
     </script>
 </body>
 </html>
