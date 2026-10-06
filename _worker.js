@@ -1414,6 +1414,7 @@ export default {
         if (!env.DB) {
           return new Response(JSON.stringify({ success: true, coupons: [] }), { headers: { "Content-Type": "application/json" } });
         }
+        await ensureAuthorCouponsTable(env);
         try {
           const username = (user.username || "").toLowerCase();
           const isDev = user.role === "developer" || username === "abhinavgiri45";
@@ -1433,8 +1434,8 @@ export default {
             headers: { "Content-Type": "application/json" }
           });
         } catch (err) {
-          return new Response(JSON.stringify({ success: false, message: err.message, coupons: [] }), {
-            status: 500, headers: { "Content-Type": "application/json" }
+          return new Response(JSON.stringify({ success: true, coupons: [] }), {
+            headers: { "Content-Type": "application/json" }
           });
         }
       }
@@ -1445,6 +1446,7 @@ export default {
             status: 500, headers: { "Content-Type": "application/json" }
           });
         }
+        await ensureAuthorCouponsTable(env);
         try {
           const data = await request.json().catch(() => ({}));
           const bookId = parseInt(data.book_id, 10);
@@ -1493,6 +1495,7 @@ export default {
             status: 500, headers: { "Content-Type": "application/json" }
           });
         }
+        await ensureAuthorCouponsTable(env);
         try {
           const couponId = parseInt(url.searchParams.get("coupon_id"), 10);
           if (!couponId) {
@@ -1644,6 +1647,8 @@ Format with these exact markdown sections:
           status: 500, headers: { "Content-Type": "application/json" }
         });
       }
+
+      await ensureAuthorCouponsTable(env);
 
       try {
         const coupon = await env.DB.prepare(
@@ -4875,6 +4880,7 @@ Format with these exact markdown sections:
         let appliedCouponId = null;
 
         if (couponCode) {
+          await ensureAuthorCouponsTable(env);
           try {
             const couponRow = await env.DB.prepare(
               "SELECT id, discount_percent, max_uses, times_used FROM author_coupons WHERE book_id = ? AND code = ? AND is_active = 1 LIMIT 1"
@@ -6561,6 +6567,7 @@ async function ensureBooksTable(env) {
       await env.DB.prepare(`ALTER TABLE books ADD COLUMN ${col} ${colType}`).run();
     } catch (_) {}
   }
+  await ensureAuthorCouponsTable(env);
 }
 
 async function ensureBadgesTable(env) {
@@ -6654,6 +6661,25 @@ async function ensureInteractionsTable(env) {
         rating INTEGER CHECK (rating >= 1 AND rating <= 5),
         review TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (_) {}
+}
+
+async function ensureAuthorCouponsTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS author_coupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_id INTEGER NOT NULL,
+        book_id INTEGER DEFAULT NULL,
+        code TEXT NOT NULL UNIQUE,
+        discount_percent INTEGER NOT NULL DEFAULT 10,
+        max_uses INTEGER NOT NULL DEFAULT 50,
+        times_used INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
   } catch (_) {}
