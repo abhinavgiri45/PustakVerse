@@ -6625,6 +6625,7 @@ async function ensureLeadershipTable(env) {
     }
   } catch (e) {
     console.warn("ensureLeadershipTable warning:", e.message);
+  }
 }
 
 async function ensureAnnouncementsTable(env) {
@@ -8796,6 +8797,8 @@ function relTime(ts) {
     if (diff < 172800) return 'Yesterday';
     if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
     return d.toLocaleDateString();
+}
+
 function formatExactDateTime(ts) {
     if (!ts || ts === '—' || ts === 'None' || ts === 'null') return '—';
     const d = parseUtcDate(ts);
@@ -8810,7 +8813,7 @@ function formatExactDateTime(ts) {
     hours = hours % 12;
     hours = hours ? hours : 12;
     const formattedHours = String(hours).padStart(2, '0');
-    return `${day} ${month} ${year}, ${formattedHours}:${minutes} ${ampm}`;
+    return day + ' ' + month + ' ' + year + ', ' + formattedHours + ':' + minutes + ' ' + ampm;
 }
 
 function refreshAllTimestamps() {
@@ -8949,7 +8952,7 @@ function applyUserSortingAndFiltering() {
 
     const badge = document.getElementById('userFilterStatsBadge');
     if (badge) {
-        badge.textContent = `Showing ${visibleRows.length} of ${totalUsers} Users`;
+        badge.textContent = 'Showing ' + visibleRows.length + ' of ' + totalUsers + ' Users';
     }
 
     paginateUserRows(visibleRows);
