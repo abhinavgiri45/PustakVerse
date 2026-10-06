@@ -202,16 +202,21 @@
             <span>🛡️</span> PustakVerse Infrastructure
         </div>
         <h1>System Under Scheduled Maintenance</h1>
-        <p class="description">
-            {{ reason or "We are performing scheduled infrastructure upgrades, database performance optimizations, and Girionix AI architecture enhancements. Normal public platform access will automatically resume as scheduled." }}
-        </p>
 
-        <div class="window-box">
+        <div class="window-box" style="margin-top: 18px;">
             <div class="window-title"><i class="far fa-clock"></i> Scheduled Maintenance Window</div>
             <div class="window-times">
                 <span class="pill"><i class="fas fa-play" style="font-size: 0.75rem;"></i> From: {{ start or "In Progress" }}</span>
                 <span style="color: #f59e0b; font-weight: 900;">➜</span>
                 <span class="pill"><i class="fas fa-flag-checkered" style="font-size: 0.75rem;"></i> To: {{ end or "Shortly" }}</span>
+            </div>
+            <div style="margin-top: 14px; padding: 12px 16px; background: rgba(0, 0, 0, 0.4); border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.35); text-align: left;">
+                <div style="font-size: 0.76rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                    🎯 Reason &amp; Objective:
+                </div>
+                <div style="font-size: 1rem; font-weight: 600; color: #ffffff; line-height: 1.55;">
+                    {{ reason or "We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience." }}
+                </div>
             </div>
         </div>
 
@@ -235,7 +240,7 @@
 
         <div class="footer-links">
             <span>Official Desk: support@pustakverse.com</span>
-            <a href="/login?ref=maintenance_bypass" class="tech-bypass-btn">
+            <a href="/?bypass_maintenance=1" class="tech-bypass-btn">
                 <span>🔑</span> Technical Staff Access (Developer, CTO, CEO) →
             </a>
         </div>

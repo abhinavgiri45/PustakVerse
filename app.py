@@ -4356,6 +4356,13 @@ def check_system_maintenance():
         if request.path.startswith(p):
             return None
 
+    # Support special bypass_maintenance query parameter or session flag
+    if 'bypass_maintenance' in request.args or request.cookies.get('pv_bypass_maintenance') == '1':
+        session['maintenance_bypass'] = True
+
+    if session.get('maintenance_bypass'):
+        return None
+
     try:
         fps = get_front_page_settings()
         if fps and fps.get('maintenance_mode'):
@@ -4365,7 +4372,8 @@ def check_system_maintenance():
 
             start_time = fps.get('maintenance_start') or 'In Progress'
             end_time = fps.get('maintenance_end') or 'Shortly'
-            reason = fps.get('maintenance_reason') or 'Scheduled Core Infrastructure & Girionix AI Architecture Optimization'
+            raw_reason = fps.get('maintenance_reason')
+            reason = raw_reason if (raw_reason and raw_reason != 'Database infrastructure upgrade' and raw_reason != 'Scheduled Core Infrastructure & Girionix AI Architecture Optimization') else 'We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.'
 
             if request.is_json or request.path.startswith('/api/'):
                 return jsonify({

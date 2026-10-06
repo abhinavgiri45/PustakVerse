@@ -453,11 +453,8 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         </div>
         <div class="brand-badge"><span>⚡</span> Scheduled System Maintenance</div>
         <h1>PustakVerse is Upgrading</h1>
-        <p class="subtitle">
-            We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.
-        </p>
-        <div class="schedule-card">
-            <div style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.06em;">
+        <div class="schedule-card" style="margin-top: 20px;">
+            <div style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
                 ⏰ Scheduled Maintenance Window
             </div>
             <div class="window-grid">
@@ -471,8 +468,13 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
                     <div class="val">${escapeHtml(end)}</div>
                 </div>
             </div>
-            <div style="font-size: 0.84rem; color: #cbd5e1; margin-top: 12px;">
-                <strong>Reason / Objective:</strong> ${escapeHtml(reason)}
+            <div style="margin-top: 18px; padding: 14px 18px; background: rgba(15, 23, 42, 0.85); border-radius: 12px; border: 1.5px solid rgba(245, 158, 11, 0.35); text-align: left;">
+                <div style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">
+                    🎯 Reason &amp; Objective:
+                </div>
+                <div style="font-size: 1.05rem; font-weight: 600; color: #ffffff; line-height: 1.6;">
+                    ${(reason && reason !== 'Database infrastructure upgrade' && reason !== 'Scheduled Core Infrastructure & Girionix AI Architecture Optimization') ? escapeHtml(reason) : 'We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.'}
+                </div>
             </div>
         </div>
         <div class="security-badge">
@@ -486,8 +488,8 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         </div>
         <div class="bypass-box">
             <span>Engineering Status: <strong>Cluster Sync In Progress</strong></span>
-            <a href="/login?ref=maintenance_bypass" class="bypass-link">
-                <span>👑</span> Developer / Technical Leadership Bypass
+            <a href="/?bypass_maintenance=1" class="bypass-link">
+                <span>👑</span> Developer / Technical Leadership Access
             </a>
         </div>
     </div>
@@ -869,7 +871,27 @@ export default {
     ];
     const isExemptPath = exemptMaintenancePaths.some(p => url.pathname.startsWith(p));
 
-    if (env.DB && !isExemptPath) {
+    // Check for special bypass maintenance query parameter or cookie:
+    // e.g. /?bypass_maintenance, /?bypass_maintenance=1, or cookie pv_bypass_maintenance=1
+    const hasBypassParam = url.searchParams.has("bypass_maintenance") || 
+                           url.pathname.includes("bypass_maintenance") ||
+                           url.search.includes("bypass_maintenance");
+    const rawCookies = parseCookies(request.headers.get("Cookie"));
+    const hasBypassCookie = rawCookies.pv_bypass_maintenance === "1";
+
+    if (hasBypassParam && !hasBypassCookie) {
+      // Set bypass cookie and redirect cleanly to homepage or requested path without query param loop
+      const cleanUrl = new URL(request.url);
+      cleanUrl.searchParams.delete("bypass_maintenance");
+      // Handle edge cases like /=?bypass_maintenance
+      if (cleanUrl.pathname === "/=") cleanUrl.pathname = "/";
+      const headers = new Headers();
+      headers.set("Location", cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
+      headers.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=86400; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+      return new Response(null, { status: 302, headers });
+    }
+
+    if (env.DB && !isExemptPath && !hasBypassParam && !hasBypassCookie) {
       try {
         let fps = null;
         try {
@@ -879,7 +901,7 @@ export default {
         } catch (_) {}
 
         if (fps && Boolean(fps.maintenance_mode)) {
-          const cookies = parseCookies(request.headers.get("Cookie"));
+          const cookies = rawCookies;
           let sessionUser = null;
           if (cookies.pv_session) {
             sessionUser = await verifySession(cookies.pv_session, env);
