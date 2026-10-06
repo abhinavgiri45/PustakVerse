@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -378,6 +379,9 @@
         </div>
         
             <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button type="button" id="headerEndMaintenanceBtn" onclick="endMaintenanceMode()" style="display: none; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;">
+                    <span>🟢</span> End Maintenance Break
+                </button>
                 <a href="/admin/activity-monitor" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); font-size: 0.95rem;">
                     <span>📊</span> User Activity Monitor 🔒
                 </a>
@@ -2421,6 +2425,11 @@
                     <p style="color: #64748b; font-size: 0.88rem; margin: 4px 0 0 0;">Live infrastructure health, scheduled maintenance engine with automated user email dispatch, emergency switches, and memory cache diagnostics.</p>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <!-- Direct 1-Click End Maintenance Break Button -->
+                    <button type="button" onclick="endMaintenanceMode()" id="devEndMaintenanceDirectBtn" class="btn-sm btn-green" style="padding: 8px 16px; font-weight: 800; display: none; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);">
+                        🟢 End Maintenance Break
+                    </button>
+
                     <!-- Scheduled Maintenance Engine Button -->
                     <button type="button" onclick="openMaintenanceModal()" id="devMaintenanceBtn" class="btn-sm btn-red" style="padding: 8px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
                         🚨 Schedule Maintenance
@@ -2443,9 +2452,18 @@
             </div>
 
             <!-- Maintenance Status Live Indicator (if active) -->
-            <div id="devMaintenanceLiveBanner" style="display: none; background: #fff7ed; border: 1.5px dashed #ea580c; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.88rem; color: #9a3412;">
-                <strong>⚠️ Maintenance Mode is Currently ACTIVE:</strong> Public visitors and normal readers see the maintenance screen. Developer, CTO, CEO, and technical staff maintain continuous bypass access.
-                <div id="devMaintenanceWindowDisplay" style="margin-top: 4px; font-weight: 600; color: #c2410c;"></div>
+            <div id="devMaintenanceLiveBanner" style="display: none; background: #fff7ed; border: 1.5px dashed #ea580c; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.88rem; color: #9a3412;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <strong>⚠️ Maintenance Mode is Currently ACTIVE:</strong> Public visitors and normal readers see the maintenance screen. Developer, CTO, CEO, and technical staff maintain continuous bypass access.
+                        <div id="devMaintenanceWindowDisplay" style="margin-top: 4px; font-weight: 600; color: #c2410c;"></div>
+                    </div>
+                    <div>
+                        <button type="button" onclick="endMaintenanceMode()" class="btn-sm btn-green" style="padding: 8px 16px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);">
+                            🟢 End Maintenance Break Now
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Live Metrics Grid -->
@@ -5008,24 +5026,30 @@
     async function endMaintenanceMode() {
         if (!confirm('Are you sure you want to end maintenance mode and set the platform completely LIVE for all users?')) return;
         try {
-            const res = await fetch('/developer/toggle_maintenance', {
+            const res = await fetch('/developer/end_maintenance', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ action: 'disable' })
+                }
             });
             const data = await res.json();
             if (data.success) {
-                alert('Maintenance mode deactivated. Platform is live.');
+                alert('🟢 Maintenance mode deactivated! PustakVerse is now 100% LIVE for all users.');
                 closeMaintenanceModal();
+                const banner = document.getElementById('devMaintenanceLiveBanner');
+                if (banner) banner.style.display = 'none';
+                const headerBtn = document.getElementById('headerEndMaintenanceBtn');
+                if (headerBtn) headerBtn.style.display = 'none';
+                const directBtn = document.getElementById('devEndMaintenanceDirectBtn');
+                if (directBtn) directBtn.style.display = 'none';
                 loadDeveloperSystemMetrics();
             } else {
                 alert(data.message || 'Could not end maintenance.');
             }
         } catch (err) {
-            alert('Error: ' + err.message);
+            // Fallback direct navigation
+            window.location.href = '/developer/end_maintenance';
         }
     }
 
@@ -5058,14 +5082,22 @@
                 const maintBanner = document.getElementById('devMaintenanceLiveBanner');
                 const maintWindowDisplay = document.getElementById('devMaintenanceWindowDisplay');
                 const btnDisable = document.getElementById('btnDisableMaintenance');
+                const directBtn = document.getElementById('devEndMaintenanceDirectBtn');
+                const headerBtn = document.getElementById('headerEndMaintenanceBtn');
 
                 if (currentMaintenanceMode) {
                     if (maintBtn) {
                         maintBtn.className = 'btn-sm btn-green';
-                        maintBtn.textContent = '🔓 Maintenance Active (Configure / End)';
+                        maintBtn.textContent = '🔓 Maintenance Settings';
                     }
                     if (maintBanner) {
                         maintBanner.style.display = 'block';
+                    }
+                    if (directBtn) {
+                        directBtn.style.display = 'inline-flex';
+                    }
+                    if (headerBtn) {
+                        headerBtn.style.display = 'inline-flex';
                     }
                     if (maintWindowDisplay) {
                         maintWindowDisplay.textContent = 'Window: ' + (m.maintenance_start || 'Immediate') + ' ➜ ' + (m.maintenance_end || 'TBD') + ' | Reason: ' + (m.maintenance_reason || 'Optimization');
@@ -5080,6 +5112,12 @@
                     }
                     if (maintBanner) {
                         maintBanner.style.display = 'none';
+                    }
+                    if (directBtn) {
+                        directBtn.style.display = 'none';
+                    }
+                    if (headerBtn) {
+                        headerBtn.style.display = 'none';
                     }
                     if (btnDisable) {
                         btnDisable.style.display = 'none';

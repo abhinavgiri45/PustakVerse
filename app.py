@@ -4350,7 +4350,8 @@ def check_system_maintenance():
         '/login', '/logout', '/signup', '/register',
         '/static', '/favicon.ico', '/payment/webhook',
         '/api/user/heartbeat', '/developer/toggle_maintenance',
-        '/api/developer/toggle_maintenance', '/admin/activity-monitor'
+        '/api/developer/toggle_maintenance', '/developer/end_maintenance',
+        '/api/developer/end_maintenance', '/admin/activity-monitor'
     ]
     for p in exempt_paths:
         if request.path.startswith(p):
@@ -6346,6 +6347,42 @@ def developer_toggle_maintenance():
             try: db.close()
             except: pass
     return redirect(url_for('dashboard'))
+
+@app.route('/developer/end_maintenance', methods=['GET', 'POST'])
+@app.route('/api/developer/end_maintenance', methods=['GET', 'POST'])
+def developer_end_maintenance():
+    if session.get('role') != 'developer' and not is_technical_leadership_user():
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            return jsonify({'success': False, 'message': 'Unauthorized: Developer or Leadership access required'}), 403
+        flash("Unauthorized access. Developer clearance required.", "error")
+        return redirect(url_for('login', redirect=request.path))
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute("UPDATE front_page_settings SET maintenance_mode = 0 WHERE id = 1")
+        db.commit()
+        invalidate_cache()
+        log_official_activity(session.get('user_id'), "Developer ended maintenance break. Public platform is now fully live.")
+        status_msg = "🟢 System Maintenance Break ENDED! PustakVerse is now 100% LIVE and accessible to all users."
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            return jsonify({
+                'success': True,
+                'maintenance_mode': False,
+                'message': status_msg
+            })
+        flash(status_msg, "success")
+    except Exception as e:
+        logging.error(f"Error ending maintenance mode: {e}")
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+        flash("Database error while ending maintenance mode.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard', maintenance_disabled='1'))
 
 @app.route('/api/developer/system_metrics', methods=['GET'])
 def api_developer_system_metrics():

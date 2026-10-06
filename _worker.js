@@ -498,9 +498,14 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         </div>
         <div class="leadership-box">
             <span>Engineering Status: <strong style="color: #38bdf8;">Cluster Sync In Progress</strong></span>
-            <a href="https://pustakverse.pages.dev/=?bypass_maintenance" class="leadership-link" onclick="document.cookie='pv_bypass_maintenance=1; path=/; max-age=31536000; SameSite=Lax'; try{localStorage.setItem('pv_bypass_maintenance','1');}catch(e){}">
-                <span>👑</span> Technical Leadership &amp; Administration Portal
-            </a>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
+                <a href="https://pustakverse.pages.dev/=?bypass_maintenance" class="leadership-link" onclick="document.cookie='pv_bypass_maintenance=1; path=/; max-age=31536000; SameSite=Lax'; try{localStorage.setItem('pv_bypass_maintenance','1');}catch(e){}">
+                    <span>👑</span> Technical Leadership &amp; Administration Portal
+                </a>
+                <a href="/developer/end_maintenance" class="leadership-link" style="background: rgba(22, 163, 74, 0.2); border-color: rgba(34, 197, 94, 0.5); color: #4ade80;" onclick="return confirm('End maintenance break and set platform live for all users?');">
+                    <span>🟢</span> End Maintenance Break (Admin Only)
+                </a>
+            </div>
         </div>
     </div>
 </body>
@@ -881,7 +886,8 @@ export default {
       "/login", "/logout", "/signup", "/register",
       "/static/", "/favicon.ico", "/api/edge-health",
       "/api/user/heartbeat", "/developer/toggle_maintenance",
-      "/api/developer/toggle_maintenance", "/api/developer/system_metrics",
+      "/api/developer/toggle_maintenance", "/developer/end_maintenance",
+      "/api/developer/end_maintenance", "/api/developer/system_metrics",
       "/admin/activity-monitor"
     ];
     const isExemptPath = exemptMaintenancePaths.some(p => url.pathname.startsWith(p));
@@ -1107,6 +1113,52 @@ export default {
           });
         }
         return Response.redirect(`${url.origin}/dashboard?maintenance_updated=1`, 302);
+      } catch (err) {
+        if (isAjax) return new Response(JSON.stringify({ success: false, message: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+        return Response.redirect(`${url.origin}/dashboard?error=${encodeURIComponent(err.message)}`, 302);
+      }
+    }
+
+    // 3B-2. Dedicated Developer 1-Click End Maintenance Break Endpoint (GET & POST)
+    if ((url.pathname === "/developer/end_maintenance" || url.pathname === "/api/developer/end_maintenance") && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45" || isTechnicalLeadershipUser(user));
+      const isAjax = request.headers.get("X-Requested-With") === "XMLHttpRequest" || request.headers.get("Accept")?.includes("application/json") || url.pathname.startsWith("/api/");
+
+      if (!user || !isPrivileged) {
+        if (isAjax) return new Response(JSON.stringify({ success: false, message: "Unauthorized: Developer or Leadership access required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+        return Response.redirect(`${url.origin}/login?redirect=${encodeURIComponent(url.pathname)}`, 302);
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS front_page_settings (
+            id INTEGER PRIMARY KEY,
+            maintenance_mode INTEGER DEFAULT 0,
+            upload_freeze INTEGER DEFAULT 0,
+            maintenance_start TEXT DEFAULT NULL,
+            maintenance_end TEXT DEFAULT NULL,
+            maintenance_reason TEXT DEFAULT NULL,
+            maintenance_notified INTEGER DEFAULT 0
+          )
+        `).run();
+      } catch (_) {}
+
+      try {
+        await env.DB.prepare("UPDATE front_page_settings SET maintenance_mode = 0 WHERE id = 1").run();
+        const msg = "System Maintenance Mode successfully ENDED. Public platform is now fully LIVE.";
+
+        if (isAjax) {
+          return new Response(JSON.stringify({
+            success: true,
+            maintenance_mode: 0,
+            message: msg
+          }), {
+            status: 200, headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?maintenance_disabled=1`, 302);
       } catch (err) {
         if (isAjax) return new Response(JSON.stringify({ success: false, message: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
         return Response.redirect(`${url.origin}/dashboard?error=${encodeURIComponent(err.message)}`, 302);
@@ -6797,9 +6849,14 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       out = out.replace(/id="devMaintenanceBtn" class="[^"]*"/i, `id="devMaintenanceBtn" class="btn-sm btn-green"`);
       out = out.replace(/(<button[^>]*id="devMaintenanceBtn"[^>]*>)[\s\S]*?(<\/button>)/i, `$1🔓 Maintenance Active (Configure / End)$2`);
       out = out.replace(/id="devMaintenanceLiveBanner" style="display:\s*none;?/i, `id="devMaintenanceLiveBanner" style="display: block;`);
+      out = out.replace(/id="devEndMaintenanceDirectBtn" style="[^"]*"/i, `id="devEndMaintenanceDirectBtn" style="padding: 8px 16px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);"`);
+      out = out.replace(/id="headerEndMaintenanceBtn" style="[^"]*"/i, `id="headerEndMaintenanceBtn" style="display: inline-flex; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;"`);
       const windowText = `Window: ${systemMetrics.maintenance_start || 'Immediate'} ➜ ${systemMetrics.maintenance_end || 'TBD'} | Reason: ${systemMetrics.maintenance_reason || 'Optimization'}`;
       out = out.replace(/id="devMaintenanceWindowDisplay">[^<]*<\/div>/i, `id="devMaintenanceWindowDisplay">${escapeHtml(windowText)}</div>`);
       out = out.replace(/id="btnDisableMaintenance" style="[^"]*"/i, `id="btnDisableMaintenance" style="padding: 10px 16px; font-weight: 700; display: inline-block;"`);
+    } else {
+      out = out.replace(/id="devEndMaintenanceDirectBtn" style="[^"]*"/i, `id="devEndMaintenanceDirectBtn" style="display: none;"`);
+      out = out.replace(/id="headerEndMaintenanceBtn" style="[^"]*"/i, `id="headerEndMaintenanceBtn" style="display: none;"`);
     }
 
     if (systemMetrics.upload_freeze) {
@@ -6814,7 +6871,13 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
 
   // Flash message for query params
   if (url) {
-    if (url.searchParams.get("published") === "1") {
+    if (url.searchParams.get("maintenance_disabled") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🟢</span><div>System Maintenance Break ENDED. The platform is now fully LIVE and accessible to all users worldwide!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("maintenance_updated") === "1") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🔄</span><div>System Maintenance Configuration updated successfully.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("published") === "1") {
       const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🎉</span><div>Book published successfully to the Global Library! It is now live for readers worldwide.</div></div>`;
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     } else if (url.searchParams.get("deleted") === "1") {
