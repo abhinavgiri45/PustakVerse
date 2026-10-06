@@ -692,6 +692,7 @@
                     card.setAttribute('data-author', (book.author_name || '').toLowerCase());
                     card.setAttribute('data-catalog', (book.catalog || '').toLowerCase());
 
+                    let detailsHref = `/book/${book.id}`;
                     let readHref = `/read_book/${book.id}`;
                     if (window.location.hostname.endsWith('github.io')) {
                         readHref = `viewer.html?id=${book.id}&title=${encodeURIComponent(book.title || '')}&src=${encodeURIComponent(book.pdf_file || '')}`;
@@ -700,7 +701,7 @@
                     const isPaidUser = book.is_purchased || (book.is_paid && book.order_id);
 
                     card.innerHTML = `
-                        <a href="${readHref}" style="display: block;">
+                        <a href="${detailsHref}" style="display: block;" title="View Details, Synopsis & Reviews">
                             <img src="${coverSrc}" alt="Cover of ${escapeHtml(book.title || '')}" class="book-cover" loading="lazy" width="250" height="320" onerror="this.src='/static/PustakVerse.png'">
                         </a>
                         <div class="book-info">
@@ -713,7 +714,7 @@
                                     <option value="completed">✅ Done</option>
                                 </select>
                             </div>
-                            <h3 class="book-title"><a href="${readHref}">${book.title}</a></h3>
+                            <h3 class="book-title"><a href="${detailsHref}" title="View Details, Synopsis & Reviews">${book.title}</a></h3>
                             <p class="book-author">By ${book.author_name || 'Author'}</p>
                             <div class="book-actions">
                                 <a href="${readHref}" class="btn-read-full">Read Book</a>

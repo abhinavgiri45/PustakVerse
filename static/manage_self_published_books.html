@@ -1168,11 +1168,11 @@
                                 data-sales="${b.sales_count || 0}">
                                 <td>
                                     <div class="book-cell">
-                                        <a href="/read_book/${b.id}" target="_blank">
+                                        <a href="/book/${b.id}" target="_blank" title="View Details, Synopsis & Reviews">
                                             <img src="${coverImg}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
                                         </a>
                                         <div class="book-details">
-                                            <a href="/read_book/${b.id}" target="_blank" class="book-title-text" style="text-decoration: none;">
+                                            <a href="/book/${b.id}" target="_blank" class="book-title-text" style="text-decoration: none;" title="View Details, Synopsis & Reviews">
                                                 ${b.title}
                                             </a>
                                             <div class="book-meta-sub">

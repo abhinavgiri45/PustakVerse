@@ -522,6 +522,15 @@
         </div>
     </nav>
 
+    <!-- GLOBAL PLATFORM ALERT / ANNOUNCEMENT TICKER (Synced to Official & Developer Dashboards) -->
+    <div id="globalAnnouncementBanner" class="global-announcement-banner" style="display: none; background: linear-gradient(90deg, #991b1b, #c2410c, #b45309); color: #ffffff; padding: 10px 20px; font-size: 0.9rem; font-weight: 600; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 99;">
+        <span style="background: rgba(255,255,255,0.22); padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">📢 PLATFORM NOTICE</span>
+        <span id="globalAnnouncementText" style="flex: 1; max-width: 900px; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+            
+        </span>
+        <button type="button" onclick="document.getElementById('globalAnnouncementBanner').style.display='none'" style="background: none; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer; padding: 0 6px; line-height: 1; opacity: 0.8;" title="Dismiss">&times;</button>
+    </div>
+
     <div class="hero-section">
         <h1>PustakVerse</h1>
         <p>Every Book. Every Mind. Free.</p>
@@ -772,6 +781,7 @@
 
                     const isPaid = !!b.is_paid && (b.price_paise > 0);
                     const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
+                    let detailsHref = b.id ? `/book/${b.id}` : '#';
                     let readHref = b.id ? `/read_book/${b.id}` : (b.pdf_file || '#');
                     if (window.location.hostname.endsWith('github.io') && b.id) {
                         readHref = `viewer.html?id=${b.id}&title=${encodeURIComponent(b.title || '')}&src=${encodeURIComponent(b.pdf_file || '')}`;
@@ -820,7 +830,7 @@
                     }
 
                     card.innerHTML = `
-                        <a href="${readHref}" class="book-cover-link">
+                        <a href="${detailsHref}" class="book-cover-link" title="View Details, Synopsis & Reviews">
                             <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
                         </a>
                         <div class="book-info">
@@ -829,7 +839,7 @@
                                 <span class="book-tag">${b.catalog || 'General'}</span>
                                 ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ Featured</span>' : ''}
                             </div>
-                            <h3 class="book-title"><a href="${readHref}">${b.title}</a></h3>
+                            <h3 class="book-title"><a href="${detailsHref}" title="View Details, Synopsis & Reviews">${b.title}</a></h3>
                             <p class="book-author">By ${b.author_name || 'PustakVerse'}</p>
                             <div style="color: #f59e0b; margin-bottom: 15px;">★★★★★ <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span></div>
                             ${actionsHtml}
@@ -870,9 +880,28 @@
             } catch (_) {}
         }
 
+        // Hydrate global ticker / announcement banner from edge or server
+        async function checkGlobalAnnouncement() {
+            try {
+                const res = await fetch('/api/global_announcement');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.has_announcement && data.announcement && data.announcement.message) {
+                        const banner = document.getElementById('globalAnnouncementBanner');
+                        const textEl = document.getElementById('globalAnnouncementText');
+                        if (banner && textEl) {
+                            textEl.textContent = data.announcement.message;
+                            banner.style.display = 'flex';
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             hydrateBooksFromD1();
             checkEdgeSession();
+            checkGlobalAnnouncement();
             let currentItems = 10;
             const step = 10;
             const loadMoreBtn = document.getElementById('loadMoreBtn');

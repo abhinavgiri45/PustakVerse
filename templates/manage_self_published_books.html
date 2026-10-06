@@ -597,11 +597,11 @@
                                 data-sales="{{ book.sales_count or 0 }}">
                                 <td>
                                     <div class="book-cell">
-                                        <a href="/read_book/{{ book.id }}" target="_blank" title="Preview in Reader">
+                                        <a href="/book/{{ book.id }}" target="_blank" title="View Details, Synopsis & Reviews">
                                             <img src="{{ book.cover_image | drive_img if (book.cover_image and book.cover_image.startswith('http')) else (url_for('static', filename='uploads/covers/' + book.cover_image) if (book.cover_image and url_for is defined) else (book.cover_image or '/static/PustakVerse.png')) }}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
                                         </a>
                                         <div class="book-details">
-                                            <a href="/read_book/{{ book.id }}" target="_blank" class="book-title-text" style="text-decoration: none;">
+                                            <a href="/book/{{ book.id }}" target="_blank" class="book-title-text" style="text-decoration: none;" title="View Details, Synopsis & Reviews">
                                                 {{ book.title }}
                                             </a>
                                             <div class="book-meta-sub">
@@ -1290,11 +1290,11 @@
                                 data-sales="${b.sales_count || 0}">
                                 <td>
                                     <div class="book-cell">
-                                        <a href="/read_book/${b.id}" target="_blank">
+                                        <a href="/book/${b.id}" target="_blank" title="View Details, Synopsis & Reviews">
                                             <img src="${coverImg}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
                                         </a>
                                         <div class="book-details">
-                                            <a href="/read_book/${b.id}" target="_blank" class="book-title-text" style="text-decoration: none;">
+                                            <a href="/book/${b.id}" target="_blank" class="book-title-text" style="text-decoration: none;" title="View Details, Synopsis & Reviews">
                                                 ${b.title}
                                             </a>
                                             <div class="book-meta-sub">
