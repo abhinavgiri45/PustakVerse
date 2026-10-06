@@ -799,28 +799,18 @@
                     let actionsHtml = '';
                     if (isPaid) {
                         actionsHtml = `
-                            <div class="book-actions" style="display: flex; flex-direction: column; gap: 8px;">
-                                <div style="display: flex; gap: 8px;">
-                                    <a href="${readHref}" class="btn btn-read" style="flex: 1; font-size: 0.85rem; padding: 8px 6px;" onclick="event.stopPropagation();">Free Preview</a>
-                                    <a href="${buyHref}" class="btn btn-premium" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px;" onclick="event.stopPropagation();">Buy ${priceFormatted}</a>
-                                </div>
-                                <a href="${detailsHref}" class="btn btn-outline" style="width: 100%; box-sizing: border-box; text-align: center; font-size: 0.82rem; font-weight: 700; padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--border-subtle, #cbd5e1); color: var(--text-primary, #1e293b); background: var(--surface, #ffffff); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;" title="View Amazon-style product specs, full blurb and reviews">
-                                    <span>🔍 Details & Reviews</span>
-                                </a>
+                            <div class="book-actions" style="display: flex; gap: 8px;">
+                                <a href="${readHref}" class="btn btn-read" style="flex: 1; font-size: 0.85rem; padding: 8px 6px;" onclick="event.stopPropagation();">Free Preview</a>
+                                <a href="${buyHref}" class="btn btn-premium" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px;" onclick="event.stopPropagation();">Buy ${priceFormatted}</a>
                             </div>
                         `;
                     } else {
                         actionsHtml = `
-                            <div class="book-actions" style="display: flex; flex-direction: column; gap: 8px;">
-                                <div style="display: flex; gap: 8px;">
-                                    <a href="${readHref}" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
-                                    <form action="/save_book/${b.id}" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
-                                    </form>
-                                </div>
-                                <a href="${detailsHref}" class="btn btn-outline" style="width: 100%; box-sizing: border-box; text-align: center; font-size: 0.82rem; font-weight: 700; padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--border-subtle, #cbd5e1); color: var(--text-primary, #1e293b); background: var(--surface, #ffffff); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;" title="View Amazon-style product specs, full blurb and reviews">
-                                    <span>🔍 Details & Reviews</span>
-                                </a>
+                            <div class="book-actions" style="display: flex; gap: 8px;">
+                                <a href="${readHref}" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                <form action="/save_book/${b.id}" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                    <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                </form>
                             </div>
                         `;
                     }
@@ -916,6 +906,25 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
+            // Ensure bypass maintenance flag is persisted across edge sessions
+            if (window.location.search.includes('bypass_maintenance') || window.location.pathname.includes('bypass_maintenance')) {
+                document.cookie = "pv_bypass_maintenance=1; path=/; max-age=31536000; SameSite=Lax";
+                try { localStorage.setItem('pv_bypass_maintenance', '1'); } catch (_) {}
+                if (window.history && window.history.replaceState) {
+                    const cleanP = window.location.pathname === '/=' ? '/' : window.location.pathname;
+                    const sp = new URLSearchParams(window.location.search);
+                    sp.delete('bypass_maintenance');
+                    const qs = sp.toString() ? ('?' + sp.toString()) : '';
+                    window.history.replaceState(null, '', cleanP + qs);
+                }
+            } else {
+                try {
+                    if (localStorage.getItem('pv_bypass_maintenance') === '1' && !document.cookie.includes('pv_bypass_maintenance=1')) {
+                        document.cookie = "pv_bypass_maintenance=1; path=/; max-age=31536000; SameSite=Lax";
+                    }
+                } catch (_) {}
+            }
+
             hydrateBooksFromD1();
             checkEdgeSession();
             checkGlobalAnnouncement();

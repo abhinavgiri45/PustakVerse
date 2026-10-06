@@ -421,7 +421,7 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             margin-bottom: 26px;
             text-align: left;
         }
-        .bypass-box {
+        .leadership-box {
             border-top: 1px solid var(--slate-border);
             padding-top: 20px;
             margin-top: 14px;
@@ -430,16 +430,26 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             align-items: center;
             flex-wrap: wrap;
             gap: 12px;
-            font-size: 0.82rem;
-            color: #64748b;
+            font-size: 0.85rem;
+            color: #94a3b8;
         }
-        .bypass-link {
+        .leadership-link {
             color: #fb923c;
             text-decoration: none;
-            font-weight: 700;
+            font-weight: 800;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(251, 146, 60, 0.12);
+            border: 1px solid rgba(251, 146, 60, 0.35);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+        .leadership-link:hover {
+            background: rgba(251, 146, 60, 0.22);
+            border-color: #fb923c;
+            transform: translateY(-1px);
         }
     </style>
 </head>
@@ -468,12 +478,12 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
                     <div class="val">${escapeHtml(end)}</div>
                 </div>
             </div>
-            <div style="margin-top: 18px; padding: 14px 18px; background: rgba(15, 23, 42, 0.85); border-radius: 12px; border: 1.5px solid rgba(245, 158, 11, 0.35); text-align: left;">
-                <div style="font-size: 0.78rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">
-                    🎯 Reason &amp; Objective:
+            <div style="margin-top: 18px; padding: 18px 22px; background: rgba(15, 23, 42, 0.95); border-radius: 14px; border: 2px solid #f59e0b; text-align: left; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <span>🎯</span> Reason &amp; Objective:
                 </div>
-                <div style="font-size: 1.05rem; font-weight: 600; color: #ffffff; line-height: 1.6;">
-                    ${(reason && reason !== 'Database infrastructure upgrade' && reason !== 'Scheduled Core Infrastructure & Girionix AI Architecture Optimization') ? escapeHtml(reason) : 'We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.'}
+                <div style="font-size: 1.15rem; font-weight: 700; color: #ffffff; line-height: 1.6;">
+                    We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.
                 </div>
             </div>
         </div>
@@ -486,10 +496,10 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
                 </span>
             </div>
         </div>
-        <div class="bypass-box">
-            <span>Engineering Status: <strong>Cluster Sync In Progress</strong></span>
-            <a href="/?bypass_maintenance=1" class="bypass-link">
-                <span>👑</span> Developer / Technical Leadership Access
+        <div class="leadership-box">
+            <span>Engineering Status: <strong style="color: #38bdf8;">Cluster Sync In Progress</strong></span>
+            <a href="https://pustakverse.pages.dev/=?bypass_maintenance" class="leadership-link" onclick="document.cookie='pv_bypass_maintenance=1; path=/; max-age=31536000; SameSite=Lax'; try{localStorage.setItem('pv_bypass_maintenance','1');}catch(e){}">
+                <span>👑</span> Technical Leadership &amp; Administration Portal
             </a>
         </div>
     </div>
@@ -871,27 +881,36 @@ export default {
     ];
     const isExemptPath = exemptMaintenancePaths.some(p => url.pathname.startsWith(p));
 
-    // Check for special bypass maintenance query parameter or cookie:
-    // e.g. /?bypass_maintenance, /?bypass_maintenance=1, or cookie pv_bypass_maintenance=1
+    // Check for special bypass maintenance query parameter, cookie, or referer:
+    // e.g. /?bypass_maintenance, /?bypass_maintenance=1, /=?bypass_maintenance, or cookie pv_bypass_maintenance=1
+    const rawReqUrl = request.url || "";
+    const rawCookieHeader = request.headers.get("Cookie") || "";
+    const rawReferer = request.headers.get("Referer") || "";
+
     const hasBypassParam = url.searchParams.has("bypass_maintenance") || 
+                           rawReqUrl.includes("bypass_maintenance") ||
                            url.pathname.includes("bypass_maintenance") ||
                            url.search.includes("bypass_maintenance");
-    const rawCookies = parseCookies(request.headers.get("Cookie"));
-    const hasBypassCookie = rawCookies.pv_bypass_maintenance === "1";
+    const rawCookies = parseCookies(rawCookieHeader);
+    const hasBypassCookie = rawCookies.pv_bypass_maintenance === "1" || 
+                            rawCookieHeader.includes("pv_bypass_maintenance=1") ||
+                            rawReferer.includes("bypass_maintenance");
+    const isMaintenanceBypassed = hasBypassParam || hasBypassCookie;
 
-    if (hasBypassParam && !hasBypassCookie) {
-      // Set bypass cookie and redirect cleanly to homepage or requested path without query param loop
-      const cleanUrl = new URL(request.url);
-      cleanUrl.searchParams.delete("bypass_maintenance");
-      // Handle edge cases like /=?bypass_maintenance
-      if (cleanUrl.pathname === "/=") cleanUrl.pathname = "/";
+    // Handle edge normalization (e.g. /=?bypass_maintenance or /=)
+    if (url.pathname === "/=" || url.pathname.startsWith("/=")) {
+      url.pathname = "/";
+    }
+
+    // Direct endpoint to set cookie and redirect if specifically requested
+    if (url.pathname === "/bypass_maintenance" || url.pathname === "/bypass") {
       const headers = new Headers();
-      headers.set("Location", cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
-      headers.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=86400; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+      headers.set("Location", "/");
+      headers.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
       return new Response(null, { status: 302, headers });
     }
 
-    if (env.DB && !isExemptPath && !hasBypassParam && !hasBypassCookie) {
+    if (env.DB && !isExemptPath && !isMaintenanceBypassed) {
       try {
         let fps = null;
         try {
@@ -5105,86 +5124,126 @@ Format with these exact markdown sections:
       }
     }
 
-    // 6A. Dedicated Book Details & Reviews Route: /book/:id or /book/:id/
-    const bookDetailsMatch = url.pathname.match(/^\/book\/(\d+)\/?$/);
-    if (bookDetailsMatch && env.DB) {
+    // 6A. Dedicated Book Details & Reviews Route: /book/:id, /view_book/:id (with or without trailing slash)
+    const bookDetailsMatch = url.pathname.match(/^\/(?:book|view_book)\/(\d+)\/?$/);
+    if (bookDetailsMatch) {
       const bookId = parseInt(bookDetailsMatch[1], 10);
       try {
-        await ensureBooksTable(env);
-        await ensureBadgesTable(env);
-        await ensureInteractionsTable(env);
-        await ensureAnnouncementsTable(env);
+        let book = null;
+        let reviews = [];
+        let badges = [];
+        let announcement = null;
 
-        const book = await env.DB.prepare(
-          `SELECT b.*, COALESCE(u.username, 'Author') as author_name 
-           FROM books b 
-           LEFT JOIN users u ON b.author_id = u.id 
-           WHERE b.id = ? LIMIT 1`
-        ).bind(bookId).first();
+        if (env.DB) {
+          try {
+            await ensureBooksTable(env);
+            await ensureBadgesTable(env);
+            await ensureInteractionsTable(env);
+            await ensureAnnouncementsTable(env);
 
-        if (book) {
-          const reqCookies = parseCookies(request.headers.get("Cookie"));
-          let edgeUser = null;
-          if (reqCookies.pv_session) {
-            try { edgeUser = JSON.parse(atob(reqCookies.pv_session)); } catch (_) {}
-          }
-
-          let canRead = false;
-          if (edgeUser) {
-            if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer") {
-              canRead = true;
-            } else {
+            try {
+              book = await env.DB.prepare(
+                `SELECT b.*, COALESCE(u.username, 'Author') as author_name 
+                 FROM books b 
+                 LEFT JOIN users u ON b.author_id = u.id 
+                 WHERE b.id = ? LIMIT 1`
+              ).bind(bookId).first();
+            } catch (_) {
               try {
-                const purchase = await env.DB.prepare(
-                  "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
-                ).bind(edgeUser.id, bookId).first();
-                if (purchase) canRead = true;
+                book = await env.DB.prepare("SELECT * FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
               } catch (_) {}
             }
-          } else {
-            if (!book.is_paid || book.price_paise === 0) {
-              canRead = true;
+
+            if (book) {
+              try {
+                const revRes = await env.DB.prepare(
+                  `SELECT i.*, COALESCE(u.username, 'Reader') as username 
+                   FROM interactions i 
+                   LEFT JOIN users u ON i.user_id = u.id 
+                   WHERE i.book_id = ? 
+                   ORDER BY i.created_at DESC`
+                ).bind(bookId).all();
+                reviews = revRes.results || [];
+              } catch (_) {}
+
+              try {
+                const bgRes = await env.DB.prepare(
+                  `SELECT * FROM book_custom_badges WHERE book_id = ? ORDER BY id DESC`
+                ).bind(bookId).all();
+                badges = bgRes.results || [];
+              } catch (_) {}
+
+              try {
+                announcement = await env.DB.prepare(
+                  "SELECT * FROM global_announcements WHERE active = 1 ORDER BY id DESC LIMIT 1"
+                ).first();
+              } catch (_) {}
             }
+          } catch (dbErr) {
+            console.error("DB book query notice:", dbErr);
           }
-
-          let reviews = [];
-          try {
-            const revRes = await env.DB.prepare(
-              `SELECT i.*, COALESCE(u.username, 'Reader') as username 
-               FROM interactions i 
-               LEFT JOIN users u ON i.user_id = u.id 
-               WHERE i.book_id = ? 
-               ORDER BY i.created_at DESC`
-            ).bind(bookId).all();
-            reviews = revRes.results || [];
-          } catch (_) {}
-
-          let badges = [];
-          try {
-            const bgRes = await env.DB.prepare(
-              `SELECT * FROM book_custom_badges WHERE book_id = ? ORDER BY id DESC`
-            ).bind(bookId).all();
-            badges = bgRes.results || [];
-          } catch (_) {}
-
-          let announcement = null;
-          try {
-            announcement = await env.DB.prepare(
-              "SELECT * FROM global_announcements WHERE active = 1 ORDER BY id DESC LIMIT 1"
-            ).first();
-          } catch (_) {}
-
-          return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement), {
-            headers: { "Content-Type": "text/html; charset=utf-8" }
-          });
         }
+
+        // Resilient fallback if book isn't in D1 yet or DB failed
+        if (!book) {
+          const fallbackCatalog = [
+            { id: 1, title: "As You Thinketh", author_name: "James Allen", catalog: "Philosophy", cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "A timeless masterpiece exploring the power of thought and the architect of one's own destiny and character." },
+            { id: 2, title: "Helen Keller: Story of My Life", author_name: "Helen Keller", catalog: "Biography", cover_image: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "The inspiring, triumph-over-adversity autobiography documenting Helen Keller's miraculous journey to literacy and education." },
+            { id: 3, title: "Exploration Class-9th", author_name: "Academic Board", catalog: "Academic", cover_image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 0, description: "Structured core curricula and reading explorations designed for Secondary Class 9 academic achievement." },
+            { id: 4, title: "India Of My Dreams", author_name: "Mahatma Gandhi", catalog: "History & Society", cover_image: "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "A seminal collection of Mahatma Gandhi's speeches and essays articulating his vision of an independent, self-reliant India." }
+          ];
+          book = fallbackCatalog.find(b => b.id === bookId) || {
+            id: bookId,
+            title: `Publication #${bookId}`,
+            author_name: "PustakVerse Library",
+            catalog: "General",
+            cover_image: "/static/PustakVerse.png",
+            pdf_file: "#",
+            is_paid: 0,
+            price_paise: 0,
+            description: "Explore this publication on PustakVerse. Full reader ratings, synopsis, and community discussions are available."
+          };
+        }
+
+        const reqCookies = parseCookies(request.headers.get("Cookie"));
+        let edgeUser = null;
+        if (reqCookies.pv_session) {
+          try { edgeUser = JSON.parse(atob(reqCookies.pv_session)); } catch (_) {}
+        }
+
+        let canRead = false;
+        if (edgeUser) {
+          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer") {
+            canRead = true;
+          } else if (env.DB) {
+            try {
+              const purchase = await env.DB.prepare(
+                "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+              ).bind(edgeUser.id, bookId).first();
+              if (purchase) canRead = true;
+            } catch (_) {}
+          }
+        } else {
+          if (!book.is_paid || book.price_paise === 0) {
+            canRead = true;
+          }
+        }
+
+        const respHeaders = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+        if (hasBypassParam) {
+          respHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+        }
+
+        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement), {
+          headers: respHeaders
+        });
       } catch (err) {
         console.error("Error loading edge book details:", err);
       }
     }
 
-    // 6A-1. Girionix AI Review Consensus API: /api/books/:id/ai_review_summary
-    const aiReviewMatch = url.pathname.match(/^\/api\/books\/(\d+)\/ai_review_summary\/?$/);
+    // 6A-1. Girionix AI Review Consensus API: /api/books/:id/ai_review_summary, /api/view_book/:id/ai_review_summary
+    const aiReviewMatch = url.pathname.match(/^\/api\/(?:books|book|view_book)\/(\d+)\/ai_review_summary\/?$/);
     if (aiReviewMatch && env.DB) {
       const bookId = parseInt(aiReviewMatch[1], 10);
       try {
@@ -5656,7 +5715,22 @@ Format with these exact markdown sections:
       });
     }
 
-    // 7. Route to GitHub Pages or configured BACKEND_URL
+    // 7A. Cloudflare Pages Asset Layer (Instant Zero-Latency Local Edge Asset)
+    if (env.ASSETS) {
+      try {
+        const assetResp = await env.ASSETS.fetch(request.clone());
+        if (assetResp && assetResp.status < 400) {
+          if (hasBypassParam) {
+            const h = new Headers(assetResp.headers);
+            h.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+            return new Response(assetResp.body, { status: assetResp.status, headers: h });
+          }
+          return assetResp;
+        }
+      } catch (_) {}
+    }
+
+    // 7B. Route to GitHub Pages or configured BACKEND_URL
     const cleanPath = url.pathname.replace(/\/+$/, "") || "/";
     const mappedHtmlFile = HTML_ROUTE_MAP[cleanPath] || HTML_ROUTE_MAP[url.pathname];
 
@@ -5691,6 +5765,15 @@ Format with these exact markdown sections:
       });
 
       if (response && response.status < 400) {
+        if (hasBypassParam) {
+          const respHeaders = new Headers(response.headers);
+          respHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: respHeaders
+          });
+        }
         return response;
       }
     } catch (_) {}
@@ -5704,12 +5787,16 @@ Format with these exact markdown sections:
         });
         if (rawResp && rawResp.status < 400) {
           const body = await rawResp.text();
+          const rHeaders = new Headers({
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=300"
+          });
+          if (hasBypassParam) {
+            rHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+          }
           return new Response(body, {
             status: 200,
-            headers: {
-              "Content-Type": "text/html; charset=utf-8",
-              "Cache-Control": "public, max-age=300"
-            }
+            headers: rHeaders
           });
         }
       } catch (_) {}
@@ -5722,12 +5809,16 @@ Format with these exact markdown sections:
       });
       if (indexFallback && indexFallback.status < 400) {
         const body = await indexFallback.text();
+        const fbHeaders = new Headers({
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300"
+        });
+        if (hasBypassParam) {
+          fbHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+        }
         return new Response(body, {
           status: 200,
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "public, max-age=300"
-          }
+          headers: fbHeaders
         });
       }
     } catch (_) {}

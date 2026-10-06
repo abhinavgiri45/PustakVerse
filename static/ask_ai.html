@@ -4135,7 +4135,7 @@
       formData.append('prompt', promptText);
       formData.append('mode', activeMode);
       formData.append('model_id', document.getElementById('modelSelector').value);
-      formData.append('csrf_token', 'd66787380e3a5c42f12c8b3ce86c98ecd3df95bfadf6cbe90b74331d4a493188');
+      formData.append('csrf_token', 'dc92b2e359ae8f6e391050f8bfa7a4521ef47b740a7db41ba22d409c936dcab1');
       
       if (currentSession && currentSession.messages && currentSession.messages.length > 0) {
         const recentHistory = currentSession.messages.slice(-30);
@@ -4149,8 +4149,8 @@
       fetch('/api/granthmind/chat', {
         method: 'POST',
         headers: { 
-          'X-CSRF-Token': 'd66787380e3a5c42f12c8b3ce86c98ecd3df95bfadf6cbe90b74331d4a493188',
-          'X-CSRFToken': 'd66787380e3a5c42f12c8b3ce86c98ecd3df95bfadf6cbe90b74331d4a493188'
+          'X-CSRF-Token': 'dc92b2e359ae8f6e391050f8bfa7a4521ef47b740a7db41ba22d409c936dcab1',
+          'X-CSRFToken': 'dc92b2e359ae8f6e391050f8bfa7a4521ef47b740a7db41ba22d409c936dcab1'
         },
         body: formData
       })
@@ -4717,7 +4717,7 @@ function toggleSourcesDrawer(btn) {
       showToast('✨ Enhancing prompt with AI...');
       fetch('/api/ai/enhance_prompt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'd66787380e3a5c42f12c8b3ce86c98ecd3df95bfadf6cbe90b74331d4a493188' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'dc92b2e359ae8f6e391050f8bfa7a4521ef47b740a7db41ba22d409c936dcab1' },
         body: JSON.stringify({ prompt: val, mode: activeMode })
       })
       .then(r => r.json())
@@ -5137,8 +5137,8 @@ function toggleSourcesDrawer(btn) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': 'd66787380e3a5c42f12c8b3ce86c98ecd3df95bfadf6cbe90b74331d4a493188',
-          'X-CSRFToken': 'd66787380e3a5c42f12c8b3ce86c98ecd3df95bfadf6cbe90b74331d4a493188'
+          'X-CSRF-Token': 'dc92b2e359ae8f6e391050f8bfa7a4521ef47b740a7db41ba22d409c936dcab1',
+          'X-CSRFToken': 'dc92b2e359ae8f6e391050f8bfa7a4521ef47b740a7db41ba22d409c936dcab1'
         },
         body: JSON.stringify({
           prompt: promptText,
