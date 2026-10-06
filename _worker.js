@@ -6283,8 +6283,8 @@ function renderEdgeDashboardHtml(user) {
       <div class="stat-card">
         <div class="stat-icon">🌐</div>
         <div>
-          <div class="stat-val">100% Free</div>
-          <div class="stat-label">Open Digital Access</div>
+          <div class="stat-val">Digital Library</div>
+          <div class="stat-label">Global Access</div>
         </div>
       </div>
       <div class="stat-card">
@@ -7731,16 +7731,16 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
     <div class="gate-modal-backdrop" id="authGateModal">
         <div class="gate-modal-card">
             <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
-            <h2 class="gate-modal-title">Sign In Required to Read Free</h2>
+            <h2 class="gate-modal-title">Sign In Required to Read</h2>
             <p class="gate-modal-desc">
-                PustakVerse is 100% free for readers! To read <strong>"${escapeHtml(book.title || "this book")}"</strong>, please sign in or create your free account.
+                Welcome to PustakVerse! To read <strong>"${escapeHtml(book.title || "this book")}"</strong>, please sign in or create your account.
             </p>
             <div class="gate-btn-group">
                 <a href="/login?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-primary">
-                    <span>🔑 Sign In to Read Free</span>
+                    <span>🔑 Sign In to Read</span>
                 </a>
                 <a href="/register?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-secondary">
-                    <span>✨ Create Free Account</span>
+                    <span>✨ Create Reader Account</span>
                 </a>
                 <a href="/" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none; margin-top: 6px;">
                     Return to Library
