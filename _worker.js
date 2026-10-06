@@ -9106,8 +9106,16 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg-light); color: var(--text-primary); margin: 0; }
         .navbar { background: var(--nav-bg); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
         .container { max-width: 1040px; margin: 30px auto; padding: 0 20px; }
+        
+        /* BREADCRUMBS */
+        .breadcrumbs-bar { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; flex-wrap: wrap; }
+        .breadcrumbs-bar a { color: var(--text-muted); text-decoration: none; }
+        .breadcrumbs-bar a:hover { color: #f97316; text-decoration: underline; }
+        .breadcrumbs-bar .sep { color: var(--border-subtle); }
+        .breadcrumbs-bar .current { color: var(--text-primary); font-weight: 600; }
+
         .book-header { display: flex; gap: 40px; background: var(--surface-card); padding: 36px; border-radius: 18px; border: 1px solid var(--border-subtle); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        .book-cover { width: 260px; height: 360px; object-fit: cover; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
+        .book-cover { width: 100%; max-width: 280px; height: auto; object-fit: cover; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
         .book-details { flex: 1; }
         .tag { display: inline-block; background: rgba(249, 115, 22, 0.12); color: #ea580c; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
         h1 { margin: 0 0 8px 0; font-size: 2.1rem; line-height: 1.25; }
@@ -9116,6 +9124,18 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
         .header-stars { color: #f59e0b; font-weight: bold; }
         .description { font-size: 1rem; line-height: 1.7; color: var(--text-secondary); margin-bottom: 24px; }
         .action-box { background: var(--surface); border: 1px solid var(--border-subtle); padding: 20px; border-radius: 12px; }
+        
+        .product-specs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px; margin: 20px 0; }
+        .spec-item { display: flex; flex-direction: column; gap: 4px; }
+        .spec-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
+        .spec-val { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
+        
+        .trust-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; padding: 12px 16px; background: rgba(249, 115, 22, 0.04); border: 1px dashed rgba(249, 115, 22, 0.25); border-radius: 10px; }
+        .trust-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); }
+
+        .author-showcase-card { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 24px; margin: 30px 0; display: flex; gap: 20px; align-items: flex-start; }
+        .author-avatar { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; font-size: 1.7rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3); }
+
         .badge-color-gold { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
         .badge-color-emerald { background: linear-gradient(135deg, #10b981, #059669); color: white; }
         .badge-color-crimson { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
@@ -9154,6 +9174,8 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
             .book-header { flex-direction: column; padding: 20px; }
             .book-cover { width: 100%; max-width: 200px; height: auto; margin: 0 auto; display: block; }
             .ai-insights-grid { grid-template-columns: 1fr; }
+            .author-showcase-card { flex-direction: column; text-align: center; }
+            .author-avatar { margin: 0 auto; }
         }
         .ai-insight-column { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 15px 18px; }
         .ai-insight-column.positive { border-top: 3px solid #10b981; }
@@ -9187,41 +9209,112 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
     </nav>
 
     <div class="container">
+        <!-- BREADCRUMB -->
+        <nav class="breadcrumbs-bar" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span class="sep">›</span>
+            <a href="/?search=${encodeURIComponent(book.catalog || '')}">${escapeHtml(book.catalog || 'Books')}</a>
+            <span class="sep">›</span>
+            <span class="current">${escapeHtml(book.title)}</span>
+        </nav>
+
         <div class="book-header">
-            <img src="${coverSrc}" class="book-cover" alt="${escapeHtml(book.title)}">
+            <!-- LEFT COLUMN: COVER & QUICK BUY BOX -->
+            <div style="display: flex; flex-direction: column; align-items: center; width: 280px; max-width: 100%;">
+                <div style="position: relative; width: 100%; text-align: center;">
+                    <img src="${coverSrc}" class="book-cover" alt="${escapeHtml(book.title)}">
+                    <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 0.74rem; font-weight: 700; white-space: nowrap;">
+                        📖 Digital eBook Edition
+                    </div>
+                </div>
+
+                <div class="trust-strip" style="width: 100%; box-sizing: border-box;">
+                    <div class="trust-item"><span>⚡</span> Instant Delivery</div>
+                    <div class="trust-item"><span>🔒</span> Verified & Safe</div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: PRODUCT SPECIFICATIONS & REVIEWS BRIEF -->
             <div class="book-details">
                 ${badgesHtml}
                 <div class="tag">${escapeHtml(book.catalog || 'General')}</div>
-                <h1>${escapeHtml(book.title)}</h1>
+                <h1 style="margin: 0 0 6px 0; font-size: 2.2rem; font-weight: 900;">${escapeHtml(book.title)}</h1>
+                
                 <div class="author">
                     <span>By <a href="/author/${encodeURIComponent(book.author_name || 'Author')}" style="color: #ea580c; font-weight: 700; text-decoration: none;">${escapeHtml(book.author_name || 'PustakVerse')}</a></span>
                     <span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-left: 6px;">✓ Verified Creator</span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">| Publisher: <strong>PustakVerse Editions</strong></span>
                 </div>
 
-                ${book.sbin_no ? `
-                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-subtle); font-size: 0.82rem; font-weight: 700; margin-bottom: 14px;">
-                    <span style="color: var(--text-muted);">🏷️ SBIN / ISBN:</span>
-                    <code style="color: #ea580c; font-weight: 800;">${escapeHtml(book.sbin_no)}</code>
+                <!-- STAR RATINGS SUMMARY BAR -->
+                <div class="header-rating" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; margin-bottom: 18px;">
+                    <a href="#customer-reviews" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                        <span class="header-stars">★ ${avgRating}</span>
+                        <span style="color: #3b82f6; font-size: 0.95rem; font-weight: 700; text-decoration: underline;">
+                            (${reviewCount} ratings)
+                        </span>
+                    </a>
+                    <span style="color: var(--text-muted);">•</span>
+                    <a href="#customer-reviews" style="color: #3b82f6; font-size: 0.88rem; text-decoration: none; font-weight: 600;">Reviews</a>
+                    <span style="color: var(--text-muted);">•</span>
+                    <a href="#girionixAiConsensusCard" style="color: #ea580c; font-size: 0.88rem; text-decoration: none; font-weight: 700;">✨ AI Consensus Brief</a>
                 </div>
-                ` : ''}
 
-                <div class="header-rating">
-                    <span class="header-stars">★ ${avgRating}</span>
-                    <span style="color: var(--text-muted); font-size: 0.95rem;">(${reviewCount} reviews)</span>
+                <!-- SPECIFICATIONS GRID -->
+                <div class="product-specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">Format</span>
+                        <span class="spec-val">📖 Digital PDF / Web</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Category</span>
+                        <span class="spec-val">📂 ${escapeHtml(book.catalog || 'General')}</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Reading Time</span>
+                        <span class="spec-val">⏱️ ~${Math.max(3, Math.round(((book.description || '').length) / 200))} mins</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Language</span>
+                        <span class="spec-val">🌐 English / Global</span>
+                    </div>
+                    ${book.sbin_no ? `
+                    <div class="spec-item">
+                        <span class="spec-label">Identifier</span>
+                        <span class="spec-val" style="color: #ea580c; font-family: monospace;">${escapeHtml(book.sbin_no)}</span>
+                    </div>
+                    ` : ''}
                 </div>
 
-                <div class="description">${escapeHtml(book.description || 'No synopsis provided for this book.')}</div>
+                <div style="margin: 20px 0 14px 0;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 800;">📝 About this Book</h3>
+                    <div class="description">${escapeHtml(book.description || 'No synopsis provided for this book.')}</div>
+                </div>
+
                 <div class="action-box">
                     ${actionsHtml}
                     <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <a href="/ask_ai?book_id=${book.id}" class="btn" style="flex: 1; text-align: center; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; text-decoration: none; padding: 9px; border-radius: 8px; font-weight: 700;">📖 AI Study Companion</a>
-                        <a href="/certificate/${book.id}" target="_blank" class="btn" style="flex: 1; text-align: center; background: #f0fdf4; color: #15803d; border: 1px solid #86efac; text-decoration: none; padding: 9px; border-radius: 8px; font-weight: 700;">🎓 Claim Certificate</a>
+                        <a href="/ask_ai?book_id=${book.id}" class="btn" style="flex: 1; text-align: center; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: 700;">📖 AI Study Companion</a>
+                        <a href="/certificate/${book.id}" target="_blank" class="btn" style="flex: 1; text-align: center; background: #f0fdf4; color: #15803d; border: 1px solid #86efac; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: 700;">🎓 Claim Certificate</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div style="margin-top: 35px;">
+        <!-- ABOUT THE AUTHOR SHOWCASE -->
+        <div class="author-showcase-card">
+            <div class="author-avatar">${escapeHtml((book.author_name || 'A').slice(0, 1).toUpperCase())}</div>
+            <div>
+                <h3 style="margin: 0 0 6px 0; font-size: 1.2rem; font-weight: 800;">About the Author: ${escapeHtml(book.author_name || 'PustakVerse Creator')}</h3>
+                <p style="margin: 0 0 12px 0; color: var(--text-secondary); line-height: 1.6; font-size: 0.92rem;">
+                    ${escapeHtml(book.author_name || 'The author')} is an accredited creator and writer on PustakVerse publishing books and educational literature.
+                </p>
+                <a href="/author/${encodeURIComponent(book.author_name || 'Author')}" style="color: #ea580c; font-weight: 700; font-size: 0.85rem; text-decoration: none;">View full catalogue & profile →</a>
+            </div>
+        </div>
+
+        <!-- REVIEWS ANCHOR & SECTION -->
+        <div style="margin-top: 35px;" id="customer-reviews">
             <h2 style="font-size: 1.5rem; margin-bottom: 15px;">Community Reviews & Ratings</h2>
 
             <!-- GIRIONIX AI REVIEW CONSENSUS MODEL -->

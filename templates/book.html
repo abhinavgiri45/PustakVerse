@@ -155,100 +155,151 @@
             margin-bottom: 30px; 
         }
         
-        .action-box { 
-            background: var(--surface); 
-            padding: 20px; 
-            border-radius: 12px; 
-            border: 1px solid var(--border-subtle); 
-            display: inline-block; 
-            width: 100%; 
-            box-sizing: border-box; 
+        /* AMAZON & FLIPKART E-COMMERCE STYLES */
+        .breadcrumbs-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-        
-        .price { 
-            font-size: 1.8rem; 
-            font-weight: bold; 
-            color: #16a34a; 
-            margin-bottom: 15px; 
+        .breadcrumbs-bar a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
         }
-        
-        .reviews-section { 
-            color: var(--text-primary); 
-            margin-bottom: 30px; 
+        .breadcrumbs-bar a:hover {
+            color: var(--primary-orange);
+            text-decoration: underline;
         }
-        
-        /* REVIEW SUMMARY STYLES */
-        .summary-container { 
-            display: flex; 
-            gap: 40px; 
-            margin-bottom: 40px; 
-            background: var(--surface-card); 
-            padding: 30px; 
-            border-radius: 8px; 
-            border: 1px solid var(--border-subtle); 
-            align-items: center; 
+        .breadcrumbs-bar .sep {
+            color: var(--border-subtle);
+            font-size: 0.8rem;
         }
-        
-        .summary-score { 
-            text-align: center; 
-            min-width: 150px; 
+        .breadcrumbs-bar .current {
+            color: var(--text-primary);
+            font-weight: 600;
         }
-        
-        .summary-score .big-number { 
-            font-size: 4rem; 
-            font-weight: bold; 
-            color: var(--text-primary); 
-            line-height: 1; 
+
+        .product-specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
         }
-        
-        .summary-score .stars { 
-            color: #eab308; 
-            font-size: 1.5rem; 
-            margin: 5px 0; 
+        .spec-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
-        
-        .summary-score .total-text { 
-            color: var(--text-muted); 
-            font-size: 0.9rem; 
+        .spec-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 700;
         }
-        
-        .summary-bars { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
+        .spec-val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        
-        .bar-row { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            font-size: 0.9rem; 
-            color: var(--text-secondary); 
+
+        .trust-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin: 18px 0;
+            padding: 12px 16px;
+            background: rgba(249, 115, 22, 0.04);
+            border: 1px dashed rgba(249, 115, 22, 0.25);
+            border-radius: 10px;
         }
-        
-        .bar-label { 
-            min-width: 50px; 
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-secondary);
         }
-        
-        .bar-outer { 
-            flex: 1; 
-            height: 12px; 
-            background: var(--border-subtle); 
-            border-radius: 6px; 
-            overflow: hidden; 
+        .trust-item span.icon {
+            font-size: 1.2rem;
         }
-        
-        .bar-inner { 
-            height: 100%; 
-            background: #eab308; 
-            border-radius: 6px; 
+
+        .author-showcase-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 24px;
+            margin: 30px 0;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
         }
-        
-        .bar-count { 
-            min-width: 40px; 
-            text-align: right; 
-            color: var(--text-muted); 
+        .author-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #ffffff;
+            font-size: 1.8rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+        .author-info {
+            flex: 1;
+        }
+        .author-name-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .author-bio-text {
+            font-size: 0.92rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin: 0 0 12px 0;
+        }
+
+        .flipkart-pricing-box {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .fk-special-price {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #16a34a;
+            line-height: 1;
+        }
+        .fk-free-tag {
+            background: #dcfce7;
+            color: #166534;
+            font-size: 0.82rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
         }
 
         /* RESTORED BOOK ACCOLADE & BADGE SYSTEM */
@@ -656,11 +707,43 @@
             {% endif %}
         {% endwith %}
 
+        <!-- BREADCRUMB NAVIGATION -->
+        <nav class="breadcrumbs-bar" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span class="sep">›</span>
+            <a href="/?search={{ book.catalog | urlencode }}">{{ book.catalog or 'Books' }}</a>
+            <span class="sep">›</span>
+            <span class="current">{{ book.title }}</span>
+        </nav>
+
         <div class="book-header">
-            <div>
-                <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' ~ book.cover_image) }}" class="book-cover" alt="Cover">
+            <!-- LEFT COLUMN: COVER & QUICK BUY BOX -->
+            <div style="display: flex; flex-direction: column; align-items: center; width: 300px; max-width: 100%;">
+                <div style="position: relative; width: 100%; text-align: center;">
+                    <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' ~ book.cover_image) }}" class="book-cover" alt="{{ book.title }} Cover" style="width: 100%; max-width: 280px; height: auto; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.18);">
+                    <div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 0.76rem; font-weight: 700; backdrop-filter: blur(4px); white-space: nowrap;">
+                        📖 Digital eBook Edition
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-top: 18px; width: 100%; max-width: 280px;">
+                    <button type="button" id="ttsPlayBtn" onclick="toggleBookTTS()" class="btn-sm" style="flex: 1; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 7px 10px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        🎧 Listen
+                    </button>
+                    <button type="button" onclick="openShareModal()" class="btn-sm" style="flex: 1; background: var(--surface); color: #3b82f6; border: 1px solid #bfdbfe; border-radius: 20px; padding: 7px 10px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        🔗 Share
+                    </button>
+                </div>
+
+                <!-- TRUST STRIP -->
+                <div class="trust-strip" style="width: 100%; max-width: 280px; box-sizing: border-box; margin-top: 16px;">
+                    <div class="trust-item"><span class="icon">⚡</span> Instant Access</div>
+                    <div class="trust-item"><span class="icon">🔒</span> Safe & Verified</div>
+                    <div class="trust-item"><span class="icon">📱</span> All Devices</div>
+                </div>
             </div>
             
+            <!-- RIGHT COLUMN: PRODUCT METADATA & REVIEWS BRIEF -->
             <div class="book-details">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
                     <span class="tag">{{ book.catalog }}</span>
@@ -698,70 +781,93 @@
                     {% endif %}
                 </div>
 
-                <h1>{{ book.title }}</h1>
-                <div class="author" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                    <span>By <a href="{{ url_for('public_author_profile', username=book.author_name) }}" style="color: var(--primary-orange); font-weight: 700; text-decoration: none;" title="View Author Showcase & Published Works">{{ book.author_name }}</a></span>
+                <h1 style="margin: 0 0 6px 0; font-size: 2.2rem; font-weight: 900; line-height: 1.25; color: var(--text-primary);">{{ book.title }}</h1>
+                
+                <div class="author" style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+                    <span>By <a href="{{ url_for('public_author_profile', username=book.author_name) }}" style="color: var(--primary-orange); font-weight: 800; text-decoration: none;" title="View Author Showcase & Published Works">{{ book.author_name }}</a></span>
                     <span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✓ Verified Creator</span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">| Publisher: <strong>PustakVerse Editions</strong></span>
                 </div>
-                
-                
-                <!-- VERIFIED SBIN / ISBN STANDARD IDENTIFIER -->
-                {% if book.sbin_no or book.isbn %}
-                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 14px;">
-                    <span style="color: #64748b;">🏷️ SBIN / ISBN:</span>
-                    <code style="color: #ea580c; font-weight: 800; font-size: 0.88rem;">{{ book.sbin_no or book.isbn }}</code>
-                    <button type="button" onclick="navigator.clipboard.writeText('{{ book.sbin_no or book.isbn }}'); alert('Copied SBIN / ISBN to clipboard!');" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0 4px;" title="Copy Standard Identifier">📋</button>
-                    <span style="font-size: 0.72rem; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">✓ Registered</span>
-                </div>
-                {% endif %}
 
-                <!-- Average Rating Header -->
-                <div class="header-rating">
-                    <span class="header-stars">
-                        {% if avg_rating > 0 %}
-                            ★ {{ avg_rating }}
-                        {% else %}
-                            ☆ No Ratings
-                        {% endif %}
-                    </span>
-                    <span class="header-count">({{ review_count }} reviews)</span>
+                <!-- STAR RATINGS & REVIEWS QUICK BAR (AMAZON STYLE) -->
+                <div class="header-rating" style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap;">
+                    <a href="#customer-reviews" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                        <span class="header-stars" style="color: #f59e0b; font-size: 1.2rem; font-weight: 900;">
+                            {% if avg_rating > 0 %}
+                                ★ {{ avg_rating }}
+                            {% else %}
+                                ☆ No Ratings
+                            {% endif %}
+                        </span>
+                        <span style="color: #f59e0b; letter-spacing: -1px; font-size: 1.1rem;">
+                            {% for _ in range(avg_rating|round|int) %}★{% endfor %}{% for _ in range(5 - (avg_rating|round|int)) %}☆{% endfor %}
+                        </span>
+                        <span class="header-count" style="color: #3b82f6; font-size: 0.95rem; font-weight: 700; text-decoration: underline;">
+                            {{ review_count }} global ratings
+                        </span>
+                    </a>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">•</span>
+                    <a href="#customer-reviews" style="color: #3b82f6; font-size: 0.88rem; font-weight: 600; text-decoration: none;">Read Reviews</a>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">•</span>
+                    <a href="#girionixAiConsensusCard" style="color: #ea580c; font-size: 0.88rem; font-weight: 700; text-decoration: none;">✨ AI Feedback Brief</a>
                 </div>
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-                    <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">
-                        ⏱️ Estimated Reading: <strong>~{{ [((((book.description or '')|length) / 200)|round|int), 3]|max }} mins</strong>
-                    </span>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" id="ttsPlayBtn" onclick="toggleBookTTS()" class="btn-sm" style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
-                            🎧 Listen to Synopsis
-                        </button>
-                        <button type="button" onclick="openShareModal()" class="btn-sm" style="background: #f8fafc; color: #3b82f6; border: 1px solid #bfdbfe; border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
-                            🔗 Share Book
-                        </button>
+
+                <!-- FLIPKART & AMAZON PRICING BOX -->
+                <div class="flipkart-pricing-box">
+                    {% if book.is_paid %}
+                        <span class="fk-special-price">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                        <span style="color: var(--text-muted); text-decoration: line-through; font-size: 1.1rem;">₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span>
+                        <span style="background: #fee2e2; color: #dc2626; font-size: 0.82rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;">30% OFF</span>
+                        <span class="fk-free-tag" style="background: #e0f2fe; color: #0369a1;">Digital Edition</span>
+                    {% else %}
+                        <span class="fk-special-price" style="color: #10b981;">₹0.00</span>
+                        <span class="fk-free-tag">100% Free Access</span>
+                        <span style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600;">Inclusive of all digital rights</span>
+                    {% endif %}
+                </div>
+
+                <!-- AMAZON SPECIFICATIONS SUMMARY GRID -->
+                <div class="product-specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">Format</span>
+                        <span class="spec-val">📖 Digital PDF / Web</span>
                     </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Category</span>
+                        <span class="spec-val">📂 {{ book.catalog or 'General' }}</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Reading Time</span>
+                        <span class="spec-val">⏱️ ~{{ [((((book.description or '')|length) / 200)|round|int), 3]|max }} mins</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Language</span>
+                        <span class="spec-val">🌐 English / Global</span>
+                    </div>
+                    {% if book.sbin_no or book.isbn %}
+                    <div class="spec-item">
+                        <span class="spec-label">Identifier</span>
+                        <span class="spec-val" style="color: #ea580c; font-family: monospace; font-size: 0.85rem;">{{ book.sbin_no or book.isbn }}</span>
+                    </div>
+                    {% endif %}
                 </div>
 
-                <div class="description" id="bookSynopsisText">{{ book.description or 'No description provided for this book.' }}</div>
+                <!-- AUTHOR'S BOOK BLURB & SYNOPSIS -->
+                <div style="margin: 22px 0 16px 0;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                        <span>📝</span> About this Book
+                    </h3>
+                    <div class="description" id="bookSynopsisText" style="margin-bottom: 20px;">{{ book.description or 'No description provided for this book.' }}</div>
+                </div>
                 
+                <!-- BUY / READ / SAVE ACTION BOX -->
                 <div class="action-box">
                     {% if book.is_paid %}
                         {% if can_read %}
-                            <div style="color: #047857; font-weight: bold; margin-bottom: 10px;">✓ You own this premium book</div>
-                <!-- AUTHOR TIPPING & SUPPORT CARD -->
-                <div style="margin-top: 15px; padding: 14px 18px; background: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.6rem;">☕</span>
-                        <div>
-                            <div style="font-weight: 800; font-size: 0.92rem; color: #92400e;">Love {{ book.author_name }}'s work?</div>
-                            <div style="font-size: 0.8rem; color: #b45309;">Support the creator directly with a voluntary token of appreciation.</div>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('buy_book', book_id=book.id) }}" class="btn-sm" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px;">
-                        <span>☕ Tip ₹20</span>
-                    </a>
-                </div>
-
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark">Read Full Book Now</a>
+                            <div style="color: #047857; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                <span>✓</span> You own full access to this premium book
+                            </div>
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="display: block; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: #0f172a; color: white;">Read Full Book Now</a>
                         {% else %}
                             <div class="price" id="bookDisplayPrice">₹{{ "%.2f"|format(book.price_paise/100) }}</div>
                             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -771,33 +877,69 @@
                             <div id="couponResultMsg" style="display: none; font-size: 0.84rem; margin-bottom: 10px; padding: 6px 10px; border-radius: 6px;"></div>
                             
                             <div style="display: flex; gap: 10px;">
-                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569;">Free Preview</a>
-                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2;">
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; color: white;">Free Preview</a>
+                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2; margin: 0;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-green">Buy Securely</button>
+                                    <button type="submit" class="btn btn-green" style="width: 100%; padding: 12px; border-radius: 8px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; cursor: pointer;">Buy Securely</button>
                                 </form>
                             </div>
                         {% endif %}
                     {% else %}
-                        <div class="price" style="color: #3b82f6;">Free to Read</div>
+                        <div class="price" style="color: #10b981; font-size: 1.6rem; font-weight: 800; margin-bottom: 12px;">Free to Read (Open Access)</div>
                         <div style="display: flex; gap: 10px;">
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1;">Read Now</a>
-                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1;">
+                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1.2; text-align: center; background: var(--primary-orange); color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800;">📖 Read Now</a>
+                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; margin: 0;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-dark" style="background: #cbd5e1; color: #0f172a;">Save to Library</button>
+                                <button type="submit" class="btn btn-dark" style="width: 100%; background: #cbd5e1; color: #0f172a; padding: 12px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">💾 Save to Library</button>
                             </form>
                         </div>
                     {% endif %}
+                    
                     <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">📖 AI Study Companion</a>
-                        <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="btn btn-outline" style="flex: 1; background: #f0fdf4; color: #15803d; border: 1px solid #86efac;">🎓 Claim Certificate</a>
+                        <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: 700; text-align: center;">💡 AI Study Companion</a>
+                        <a href="{{ url_for('generate_reading_certificate', book_id=book.id) }}" target="_blank" class="btn btn-outline" style="flex: 1; background: #f0fdf4; color: #15803d; border: 1px solid #86efac; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: 700; text-align: center;">🎓 Claim Certificate</a>
+                    </div>
+
+                    <!-- AUTHOR TIPPING & SUPPORT CARD -->
+                    <div style="margin-top: 16px; padding: 14px 18px; background: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.6rem;">☕</span>
+                            <div>
+                                <div style="font-weight: 800; font-size: 0.92rem; color: #92400e;">Love {{ book.author_name }}'s writing?</div>
+                                <div style="font-size: 0.8rem; color: #b45309;">Support the creator directly with a voluntary token of appreciation.</div>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('buy_book', book_id=book.id) }}" class="btn-sm" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px;">
+                            <span>☕ Tip Creator</span>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- REVIEWS SECTION -->
-        <div class="reviews-section">
+        <!-- ABOUT THE AUTHOR SHOWCASE (AMAZON STYLE) -->
+        <div class="author-showcase-card">
+            <div class="author-avatar">
+                {{ (book.author_name or 'A')[:1] | upper }}
+            </div>
+            <div class="author-info">
+                <div class="author-name-title">
+                    <span>About the Author: {{ book.author_name }}</span>
+                    <span style="font-size: 0.76rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">Verified PustakVerse Creator</span>
+                </div>
+                <p class="author-bio-text">
+                    {{ book.author_name }} is a featured creator and contributor on PustakVerse, sharing original works, academic textbooks, and literature for readers worldwide. Explore their full catalogue of publications and connect directly through their author profile.
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <a href="{{ url_for('public_author_profile', username=book.author_name) }}" class="btn btn-outline" style="font-size: 0.84rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; text-decoration: none; color: var(--primary-orange); border: 1.5px solid var(--primary-orange);">
+                        View All Books by {{ book.author_name }} →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- REVIEWS & RATINGS SECTION (ANCHOR FOR CUSTOMER REVIEWS) -->
+        <div class="reviews-section" id="customer-reviews">
             {% if book.official_staff_review %}
             <div style="background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border: 1.5px solid #e879f9; border-radius: 14px; padding: 18px 24px; margin-bottom: 28px;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
