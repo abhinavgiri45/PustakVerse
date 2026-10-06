@@ -549,7 +549,12 @@ async function generateValidSbin(db = null) {
         const existing = await db.prepare("SELECT id FROM books WHERE sbin_no = ? OR isbn = ? LIMIT 1").bind(sbin, sbin).first();
         if (!existing) return sbin;
       } catch (_) {
-        return sbin;
+        try {
+          const fallback = await db.prepare("SELECT id FROM books WHERE sbin_no = ? LIMIT 1").bind(sbin).first();
+          if (!fallback) return sbin;
+        } catch (__) {
+          return sbin;
+        }
       }
     } else {
       return sbin;
@@ -1302,7 +1307,17 @@ export default {
              WHERE b.sbin_no = ? OR b.isbn = ?
              LIMIT 1`
           ).bind(code, code).first();
-        } catch (_) {}
+        } catch (_) {
+          try {
+            registeredBook = await env.DB.prepare(
+              `SELECT b.id, b.title, b.catalog, b.is_paid, b.price_paise, b.cover_image, u.username as author_name
+               FROM books b
+               LEFT JOIN users u ON b.author_id = u.id
+               WHERE b.sbin_no = ?
+               LIMIT 1`
+            ).bind(code).first();
+          } catch (__) {}
+        }
       }
       return new Response(JSON.stringify({
         valid: true,
@@ -2776,17 +2791,53 @@ Format with these exact markdown sections:
               sbinNo = await generateValidSbin(env.DB);
             }
 
-            // Insert book into Cloudflare D1 books table
-            await env.DB.prepare(
-              `INSERT INTO books (
-                 title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
-                 preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                 created_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-            ).bind(
-              title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-              5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo
-            ).run();
+            // Ensure books table and columns (including isbn) exist
+            await ensureBooksTable(env);
+
+            // Insert book into Cloudflare D1 books table with fail-safe resilience
+            try {
+              await env.DB.prepare(
+                `INSERT INTO books (
+                   title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
+                   preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
+                   created_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+              ).bind(
+                title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
+                5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo
+              ).run();
+            } catch (insertErr) {
+              const errMsg = String(insertErr?.message || insertErr);
+              if (errMsg.includes("no column named isbn")) {
+                try {
+                  await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run();
+                  await env.DB.prepare(
+                    `INSERT INTO books (
+                       title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
+                       preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
+                       created_at
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                  ).bind(
+                    title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
+                    5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo
+                  ).run();
+                } catch (retryErr) {
+                  // Fallback without isbn column
+                  await env.DB.prepare(
+                    `INSERT INTO books (
+                       title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
+                       preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no,
+                       created_at
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                  ).bind(
+                    title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
+                    5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo
+                  ).run();
+                }
+              } else {
+                throw insertErr;
+              }
+            }
 
             // Insert category if not exists
             try {
@@ -2951,6 +3002,8 @@ Format with these exact markdown sections:
       let pdfLink = (formData.get("pdf_link") || "").trim();
       let coverLink = (formData.get("cover_link") || "").trim();
 
+      await ensureBooksTable(env);
+
       let sql = "UPDATE books SET title = ?, catalog = ?, description = ?";
       const binds = [title, catalog, description];
 
@@ -2969,7 +3022,37 @@ Format with these exact markdown sections:
       sql += " WHERE id = ?";
       binds.push(bookId);
 
-      await env.DB.prepare(sql).bind(...binds).run();
+      try {
+        await env.DB.prepare(sql).bind(...binds).run();
+      } catch (updateErr) {
+        const errMsg = String(updateErr?.message || updateErr);
+        if (errMsg.includes("no column named isbn")) {
+          try {
+            await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run();
+            await env.DB.prepare(sql).bind(...binds).run();
+          } catch (_) {
+            let fallbackSql = "UPDATE books SET title = ?, catalog = ?, description = ?";
+            const fallbackBinds = [title, catalog, description];
+            if (sbinNo) {
+              fallbackSql += ", sbin_no = ?";
+              fallbackBinds.push(sbinNo);
+            }
+            if (pdfLink) {
+              fallbackSql += ", pdf_file = ?";
+              fallbackBinds.push(normalizeDriveLink(pdfLink));
+            }
+            if (coverLink) {
+              fallbackSql += ", cover_image = ?";
+              fallbackBinds.push(normalizeDriveImageLink(coverLink));
+            }
+            fallbackSql += " WHERE id = ?";
+            fallbackBinds.push(bookId);
+            await env.DB.prepare(fallbackSql).bind(...fallbackBinds).run();
+          }
+        } else {
+          throw updateErr;
+        }
+      }
       return Response.redirect(`${url.origin}/dashboard?updated=1`, 302);
     }
 
@@ -6447,9 +6530,15 @@ async function ensureBooksTable(env) {
         is_quarantined INTEGER NOT NULL DEFAULT 0,
         is_featured INTEGER NOT NULL DEFAULT 0,
         sbin_no TEXT DEFAULT NULL,
+        isbn TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+  } catch (_) {}
+
+  // Explicitly ensure isbn column exists in existing D1 databases
+  try {
+    await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run();
   } catch (_) {}
 
   const bookCols = [
@@ -6464,7 +6553,8 @@ async function ensureBooksTable(env) {
     ["description", "TEXT DEFAULT NULL"],
     ["is_quarantined", "INTEGER NOT NULL DEFAULT 0"],
     ["is_featured", "INTEGER NOT NULL DEFAULT 0"],
-    ["sbin_no", "TEXT DEFAULT NULL"]
+    ["sbin_no", "TEXT DEFAULT NULL"],
+    ["isbn", "TEXT DEFAULT NULL"]
   ];
   for (const [col, colType] of bookCols) {
     try {
