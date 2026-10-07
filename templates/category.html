@@ -397,17 +397,28 @@
                     <h3 class="book-title"><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></h3>
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
                     
-                    <div class="book-actions">
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Preview</a>
-                            <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
-                                <button type="submit" class="btn btn-premium" style="width: 100%;">Buy ₹{{ "%.2f"|format(book.price_paise/100) }}</button>
-                            </form>
+                            <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; flex-wrap: wrap;">
+                                <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                                <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span>
+                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Preview</a>
+                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1.4; display: flex; margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-premium" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800;">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>
+                                </form>
+                            </div>
                         {% else %}
-                            <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read">Read Now</a>
-                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex;">
-                                <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
-                            </form>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Read Now</a>
+                                <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; display: flex; margin: 0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                </form>
+                            </div>
                         {% endif %}
                     </div>
                 </div>

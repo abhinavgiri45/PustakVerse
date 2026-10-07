@@ -201,8 +201,8 @@
         
         <div style="display: flex; align-items: center; gap: 14px;">
             {% if book.is_paid and not can_read %}
-            <a href="{{ url_for('buy_book', book_id=book.id) }}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;">
-                💳 Buy ₹{{ "%.2f"|format(book.price_paise/100) }} (Razorpay)
+            <a href="{{ url_for('buy_book', book_id=book.id) }}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                ⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }}) <span style="text-decoration: line-through; opacity: 0.8; font-size: 0.8em; margin-left: 3px;">₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span>
             </a>
             {% endif %}
             <a href="{{ request.referrer or url_for('index') }}">← Back to Library</a>
@@ -238,7 +238,7 @@
                 <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
                 <h2 class="gate-modal-title">Sign In to Access Premium Book</h2>
                 <p class="gate-modal-desc">
-                    Welcome to PustakVerse! <strong>"{{ book.title }}"</strong> is a premium publication priced at <strong>₹{{ "%.2f"|format(book.price_paise/100) }}</strong>. Please sign in or create an account to read or purchase this title.
+                    Welcome to PustakVerse! <strong>"{{ book.title }}"</strong> is a premium publication priced at <strong>₹{{ "%.2f"|format(book.price_paise/100) }}</strong> (MRP ₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }} · 30% OFF). Please sign in or create an account to read or purchase this title.
                 </p>
                 <div class="gate-btn-group">
                     <a href="{{ url_for('login', next=request.path) }}" class="gate-btn gate-btn-primary">
@@ -259,7 +259,7 @@
                 <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
                 <h2 class="gate-modal-title">Premium Author Publication</h2>
                 <p class="gate-modal-desc">
-                    This exclusive title is priced at <strong>₹{{ "%.2f"|format(book.price_paise/100) }}</strong>. 100% of reader payments directly support the author via Razorpay.
+                    This exclusive title is priced at <strong style="color: #16a34a; font-size: 1.15rem;">₹{{ "%.2f"|format(book.price_paise/100) }}</strong> <span style="text-decoration: line-through; color: var(--text-muted); margin-left: 6px;">MRP ₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span> <span style="background: #fee2e2; color: #dc2626; font-size: 0.75rem; font-weight: 800; padding: 2px 6px; border-radius: 8px; margin-left: 4px;">30% OFF</span>. 100% of reader payments directly support the author via Razorpay.
                 </p>
                 <div class="gate-btn-group">
                     <a href="{{ url_for('buy_book', book_id=book.id) }}" class="gate-btn gate-btn-pay">

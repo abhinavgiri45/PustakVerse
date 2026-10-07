@@ -297,7 +297,10 @@
                         <div class="book-card-cat">{{ book.catalog }}</div>
                         <div class="book-card-footer">
                             {% if book.is_paid %}
-                                <span style="color: #166534;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                                <span style="display: flex; align-items: baseline; gap: 4px;">
+                                    <strong style="color: #166534; font-weight: 800;">₹{{ "%.2f"|format(book.price_paise/100) }}</strong>
+                                    <span style="color: var(--text-muted); text-decoration: line-through; font-size: 0.78rem;">MRP ₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span>
+                                </span>
                             {% else %}
                                 <span style="color: #475569;">Free</span>
                             {% endif %}

@@ -810,10 +810,17 @@
 
                     let actionsHtml = '';
                     if (isPaid) {
+                        const mrpPaise = Math.round((b.price_paise || 0) * 1.4);
+                        const mrpFormatted = `₹${(mrpPaise / 100).toFixed(2)}`;
                         actionsHtml = `
+                            <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
+                                <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">${priceFormatted}</span>
+                                <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ${mrpFormatted}</span>
+                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
+                            </div>
                             <div class="book-actions" style="display: flex; gap: 8px;">
                                 <a href="${readHref}" class="btn btn-read" style="flex: 1; font-size: 0.85rem; padding: 8px 6px;" onclick="event.stopPropagation();">Free Preview</a>
-                                <a href="${buyHref}" class="btn btn-premium" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px;" onclick="event.stopPropagation();">Buy ${priceFormatted}</a>
+                                <a href="${buyHref}" class="btn btn-premium" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px;" onclick="event.stopPropagation();">⚡ Buy Now (${priceFormatted})</a>
                             </div>
                         `;
                     } else {

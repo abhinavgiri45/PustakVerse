@@ -4390,11 +4390,41 @@ Format with these exact markdown sections:
             if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
             badgesByBook[bg.book_id].push(bg);
           });
-          results = results.map(b => ({
-            ...b,
-            cover_image: resolveEffectiveBookCover(b),
-            custom_badges: badgesByBook[b.id] || []
-          }));
+          results = results.map(b => {
+            if (b.id === 9999) {
+              return {
+                ...b,
+                title: "PustakVerse Premium Edition: Test Payment Guide",
+                author_name: (b.author_name && b.author_name !== "Author" && b.author_name !== "PustakVerse Library") ? b.author_name : "PustakVerse Official",
+                catalog: "Academic",
+                price_paise: 100,
+                is_paid: 1,
+                cover_image: resolveEffectiveBookCover({ ...b, cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80" }),
+                custom_badges: badgesByBook[b.id] || []
+              };
+            }
+            return {
+              ...b,
+              cover_image: resolveEffectiveBookCover(b),
+              custom_badges: badgesByBook[b.id] || []
+            };
+          });
+
+          if (!results.find(b => b.id === 9999)) {
+            results.unshift({
+              id: 9999,
+              title: "PustakVerse Premium Edition: Test Payment Guide",
+              author_name: "PustakVerse Official",
+              catalog: "Academic",
+              price_paise: 100,
+              is_paid: 1,
+              is_featured: 1,
+              is_quarantined: 0,
+              description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).",
+              cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+              custom_badges: []
+            });
+          }
         } catch (_) {}
 
         return new Response(JSON.stringify(results), {
@@ -4689,19 +4719,26 @@ Format with these exact markdown sections:
            WHERE b.id = ? LIMIT 1`
         ).bind(targetBookId).first();
 
-        if (!book && targetBookId === 9999) {
-          book = {
-            id: 9999,
-            title: "PustakVerse Premium Edition: Test Payment Guide",
-            author_name: "PustakVerse Official",
-            catalog: "Academic",
-            cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
-            pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
-            is_paid: 1,
-            price_paise: 100,
-            preview_pages: 5,
-            description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00."
-          };
+        if (targetBookId === 9999) {
+          if (!book) {
+            book = {
+              id: 9999,
+              title: "PustakVerse Premium Edition: Test Payment Guide",
+              author_name: "PustakVerse Official",
+              catalog: "Academic",
+              cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+              pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
+              is_paid: 1,
+              price_paise: 100,
+              preview_pages: 5,
+              description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00."
+            };
+          } else {
+            book.id = 9999;
+            book.title = "PustakVerse Premium Edition: Test Payment Guide";
+            book.is_paid = 1;
+            book.price_paise = 100;
+          }
         }
 
         if (!book) {
@@ -4718,12 +4755,13 @@ Format with these exact markdown sections:
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
         }
 
-        // Check if already purchased
+        // Check if already purchased (allow developer or ?force=1 to test checkout anytime)
+        const isTester = sessionUser.role === "developer" || sessionUser.role === "official" || url.searchParams.has("force") || url.searchParams.has("test");
         const existingPurchase = await env.DB.prepare(
           "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
         ).bind(sessionUser.id, targetBookId).first();
 
-        if (existingPurchase) {
+        if (existingPurchase && !isTester) {
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
         }
 
@@ -5176,15 +5214,22 @@ Format with these exact markdown sections:
            FROM books b WHERE b.id = ? LIMIT 1`
         ).bind(targetBookId).first();
 
-        if (!book && targetBookId === 9999) {
-          book = {
-            id: 9999,
-            title: "PustakVerse Premium Edition: Test Payment Guide",
-            is_paid: 1,
-            price_paise: 100,
-            author_key_id: null,
-            author_key_secret: null
-          };
+        if (targetBookId === 9999) {
+          if (!book) {
+            book = {
+              id: 9999,
+              title: "PustakVerse Premium Edition: Test Payment Guide",
+              is_paid: 1,
+              price_paise: 100,
+              author_key_id: null,
+              author_key_secret: null
+            };
+          } else {
+            book.id = 9999;
+            book.title = "PustakVerse Premium Edition: Test Payment Guide";
+            book.is_paid = 1;
+            book.price_paise = 100;
+          }
         }
 
         if (!book) {
@@ -5588,6 +5633,36 @@ Format with these exact markdown sections:
               } catch (_) {}
             }
 
+            if (bookId === 9999) {
+              if (!book) {
+                book = {
+                  id: 9999,
+                  title: "PustakVerse Premium Edition: Test Payment Guide",
+                  author_name: "PustakVerse Official",
+                  catalog: "Academic",
+                  cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+                  pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
+                  is_paid: 1,
+                  price_paise: 100,
+                  preview_pages: 5,
+                  is_featured: 1,
+                  description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise)."
+                };
+              } else {
+                book.id = 9999;
+                book.title = "PustakVerse Premium Edition: Test Payment Guide";
+                book.author_name = (book.author_name && book.author_name !== "Author" && book.author_name !== "PustakVerse Library") ? book.author_name : "PustakVerse Official";
+                book.catalog = "Academic";
+                book.cover_image = "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80";
+                book.pdf_file = "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing";
+                book.is_paid = 1;
+                book.price_paise = 100;
+                book.preview_pages = 5;
+                book.is_featured = 1;
+                book.description = "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).";
+              }
+            }
+
             if (book) {
               try {
                 const revRes = await env.DB.prepare(
@@ -5646,17 +5721,20 @@ Format with these exact markdown sections:
           try { edgeUser = JSON.parse(atob(reqCookies.pv_session)); } catch (_) {}
         }
 
+        let isPurchased = false;
+        if (edgeUser && env.DB) {
+          try {
+            const purchase = await env.DB.prepare(
+              "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+            ).bind(edgeUser.id, bookId).first();
+            if (purchase) isPurchased = true;
+          } catch (_) {}
+        }
+
         let canRead = false;
         if (edgeUser) {
-          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer") {
+          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer" || isPurchased) {
             canRead = true;
-          } else if (env.DB) {
-            try {
-              const purchase = await env.DB.prepare(
-                "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
-              ).bind(edgeUser.id, bookId).first();
-              if (purchase) canRead = true;
-            } catch (_) {}
           }
         } else {
           if (!book.is_paid || book.price_paise === 0) {
@@ -5669,7 +5747,7 @@ Format with these exact markdown sections:
           respHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
         }
 
-        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement, url.origin), {
+        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement, url.origin, isPurchased), {
           headers: respHeaders
         });
       } catch (err) {
@@ -7024,9 +7102,25 @@ async function ensureBooksTable(env) {
   // Ensure official test paid book exists for payment gateway testing & verification
   try {
     const existingTestBook = await env.DB.prepare(
-      "SELECT id FROM books WHERE id = 9999 OR title = ? LIMIT 1"
-    ).bind("PustakVerse Premium Edition: Test Payment Guide").first();
-    if (!existingTestBook) {
+      "SELECT id FROM books WHERE id = 9999 LIMIT 1"
+    ).first();
+    if (existingTestBook) {
+      await env.DB.prepare(`
+        UPDATE books SET
+          title = 'PustakVerse Premium Edition: Test Payment Guide',
+          catalog = 'Academic',
+          cover_image = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+          pdf_file = 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+          is_paid = 1,
+          price_paise = 100,
+          preview_pages = 5,
+          rp_verified = 1,
+          description = 'Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).',
+          is_featured = 1,
+          is_quarantined = 0
+        WHERE id = 9999
+      `).run();
+    } else {
       let authorId = 1;
       try {
         const u = await env.DB.prepare("SELECT id FROM users WHERE role = 'developer' OR role = 'official' ORDER BY id ASC LIMIT 1").first();
@@ -8382,8 +8476,8 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         
         <div style="display: flex; align-items: center; gap: 14px;">
             ${(isPaid && !canRead) ? `
-            <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;">
-                💳 Buy ₹${priceFormatted} (Razorpay)
+            <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                ⚡ Buy Now (₹${priceFormatted}) <span style="text-decoration: line-through; opacity: 0.8; font-size: 0.8em; margin-left: 3px;">₹${(pricePaise * 1.4 / 100).toFixed(2)}</span>
             </a>
             ` : ""}
             <a href="/">← Back to Library</a>
@@ -8406,7 +8500,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
             <h2 class="gate-modal-title">Sign In to Access Premium Book</h2>
             <p class="gate-modal-desc">
-                Welcome to PustakVerse! <strong>"${escapeHtml(book.title || "this book")}"</strong> is a premium publication priced at <strong>₹${priceFormatted}</strong>. Please sign in or create an account to access or purchase it.
+                Welcome to PustakVerse! <strong>"${escapeHtml(book.title || "this book")}"</strong> is a premium publication priced at <strong>₹${priceFormatted}</strong> (MRP ₹${(pricePaise * 1.4 / 100).toFixed(2)} · 30% OFF). Please sign in or create an account to access or purchase it.
             </p>
             <div class="gate-btn-group">
                 <a href="/login?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-primary">
@@ -8423,7 +8517,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
             <h2 class="gate-modal-title">Premium Author Publication</h2>
             <p class="gate-modal-desc">
-                This title is priced at <strong>₹${priceFormatted}</strong>. 100% of reader payments directly support the author via Razorpay.
+                This title is priced at <strong style="color: #16a34a; font-size: 1.15rem;">₹${priceFormatted}</strong> <span style="text-decoration: line-through; color: #94a3b8; margin-left: 6px;">MRP ₹${(pricePaise * 1.4 / 100).toFixed(2)}</span> <span style="background: #fee2e2; color: #dc2626; font-size: 0.75rem; font-weight: 800; padding: 2px 6px; border-radius: 8px; margin-left: 4px;">30% OFF</span>. 100% of reader payments directly support the author via Razorpay.
             </p>
             <div class="gate-btn-group">
                 <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay">
@@ -9848,7 +9942,7 @@ ${tags.join(', ')}
 *Engineered by Girionix AI Book Architect. Recommended for readers seeking high-caliber ${cleanCat}. Optimally calibrated for digital distribution, search discoverability, and author platforms worldwide.*`;
 }
 
-function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = false, badges = [], announcement = null, reqOrigin = "https://pustakverse.pages.dev") {
+function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = false, badges = [], announcement = null, reqOrigin = "https://pustakverse.pages.dev", isPurchased = false) {
   const origin = reqOrigin || "https://pustakverse.pages.dev";
   const canonicalUrl = `${origin}/book/${book.id}`;
   const effectiveCover = resolveEffectiveBookCover(book, origin);
@@ -9873,6 +9967,8 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
   const pricePaise = book.price_paise || 0;
   const priceFormatted = (pricePaise / 100).toFixed(2);
   const isPaid = !!book.is_paid && pricePaise > 0;
+  const mrpPaise = Math.round(pricePaise * 1.4);
+  const mrpFormatted = (mrpPaise / 100).toFixed(2);
 
   let badgesHtml = "";
   if (Array.isArray(badges) && badges.length > 0) {
@@ -9894,25 +9990,56 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
     `;
   }
 
+  let pricingBoxHtml = "";
+  if (isPaid) {
+    pricingBoxHtml = `
+      <div class="flipkart-pricing-box" style="display: flex; align-items: baseline; gap: 12px; margin: 16px 0 14px 0; flex-wrap: wrap;">
+        <span class="fk-special-price" style="font-size: 2.2rem; font-weight: 900; color: #16a34a; line-height: 1;">₹${priceFormatted}</span>
+        <span class="fk-mrp-price" style="color: var(--text-muted); text-decoration: line-through; font-size: 1.15rem; font-weight: 600;">₹${mrpFormatted}</span>
+        <span class="fk-discount-badge" style="background: #fee2e2; color: #dc2626; font-size: 0.85rem; font-weight: 800; padding: 3px 8px; border-radius: 12px;">30% OFF</span>
+        <span class="fk-free-tag" style="background: #e0f2fe; color: #0369a1; font-size: 0.82rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase;">Digital Edition</span>
+        <span style="color: var(--text-muted); font-size: 0.82rem; font-weight: 600;">(Inclusive of all taxes & instant download)</span>
+      </div>
+    `;
+  } else {
+    pricingBoxHtml = `
+      <div class="flipkart-pricing-box" style="display: flex; align-items: baseline; gap: 12px; margin: 16px 0 14px 0; flex-wrap: wrap;">
+        <span class="fk-special-price" style="font-size: 2.2rem; font-weight: 900; color: #10b981; line-height: 1;">₹0.00</span>
+        <span class="fk-free-tag" style="background: #dcfce7; color: #166534; font-size: 0.82rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase;">Free Edition</span>
+        <span style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600;">Inclusive of all digital rights</span>
+      </div>
+    `;
+  }
+
   let actionsHtml = "";
   if (isPaid) {
     if (canRead) {
       actionsHtml = `
-        <div style="color: #047857; font-weight: bold; margin-bottom: 10px;">✓ You own this premium book</div>
-        <a href="/read_book/${book.id}" class="btn btn-dark" style="display: block; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800;">Read Full Book Now</a>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span>✓ You own full access to this premium book</span>
+          <span style="font-size: 0.82rem; background: #d1fae5; padding: 2px 8px; border-radius: 6px;">Active License</span>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 2; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800;">📖 Read Full Book Now</a>
+          <a href="/buy_book/${book.id}?force=1" class="btn btn-green" style="flex: 1; min-width: 160px; text-align: center; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;" title="Test checkout or buy another license">⚡ Buy Now (₹${priceFormatted})</a>
+        </div>
       `;
     } else {
       actionsHtml = `
-        <div class="price" style="font-size: 1.8rem; font-weight: 900; color: #10b981; margin-bottom: 12px;">₹${priceFormatted}</div>
+        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+          <div class="price" style="font-size: 1.8rem; font-weight: 900; color: #16a34a; line-height: 1;">₹${priceFormatted}</div>
+          <div style="color: var(--text-muted); text-decoration: line-through; font-size: 1.05rem;">MRP ₹${mrpFormatted}</div>
+          <span style="background: #fee2e2; color: #dc2626; font-size: 0.8rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">30% OFF</span>
+        </div>
         <div style="display: flex; gap: 10px;">
           <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 1; text-align: center; background: #475569; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; color: white;">Free Preview</a>
-          <a href="/buy_book/${book.id}" class="btn btn-green" style="flex: 2; text-align: center; background: linear-gradient(135deg, #10b981, #059669); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white;">Buy Securely</a>
+          <a href="/buy_book/${book.id}" class="btn btn-green" style="flex: 2; text-align: center; background: linear-gradient(135deg, #10b981, #059669); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹${priceFormatted})</a>
         </div>
       `;
     }
   } else {
     actionsHtml = `
-      <div class="price" style="font-size: 1.8rem; font-weight: 900; color: #3b82f6; margin-bottom: 12px;">Free to Read</div>
+      <div class="price" style="font-size: 1.8rem; font-weight: 900; color: #3b82f6; margin-bottom: 12px;">Free to Read (Open Access)</div>
       <div style="display: flex; gap: 10px;">
         <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 1; text-align: center; background: #ea580c; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white;">Read Now</a>
         <form action="/save_book/${book.id}" method="POST" style="flex: 1; margin: 0;">
@@ -10048,6 +10175,13 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
         .badge-color-violet { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
         .badge-color-orange { background: linear-gradient(135deg, #f97316, #ea580c); color: white; }
 
+        /* FLIPKART & AMAZON PRICING BOX STYLES */
+        .flipkart-pricing-box { display: flex; align-items: baseline; gap: 12px; margin: 16px 0 14px 0; flex-wrap: wrap; }
+        .fk-special-price { font-size: 2.2rem; font-weight: 900; color: #16a34a; line-height: 1; }
+        .fk-mrp-price { color: var(--text-muted); text-decoration: line-through; font-size: 1.15rem; font-weight: 600; }
+        .fk-discount-badge { background: #fee2e2; color: #dc2626; font-size: 0.85rem; font-weight: 800; padding: 3px 8px; border-radius: 12px; }
+        .fk-free-tag { background: #dcfce7; color: #166534; font-size: 0.82rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+
         /* GIRIONIX AI REVIEW CONSENSUS CARD */
         .girionix-ai-consensus-card {
             background: linear-gradient(135deg, rgba(249, 115, 22, 0.04) 0%, rgba(99, 102, 241, 0.05) 100%);
@@ -10164,6 +10298,9 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
                     <span style="color: var(--text-muted);">•</span>
                     <a href="#girionixAiConsensusCard" style="color: #ea580c; font-size: 0.88rem; text-decoration: none; font-weight: 700;">✨ AI Consensus Brief</a>
                 </div>
+
+                <!-- FLIPKART & AMAZON PRICING BOX -->
+                ${pricingBoxHtml}
 
                 <!-- SPECIFICATIONS GRID -->
                 <div class="product-specs-grid">
@@ -10423,6 +10560,7 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
     let coverSrc = resolveEffectiveBookCover(b);
     const isPaid = !!b.is_paid && (b.price_paise > 0);
     const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
+    const mrpFormatted = `₹${(Math.round((b.price_paise || 0) * 1.4) / 100).toFixed(2)}`;
     return `
       <a href="/book/${b.id}" class="book-card">
         <div class="book-cover-wrap">
@@ -10433,7 +10571,7 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
           <div class="book-card-cat">${escapeHtml(b.catalog || 'General')}</div>
           <div class="book-card-title">${escapeHtml(b.title)}</div>
           <div class="book-card-footer">
-            <span class="price-pill ${isPaid ? 'paid' : 'free'}">${isPaid ? priceFormatted : 'Free'}</span>
+            <span class="price-pill ${isPaid ? 'paid' : 'free'}">${isPaid ? `${priceFormatted} <span style="text-decoration: line-through; font-size: 0.72rem; opacity: 0.8; margin-left: 2px;">MRP ${mrpFormatted}</span>` : 'Free'}</span>
             <span class="read-btn">Read →</span>
           </div>
         </div>
