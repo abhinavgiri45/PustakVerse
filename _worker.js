@@ -524,6 +524,61 @@ function normalizeDriveImageLink(url) {
   return trimmed;
 }
 
+function resolveEffectiveBookCover(book, origin = "") {
+  if (!book) return origin ? `${origin}/static/PustakVerse.png` : "/static/PustakVerse.png";
+  
+  let cover = (book.cover_image || "").trim();
+
+  // If cover_image is a Google Drive link, extract ID and convert to lh3 thumbnail
+  if (cover) {
+    const driveMatch = cover.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+    }
+  }
+
+  // Check if cover is a default logo placeholder or empty
+  const isDefaultLogo = !cover ||
+    cover === "/static/PustakVerse.png" ||
+    cover === "PustakVerse.png" ||
+    cover === "/static/logo.png" ||
+    cover === "logo.png" ||
+    cover.endsWith("/PustakVerse.png");
+
+  // If it's a placeholder/empty, check if pdf_file is a Google Drive link to extract its first page cover
+  if (isDefaultLogo && book.pdf_file && typeof book.pdf_file === "string") {
+    const pdfMatch = book.pdf_file.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+    if (pdfMatch) {
+      return `https://lh3.googleusercontent.com/d/${pdfMatch[1]}`;
+    }
+  }
+
+  // If cover starts with http/https and is not the default logo
+  if (cover && (cover.startsWith("http://") || cover.startsWith("https://"))) {
+    if (cover.endsWith("/static/PustakVerse.png") && book.pdf_file && typeof book.pdf_file === "string") {
+      const pdfMatch = book.pdf_file.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+      if (pdfMatch) {
+        return `https://lh3.googleusercontent.com/d/${pdfMatch[1]}`;
+      }
+    }
+    return cover;
+  }
+
+  // If relative path
+  if (cover && cover.startsWith("/")) {
+    return origin ? `${origin}${cover}` : cover;
+  }
+
+  if (cover && !isDefaultLogo) {
+    return origin ? `${origin}/${cover}` : `/${cover}`;
+  }
+
+  // Absolute fallback
+  const fallback = "/static/PustakVerse.png";
+  return origin ? `${origin}${fallback}` : fallback;
+}
+
+
 function generateValidSbinNumber() {
   const prefix = "978938";
   const randomPart = Math.floor(100000 + Math.random() * 900000).toString();
@@ -2814,12 +2869,14 @@ Format with these exact markdown sections:
               return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Please provide a Google Drive PDF Book Link.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
             }
 
-            if (!coverLink) {
-              coverLink = "/static/PustakVerse.png";
-            }
-
             const normPdf = normalizeDriveLink(pdfLink);
-            const normCover = normalizeDriveImageLink(coverLink);
+            let normCover = "";
+            if (coverLink && coverLink.trim()) {
+              normCover = normalizeDriveImageLink(coverLink.trim());
+            } else {
+              const driveCover = normalizeDriveImageLink(pdfLink);
+              normCover = (driveCover && driveCover !== pdfLink) ? driveCover : "/static/PustakVerse.png";
+            }
 
             const isPaid = formData.get("is_paid") === "on" || formData.get("is_paid") === "true";
             let pricePaise = 0;
@@ -3063,9 +3120,15 @@ Format with these exact markdown sections:
         sql += ", pdf_file = ?";
         binds.push(normalizeDriveLink(pdfLink));
       }
-      if (coverLink) {
+      if (coverLink && coverLink.trim()) {
         sql += ", cover_image = ?";
-        binds.push(normalizeDriveImageLink(coverLink));
+        binds.push(normalizeDriveImageLink(coverLink.trim()));
+      } else if (pdfLink) {
+        const driveCover = normalizeDriveImageLink(pdfLink);
+        if (driveCover && driveCover !== pdfLink) {
+          sql += ", cover_image = ?";
+          binds.push(driveCover);
+        }
       }
       sql += " WHERE id = ?";
       binds.push(bookId);
@@ -3089,9 +3152,15 @@ Format with these exact markdown sections:
               fallbackSql += ", pdf_file = ?";
               fallbackBinds.push(normalizeDriveLink(pdfLink));
             }
-            if (coverLink) {
+            if (coverLink && coverLink.trim()) {
               fallbackSql += ", cover_image = ?";
-              fallbackBinds.push(normalizeDriveImageLink(coverLink));
+              fallbackBinds.push(normalizeDriveImageLink(coverLink.trim()));
+            } else if (pdfLink) {
+              const driveCover = normalizeDriveImageLink(pdfLink);
+              if (driveCover && driveCover !== pdfLink) {
+                fallbackSql += ", cover_image = ?";
+                fallbackBinds.push(driveCover);
+              }
             }
             fallbackSql += " WHERE id = ?";
             fallbackBinds.push(bookId);
@@ -4290,6 +4359,7 @@ Format with these exact markdown sections:
           });
           results = results.map(b => ({
             ...b,
+            cover_image: resolveEffectiveBookCover(b),
             custom_badges: badgesByBook[b.id] || []
           }));
         } catch (_) {}
@@ -4578,7 +4648,7 @@ Format with these exact markdown sections:
 
       try {
         const book = await env.DB.prepare(
-          `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.catalog,
+          `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
                   b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret,
                   u.username as author_name
            FROM books b
@@ -4838,7 +4908,7 @@ Format with these exact markdown sections:
         </div>
 
         <div class="book-preview">
-            <img src="${escapeHtml(book.cover_image || '/static/PustakVerse.png')}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
+            <img src="${escapeHtml(resolveEffectiveBookCover(book))}" alt="Cover" class="book-thumb" onerror="this.src='/static/PustakVerse.png'">
             <div class="book-info">
                 <h3>${escapeHtml(book.title)}</h3>
                 <p>By <strong>${escapeHtml(book.author_name || 'Author')}</strong> · ${escapeHtml(book.catalog || 'General')}</p>
@@ -5221,7 +5291,12 @@ Format with these exact markdown sections:
           }
         }
 
-        return new Response(JSON.stringify({ logged_in: true, books }), {
+        const resolvedBooks = (books || []).map(b => ({
+          ...b,
+          cover_image: resolveEffectiveBookCover(b)
+        }));
+
+        return new Response(JSON.stringify({ logged_in: true, books: resolvedBooks }), {
           headers: { "Content-Type": "application/json" }
         });
       } catch (err) {
@@ -5359,6 +5434,22 @@ Format with these exact markdown sections:
       }
     }
 
+    // 6A-0. Direct Book Cover Redirect API: /api/book_cover/:id or /book/:id/cover
+    const bookCoverMatch = url.pathname.match(/^\/(?:api\/book_cover\/(\d+)|book\/(\d+)\/cover)\/?$/);
+    if (bookCoverMatch) {
+      const bookId = parseInt(bookCoverMatch[1] || bookCoverMatch[2], 10);
+      let coverUrl = `${url.origin}/static/PustakVerse.png`;
+      if (env.DB && bookId) {
+        try {
+          const b = await env.DB.prepare("SELECT id, title, cover_image, pdf_file FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
+          if (b) {
+            coverUrl = resolveEffectiveBookCover(b, url.origin);
+          }
+        } catch (_) {}
+      }
+      return Response.redirect(coverUrl, 302);
+    }
+
     // 6A. Dedicated Book Details & Reviews Route: /book/:id, /view_book/:id (with or without trailing slash)
     const bookDetailsMatch = url.pathname.match(/^\/(?:book|view_book)\/(\d+)\/?$/);
     if (bookDetailsMatch) {
@@ -5469,7 +5560,7 @@ Format with these exact markdown sections:
           respHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
         }
 
-        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement), {
+        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement, url.origin), {
           headers: respHeaders
         });
       } catch (err) {
@@ -5820,7 +5911,7 @@ Format with these exact markdown sections:
         const targetName = author?.username || authorUsername;
         try {
           const booksRes = await env.DB.prepare(
-            `SELECT id, title, catalog, price_paise, cover_image, is_paid, is_featured, is_quarantined, author_id, author_name 
+            `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined, author_id, author_name 
              FROM books 
              WHERE (author_id = ? OR LOWER(author_name) = LOWER(?)) 
                AND (is_quarantined = 0 OR is_quarantined IS NULL) 
@@ -5830,7 +5921,7 @@ Format with these exact markdown sections:
         } catch (_) {
           try {
             const booksRes = await env.DB.prepare(
-              `SELECT id, title, catalog, price_paise, cover_image, is_paid, is_featured 
+              `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured 
                FROM books 
                WHERE LOWER(author_name) = LOWER(?) 
                ORDER BY id DESC`
@@ -7185,7 +7276,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   // 5. Inject Books Table into Platform Library Management / My Published Books
   if (myBooks && myBooks.length > 0) {
     const bookRowsHtml = myBooks.map(b => {
-      const coverUrl = b.cover_image || "/static/PustakVerse.png";
+      const coverUrl = resolveEffectiveBookCover(b);
       const authorText = b.author_name || username;
       const isMine = b.author_id === user.id || (authorText && authorText.toLowerCase() === username.toLowerCase());
       const priceText = b.is_paid ? `₹${((b.price_paise || 0) / 100).toFixed(2)}` : "Free";
@@ -9499,12 +9590,14 @@ ${tags.join(', ')}
 *Engineered by Girionix AI Book Architect. Recommended for readers seeking high-caliber ${cleanCat}. Optimally calibrated for digital distribution, search discoverability, and author platforms worldwide.*`;
 }
 
-function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = false, badges = [], announcement = null) {
-  let coverSrc = book.cover_image || "/static/PustakVerse.png";
-  if (coverSrc.includes("drive.google.com/file/d/")) {
-    const m = coverSrc.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (m) coverSrc = `https://lh3.googleusercontent.com/d/${m[1]}`;
-  }
+function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = false, badges = [], announcement = null, reqOrigin = "https://pustakverse.pages.dev") {
+  const origin = reqOrigin || "https://pustakverse.pages.dev";
+  const canonicalUrl = `${origin}/book/${book.id}`;
+  const effectiveCover = resolveEffectiveBookCover(book, origin);
+  let coverSrc = effectiveCover;
+
+  const rawDesc = (book.description || `Read and explore "${book.title}" by ${book.author_name || 'Author'} on PustakVerse. Discover reader reviews, ratings, and digital preview.`).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const descSnippet = rawDesc.length > 200 ? rawDesc.slice(0, 197) + "..." : rawDesc;
 
   const reviewCount = reviews.length;
   let avgRating = 5.0;
@@ -9607,6 +9700,33 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(book.title)} · PustakVerse</title>
+    <link rel="canonical" href="${canonicalUrl}">
+    <link rel="icon" type="image/png" href="${origin}/static/PustakVerse.png">
+
+    <!-- Primary Metadata -->
+    <meta name="description" content="${escapeHtml(descSnippet)}">
+    <meta name="author" content="${escapeHtml(book.author_name || 'PustakVerse')}">
+
+    <!-- Open Graph / Facebook / WhatsApp / Discord Previews -->
+    <meta property="og:type" content="book">
+    <meta property="og:site_name" content="PustakVerse">
+    <meta property="og:url" content="${canonicalUrl}">
+    <meta property="og:title" content="${escapeHtml(book.title)} · PustakVerse">
+    <meta property="og:description" content="${escapeHtml(descSnippet)}">
+    <meta property="og:image" content="${escapeHtml(effectiveCover)}">
+    <meta property="og:image:secure_url" content="${escapeHtml(effectiveCover)}">
+    <meta property="og:image:alt" content="Cover page of ${escapeHtml(book.title)}">
+    <meta property="book:author" content="${escapeHtml(book.author_name || 'Author')}">
+    <meta property="book:tag" content="${escapeHtml(book.catalog || 'General')}">
+
+    <!-- Twitter / X Large Summary Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@PustakVerse">
+    <meta name="twitter:title" content="${escapeHtml(book.title)} · PustakVerse">
+    <meta name="twitter:description" content="${escapeHtml(descSnippet)}">
+    <meta name="twitter:image" content="${escapeHtml(effectiveCover)}">
+    <meta name="twitter:image:alt" content="Cover page of ${escapeHtml(book.title)}">
+
     <link rel="stylesheet" href="/static/style.css">
     <script src="/static/theme.js"></script>
     <style>
@@ -9749,7 +9869,7 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
             <!-- LEFT COLUMN: COVER & QUICK BUY BOX -->
             <div style="display: flex; flex-direction: column; align-items: center; width: 280px; max-width: 100%;">
                 <div style="position: relative; width: 100%; text-align: center;">
-                    <img src="${coverSrc}" class="book-cover" alt="${escapeHtml(book.title)}">
+                    <img src="${coverSrc}" class="book-cover" alt="${escapeHtml(book.title)}" onerror="if(this.src!=='/static/PustakVerse.png'){this.src='/static/PustakVerse.png';}">
                     <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 0.74rem; font-weight: 700; white-space: nowrap;">
                         📖 Digital eBook Edition
                     </div>
@@ -10042,11 +10162,7 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
   );
 
   const booksHtml = (books || []).map(b => {
-    let coverSrc = b.cover_image || "/static/PustakVerse.png";
-    if (coverSrc.includes("drive.google.com")) {
-      const m = coverSrc.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || coverSrc.match(/id=([a-zA-Z0-9_-]+)/);
-      if (m) coverSrc = `https://lh3.googleusercontent.com/d/${m[1]}`;
-    }
+    let coverSrc = resolveEffectiveBookCover(b);
     const isPaid = !!b.is_paid && (b.price_paise > 0);
     const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
     return `

@@ -720,10 +720,22 @@
                 books.forEach(book => {
                     if (existingCards.has(String(book.id))) return;
 
-                    let coverSrc = book.cover_image || '/static/PustakVerse.png';
-                    if (coverSrc.includes('drive.google.com/file/d/')) {
-                        const m = coverSrc.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-                        if (m) coverSrc = `https://lh3.googleusercontent.com/d/${m[1]}`;
+                    let coverSrc = (book.cover_image || '').trim();
+                    if (coverSrc) {
+                        const driveMatch = coverSrc.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+                        if (driveMatch) {
+                            coverSrc = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+                        }
+                    }
+                    const isDefaultLogo = !coverSrc || coverSrc === '/static/PustakVerse.png' || coverSrc === 'PustakVerse.png' || coverSrc.endsWith('/PustakVerse.png');
+                    if (isDefaultLogo && book.pdf_file && typeof book.pdf_file === 'string') {
+                        const pdfMatch = book.pdf_file.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+                        if (pdfMatch) {
+                            coverSrc = `https://lh3.googleusercontent.com/d/${pdfMatch[1]}`;
+                        }
+                    }
+                    if (!coverSrc) {
+                        coverSrc = '/static/PustakVerse.png';
                     }
 
                     const card = document.createElement('div');

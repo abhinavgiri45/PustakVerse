@@ -551,8 +551,22 @@ def clean_book_data(books):
     if not books: 
         return []
     for idx, b in enumerate(books):
-        b['cover_image'] = str(b.get('cover_image') or "")
-        b['pdf_file'] = str(b.get('pdf_file') or "")
+        cover_val = str(b.get('cover_image') or "").strip()
+        pdf_val = str(b.get('pdf_file') or "").strip()
+
+        # If cover_val is a Google Drive link, extract ID and convert to lh3 thumbnail
+        drive_m = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)', cover_val)
+        if drive_m:
+            cover_val = f"https://lh3.googleusercontent.com/d/{drive_m.group(1)}"
+        elif not cover_val or cover_val in ("/static/PustakVerse.png", "PustakVerse.png", "/static/logo.png", "logo.png") or cover_val.endswith("/PustakVerse.png"):
+            pdf_m = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)', pdf_val)
+            if pdf_m:
+                cover_val = f"https://lh3.googleusercontent.com/d/{pdf_m.group(1)}"
+            else:
+                cover_val = "/static/PustakVerse.png"
+
+        b['cover_image'] = cover_val
+        b['pdf_file'] = pdf_val
         b['author_name'] = str(b.get('author_name') or "Unknown")
         b['description'] = str(b.get('description') or "")
         try:
