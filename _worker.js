@@ -7900,14 +7900,15 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
     <div id="protection-overlay"></div>
 
-    <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL -->
-    ${!currentUser ? `
-    <div class="gate-modal-backdrop" id="authGateModal">
+    <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL (ONLY FOR PREMIUM PAID UNPURCHASED TITLES) -->
+    ${(!canRead) ? `
+    <div class="gate-modal-backdrop" id="${!currentUser ? 'authGateModal' : 'purchaseGateModal'}">
         <div class="gate-modal-card">
+            ${!currentUser ? `
             <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
-            <h2 class="gate-modal-title">Sign In Required to Read</h2>
+            <h2 class="gate-modal-title">Sign In to Access Premium Book</h2>
             <p class="gate-modal-desc">
-                Welcome to PustakVerse! To read <strong>"${escapeHtml(book.title || "this book")}"</strong>, please sign in or create your account.
+                Welcome to PustakVerse! <strong>"${escapeHtml(book.title || "this book")}"</strong> is a premium publication priced at <strong>₹${priceFormatted}</strong>. Please sign in or create an account to access or purchase it.
             </p>
             <div class="gate-btn-group">
                 <a href="/login?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-primary">
@@ -7920,11 +7921,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                     Return to Library
                 </a>
             </div>
-        </div>
-    </div>
-    ` : ((isPaid && !canRead) ? `
-    <div class="gate-modal-backdrop" id="purchaseGateModal">
-        <div class="gate-modal-card">
+            ` : `
             <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
             <h2 class="gate-modal-title">Premium Author Publication</h2>
             <p class="gate-modal-desc">
@@ -7938,9 +7935,10 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                     <span>Browse Free Books Instead</span>
                 </a>
             </div>
+            `}
         </div>
     </div>
-    ` : "")}
+    ` : ""}
 
     <!-- Advanced Protection & View Scripts -->
     <script>

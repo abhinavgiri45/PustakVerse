@@ -7183,10 +7183,6 @@ def export_book_sales_csv(book_id):
 @app.route('/viewer/<int:book_id>')
 @app.route('/read/<int:book_id>')
 def read_book(book_id):
-    if 'user_id' not in session: 
-        flash("Please sign in or register to read or preview books.", "error")
-        return redirect(url_for('login'))
-        
     db = None
     can_read = False
     try:
@@ -7198,10 +7194,15 @@ def read_book(book_id):
             flash("The requested book is currently unavailable or has moved.", "info")
             return redirect(url_for('index'))
             
-        can_read = not book['is_paid'] or session.get('user_id') == book['author_id'] or session.get('role') == 'developer'
+        user_id = session.get('user_id')
+        user_role = session.get('role')
+        can_read = not book.get('is_paid') or (user_id and (user_id == book['author_id'] or user_role == 'developer'))
         
-        if book['is_paid'] and not can_read and session.get('user_id'):
-            cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
+        if book.get('is_paid') and not can_read:
+            if not user_id:
+                flash("Please sign in or register to read or purchase this title.", "info")
+                return redirect(url_for('login', next=request.path))
+            cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))
             can_read = bool(cursor.fetchone())
     except Exception: 
         flash("Database error.", "error")

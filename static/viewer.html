@@ -315,7 +315,7 @@
             const titleSpan = document.getElementById('auth-gate-book-title');
             if (titleSpan) titleSpan.textContent = `"${titleParam}"`;
 
-            // Check if user is logged in
+            // Fetch current user (if logged in)
             let currentUser = null;
             try {
                 const userRes = await fetch('/api/user/me');
@@ -327,15 +327,6 @@
                 }
             } catch (_) {}
 
-            if (!currentUser) {
-                // User is not signed in -> Mandatory sign-in gate
-                const authModal = document.getElementById('authGateModal');
-                if (authModal) authModal.style.display = 'flex';
-                document.getElementById('book-title-display').textContent = titleParam;
-                return;
-            }
-
-            // User is signed in! Check book details
             if (titleParam) {
                 document.getElementById('book-title-display').textContent = titleParam;
                 document.getElementById('page-title').textContent = 'Reading: ' + titleParam + ' - PustakVerse';
@@ -356,7 +347,16 @@
                 const isPaid = !!targetBook.is_paid && (targetBook.price_paise > 0);
                 const isAuthorOrDev = currentUser && (currentUser.id === targetBook.author_id || currentUser.role === 'developer');
 
+                if (titleSpan) titleSpan.textContent = `"${targetBook.title || titleParam}"`;
+
                 if (isPaid && !isAuthorOrDev) {
+                    if (!currentUser) {
+                        // User is not signed in and book is paid -> Show sign-in gate
+                        const authModal = document.getElementById('authGateModal');
+                        if (authModal) authModal.style.display = 'flex';
+                        return;
+                    }
+
                     // Check if already purchased
                     let hasPurchased = false;
                     try {

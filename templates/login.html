@@ -125,9 +125,9 @@
         <div id="loginMainContent" style="{% if show_2fa_form %}display: none;{% endif %}">
             <!-- TABS -->
             <div class="tabs">
-                <button type="button" class="tab-btn {% if active_tab == 'reader' or not active_tab %}active{% endif %}" onclick="switchTab('reader', this)">📖 Reader Login</button>
-                <button type="button" class="tab-btn {% if active_tab == 'official' %}active{% endif %}" onclick="switchTab('official', this)">🏛️ Author / Official</button>
-                <button type="button" class="tab-btn" onclick="switchTab('register', this)">✨ Create Account</button>
+                <button type="button" class="tab-btn {% if active_tab == 'reader' or not active_tab %}active{% endif %}" onclick="switchTab('reader', this)" id="tabBtnReader">📖 Reader Login</button>
+                <button type="button" class="tab-btn {% if active_tab == 'official' %}active{% endif %}" onclick="switchTab('official', this)" id="tabBtnOfficial">🏛️ Author / Official</button>
+                <button type="button" class="tab-btn {% if active_tab == 'register' %}active{% endif %}" onclick="switchTab('register', this)" id="tabBtnRegister">✨ Create Account</button>
             </div>
 
             <!-- READER LOGIN -->
@@ -195,7 +195,7 @@
             </div>
 
             <!-- REGISTRATION FORM -->
-            <div id="register" class="form-area">
+            <div id="register" class="form-area {% if active_tab == 'register' %}active{% endif %}">
                 <h2><span style="font-size: 2.2rem;">✨</span>Join PustakVerse</h2>
 
                 <a href="/login/google?mode=signup" class="btn-google" style="margin-bottom: 20px;">
@@ -296,6 +296,23 @@
             navLinks.insertAdjacentHTML('beforeend', '<a href="/" class="custom-back-btn">← Back to Library</a>');
         }
 
+        // Auto-switch to register tab if URL path is /register or has ?tab=register or #register
+        const path = window.location.pathname.toLowerCase();
+        const searchParams = new URLSearchParams(window.location.search);
+        const tabParam = searchParams.get('tab');
+        const hash = window.location.hash.toLowerCase();
+
+        if (path.includes('register') || path.includes('signup') || tabParam === 'register' || hash === '#register') {
+            const regBtn = document.getElementById('tabBtnRegister');
+            switchTab('register', regBtn);
+        } else if (tabParam === 'official' || hash === '#official') {
+            const offBtn = document.getElementById('tabBtnOfficial');
+            switchTab('official', offBtn);
+        } else if (tabParam === 'reader' || hash === '#reader') {
+            const rdrBtn = document.getElementById('tabBtnReader');
+            switchTab('reader', rdrBtn);
+        }
+
         // Force hide telegram popup and overlay just in case CSS misses it
         const telegramPopup = document.getElementById('telegramPopup');
         const overlay = document.querySelector('.overlay');
@@ -308,8 +325,22 @@
     function switchTab(tabId, element) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.form-area').forEach(form => form.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        if(element) element.classList.add('active');
+        const targetForm = document.getElementById(tabId);
+        if (targetForm) targetForm.classList.add('active');
+        if (element) {
+            element.classList.add('active');
+        } else {
+            if (tabId === 'register') {
+                const b = document.getElementById('tabBtnRegister');
+                if (b) b.classList.add('active');
+            } else if (tabId === 'official') {
+                const b = document.getElementById('tabBtnOfficial');
+                if (b) b.classList.add('active');
+            } else {
+                const b = document.getElementById('tabBtnReader');
+                if (b) b.classList.add('active');
+            }
+        }
     }
 
     function togglePassword(fieldId, iconElement) {
