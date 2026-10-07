@@ -3284,65 +3284,98 @@ Format with these exact markdown sections:
     if ((url.pathname === "/update_front_page" || url.pathname === "/api/developer/update_front_page") && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
+      const acceptsJson = request.headers.get("accept")?.includes("application/json") || request.headers.get("x-requested-with") === "XMLHttpRequest";
+
       if (!user || user.role !== "developer") {
+        if (acceptsJson) {
+          return new Response(JSON.stringify({ success: false, message: "Unauthorized: Only Developer can modify website settings." }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
         return new Response("Unauthorized: Only Developer can modify website settings.", { status: 403 });
       }
-      const formData = await request.formData().catch(() => new FormData());
-      const heroTitle = (formData.get("hero_title") || "").trim();
-      const heroSubtitle = (formData.get("hero_subtitle") || "").trim();
-      const introTagline = (formData.get("intro_tagline") || "").trim();
-      const introSubTagline = (formData.get("intro_sub_tagline") || "").trim();
-      const donationActive = formData.has("donation_active") ? 1 : 0;
-      const checkoutActive = formData.has("checkout_donation_active") ? 1 : 0;
-      const donationDefaultInr = parseInt(formData.get("donation_default_inr") || "10", 10) || 10;
-      const keyId = (formData.get("rp_key_id") || "").trim();
-      const keySecret = (formData.get("rp_key_secret") || "").trim();
 
-      let curFps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
-      if (!curFps) {
-        await env.DB.prepare("INSERT INTO front_page_settings (id) VALUES (1)").run();
-        curFps = {};
+      try {
+        await ensureFrontPageSettingsTable(env);
+        const formData = await request.formData().catch(() => new FormData());
+        const heroTitle = (formData.get("hero_title") || "").trim();
+        const heroSubtitle = (formData.get("hero_subtitle") || "").trim();
+        const introTagline = (formData.get("intro_tagline") || "").trim();
+        const introSubTagline = (formData.get("intro_sub_tagline") || "").trim();
+        const donationActive = formData.has("donation_active") ? 1 : 0;
+        const checkoutActive = formData.has("checkout_donation_active") ? 1 : 0;
+        const donationDefaultInr = parseInt(formData.get("donation_default_inr") || "10", 10) || 10;
+        const keyId = (formData.get("rp_key_id") || "").trim();
+        const keySecret = (formData.get("rp_key_secret") || "").trim();
+
+        let curFps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first().catch(() => null);
+        if (!curFps) {
+          await env.DB.prepare("INSERT INTO front_page_settings (id) VALUES (1)").run().catch(() => {});
+          curFps = {};
+        }
+
+        const finalHeroTitle = heroTitle || curFps.hero_title || "PustakVerse";
+        const finalHeroSubtitle = heroSubtitle || curFps.hero_subtitle || "Empowering Readers & Authors Worldwide";
+        const finalIntroTagline = introTagline || curFps.intro_tagline || "Every Book. Every Mind. Infinite Knowledge.";
+        const finalIntroSubTagline = introSubTagline || curFps.intro_sub_tagline || "Prepare to explore the universe of knowledge...";
+        const finalRpKeyId = keyId || curFps.rp_key_id || "";
+        const finalRpKeySecret = keySecret || curFps.rp_key_secret || "";
+
+        try {
+          await env.DB.prepare(`
+            UPDATE front_page_settings 
+            SET hero_title = ?, hero_subtitle = ?, intro_tagline = ?, intro_sub_tagline = ?,
+                donation_active = ?, checkout_donation_active = ?, donation_default_inr = ?,
+                rp_key_id = ?, rp_key_secret = ?
+            WHERE id = 1
+          `).bind(
+            finalHeroTitle, finalHeroSubtitle, finalIntroTagline, finalIntroSubTagline,
+            donationActive, checkoutActive, donationDefaultInr,
+            finalRpKeyId, finalRpKeySecret
+          ).run();
+        } catch (dbErr) {
+          console.warn("Primary UPDATE front_page_settings failed, applying resilient fallback:", dbErr.message);
+          // Fallback to updating available columns
+          await env.DB.prepare("UPDATE front_page_settings SET hero_title = ?, hero_subtitle = ? WHERE id = 1")
+            .bind(finalHeroTitle, finalHeroSubtitle).run().catch(() => {});
+          await env.DB.prepare("UPDATE front_page_settings SET intro_tagline = ?, intro_sub_tagline = ? WHERE id = 1")
+            .bind(finalIntroTagline, finalIntroSubTagline).run().catch(() => {});
+          await env.DB.prepare("UPDATE front_page_settings SET donation_active = ?, checkout_donation_active = ?, donation_default_inr = ? WHERE id = 1")
+            .bind(donationActive, checkoutActive, donationDefaultInr).run().catch(() => {});
+          await env.DB.prepare("UPDATE front_page_settings SET rp_key_id = ?, rp_key_secret = ? WHERE id = 1")
+            .bind(finalRpKeyId, finalRpKeySecret).run().catch(() => {});
+        }
+
+        if (acceptsJson) {
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: "Website settings saved and synced live across PustakVerse!",
+            settings: {
+              hero_title: finalHeroTitle,
+              hero_subtitle: finalHeroSubtitle,
+              intro_tagline: finalIntroTagline,
+              intro_sub_tagline: finalIntroSubTagline,
+              donation_active: Boolean(donationActive),
+              checkout_donation_active: Boolean(checkoutActive),
+              donation_default_inr: donationDefaultInr,
+              rp_key_id: finalRpKeyId
+            }
+          }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?updated_settings=1`, 302);
+      } catch (err) {
+        console.error("Error in /update_front_page:", err);
+        if (acceptsJson) {
+          return new Response(JSON.stringify({ success: false, message: err.message || "Failed to update settings" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?updated_settings=1`, 302);
       }
-
-      const finalHeroTitle = heroTitle || curFps.hero_title || "PustakVerse";
-      const finalHeroSubtitle = heroSubtitle || curFps.hero_subtitle || "Empowering Readers & Authors Worldwide";
-      const finalIntroTagline = introTagline || curFps.intro_tagline || "Every Book. Every Mind. Infinite Knowledge.";
-      const finalIntroSubTagline = introSubTagline || curFps.intro_sub_tagline || "Prepare to explore the universe of knowledge...";
-      const finalRpKeyId = keyId || curFps.rp_key_id || "";
-      const finalRpKeySecret = keySecret || curFps.rp_key_secret || "";
-
-      await env.DB.prepare(`
-        UPDATE front_page_settings 
-        SET hero_title = ?, hero_subtitle = ?, intro_tagline = ?, intro_sub_tagline = ?,
-            donation_active = ?, checkout_donation_active = ?, donation_default_inr = ?,
-            rp_key_id = ?, rp_key_secret = ?
-        WHERE id = 1
-      `).bind(
-        finalHeroTitle, finalHeroSubtitle, finalIntroTagline, finalIntroSubTagline,
-        donationActive, checkoutActive, donationDefaultInr,
-        finalRpKeyId, finalRpKeySecret
-      ).run();
-
-      const acceptsJson = request.headers.get("accept")?.includes("application/json") || request.headers.get("x-requested-with") === "XMLHttpRequest";
-      if (acceptsJson) {
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: "Website settings saved and synced live across PustakVerse!",
-          settings: {
-            hero_title: finalHeroTitle,
-            hero_subtitle: finalHeroSubtitle,
-            intro_tagline: finalIntroTagline,
-            intro_sub_tagline: finalIntroSubTagline,
-            donation_active: Boolean(donationActive),
-            checkout_donation_active: Boolean(checkoutActive),
-            donation_default_inr: donationDefaultInr,
-            rp_key_id: finalRpKeyId
-          }
-        }), {
-          headers: { "Content-Type": "application/json" }
-        });
-      }
-      return Response.redirect(`${url.origin}/dashboard?updated_settings=1`, 302);
     }
 
     // Developer Support / Donation Settings
@@ -7167,6 +7200,79 @@ async function ensureAuthorCouponsTable(env) {
       )
     `).run();
   } catch (_) {}
+}
+
+async function ensureFrontPageSettingsTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS front_page_settings (
+        id INTEGER PRIMARY KEY,
+        hero_title TEXT DEFAULT 'PustakVerse',
+        hero_subtitle TEXT DEFAULT 'Empowering Readers & Authors Worldwide',
+        font_color TEXT DEFAULT '#ffffff',
+        logo_image TEXT DEFAULT 'PustakVerse.png',
+        donation_active INTEGER DEFAULT 0,
+        donation_qr TEXT DEFAULT NULL,
+        intro_tagline TEXT DEFAULT 'Every Book. Every Mind. Infinite Knowledge.',
+        intro_sub_tagline TEXT DEFAULT 'Prepare to explore the universe of knowledge...',
+        checkout_donation_active INTEGER DEFAULT 1,
+        donation_default_inr INTEGER DEFAULT 10,
+        rp_key_id TEXT DEFAULT '',
+        rp_key_secret TEXT DEFAULT '',
+        gemini_api_key TEXT DEFAULT NULL,
+        alert_ticker_message TEXT DEFAULT '',
+        alert_ticker_active INTEGER DEFAULT 0,
+        maintenance_mode INTEGER DEFAULT 0,
+        upload_freeze INTEGER DEFAULT 0,
+        maintenance_start TEXT DEFAULT NULL,
+        maintenance_end TEXT DEFAULT NULL,
+        maintenance_reason TEXT DEFAULT NULL,
+        maintenance_notified INTEGER DEFAULT 0
+      )
+    `).run();
+
+    // Auto-migrate any columns that might be missing in existing tables
+    const requiredCols = [
+      ["hero_title", "TEXT DEFAULT 'PustakVerse'"],
+      ["hero_subtitle", "TEXT DEFAULT 'Empowering Readers & Authors Worldwide'"],
+      ["font_color", "TEXT DEFAULT '#ffffff'"],
+      ["logo_image", "TEXT DEFAULT 'PustakVerse.png'"],
+      ["donation_active", "INTEGER DEFAULT 0"],
+      ["donation_qr", "TEXT DEFAULT NULL"],
+      ["intro_tagline", "TEXT DEFAULT 'Every Book. Every Mind. Infinite Knowledge.'"],
+      ["intro_sub_tagline", "TEXT DEFAULT 'Prepare to explore the universe of knowledge...'"],
+      ["checkout_donation_active", "INTEGER DEFAULT 1"],
+      ["donation_default_inr", "INTEGER DEFAULT 10"],
+      ["rp_key_id", "TEXT DEFAULT ''"],
+      ["rp_key_secret", "TEXT DEFAULT ''"],
+      ["gemini_api_key", "TEXT DEFAULT NULL"],
+      ["alert_ticker_message", "TEXT DEFAULT ''"],
+      ["alert_ticker_active", "INTEGER DEFAULT 0"],
+      ["maintenance_mode", "INTEGER DEFAULT 0"],
+      ["upload_freeze", "INTEGER DEFAULT 0"],
+      ["maintenance_start", "TEXT DEFAULT NULL"],
+      ["maintenance_end", "TEXT DEFAULT NULL"],
+      ["maintenance_reason", "TEXT DEFAULT NULL"],
+      ["maintenance_notified", "INTEGER DEFAULT 0"]
+    ];
+
+    for (const [col, colDef] of requiredCols) {
+      try {
+        await env.DB.prepare(`ALTER TABLE front_page_settings ADD COLUMN ${col} ${colDef}`).run();
+      } catch (_) {
+        // Column already exists or error ignored
+      }
+    }
+
+    // Ensure row id=1 exists
+    const row = await env.DB.prepare("SELECT id FROM front_page_settings WHERE id = 1").first();
+    if (!row) {
+      await env.DB.prepare("INSERT INTO front_page_settings (id) VALUES (1)").run();
+    }
+  } catch (err) {
+    console.warn("ensureFrontPageSettingsTable warning:", err.message);
+  }
 }
 
 function renderContactLeadershipCards(leaders) {

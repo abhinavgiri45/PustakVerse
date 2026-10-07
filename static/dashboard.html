@@ -5203,13 +5203,13 @@
     }
 
     async function handleWebsiteSettingsSubmit(e) {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         const form = document.getElementById('formWebsiteSettings');
         const alertBox = document.getElementById('websiteSettingsAlert');
         const submitBtn = document.getElementById('btnUpdateSettings');
         if (!form) return;
 
-        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Save';
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Save & Sync Website Settings';
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span>⏳</span> Saving & Syncing Live...';
@@ -5221,35 +5221,64 @@
             const res = await fetch(form.action || '/update_front_page', {
                 method: 'POST',
                 headers: {
-                    'Accept': 'application/json, text/html, */*',
+                    'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: formData
             });
 
-            if (res.ok) {
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (_) {}
+
+            if (res.ok && (!data || data.success !== false)) {
                 if (alertBox) {
                     alertBox.style.display = 'block';
                     alertBox.style.background = '#dcfce7';
                     alertBox.style.color = '#166534';
                     alertBox.style.border = '1px solid #86efac';
-                    alertBox.innerHTML = '🎉 <strong>Website Settings Updated!</strong> Changes are live across the website, homepage, and payment gateway.';
+                    alertBox.innerHTML = '🎉 <strong>Website Settings Updated & Synced!</strong> Changes are live across the website, homepage, and checkout gateway.';
                     alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<span>✓</span> Synced Live!';
+                    submitBtn.style.background = '#16a34a';
                 }
                 setTimeout(() => {
                     if (alertBox) alertBox.style.display = 'none';
-                }, 6000);
+                    if (submitBtn) {
+                        submitBtn.style.background = '';
+                        submitBtn.innerHTML = originalBtnHtml;
+                    }
+                }, 5000);
             } else {
-                form.submit();
-                return;
+                const errMsg = (data && (data.message || data.error)) || 'Failed to sync settings. Edge returned HTTP ' + res.status;
+                if (alertBox) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.background = '#fee2e2';
+                    alertBox.style.color = '#991b1b';
+                    alertBox.style.border = '1px solid #f87171';
+                    alertBox.innerHTML = '⚠️ <strong>Sync Warning:</strong> ' + errMsg;
+                    alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
             }
         } catch (err) {
-            form.submit();
-            return;
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.border = '1px solid #f87171';
+                alertBox.innerHTML = '⚠️ <strong>Network Notice:</strong> ' + (err.message || 'Unable to connect to edge sync');
+                alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         } finally {
-            if (submitBtn) {
+            if (submitBtn && submitBtn.innerHTML.indexOf('Synced Live') === -1) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHtml;
+                submitBtn.style.opacity = '1';
+            } else if (submitBtn) {
+                submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
             }
         }
@@ -5259,6 +5288,21 @@
         updateUploadedCount();
         loadDeveloperSystemMetrics();
         loadWebsiteSettings();
+
+        // Check if redirected with updated_settings=1
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('updated_settings') === '1') {
+                const alertBox = document.getElementById('websiteSettingsAlert');
+                if (alertBox) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.background = '#dcfce7';
+                    alertBox.style.color = '#166534';
+                    alertBox.style.border = '1px solid #86efac';
+                    alertBox.innerHTML = '🎉 <strong>Website Settings Updated!</strong> Changes are live across the website, homepage, and payment gateway.';
+                }
+            }
+        } catch (_) {}
     });
 </script>
 
