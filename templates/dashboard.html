@@ -365,6 +365,9 @@
             {% if session.role in ['developer', 'official'] %}
             <a href="{{ url_for('management_self_published_books') }}" style="color: #fb923c; font-weight: 700;">📖 Manage Books</a>
             {% endif %}
+            {% if session.role == 'author' %}
+            <a href="{{ url_for('author_profile', username=session.username) }}" target="_blank" style="color: #fb923c; font-weight: 700;">👤 My Author Showcase</a>
+            {% endif %}
             <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             <a href="{{ url_for('logout') }}">
                 <button class="btn-logout">Logout</button>
@@ -377,6 +380,16 @@
             <h1>Welcome, {{ session.username }}</h1>
             <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
         </div>
+        {% if session.role == 'author' %}
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <a href="#authorPublishingSection" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
+                    <span>🚀</span> Publish a New Book
+                </a>
+                <a href="{{ url_for('author_profile', username=session.username) }}" target="_blank" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35); font-size: 0.95rem;">
+                    <span>👤</span> View Public Profile →
+                </a>
+            </div>
+        {% endif %}
         {% if session.role in ['developer', 'official'] %}
             <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <button type="button" id="headerEndMaintenanceBtn" onclick="endMaintenanceMode()" style="display: {{ 'inline-flex' if sys.maintenance_mode else 'none' }}; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;">
@@ -400,6 +413,368 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <!-- STRICT AUTHOR ONLY SECTION (TOP OF CONTAINER FOR AUTHORS) -->
+        {% if session.role == 'author' %}
+            {% if not session.is_verified %}
+                <div class="panel" style="border-left: 5px solid var(--primary-orange); margin-bottom: 24px;">
+                    <h2 style="color: var(--primary-orange); display: flex; align-items: center; gap: 8px;">
+                        <span>⏳</span> Author Account Under Review
+                    </h2>
+                    <p style="margin: 8px 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        Thank you for registering as an author on PustakVerse! Our administrative team is currently reviewing your application.
+                    </p>
+                    <p style="margin: 0; color: #64748b; font-size: 0.88rem;">
+                        You will receive an email as soon as you are approved and can begin publishing your books to the global library.
+                    </p>
+                </div>
+            {% endif %}
+
+            {% if session.is_verified %}
+            <div id="authorPublishingSection" style="margin-bottom: 30px;">
+                <!-- AUTHOR SBIN GENERATOR & MINTING STUDIO -->
+                <div class="panel" style="margin-bottom: 24px; border: 2px solid #fdba74; background: linear-gradient(to right, #fffaf5, #ffffff);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <h2 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; font-size: 1.25rem;">
+                                <span>🌐</span> Generate Valid Digital SBIN-13 (International Bookland Standard)
+                            </h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">
+                                Generate authentic, globally compliant 13-digit EAN-13 identifiers with guaranteed international validity, Modulo-10 checksum parity, and Bookland registration.
+                            </p>
+                        </div>
+                        <button type="button" onclick="mintAuthorDashboardSBIN()" class="btn-sm" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; padding: 10px 20px; font-weight: 800; font-size: 0.88rem; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                            <span>🌐</span> Generate Valid SBIN
+                        </button>
+                    </div>
+
+                    <!-- MINTED SBIN DISPLAY BOX -->
+                    <div id="authorMintedSbinBox" style="display: none; padding: 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-top: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <div style="font-size: 0.78rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em;">
+                                    ✓ Authentic Globally Unique SBIN-13 Generated
+                                </div>
+                                <div id="authorMintedSbinCode" style="font-size: 1.6rem; font-weight: 900; color: #0f172a; font-family: monospace; letter-spacing: 0.05em; margin: 4px 0;">
+                                    978-93-800-0000-0
+                                </div>
+                                <div style="font-size: 0.8rem; color: #15803d; font-weight: 600;">
+                                    Verified EAN-13 Modulo-10 Checksum · Bookland / India Digital Standard
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button type="button" onclick="copyMintedSBIN()" class="btn-sm" style="background: white; border: 1.5px solid #86efac; color: #166534; padding: 8px 14px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <span id="copySbinIcon">📋</span> <span id="copySbinText">Copy SBIN</span>
+                                </button>
+                                <button type="button" onclick="applyMintedSBINToForm()" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 8px 16px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <span>🚀</span> Use in Publish Form
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="panel" style="border-top: 4px solid var(--primary-orange);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h2 style="margin: 0; color: var(--primary-orange); display: flex; align-items: center; gap: 8px;">
+                                <span>🚀</span> Publish a New Book
+                            </h2>
+                            <span style="background: #ffedd5; color: #c2410c; font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">Author Studio</span>
+                        </div>
+                        <form action="/dashboard" method="POST" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label>Book Title</label>
+                                <input type="text" name="title" required placeholder="Enter the complete title of your book...">
+                            </div>
+                            <div class="form-group">
+                                <label>Catalog</label>
+                                <select name="catalog" required>
+                                    {% for cat in site_catalogs %}
+                                        <option value="{{ cat.name }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Book Description / Synopsis</label>
+                                <textarea name="description" rows="4" placeholder="What is this book about?..." required></textarea>
+                            </div>
+
+                            <!-- SMART ISBN / SBIN ALLOCATION SECTOR -->
+                            <div class="form-group" style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;">
+                                <label style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.1rem;">🏷️</span> Standard Book Identifier (ISBN / SBIN)
+                                </label>
+
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px;">
+                                    <div id="label_sbin_auto" onclick="toggleUploadSBIN('no')" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #fff7ed; border: 1.5px solid #ea580c; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                                        <input type="radio" name="has_sbin" value="no" id="radio_sbin_no" checked onchange="toggleUploadSBIN(this.value)" style="margin-top: 3px; cursor: pointer; accent-color: #ea580c;">
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 800; font-size: 0.88rem; color: #9a3412;">
+                                                🌐 Auto-Generate Valid International SBIN-13 (Standard Book Identifier)
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px; line-height: 1.4;">
+                                                PustakVerse will automatically assign a mathematically valid 13-digit EAN-13 standard book identifier (Prefix 978 Bookland with Modulo-10 parity checksum), valid worldwide across global catalog indices.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div id="label_sbin_custom" onclick="toggleUploadSBIN('yes')" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                                        <input type="radio" name="has_sbin" value="yes" id="radio_sbin_yes" onchange="toggleUploadSBIN(this.value)" style="margin-top: 3px; cursor: pointer; accent-color: #ea580c;">
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 800; font-size: 0.88rem; color: #1e293b;">
+                                                📋 I already have an ISBN / SBIN (Enter Existing Identifier)
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px; line-height: 1.4;">
+                                                Enter your officially registered 10 or 13-digit standard publication identifier (e.g. 978-93-849-201-4 or 978-0743273565).
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="upload_custom_sbin_box" style="display: none; margin-top: 12px; padding: 14px; background: #ffffff; border: 1.5px solid #86efac; border-radius: 8px;">
+                                    <label style="font-size: 0.82rem; font-weight: 700; color: #166534; display: block; margin-bottom: 6px;">
+                                        Enter Standard ISBN-10, ISBN-13, or Digital SBIN:
+                                    </label>
+                                    <div style="position: relative;">
+                                        <input type="text" name="sbin_no" id="upload_sbin_input" placeholder="e.g. 978-93-849-201-4 or 978-0743273565" oninput="verifyInputSBIN(this.value, 'upload_sbin_status')" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 0.9rem; margin: 0; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#cbd5e1'">
+                                    </div>
+                                    <div id="upload_sbin_status" style="font-size: 0.82rem; font-weight: 700; margin-top: 8px;"></div>
+                                </div>
+                            </div>
+
+                            <!-- DRIVE-FIRST FILE & COVER INPUTS -->
+                            <div class="form-group" style="background: #f0fdf4; padding: 18px; border-radius: 10px; border: 1.5px solid #86efac; margin-bottom: 25px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                                    <label style="color: #166534; font-size: 1rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 6px;">
+                                        <span>📁</span> Google Drive Links <span style="background: #22c55e; color: white; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ RECOMMENDED</span>
+                                    </label>
+                                    <button type="button" onclick="toggleDriveHelp('publish_drive_help')" style="background: #ffffff; border: 1px solid #86efac; color: #15803d; border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                        <span>❓</span> How to make Drive Link Public?
+                                    </button>
+                                </div>
+                                <small style="color: #15803d; display: block; font-size: 0.82rem; margin-bottom: 14px; line-height: 1.4;">
+                                    Google Drive links provide high-speed reading, support large files (up to 100MB+), and never lag.
+                                </small>
+
+                                <div id="publish_drive_help" style="display: none; background: #ffffff; border: 1.5px dashed #22c55e; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; font-size: 0.84rem; color: #1e293b; line-height: 1.6; box-shadow: 0 2px 8px rgba(34,197,94,0.08);">
+                                    <strong style="color: #166534; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                                        <span>🔓</span> 4-Step Guide to Make Your Drive Link Public:
+                                    </strong>
+                                    <ol style="margin: 0; padding-left: 20px; color: #334155;">
+                                        <li style="margin-bottom: 4px;">Open your PDF / Cover in <a href="https://drive.google.com" target="_blank" style="color: #ea580c; font-weight: 700; text-decoration: underline;">Google Drive</a>.</li>
+                                        <li style="margin-bottom: 4px;">Right-click the file and click <strong>"Share" ➔ "Share"</strong>.</li>
+                                        <li style="margin-bottom: 4px;">Under <em>General Access</em>, change the dropdown from <strong>"Restricted"</strong> to <strong>"Anyone with the link"</strong> (Role: <em>Viewer</em>).</li>
+                                        <li>Click <strong>"Copy link"</strong>, and paste it directly into the box below!</li>
+                                    </ol>
+                                </div>
+
+                                <div style="margin-bottom: 14px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+                                        📄 Google Drive PDF Book Link <span style="color: #dc2626;">*</span>
+                                    </label>
+                                    <input type="url" name="pdf_link" id="publish_pdf_link" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'pdf_drive_status')" autocomplete="off">
+                                    <div id="pdf_drive_status" style="font-size: 0.78rem; margin-top: 4px; display: none;"></div>
+                                </div>
+
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+                                        🖼️ Google Drive Book Cover Link (or Image URL) <span style="color: #dc2626;">*</span>
+                                    </label>
+                                    <input type="url" name="cover_link" id="publish_cover_link" placeholder="https://drive.google.com/file/d/.../view or direct image URL" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'cover_drive_status')" autocomplete="off">
+                                    <div id="cover_drive_status" style="font-size: 0.78rem; margin-top: 4px; display: none;"></div>
+                                </div>
+
+                                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+                                    <button type="button" onclick="toggleLocalUpload('publish_local_upload')" style="background: transparent; border: none; color: #64748b; font-size: 0.82rem; font-weight: 600; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 5px;">
+                                        <span>💾</span> <span>Or upload files directly from computer (Alternative) ▼</span>
+                                    </button>
+                                    <div id="publish_local_upload" style="display: none; margin-top: 10px; padding: 14px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                            <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block;">Upload Cover Image (All Photo Formats):</label>
+                                            <span style="font-size: 0.72rem; font-weight: 700; background: #ffedd5; color: #c2410c; padding: 2px 7px; border-radius: 6px;">Max 50 KB</span>
+                                        </div>
+                                        <input type="file" name="cover_image" id="publish_cover_file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.tiff,.tif,.ico,.jfif,.avif,.heic,.heif" onchange="validateFileSize(this, 50, 'Cover Image')" style="margin-bottom: 12px; font-size: 0.85rem; width: 100%;">
+                                        
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                            <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block;">Upload PDF Document:</label>
+                                            <span style="font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 6px;">Max 500 KB</span>
+                                        </div>
+                                        <input type="file" name="pdf_file" id="publish_pdf_file" accept=".pdf,application/pdf" onchange="validateFileSize(this, 500, 'PDF Document')" style="font-size: 0.85rem; width: 100%;">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <label>
+                                    <input type="checkbox" name="is_paid" id="is_paid_checkbox"> 
+                                    Premium/Paid Book
+                                </label>
+                                
+                                <div id="paid_settings" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e0;">
+                                    <input type="text" name="price_inr" id="price_inr_input" placeholder="Price in ₹ (INR) e.g., 199" style="margin-bottom: 12px;" oninput="calcAuthorRoyalty(this.value)">
+                                    
+                                    <div id="royaltyCalcBox" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px;">
+                                        <div style="font-size: 0.85rem; font-weight: 700; color: #166534; margin-bottom: 4px;">💰 Author Earnings & Projected Royalties</div>
+                                        <div style="font-size: 0.8rem; color: #15803d; line-height: 1.5;">
+                                            <div>Direct Revenue per sale: <strong id="royaltyPerSale" style="font-size: 0.95rem;">₹0</strong></div>
+                                            <div style="margin-top: 3px;">Estimated on 25 sales: <strong id="royalty25">₹0</strong> | 100 sales: <strong id="royalty100">₹0</strong> | 500 sales: <strong id="royalty500">₹0</strong></div>
+                                        </div>
+                                    </div>
+
+                                    <label style="color: #166534; font-size: 0.85rem; font-weight: bold;">Author's Razorpay Payment Keys (For this book)</label>
+                                    <small style="color: #15803d; display: block; margin-bottom: 8px;">100% of sales will go directly to your linked account.</small>
+                                    
+                                    <div id="publish_rp_status" style="display: none; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;"></div>
+                                    
+                                    <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Your Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                                    <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="margin-bottom: 10px; border-color: #bbf7d0;">
+                                    
+                                    <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('publish')">Test / Verify Keys</button>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn-sm btn-dark" style="width: 100%; padding: 12px; background: var(--primary-orange); border: none; font-weight: 800; font-size: 1rem;">🚀 Publish Book</button>
+                        </form>
+                    </div>
+
+                    <!-- RIGHT COLUMN: MY PUBLISHED BOOKS -->
+                    <div>
+                        <div class="panel">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
+                                <div>
+                                    <h2 style="margin: 0;">My Published Books</h2>
+                                    <p style="color: #64748b; font-size: 0.86rem; margin: 4px 0 0 0;">
+                                        Manage your published books, track sales, and edit details.
+                                    </p>
+                                </div>
+                                <span style="font-size: 0.8rem; background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 20px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 6px;">
+                                    👤 Author: <strong style="color: #0f172a;">{{ session.username }}</strong>
+                                </span>
+                            </div>
+                            
+                            <!-- BOOK MANAGEMENT FILTER TABS & STATUS CHIPS -->
+                            <div style="display: flex; gap: 8px; margin: 16px 0 12px 0; flex-wrap: wrap; align-items: center;">
+                                <button type="button" id="tabAllBooksAuthor" onclick="setBookFilterTab('all')" class="lib-filter-pill active" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1px solid #0f172a; background: #0f172a; color: white; transition: all 0.2s;">
+                                    📚 All Books (<span id="allBooksCountAuthor">{{ my_books|length if my_books else 0 }}</span>)
+                                </button>
+                                <button type="button" id="tabPaidOnlyAuthor" onclick="setBookFilterTab('paid')" class="lib-filter-pill" style="padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #166534; transition: all 0.2s;">
+                                    💰 Paid (<span id="paidBooksCountAuthor">0</span>)
+                                </button>
+                                <button type="button" id="tabFreeOnlyAuthor" onclick="setBookFilterTab('free')" class="lib-filter-pill" style="padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #0284c7; transition: all 0.2s;">
+                                    🆓 Free (<span id="freeBooksCountAuthor">0</span>)
+                                </button>
+                            </div>
+
+                            <!-- SEARCH & CATEGORY FILTER TOOLBAR -->
+                            <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-bottom: 18px; align-items: center;">
+                                <div style="position: relative;">
+                                    <input type="text" id="librarySearchAuthor" placeholder="Search by title, catalog, or SBIN..." onkeyup="filterLibrary()" style="width: 100%; padding: 10px 14px 10px 36px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; background: #f8fafc; font-size: 0.88rem;" autocomplete="off">
+                                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.95rem; color: #94a3b8;">🔍</span>
+                                </div>
+                                <select id="categoryFilterSelectAuthor" onchange="filterLibrary()" style="padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; font-size: 0.88rem; color: #334155; min-width: 140px;">
+                                    <option value="">All Categories</option>
+                                    {% if all_categories %}
+                                        {% for cat in all_categories %}
+                                            <option value="{{ cat.name }}">{{ cat.name }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                <button type="button" onclick="resetLibraryFilters()" class="btn-sm" style="padding: 10px 14px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 600; cursor: pointer; white-space: nowrap;" title="Reset filters & reload">
+                                    🔄 Reset
+                                </button>
+                            </div>
+
+                            <!-- TABLE CONTAINER -->
+                            <div class="table-scroll-container">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                            <th style="width: 60px; padding: 10px;">Cover</th>
+                                            <th style="padding: 10px; text-align: left;">Title & Metadata</th>
+                                            <th style="width: 100px; padding: 10px; text-align: left;">Price</th>
+                                            <th style="width: 180px; padding: 10px; text-align: left;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="libraryTableBodyAuthor">
+                                    {% if my_books %}
+                                        {% for book in my_books %}
+                                        <tr class="library-row"
+                                            data-id="{{ book.id }}"
+                                            data-author="{{ book.author_name | escape if book.author_name is defined else session.username }}"
+                                            data-catalog="{{ book.catalog | escape }}"
+                                            data-paid="{{ '1' if book.is_paid else '0' }}"
+                                            data-price="{{ book.price_paise or 0 }}"
+                                            data-featured="{{ '1' if book.is_featured else '0' }}"
+                                            data-quarantined="{{ '1' if book.is_quarantined else '0' }}"
+                                            data-title="{{ book.title | escape }}">
+                                            <td style="padding: 8px; vertical-align: top;">
+                                                <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 44px; height: 64px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="this.src='/static/PustakVerse.png'">
+                                            </td>
+                                            <td style="padding: 8px; vertical-align: top;" class="book-title-cell">
+                                                {% if book.is_featured %}
+                                                    <span style="background: #fef08a; color: #854d0e; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-block; margin-bottom: 3px;">⭐ Staff Pick</span>
+                                                {% endif %}
+                                                <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">{{ book.title }}</div>
+                                                <small style="color: #64748b; display: block; margin-top: 2px;">
+                                                    <span style="color: #ea580c; font-weight: 600;">{{ book.catalog }}</span>
+                                                </small>
+                                                {% if book.sbin_no %}
+                                                    <div style="font-family: monospace; font-size: 0.72rem; color: #15803d; margin-top: 3px; font-weight: 600;">SBIN: {{ book.sbin_no }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td style="padding: 8px; vertical-align: top;">
+                                                {% if book.is_paid %}
+                                                    <span style="color: #166534; font-weight: 800; font-size: 0.95rem;">₹{{ "%.2f"|format(book.price_paise/100) }}</span><br>
+                                                    {% if book.rp_verified %}
+                                                        <span title="{{ book.rp_verify_message or 'Razorpay details verified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:#dcfce7; color:#166534;">✓ Verified</span>
+                                                    {% else %}
+                                                        <span title="{{ book.rp_verify_message or 'Razorpay details unverified.' }}" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:#fef3c7; color:#92400e;">⚠ Unverified</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span style="color: #0284c7; font-weight: 700; font-size: 0.9rem;">Free</span>
+                                                {% endif %}
+                                            </td>
+                                            <td style="padding: 8px; vertical-align: top;">
+                                                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                                                    <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-sm btn-dark" style="text-decoration: none; padding: 5px 9px; font-size: 0.76rem;">View</a>
+                                                    {% if book.is_paid %}
+                                                    <a href="{{ url_for('book_sales', book_id=book.id) }}" class="btn-sm btn-green" style="text-decoration: none; padding: 5px 9px; font-size: 0.76rem;">Sales</a>
+                                                    {% endif %}
+                                                    <button type="button" class="btn-sm btn-dark edit-btn" 
+                                                            data-id="{{ book.id }}" 
+                                                            data-title="{{ book.title | escape }}" 
+                                                            data-catalog="{{ book.catalog }}" 
+                                                            data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
+                                                            data-price="{{ book.price_paise }}" 
+                                                            data-keyid="{{ book.rp_key_id or '' }}" 
+                                                            data-keysecret="{{ book.rp_key_secret or '' }}" 
+                                                            data-verified="{{ 'true' if book.rp_verified else 'false' }}" 
+                                                            data-verifymsg="{{ book.rp_verify_message or '' | escape }}" 
+                                                            data-desc="{{ book.description | escape }}" 
+                                                            data-sbin="{{ book.sbin_no or '' | escape }}"
+                                                            data-pdflink="{{ book.pdf_file if book.pdf_file.startswith('http') else '' }}" 
+                                                            data-coverlink="{{ book.cover_image if book.cover_image.startswith('http') else '' }}" 
+                                                            onclick="openEditModal(this)"
+                                                            style="padding: 5px 9px; font-size: 0.76rem; background: #334155;">Edit</button>
+                                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this book?');">
+                                                        <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Del</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
 
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
         {% if session.role == 'developer' %}
@@ -1641,15 +2016,7 @@
             </div>
         {% endif %}
 
-        {% if session.role == 'author' and not session.is_verified %}
-            <div class="panel" style="border-left: 5px solid var(--primary-orange);">
-                <h2 style="color: var(--primary-orange);">Account Under Review</h2>
-                <p>Thank you for signing up to be an author! Our administrative team is currently reviewing your application.</p>
-                <p>You will receive an email as soon as you are approved and can begin publishing your books.</p>
-            </div>
-        {% endif %}
-
-        {% if (session.role == 'author' and session.is_verified) or session.role in ['official', 'developer'] %}
+        {% if session.role in ['official', 'developer'] %}
             <!-- AUTHOR SBIN GENERATOR & MINTING STUDIO -->
             <div class="panel" style="margin-bottom: 24px; border: 2px solid #fdba74; background: linear-gradient(to right, #fffaf5, #ffffff);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -1871,9 +2238,9 @@
                     <div class="panel" id="platformLibraryManagementPanel">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
                             <div>
-                                <h2 style="margin: 0;">{{ 'My Published Books' if session.role == 'author' else 'Platform Library Management' }}</h2>
+                                <h2 style="margin: 0;">Platform Library Management</h2>
                                 <p style="color: #64748b; font-size: 0.86rem; margin: 4px 0 0 0;">
-                                    {{ 'Manage your published books, track sales, and edit details.' if session.role == 'author' else 'Review all published titles, feature staff picks, monitor pricing, and moderate platform content.' }}
+                                    Review all published titles, feature staff picks, monitor pricing, and moderate platform content.
                                 </p>
                             </div>
                             <span style="font-size: 0.8rem; background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 20px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 6px;">

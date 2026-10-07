@@ -5647,21 +5647,116 @@ Format with these exact markdown sections:
 
     // 6A-7. Public Author Showcase: GET /author/:username or /public_author_profile/:username
     const authorMatch = url.pathname.match(/^\/(?:author|author_profile|public_author_profile)\/([^\/]+)\/?$/);
-    if (authorMatch && env.DB) {
-      const authorUsername = decodeURIComponent(authorMatch[1]);
-      const author = await env.DB.prepare(
-        "SELECT id, username, email, role, avatar_url, author_bio, social_links_json, is_verified, created_at FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1"
-      ).bind(authorUsername).first();
-
-      if (author) {
-        const booksRes = await env.DB.prepare(
-          "SELECT id, title, catalog, price_paise, cover_image, is_paid, is_featured, is_quarantined FROM books WHERE author_id = ? AND (is_quarantined = 0 OR is_quarantined IS NULL) ORDER BY id DESC"
-        ).bind(author.id).all();
-        const authorBooks = booksRes.results || [];
-        return new Response(renderEdgeAuthorHtml(author, authorBooks), {
-          headers: { "Content-Type": "text/html; charset=utf-8" }
-        });
+    if (authorMatch) {
+      const rawParam = authorMatch[1].replace(/\+/g, " ");
+      let authorUsername = "";
+      try {
+        authorUsername = decodeURIComponent(rawParam).trim();
+      } catch (_) {
+        authorUsername = rawParam.trim();
       }
+
+      let author = null;
+      let authorBooks = [];
+
+      if (env.DB) {
+        // Ensure user profile columns exist without throwing
+        try {
+          await env.DB.prepare("ALTER TABLE users ADD COLUMN author_bio TEXT DEFAULT NULL").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE users ADD COLUMN social_links_json TEXT DEFAULT NULL").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE users ADD COLUMN avatar_url TEXT DEFAULT NULL").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0").run().catch(() => {});
+        } catch (_) {}
+
+        // 1. Try finding user by username
+        try {
+          author = await env.DB.prepare(
+            "SELECT * FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1"
+          ).bind(authorUsername).first();
+        } catch (_) {
+          try {
+            author = await env.DB.prepare(
+              "SELECT id, username, email, role FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1"
+            ).bind(authorUsername).first();
+          } catch (__) {}
+        }
+
+        // 2. If not found and input is numeric ID, try finding by ID
+        if (!author && /^\d+$/.test(authorUsername)) {
+          try {
+            author = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(parseInt(authorUsername, 10)).first();
+          } catch (_) {}
+        }
+
+        // 3. If still not found, check if books exist with this author_name
+        if (!author) {
+          try {
+            const b = await env.DB.prepare(
+              "SELECT author_id, author_name FROM books WHERE LOWER(author_name) = LOWER(?) LIMIT 1"
+            ).bind(authorUsername).first();
+            if (b) {
+              if (b.author_id) {
+                author = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(b.author_id).first().catch(() => null);
+              }
+              if (!author) {
+                author = {
+                  id: b.author_id || 0,
+                  username: b.author_name || authorUsername,
+                  role: "author",
+                  author_bio: `Official author profile for ${b.author_name || authorUsername} on PustakVerse.`,
+                  is_verified: 1
+                };
+              }
+            }
+          } catch (_) {}
+        }
+
+        // 4. Query books by author_id OR author_name
+        const targetId = author?.id || 0;
+        const targetName = author?.username || authorUsername;
+        try {
+          const booksRes = await env.DB.prepare(
+            `SELECT id, title, catalog, price_paise, cover_image, is_paid, is_featured, is_quarantined, author_id, author_name 
+             FROM books 
+             WHERE (author_id = ? OR LOWER(author_name) = LOWER(?)) 
+               AND (is_quarantined = 0 OR is_quarantined IS NULL) 
+             ORDER BY id DESC`
+          ).bind(targetId, targetName).all();
+          authorBooks = booksRes.results || [];
+        } catch (_) {
+          try {
+            const booksRes = await env.DB.prepare(
+              `SELECT id, title, catalog, price_paise, cover_image, is_paid, is_featured 
+               FROM books 
+               WHERE LOWER(author_name) = LOWER(?) 
+               ORDER BY id DESC`
+            ).bind(targetName).all();
+            authorBooks = booksRes.results || [];
+          } catch (__) {}
+        }
+      }
+
+      // Safe fallback if author could not be queried
+      if (!author) {
+        author = {
+          id: 0,
+          username: authorUsername,
+          role: "author",
+          author_bio: `Dedicated author & creator on PustakVerse.`,
+          is_verified: 0
+        };
+      }
+
+      let currentUser = null;
+      try {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        currentUser = await verifySession(cookies.pv_session, env);
+      } catch (_) {}
+
+      return new Response(renderEdgeAuthorHtml(author, authorBooks, currentUser), {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" }
+      });
     }
 
     // 6A-8. Reading Certificate: GET /certificate/:id
@@ -9779,37 +9874,55 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
 </html>`;
 }
 
-function renderEdgeAuthorHtml(author, books = []) {
+function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
   const authorName = author.username || "Author";
+  const authorRole = author.role || "author";
+  const isVerified = !!author.is_verified || authorRole === "developer" || authorRole === "official";
   let socials = {};
-  try { socials = JSON.parse(author.social_links_json || "{}"); } catch (_) {}
+  try {
+    if (typeof author.social_links_json === "string") {
+      socials = JSON.parse(author.social_links_json || "{}");
+    } else if (typeof author.social_links_json === "object" && author.social_links_json !== null) {
+      socials = author.social_links_json;
+    }
+  } catch (_) {}
 
-  const booksHtml = books.map(b => {
+  const isOwnerOrAdmin = currentUser && (
+    (currentUser.id && author.id && currentUser.id === author.id) ||
+    (currentUser.username && author.username && currentUser.username.toLowerCase() === author.username.toLowerCase()) ||
+    currentUser.role === "developer" ||
+    currentUser.role === "official"
+  );
+
+  const booksHtml = (books || []).map(b => {
     let coverSrc = b.cover_image || "/static/PustakVerse.png";
-    if (coverSrc.includes("drive.google.com/file/d/")) {
-      const m = coverSrc.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (coverSrc.includes("drive.google.com")) {
+      const m = coverSrc.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || coverSrc.match(/id=([a-zA-Z0-9_-]+)/);
       if (m) coverSrc = `https://lh3.googleusercontent.com/d/${m[1]}`;
     }
     const isPaid = !!b.is_paid && (b.price_paise > 0);
     const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
     return `
-      <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
-        <a href="/book/${b.id}" style="display: block;">
-          <img src="${coverSrc}" style="width: 100%; height: 260px; object-fit: cover;" alt="${escapeHtml(b.title)}">
-        </a>
-        <div style="padding: 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="font-size: 0.75rem; text-transform: uppercase; color: #ea580c; font-weight: 800; margin-bottom: 4px;">${escapeHtml(b.catalog || 'General')}</div>
-            <h3 style="margin: 0 0 6px 0; font-size: 1.05rem;"><a href="/book/${b.id}" style="text-decoration: none; color: inherit;">${escapeHtml(b.title)}</a></h3>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-            <span style="font-weight: 800; color: ${isPaid ? '#10b981' : '#3b82f6'};">${isPaid ? priceFormatted : 'Free'}</span>
-            <a href="/book/${b.id}" style="background: #0f172a; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">View Details</a>
+      <a href="/book/${b.id}" class="book-card">
+        <div class="book-cover-wrap">
+          <img src="${coverSrc}" class="book-cover" alt="${escapeHtml(b.title)}" onerror="this.src='/static/PustakVerse.png'">
+          ${b.is_featured ? '<span class="featured-badge">⭐ Staff Pick</span>' : ''}
+        </div>
+        <div class="book-card-body">
+          <div class="book-card-cat">${escapeHtml(b.catalog || 'General')}</div>
+          <div class="book-card-title">${escapeHtml(b.title)}</div>
+          <div class="book-card-footer">
+            <span class="price-pill ${isPaid ? 'paid' : 'free'}">${isPaid ? priceFormatted : 'Free'}</span>
+            <span class="read-btn">Read →</span>
           </div>
         </div>
-      </div>
+      </a>
     `;
   }).join("");
+
+  const avatarContent = author.avatar_url
+    ? `<img src="${escapeHtml(author.avatar_url)}" alt="${escapeHtml(authorName)}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
+    : escapeHtml(authorName.charAt(0).toUpperCase());
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -9817,38 +9930,497 @@ function renderEdgeAuthorHtml(author, books = []) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(authorName)} · Author Showcase · PustakVerse</title>
+  <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/theme.js"></script>
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('pustakverse_theme') || 'system';
+        var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (d) {
+          document.documentElement.classList.add('dark-theme');
+          document.documentElement.classList.remove('light-theme', 'sepia-theme');
+        } else {
+          document.documentElement.classList.add('light-theme');
+          document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+        }
+      } catch(e) {}
+    })();
+  </script>
+  <style>
+    :root {
+      --primary-orange: #ea580c;
+      --primary-dark: #c2410c;
+      --nav-bg: #0f172a;
+      --card-bg: #ffffff;
+      --bg-canvas: #f8fafc;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --border-line: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 10px 25px rgba(0,0,0,0.06);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not(.light-theme) {
+        --card-bg: #1e293b;
+        --bg-canvas: #0b0f19;
+        --text-dark: #f1f5f9;
+        --text-muted: #94a3b8;
+        --border-line: rgba(255, 255, 255, 0.1);
+        --shadow-sm: 0 2px 10px rgba(0,0,0,0.3);
+        --shadow-md: 0 10px 30px rgba(0,0,0,0.4);
+      }
+    }
+
+    .dark-theme,
+    html.dark-theme,
+    body.dark-theme {
+      --card-bg: #1e293b;
+      --bg-canvas: #0b0f19;
+      --text-dark: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border-line: rgba(255, 255, 255, 0.1);
+      --shadow-sm: 0 2px 10px rgba(0,0,0,0.3);
+      --shadow-md: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .navbar {
+      background: var(--nav-bg);
+      color: white;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .navbar a { color: white; text-decoration: none; font-weight: 600; font-size: 0.92rem; }
+    .navbar a:hover { color: var(--primary-orange); }
+
+    .nav-actions { display: flex; align-items: center; gap: 14px; }
+    .theme-toggle-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .theme-toggle-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 20px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .author-header-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 1px solid var(--border-line);
+      padding: 36px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      margin-bottom: 36px;
+      position: relative;
+    }
+    .author-avatar {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ea580c, #f97316);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      box-shadow: 0 8px 20px rgba(234, 88, 12, 0.3);
+      overflow: hidden;
+    }
+    .author-info { flex: 1; }
+    .author-name-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .author-name {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      letter-spacing: -0.02em;
+    }
+    .author-badge {
+      font-size: 0.78rem;
+      background: #dcfce7;
+      color: #166534;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .author-role-tag {
+      font-size: 0.75rem;
+      background: rgba(234, 88, 12, 0.12);
+      color: var(--primary-orange);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+    .author-meta {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .author-bio {
+      color: var(--text-muted);
+      font-size: 0.98rem;
+      line-height: 1.65;
+      margin: 16px 0 20px;
+      max-width: 720px;
+    }
+    .social-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .social-chip {
+      background: var(--card-bg);
+      color: var(--text-dark);
+      border: 1px solid var(--border-line);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .social-chip:hover {
+      background: rgba(234, 88, 12, 0.1);
+      color: var(--primary-orange);
+      border-color: var(--primary-orange);
+    }
+    .author-actions-top {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .books-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 24px;
+    }
+    .book-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border-line);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .book-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(234, 88, 12, 0.4);
+    }
+    .book-cover-wrap {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .book-cover {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s;
+    }
+    .book-card:hover .book-cover {
+      transform: scale(1.03);
+    }
+    .featured-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #fef08a;
+      color: #854d0e;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .book-card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .book-card-cat {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary-orange);
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .book-card-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .book-card-footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-line);
+    }
+    .price-pill {
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+    .price-pill.paid { color: #16a34a; }
+    .price-pill.free { color: #3b82f6; }
+    .read-btn {
+      color: var(--primary-orange);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .empty-state {
+      background: var(--card-bg);
+      border: 1px dashed var(--border-line);
+      border-radius: 16px;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .empty-state h3 {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+      color: var(--text-dark);
+    }
+    .empty-state p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+
+    footer {
+      background: var(--nav-bg);
+      color: #94a3b8;
+      text-align: center;
+      padding: 24px 20px;
+      font-size: 0.85rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin-top: 60px;
+    }
+
+    @media (max-width: 768px) {
+      .author-header-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 26px 20px;
+      }
+      .author-name-row { justify-content: center; }
+      .author-meta { justify-content: center; }
+      .social-links { justify-content: center; }
+      .author-actions-top { justify-content: center; }
+      .books-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+      .book-cover-wrap { height: 210px; }
+    }
+  </style>
 </head>
-<body style="font-family: system-ui, sans-serif; background: #f8fafc; margin: 0; color: #0f172a;">
-  <nav style="background: #0f172a; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;">
-    <a href="/"><img src="/static/PustakVerse.png" style="height: 40px;" alt="PustakVerse"></a>
-    <a href="/" style="color: #fff; text-decoration: none; font-weight: 600;">← Back to Library</a>
+<body>
+
+  <nav class="navbar">
+    <a href="/" style="display: flex; align-items: center; gap: 10px;">
+      <img src="/static/PustakVerse.png" alt="PustakVerse" style="height: 38px; width: auto; object-fit: contain;">
+      <span style="font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em;">PustakVerse</span>
+    </a>
+    <div class="nav-actions">
+      <button type="button" class="theme-toggle-btn" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
+      <a href="/">Global Library</a>
+      ${isOwnerOrAdmin
+        ? `<a href="/dashboard" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; padding: 7px 16px; border-radius: 20px; font-weight: 700;">⚙️ Author Dashboard</a>`
+        : (currentUser
+            ? `<a href="/dashboard">Dashboard</a>`
+            : `<a href="/login" style="background: rgba(255,255,255,0.12); padding: 6px 16px; border-radius: 20px;">Sign In</a>`
+          )
+      }
+    </div>
   </nav>
-  <div style="max-width: 960px; margin: 40px auto; padding: 0 20px;">
-    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 30px;">
-      <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: #ea580c; color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900;">
-          ${escapeHtml(authorName.charAt(0).toUpperCase())}
-        </div>
-        <div>
-          <h1 style="margin: 0 0 6px 0; font-size: 2rem;">${escapeHtml(authorName)}</h1>
-          <span style="background: #dcfce7; color: #166534; font-size: 0.8rem; font-weight: 800; padding: 3px 10px; border-radius: 12px;">✓ Verified Creator</span>
-        </div>
+
+  <div class="container">
+    
+    <!-- AUTHOR SHOWCASE CARD -->
+    <div class="author-header-card">
+      <div class="author-avatar">
+        ${avatarContent}
       </div>
-      <p style="margin: 20px 0 15px 0; font-size: 1.05rem; line-height: 1.7; color: #475569;">${escapeHtml(author.author_bio || 'Dedicated author publishing on PustakVerse.')}</p>
-      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-        ${socials.github ? `<a href="${escapeHtml(socials.github)}" target="_blank" style="color: #3b82f6; font-weight: 600; text-decoration: none;">GitHub</a>` : ''}
-        ${socials.linkedin ? `<a href="${escapeHtml(socials.linkedin)}" target="_blank" style="color: #3b82f6; font-weight: 600; text-decoration: none;">LinkedIn</a>` : ''}
-        ${socials.twitter ? `<a href="${escapeHtml(socials.twitter)}" target="_blank" style="color: #3b82f6; font-weight: 600; text-decoration: none;">X (Twitter)</a>` : ''}
-        ${socials.website ? `<a href="${escapeHtml(socials.website)}" target="_blank" style="color: #3b82f6; font-weight: 600; text-decoration: none;">Website</a>` : ''}
+      
+      <div class="author-info">
+        <div class="author-name-row">
+          <h1 class="author-name">${escapeHtml(authorName)}</h1>
+          ${isVerified ? '<span class="author-badge">✓ Verified Creator</span>' : ''}
+          <span class="author-role-tag">${escapeHtml(authorRole)}</span>
+        </div>
+
+        <div class="author-meta">
+          <span>📚 <strong>${books.length}</strong> Published Title${books.length === 1 ? '' : 's'}</span>
+          <span>✨ Official PustakVerse Creator</span>
+        </div>
+
+        <p class="author-bio">
+          ${escapeHtml(author.author_bio || 'Dedicated author and creator on PustakVerse. Exploring storytelling, ideas, and scholarly research.')}
+        </p>
+
+        <div class="social-links">
+          ${socials.website ? `<a href="${escapeHtml(socials.website)}" target="_blank" rel="noopener" class="social-chip">🌐 Website</a>` : ''}
+          ${socials.github ? `<a href="${escapeHtml(socials.github)}" target="_blank" rel="noopener" class="social-chip">💻 GitHub</a>` : ''}
+          ${socials.twitter || socials.x ? `<a href="${escapeHtml(socials.twitter || socials.x)}" target="_blank" rel="noopener" class="social-chip">🐦 X / Twitter</a>` : ''}
+          ${socials.linkedin ? `<a href="${escapeHtml(socials.linkedin)}" target="_blank" rel="noopener" class="social-chip">💼 LinkedIn</a>` : ''}
+          ${socials.instagram ? `<a href="${escapeHtml(socials.instagram)}" target="_blank" rel="noopener" class="social-chip">📸 Instagram</a>` : ''}
+          <button type="button" class="social-chip" onclick="copyAuthorShareLink()" style="cursor: pointer;">
+            <span id="shareBtnIcon">🔗</span> <span id="shareBtnText">Share Profile</span>
+          </button>
+        </div>
+
+        ${isOwnerOrAdmin ? `
+          <div class="author-actions-top">
+            <a href="/dashboard#publishNewBookSection" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 9px 20px; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+              <span>🚀</span> Publish a New Book
+            </a>
+            <a href="/dashboard" style="background: var(--card-bg); color: var(--text-dark); border: 1.5px solid var(--border-line); font-weight: 700; padding: 9px 20px; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem;">
+              <span>✏️</span> Edit Profile / Dashboard
+            </a>
+          </div>
+        ` : ''}
       </div>
     </div>
-    <h2 style="font-size: 1.5rem; margin-bottom: 20px;">Published Titles (${books.length})</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
-      ${booksHtml || '<p style="color: #64748b;">No books published yet.</p>'}
+
+    <!-- PUBLISHED WORKS SECTION -->
+    <div class="section-title">
+      <div>
+        <span>📚</span> Published Works by ${escapeHtml(authorName)}
+      </div>
+      <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">${books.length} Total</span>
     </div>
+
+    ${books.length > 0 ? `
+      <div class="books-grid">
+        ${booksHtml}
+      </div>
+    ` : `
+      <div class="empty-state">
+        <div style="font-size: 3rem; margin-bottom: 12px;">📖</div>
+        <h3>No public titles yet</h3>
+        <p>${escapeHtml(authorName)} hasn't published any public books yet. Stay tuned for upcoming publications!</p>
+        <a href="/" style="background: #0f172a; color: white; text-decoration: none; padding: 10px 22px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; display: inline-block;">Explore Global Library</a>
+      </div>
+    `}
+
   </div>
+
+  <footer>
+    <div style="max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>&copy; ${new Date().getFullYear()} PustakVerse. Empowering Authors &amp; Global Readers.</div>
+      <div style="display: flex; gap: 16px;">
+        <a href="/" style="color: #94a3b8; text-decoration: none;">Library</a>
+        <a href="/terms" style="color: #94a3b8; text-decoration: none;">Terms</a>
+        <a href="/contact" style="color: #94a3b8; text-decoration: none;">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function copyAuthorShareLink() {
+      if (navigator.clipboard && window.location.href) {
+        navigator.clipboard.writeText(window.location.href).then(function() {
+          var icon = document.getElementById('shareBtnIcon');
+          var txt = document.getElementById('shareBtnText');
+          if (icon) icon.textContent = '✓';
+          if (txt) txt.textContent = 'Link Copied!';
+          setTimeout(function() {
+            if (icon) icon.textContent = '🔗';
+            if (txt) txt.textContent = 'Share Profile';
+          }, 2500);
+        }).catch(function() {
+          prompt('Copy profile URL:', window.location.href);
+        });
+      } else {
+        prompt('Copy profile URL:', window.location.href);
+      }
+    }
+  </script>
 </body>
 </html>`;
 }
