@@ -533,7 +533,7 @@
 
     <div class="hero-section">
         <h1>PustakVerse</h1>
-        <p>Every Book. Every Mind. Free.</p>
+        <p>Empowering Readers &amp; Authors Worldwide</p>
         
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
             <input type="search" id="searchInput" name="search" placeholder="Search for a book, author, or category... (Ctrl + K)" aria-label="Search for a book or author">
@@ -887,8 +887,35 @@
             } catch (_) {}
         }
 
-        // Hydrate global ticker / announcement banner from edge or server
+        // Hydrate global ticker, announcement banner and hero headline from edge or server
         async function checkGlobalAnnouncement() {
+            try {
+                // 1. Sync live website settings (Hero Title, Subtitle, Announcements)
+                const sRes = await fetch('/api/front_page_settings');
+                if (sRes.ok) {
+                    const sData = await sRes.json();
+                    if (sData && sData.success && sData.settings) {
+                        const st = sData.settings;
+                        const h1 = document.querySelector('.hero-section h1');
+                        if (h1 && st.hero_title) {
+                            h1.textContent = st.hero_title;
+                        }
+                        const pSub = document.querySelector('.hero-section p');
+                        if (pSub && st.hero_subtitle) {
+                            pSub.textContent = st.hero_subtitle;
+                        }
+                        if (st.alert_ticker_active && st.alert_ticker_message) {
+                            const banner = document.getElementById('globalAnnouncementBanner');
+                            const textEl = document.getElementById('globalAnnouncementText');
+                            if (banner && textEl) {
+                                textEl.textContent = st.alert_ticker_message;
+                                banner.style.display = 'flex';
+                            }
+                        }
+                    }
+                }
+            } catch (_) {}
+
             try {
                 const res = await fetch('/api/global_announcement');
                 if (res.ok) {

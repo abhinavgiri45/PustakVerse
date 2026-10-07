@@ -169,8 +169,8 @@
         <div>
             <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" class="logo">
         </div>
-        <h1 class="tagline">{{ site_settings.intro_tagline }}</h1>
-        <p class="sub-tagline">{{ site_settings.intro_sub_tagline }}</p>
+        <h1 class="tagline">{{ site_settings.intro_tagline or 'Every Book. Every Mind. Infinite Knowledge.' }}</h1>
+        <p class="sub-tagline">{{ site_settings.intro_sub_tagline or 'Prepare to explore the universe of knowledge...' }}</p>
     </div>
 
     <button class="skip-btn" id="skipIntroBtn" onclick="goToNext()" aria-label="Skip Introduction">
@@ -180,6 +180,18 @@
 
     <script>
         let isNavigating = false;
+
+        // Dynamically sync latest tagline from platform settings
+        try {
+            fetch('/api/front_page_settings').then(r => r.json()).then(d => {
+                if (d && d.success && d.settings) {
+                    const t = document.querySelector('.tagline');
+                    const st = document.querySelector('.sub-tagline');
+                    if (t && d.settings.intro_tagline) t.textContent = d.settings.intro_tagline;
+                    if (st && d.settings.intro_sub_tagline) st.textContent = d.settings.intro_sub_tagline;
+                }
+            }).catch(() => {});
+        } catch (_) {}
 
         const timeoutId = setTimeout(() => {
             goToNext();

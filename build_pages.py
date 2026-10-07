@@ -133,8 +133,13 @@ def build():
                     }
                 ],
                 site_settings={
+                    'hero_title': 'PustakVerse',
+                    'hero_subtitle': 'Empowering Readers & Authors Worldwide',
+                    'intro_tagline': 'Every Book. Every Mind. Infinite Knowledge.',
+                    'intro_sub_tagline': 'Prepare to explore the universe of knowledge...',
                     'donation_active': True,
                     'checkout_donation_active': True,
+                    'donation_default_inr': 10,
                     'upi_id': 'abhinavgiri370@okaxis',
                     'rp_key_id': 'rzp_live_key',
                     'rp_key_secret': 'rzp_live_secret'

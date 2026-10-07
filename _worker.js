@@ -2977,6 +2977,7 @@ Format with these exact markdown sections:
 
         // Hydrate Developer & Official System Metrics for Edge SSR
         let systemMetrics = null;
+        let fps = null;
         if (env.DB && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user))) {
           try {
             const uTotal = await env.DB.prepare("SELECT count(*) as cnt FROM users").first();
@@ -2991,7 +2992,7 @@ Format with these exact markdown sections:
               const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
               salesVol = sRes?.total || 0;
             } catch (_) {}
-            let fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+            fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
 
             systemMetrics = {
               total_users: uTotal?.cnt || 0,
@@ -3013,7 +3014,7 @@ Format with these exact markdown sections:
           }
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics);
+        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps);
         return new Response(personalized, {
           status: 200,
           headers: {
@@ -3208,6 +3209,71 @@ Format with these exact markdown sections:
       const catId = parseInt(delCatMatch[1], 10);
       await env.DB.prepare("DELETE FROM catalogs WHERE id = ?").bind(catId).run();
       return Response.redirect(`${url.origin}/dashboard`, 302);
+    }
+
+    // Developer Website Settings & Payments Handler
+    if ((url.pathname === "/update_front_page" || url.pathname === "/api/developer/update_front_page") && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || user.role !== "developer") {
+        return new Response("Unauthorized: Only Developer can modify website settings.", { status: 403 });
+      }
+      const formData = await request.formData().catch(() => new FormData());
+      const heroTitle = (formData.get("hero_title") || "").trim();
+      const heroSubtitle = (formData.get("hero_subtitle") || "").trim();
+      const introTagline = (formData.get("intro_tagline") || "").trim();
+      const introSubTagline = (formData.get("intro_sub_tagline") || "").trim();
+      const donationActive = formData.has("donation_active") ? 1 : 0;
+      const checkoutActive = formData.has("checkout_donation_active") ? 1 : 0;
+      const donationDefaultInr = parseInt(formData.get("donation_default_inr") || "10", 10) || 10;
+      const keyId = (formData.get("rp_key_id") || "").trim();
+      const keySecret = (formData.get("rp_key_secret") || "").trim();
+
+      let curFps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+      if (!curFps) {
+        await env.DB.prepare("INSERT INTO front_page_settings (id) VALUES (1)").run();
+        curFps = {};
+      }
+
+      const finalHeroTitle = heroTitle || curFps.hero_title || "PustakVerse";
+      const finalHeroSubtitle = heroSubtitle || curFps.hero_subtitle || "Empowering Readers & Authors Worldwide";
+      const finalIntroTagline = introTagline || curFps.intro_tagline || "Every Book. Every Mind. Infinite Knowledge.";
+      const finalIntroSubTagline = introSubTagline || curFps.intro_sub_tagline || "Prepare to explore the universe of knowledge...";
+      const finalRpKeyId = keyId || curFps.rp_key_id || "";
+      const finalRpKeySecret = keySecret || curFps.rp_key_secret || "";
+
+      await env.DB.prepare(`
+        UPDATE front_page_settings 
+        SET hero_title = ?, hero_subtitle = ?, intro_tagline = ?, intro_sub_tagline = ?,
+            donation_active = ?, checkout_donation_active = ?, donation_default_inr = ?,
+            rp_key_id = ?, rp_key_secret = ?
+        WHERE id = 1
+      `).bind(
+        finalHeroTitle, finalHeroSubtitle, finalIntroTagline, finalIntroSubTagline,
+        donationActive, checkoutActive, donationDefaultInr,
+        finalRpKeyId, finalRpKeySecret
+      ).run();
+
+      const acceptsJson = request.headers.get("accept")?.includes("application/json") || request.headers.get("x-requested-with") === "XMLHttpRequest";
+      if (acceptsJson) {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Website settings saved and synced live across PustakVerse!",
+          settings: {
+            hero_title: finalHeroTitle,
+            hero_subtitle: finalHeroSubtitle,
+            intro_tagline: finalIntroTagline,
+            intro_sub_tagline: finalIntroSubTagline,
+            donation_active: Boolean(donationActive),
+            checkout_donation_active: Boolean(checkoutActive),
+            donation_default_inr: donationDefaultInr,
+            rp_key_id: finalRpKeyId
+          }
+        }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return Response.redirect(`${url.origin}/dashboard?updated_settings=1`, 302);
     }
 
     // Developer Support / Donation Settings
@@ -4238,7 +4304,45 @@ Format with these exact markdown sections:
       }
     }
 
-    // 6-bis. Edge Dashboard Books Hydration API: GET /api/dashboard/books
+    // 6A. NATIVE FRONT PAGE & PLATFORM SETTINGS API: GET /api/front_page_settings
+    if ((url.pathname === "/api/front_page_settings" || url.pathname === "/api/d1/settings" || url.pathname === "/api/settings") && env.DB) {
+      try {
+        let fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+        if (!fps) {
+          await env.DB.prepare("INSERT INTO front_page_settings (id) VALUES (1)").run();
+          fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+        }
+        return new Response(JSON.stringify({
+          success: true,
+          settings: {
+            hero_title: fps?.hero_title || "PustakVerse",
+            hero_subtitle: fps?.hero_subtitle || "Empowering Readers & Authors Worldwide",
+            logo_image: fps?.logo_image || "PustakVerse.png",
+            font_color: fps?.font_color || "#ffffff",
+            donation_active: Boolean(fps?.donation_active),
+            donation_qr: fps?.donation_qr || "",
+            intro_tagline: fps?.intro_tagline || "Every Book. Every Mind. Infinite Knowledge.",
+            intro_sub_tagline: fps?.intro_sub_tagline || "Prepare to explore the universe of knowledge...",
+            checkout_donation_active: fps?.checkout_donation_active !== undefined ? Boolean(fps?.checkout_donation_active) : true,
+            donation_default_inr: fps?.donation_default_inr || 10,
+            rp_key_id: fps?.rp_key_id || "",
+            alert_ticker_message: fps?.alert_ticker_message || "",
+            alert_ticker_active: Boolean(fps?.alert_ticker_active),
+            maintenance_mode: Boolean(fps?.maintenance_mode)
+          }
+        }), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=30"
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
     if (url.pathname === "/api/dashboard/books" && env.DB) {
       try {
         const cookies = parseCookies(request.headers.get("Cookie"));
@@ -6908,7 +7012,7 @@ function renderContactLeadershipCards(leaders) {
   }).join("\n");
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null) {
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null) {
   const username = user.username || "Reader";
   const role = user.role || "reader";
   const email = user.email || "";
@@ -6950,13 +7054,58 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
   }
 
+  // Hydrate Website Settings & Payments (Developer Authority)
+  if (fps && isDev) {
+    const hTitle = escapeHtml(fps.hero_title || "PustakVerse");
+    const hSubtitle = escapeHtml(fps.hero_subtitle || "Empowering Readers & Authors Worldwide");
+    const iTagline = escapeHtml(fps.intro_tagline || "Every Book. Every Mind. Infinite Knowledge.");
+    const iSubTagline = escapeHtml(fps.intro_sub_tagline || "Prepare to explore the universe of knowledge...");
+    const rKeyId = escapeHtml(fps.rp_key_id || "");
+    const rKeySecret = escapeHtml(fps.rp_key_secret || "");
+    const dDefault = fps.donation_default_inr || 10;
+    const isDonActive = Boolean(fps.donation_active);
+    const isCheckActive = fps.checkout_donation_active !== undefined ? Boolean(fps.checkout_donation_active) : true;
+
+    out = out.replace(/name="hero_title"\s+id="setting_hero_title"\s+value="[^"]*"/i, `name="hero_title" id="setting_hero_title" value="${hTitle}"`);
+    out = out.replace(/name="hero_subtitle"\s+id="setting_hero_subtitle"\s+value="[^"]*"/i, `name="hero_subtitle" id="setting_hero_subtitle" value="${hSubtitle}"`);
+    out = out.replace(/name="intro_tagline"\s+id="setting_intro_tagline"\s+value="[^"]*"/i, `name="intro_tagline" id="setting_intro_tagline" value="${iTagline}"`);
+    out = out.replace(/name="intro_sub_tagline"\s+id="setting_intro_sub_tagline"\s+value="[^"]*"/i, `name="intro_sub_tagline" id="setting_intro_sub_tagline" value="${iSubTagline}"`);
+    out = out.replace(/name="rp_key_id"\s+id="setting_rp_key_id"\s+value="[^"]*"/i, `name="rp_key_id" id="setting_rp_key_id" value="${rKeyId}"`);
+    out = out.replace(/name="rp_key_secret"\s+id="setting_rp_key_secret"\s+value="[^"]*"/i, `name="rp_key_secret" id="setting_rp_key_secret" value="${rKeySecret}"`);
+    out = out.replace(/name="donation_default_inr"\s+id="setting_donation_default_inr"\s+value="[^"]*"/i, `name="donation_default_inr" id="setting_donation_default_inr" value="${dDefault}"`);
+
+    // Fallbacks
+    out = out.replace(/name="hero_title"\s+value="[^"]*"/i, `name="hero_title" value="${hTitle}"`);
+    out = out.replace(/name="hero_subtitle"\s+value="[^"]*"/i, `name="hero_subtitle" value="${hSubtitle}"`);
+    out = out.replace(/name="intro_tagline"\s+value="[^"]*"/i, `name="intro_tagline" value="${iTagline}"`);
+    out = out.replace(/name="intro_sub_tagline"\s+value="[^"]*"/i, `name="intro_sub_tagline" value="${iSubTagline}"`);
+    out = out.replace(/name="rp_key_id"\s+value="[^"]*"/i, `name="rp_key_id" value="${rKeyId}"`);
+    out = out.replace(/name="rp_key_secret"\s+value="[^"]*"/i, `name="rp_key_secret" value="${rKeySecret}"`);
+    out = out.replace(/name="donation_default_inr"\s+value="[^"]*"/i, `name="donation_default_inr" value="${dDefault}"`);
+
+    if (isDonActive) {
+      out = out.replace(/name="donation_active"(?!\s+checked)/i, `name="donation_active" checked`);
+    } else {
+      out = out.replace(/name="donation_active"\s+checked/i, `name="donation_active"`);
+    }
+
+    if (isCheckActive) {
+      out = out.replace(/name="checkout_donation_active"(?!\s+checked)/i, `name="checkout_donation_active" checked`);
+    } else {
+      out = out.replace(/name="checkout_donation_active"\s+checked/i, `name="checkout_donation_active"`);
+    }
+  }
+
   // 1. Personalized User & Role in Header
   out = out.replace(/Welcome,\s*(?:\{\{\s*session\.username\s*\}\}|[A-Za-z0-9_]+)/g, `Welcome, <span id="dashUsernameDisplay">${escapeHtml(username)}</span>`);
   out = out.replace(/Your Role:\s*<strong[^>]*>[\s\S]*?<\/strong>/gi, `Your Role: <strong id="dashRoleDisplay" style="color: var(--primary-orange); text-transform: capitalize;">${escapeHtml(role)}</strong>`);
 
   // Flash message for query params
   if (url) {
-    if (url.searchParams.get("maintenance_disabled") === "1") {
+    if (url.searchParams.get("updated_settings") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🎉</span><div>Website Settings & Payments updated and synced live across PustakVerse!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("maintenance_disabled") === "1") {
       const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🟢</span><div>System Maintenance Break ENDED. The platform is now fully LIVE and accessible to all users worldwide!</div></div>`;
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     } else if (url.searchParams.get("maintenance_updated") === "1") {

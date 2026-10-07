@@ -385,7 +385,7 @@ class FastMemoryCache:
         self._cache = {}
         self._lock = threading.Lock()
         self._cache['settings'] = {
-            'data': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Every Book. Every Mind. Free.', 'donation_active': False, 'donation_qr': None, 'rp_key_id': '', 'rp_key_secret': '', 'intro_tagline': 'Every Book. Every Mind. Free.', 'intro_sub_tagline': 'Prepare to explore the universe of knowledge...'},
+            'data': {'logo_image': 'PustakVerse.png', 'hero_title': 'PustakVerse', 'hero_subtitle': 'Empowering Readers & Authors Worldwide', 'donation_active': False, 'donation_qr': None, 'rp_key_id': '', 'rp_key_secret': '', 'intro_tagline': 'Every Book. Every Mind. Infinite Knowledge.', 'intro_sub_tagline': 'Prepare to explore the universe of knowledge...'},
             'expiry': 0
         }
         self._cache['catalogs'] = {
@@ -2989,10 +2989,10 @@ def inject_global_settings():
             fetched_settings['logo_image'] = str(fetched_settings.get('logo_image') or "PustakVerse.png")
             fetched_settings['donation_qr'] = str(fetched_settings.get('donation_qr') or "")
             fetched_settings['hero_title'] = str(fetched_settings.get('hero_title') or "PustakVerse")
-            fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "")
+            fetched_settings['hero_subtitle'] = str(fetched_settings.get('hero_subtitle') or "Empowering Readers & Authors Worldwide")
             fetched_settings['rp_key_id'] = str(fetched_settings.get('rp_key_id') or "")
             fetched_settings['rp_key_secret'] = str(fetched_settings.get('rp_key_secret') or "")
-            fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Free.")
+            fetched_settings['intro_tagline'] = str(fetched_settings.get('intro_tagline') or "Every Book. Every Mind. Infinite Knowledge.")
             fetched_settings['intro_sub_tagline'] = str(fetched_settings.get('intro_sub_tagline') or "Prepare to explore the universe of knowledge...")
             fetched_settings['gemini_api_key'] = str(fetched_settings.get('gemini_api_key') or "")
             fetched_settings['checkout_donation_active'] = bool(fetched_settings.get('checkout_donation_active') if fetched_settings.get('checkout_donation_active') is not None else True)
@@ -8186,14 +8186,57 @@ def update_front_page():
         )
         db.commit()
         invalidate_cache()
+        fast_cache.delete('site_settings')
+        global_cache.pop('settings', None)
         flash("Platform settings updated!", "success")
-    except Exception: 
+        
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+            return jsonify({'success': True, 'message': 'Platform settings updated!'})
+    except Exception as ex: 
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+            return jsonify({'success': False, 'error': str(ex)}), 500
         flash("Database error.", "error")
     finally:
         if db:
             try: db.close()
             except: pass
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('dashboard', updated_settings=1))
+
+@app.route('/api/front_page_settings', methods=['GET'])
+@app.route('/api/d1/settings', methods=['GET'])
+@app.route('/api/settings', methods=['GET'])
+def api_front_page_settings():
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
+        fps = cursor.fetchone() or {}
+        return jsonify({
+            'success': True,
+            'settings': {
+                'hero_title': fps.get('hero_title') or 'PustakVerse',
+                'hero_subtitle': fps.get('hero_subtitle') or 'Empowering Readers & Authors Worldwide',
+                'logo_image': fps.get('logo_image') or 'PustakVerse.png',
+                'font_color': fps.get('font_color') or '#ffffff',
+                'donation_active': bool(fps.get('donation_active')),
+                'donation_qr': fps.get('donation_qr') or '',
+                'intro_tagline': fps.get('intro_tagline') or 'Every Book. Every Mind. Infinite Knowledge.',
+                'intro_sub_tagline': fps.get('intro_sub_tagline') or 'Prepare to explore the universe of knowledge...',
+                'checkout_donation_active': bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True),
+                'donation_default_inr': int(fps.get('donation_default_inr') or 10),
+                'rp_key_id': fps.get('rp_key_id') or '',
+                'alert_ticker_message': fps.get('alert_ticker_message') or '',
+                'alert_ticker_active': bool(fps.get('alert_ticker_active')),
+                'maintenance_mode': bool(fps.get('maintenance_mode'))
+            }
+        })
+    except Exception as ex:
+        return jsonify({'success': False, 'error': str(ex)}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
 
 @app.route('/add_catalog', methods=['POST'])
 def add_catalog():

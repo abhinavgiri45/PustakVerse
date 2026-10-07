@@ -879,69 +879,100 @@
 
             <div class="grid-2">
                 <div class="panel">
-                    <h2>Website Settings & Payments</h2>
-                    <form action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Hero Title</label>
-                            <input type="text" name="hero_title" value="{{ site_settings.hero_title }}">
-                        </div>
-                        <div class="form-group">
-                            <label>Hero Subtitle</label>
-                            <input type="text" name="hero_subtitle" value="{{ site_settings.hero_subtitle }}">
-                        </div>
-                        
-                        <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 20px;">
-                            <label style="color: #0369a1; font-weight: bold;">Developer Support (Donation QR)</label>
-                            <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 10px;">
-                            <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" name="donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: auto;"> 
-                                Show 'Donate' button to users
-                            </label>
-                        </div>
-                        
-                        <!-- NEW CINEMATIC INTRO SETTINGS -->
-                        <div class="form-group">
-                            <label>Cinematic Intro Main Tagline</label>
-                            <input type="text" name="intro_tagline" value="{{ site_settings.intro_tagline }}" required placeholder="Every Book. Every Mind. Free.">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
+                        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                            <span>⚙️</span> Website Settings & Payments
+                        </h2>
+                        <span style="background: rgba(234, 88, 12, 0.15); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.3); font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">
+                            Developer Authority
+                        </span>
+                    </div>
+
+                    <div id="websiteSettingsAlert" style="display: none; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 700; font-size: 0.9rem;"></div>
+
+                    <form id="formWebsiteSettings" action="{{ url_for('update_front_page') }}" method="POST" enctype="multipart/form-data" onsubmit="handleWebsiteSettingsSubmit(event)">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label style="color: #e2e8f0; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; display: block;">Hero Title (Homepage Main Headline)</label>
+                            <input type="text" name="hero_title" id="setting_hero_title" value="{{ site_settings.hero_title or 'PustakVerse' }}" placeholder="PustakVerse" style="background: #0f172a; color: #f8fafc; border: 1.5px solid #334155; border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box; font-size: 0.95rem; font-weight: 600;">
                         </div>
 
-                        <div class="form-group">
-                            <label>Cinematic Intro Sub-Tagline</label>
-                            <input type="text" name="intro_sub_tagline" value="{{ site_settings.intro_sub_tagline }}" required placeholder="Prepare to explore the universe of knowledge...">
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label style="color: #e2e8f0; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; display: block;">Hero Subtitle (Homepage Tagline)</label>
+                            <input type="text" name="hero_subtitle" id="setting_hero_subtitle" value="{{ site_settings.hero_subtitle or 'Empowering Readers & Authors Worldwide' }}" placeholder="Empowering Readers & Authors Worldwide" style="background: #0f172a; color: #f8fafc; border: 1.5px solid #334155; border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box; font-size: 0.95rem;">
                         </div>
-                        <!-- END OF INTRO SETTINGS -->
                         
-<!-- DEVELOPER CHECKOUT DONATION & RAZORPAY GATEWAY SETTINGS -->
-                        <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1.5px solid #bbf7d0; margin-bottom: 20px;">
-                            <label style="color: #166534; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                                <span>🎁</span> "Donate to PustakVerse Team" at Book Checkout
+                        <!-- DEVELOPER SUPPORT QR -->
+                        <div style="background: #0f172a; padding: 18px; border-radius: 10px; border: 1.5px solid #1e3a5f; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <label style="color: #38bdf8; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; margin: 0;">
+                                    <span>💙</span> Developer Support (Donation QR)
+                                </label>
+                                <span style="font-size: 0.72rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 8px; border-radius: 12px; font-weight: 700;">Homepage Modal</span>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4;">
+                                Upload your custom UPI / QR code image for voluntary platform reader support.
+                            </p>
+                            <input type="file" name="donation_qr" accept="image/*" style="margin-bottom: 12px; width: 100%; color: #cbd5e1; font-size: 0.88rem; background: #1e293b; padding: 8px; border-radius: 6px; border: 1px solid #334155; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 10px; color: #f1f5f9; font-weight: 600; font-size: 0.9rem; cursor: pointer; user-select: none;">
+                                <input type="checkbox" name="donation_active" id="setting_donation_active" {% if site_settings.donation_active %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;"> 
+                                Show 'Donate' button to users on homepage
                             </label>
-                            <p style="color: #15803d; font-size: 0.8rem; margin-bottom: 12px;">
+                        </div>
+                        
+                        <!-- CINEMATIC INTRO SETTINGS -->
+                        <div style="background: #0f172a; padding: 18px; border-radius: 10px; border: 1.5px solid #334155; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <label style="color: #f59e0b; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; margin: 0;">
+                                    <span>🎬</span> Cinematic Intro Screen
+                                </label>
+                                <span style="font-size: 0.72rem; background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 2px 8px; border-radius: 12px; font-weight: 700;">/intro Screen</span>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="color: #e2e8f0; font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">Cinematic Intro Main Tagline</label>
+                                <input type="text" name="intro_tagline" id="setting_intro_tagline" value="{{ site_settings.intro_tagline or 'Every Book. Every Mind. Infinite Knowledge.' }}" required placeholder="Every Book. Every Mind. Infinite Knowledge." style="background: #1e293b; color: #f8fafc; border: 1.5px solid #334155; border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box; font-size: 0.92rem;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="color: #e2e8f0; font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">Cinematic Intro Sub-Tagline</label>
+                                <input type="text" name="intro_sub_tagline" id="setting_intro_sub_tagline" value="{{ site_settings.intro_sub_tagline or 'Prepare to explore the universe of knowledge...' }}" required placeholder="Prepare to explore the universe of knowledge..." style="background: #1e293b; color: #f8fafc; border: 1.5px solid #334155; border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box; font-size: 0.92rem;">
+                            </div>
+                        </div>
+                        
+                        <!-- DEVELOPER CHECKOUT DONATION & RAZORPAY GATEWAY SETTINGS -->
+                        <div style="background: #0f172a; padding: 18px; border-radius: 10px; border: 1.5px solid #065f46; margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <label style="color: #34d399; font-weight: 800; font-size: 0.98rem; display: flex; align-items: center; gap: 6px; margin: 0;">
+                                    <span>🎁</span> "Donate to PustakVerse Team" at Book Checkout
+                                </label>
+                                <span style="font-size: 0.72rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 12px; font-weight: 700;">Revenue & Razorpay</span>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 0.82rem; margin-bottom: 14px; line-height: 1.4;">
                                 Allow readers to optionally add a small platform donation during book purchases (defaults to ₹10, editable/unselectable by buyer).
                             </p>
                             
-                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e293b; margin-bottom: 12px; cursor: pointer;">
-                                <input type="checkbox" name="checkout_donation_active" {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}checked{% endif %} style="width: auto; accent-color: #ea580c;"> 
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 700; color: #f1f5f9; margin-bottom: 14px; cursor: pointer; user-select: none;">
+                                <input type="checkbox" name="checkout_donation_active" id="setting_checkout_donation_active" {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;"> 
                                 Enable "Donate to PustakVerse Team" Option at Checkout
                             </label>
 
-                            <div style="margin-bottom: 12px;">
-                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Default Donation Amount (₹ INR)</label>
-                                <input type="number" name="donation_default_inr" value="{{ site_settings.donation_default_inr or 10 }}" min="1" max="1000" style="padding: 8px 12px; font-size: 0.88rem; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white;">
+                            <div style="margin-bottom: 14px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 4px;">Default Donation Amount (₹ INR)</label>
+                                <input type="number" name="donation_default_inr" id="setting_donation_default_inr" value="{{ site_settings.donation_default_inr or 10 }}" min="1" max="1000" style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
                             </div>
 
-                            <div style="margin-bottom: 10px;">
-                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Developer Razorpay Key ID (For Platform Donations & Revenue)</label>
-                                <input type="text" name="rp_key_id" value="{{ site_settings.rp_key_id or '' }}" placeholder="rzp_live_... or rzp_test_..." style="padding: 8px 12px; font-size: 0.88rem; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white;">
+                            <div style="margin-bottom: 14px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 4px;">Developer Razorpay Key ID (For Platform Donations & Revenue)</label>
+                                <input type="text" name="rp_key_id" id="setting_rp_key_id" value="{{ site_settings.rp_key_id or '' }}" placeholder="rzp_live_... or rzp_test_..." style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
                             </div>
 
-                            <div>
-                                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Developer Razorpay Key Secret</label>
-                                <input type="password" name="rp_key_secret" value="{{ site_settings.rp_key_secret or '' }}" placeholder="Paste Razorpay Secret..." style="padding: 8px 12px; font-size: 0.88rem; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white;">
+                            <div style="margin-bottom: 0;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 4px;">Developer Razorpay Key Secret</label>
+                                <input type="password" name="rp_key_secret" id="setting_rp_key_secret" value="{{ site_settings.rp_key_secret or '' }}" placeholder="Paste Razorpay Secret..." style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
                             </div>
                         </div>
                         
-                        <button type="submit" class="btn-sm btn-dark">Update Settings</button>
+                        <button type="submit" id="btnUpdateSettings" class="btn-sm btn-orange" style="width: 100%; padding: 14px; font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); border: none;">
+                            <span>💾</span> Save & Sync Website Settings
+                        </button>
                     </form>
                 </div>
 
@@ -5775,9 +5806,93 @@
         } catch (_) {}
     }
 
+    async function loadWebsiteSettings() {
+        try {
+            const res = await fetch('/api/front_page_settings');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.settings) {
+                const s = data.settings;
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el && val !== undefined && val !== null) el.value = val;
+                };
+                if (s.hero_title) setVal('setting_hero_title', s.hero_title);
+                if (s.hero_subtitle) setVal('setting_hero_subtitle', s.hero_subtitle);
+                if (s.intro_tagline) setVal('setting_intro_tagline', s.intro_tagline);
+                if (s.intro_sub_tagline) setVal('setting_intro_sub_tagline', s.intro_sub_tagline);
+                if (s.rp_key_id) setVal('setting_rp_key_id', s.rp_key_id);
+                if (s.donation_default_inr) setVal('setting_donation_default_inr', s.donation_default_inr);
+                
+                const donEl = document.getElementById('setting_donation_active');
+                if (donEl && s.donation_active !== undefined) {
+                    donEl.checked = Boolean(s.donation_active);
+                }
+                const chkEl = document.getElementById('setting_checkout_donation_active');
+                if (chkEl && s.checkout_donation_active !== undefined) {
+                    chkEl.checked = Boolean(s.checkout_donation_active);
+                }
+            }
+        } catch (_) {}
+    }
+
+    async function handleWebsiteSettingsSubmit(e) {
+        e.preventDefault();
+        const form = document.getElementById('formWebsiteSettings');
+        const alertBox = document.getElementById('websiteSettingsAlert');
+        const submitBtn = document.getElementById('btnUpdateSettings');
+        if (!form) return;
+
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Save';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>⏳</span> Saving & Syncing Live...';
+            submitBtn.style.opacity = '0.75';
+        }
+
+        const formData = new FormData(form);
+        try {
+            const res = await fetch(form.action || '/update_front_page', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json, text/html, */*',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+
+            if (res.ok) {
+                if (alertBox) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.background = '#dcfce7';
+                    alertBox.style.color = '#166534';
+                    alertBox.style.border = '1px solid #86efac';
+                    alertBox.innerHTML = '🎉 <strong>Website Settings Updated!</strong> Changes are live across the website, homepage, and payment gateway.';
+                    alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                setTimeout(() => {
+                    if (alertBox) alertBox.style.display = 'none';
+                }, 6000);
+            } else {
+                form.submit();
+                return;
+            }
+        } catch (err) {
+            form.submit();
+            return;
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+                submitBtn.style.opacity = '1';
+            }
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         updateUploadedCount();
         loadDeveloperSystemMetrics();
+        loadWebsiteSettings();
     });
 </script>
 
