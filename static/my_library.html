@@ -753,6 +753,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            if (new URLSearchParams(window.location.search).get('purchased') === '1') {
+                const toast = document.createElement('div');
+                toast.style.cssText = 'background: #dcfce7; border: 1.5px solid #22c55e; color: #166534; font-weight: 800; padding: 14px 20px; border-radius: 12px; margin: 20px auto; max-width: 900px; text-align: center; font-size: 1rem; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);';
+                toast.innerHTML = '🎉 <strong>Payment Successful!</strong> Your book has been unlocked and added to your Personal Library. Enjoy reading!';
+                document.querySelector('.lib-container')?.prepend(toast);
+            }
             initShelfStatuses();
             updateStreakDisplay();
             hydrateLibraryFromD1();
