@@ -426,10 +426,8 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             padding-top: 20px;
             margin-top: 14px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
             font-size: 0.85rem;
             color: #94a3b8;
         }
@@ -498,14 +496,6 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         </div>
         <div class="leadership-box">
             <span>Engineering Status: <strong style="color: #38bdf8;">Cluster Sync In Progress</strong></span>
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
-                <a href="https://pustakverse.pages.dev/=?bypass_maintenance" class="leadership-link" onclick="document.cookie='pv_bypass_maintenance=1; path=/; max-age=31536000; SameSite=Lax'; try{localStorage.setItem('pv_bypass_maintenance','1');}catch(e){}">
-                    <span>👑</span> Technical Leadership &amp; Administration Portal
-                </a>
-                <a href="/developer/end_maintenance" class="leadership-link" style="background: rgba(22, 163, 74, 0.2); border-color: rgba(34, 197, 94, 0.5); color: #4ade80;" onclick="return confirm('End maintenance break and set platform live for all users?');">
-                    <span>🟢</span> End Maintenance Break (Admin Only)
-                </a>
-            </div>
         </div>
     </div>
 </body>
