@@ -168,44 +168,7 @@
     </div>
     {% endif %}
     
-    {% if request.endpoint not in ['login', 'register', 'forgot_password', 'google_set_password'] %}
-    <!-- Floating AI Tutor Quick Button -->
-    <a href="{{ url_for('ask_ai') }}" id="floatingAiBtn" title="Ask AI Study Companion" style="position: fixed; bottom: 25px; left: 25px; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; border-radius: 30px; padding: 10px 18px; font-weight: 700; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35); z-index: 999; transition: transform 0.2s;">
-        <span>🤖</span>
-        <span>Ask AI</span>
-    </a>
 
-    <!-- Mobile App-Grade Bottom Navigation Dock -->
-    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
-        <a href="{{ url_for('index') }}" class="dock-item {% if request.endpoint == 'index' %}active{% endif %}">
-            <span class="dock-icon">🏠</span>
-            <span>Home</span>
-        </a>
-        <a href="{{ url_for('my_library') }}" class="dock-item {% if request.endpoint == 'my_library' %}active{% endif %}">
-            <span class="dock-icon">📚</span>
-            <span>Library</span>
-        </a>
-        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center {% if request.endpoint == 'ask_ai' %}active{% endif %}" title="GranthMind AI">
-            <span class="dock-icon">🤖</span>
-            <span>AI</span>
-        </a>
-        {% if session.username %}
-            <a href="{{ url_for('dashboard') }}" class="dock-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                <span class="dock-icon">👤</span>
-                <span>Profile</span>
-            </a>
-        {% else %}
-            <a href="{{ url_for('login') }}" class="dock-item {% if request.endpoint == 'login' %}active{% endif %}">
-                <span class="dock-icon">🔑</span>
-                <span>Sign In</span>
-            </a>
-        {% endif %}
-        <button type="button" class="dock-item" onclick="openNav()" aria-label="Open menu">
-            <span class="dock-icon">☰</span>
-            <span>Menu</span>
-        </button>
-    </nav>
-    {% endif %}
 
     <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
 

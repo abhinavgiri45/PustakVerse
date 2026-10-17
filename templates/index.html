@@ -327,9 +327,6 @@
             box-sizing: border-box;
         }
         @media (max-width: 768px) {
-            body {
-                padding-bottom: 74px !important;
-            }
             .navbar { 
                 flex-direction: row !important; 
                 padding: 8px 12px !important; 
@@ -2077,37 +2074,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Mobile App-Grade Bottom Navigation Dock -->
-    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
-        <a href="/" class="dock-item active">
-            <span class="dock-icon">🏠</span>
-            <span>Home</span>
-        </a>
-        <a href="{{ url_for('my_library') }}" class="dock-item">
-            <span class="dock-icon">📚</span>
-            <span>Library</span>
-        </a>
-        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center" title="GranthMind AI">
-            <span class="dock-icon">🤖</span>
-            <span>AI</span>
-        </a>
-        {% if session.user_id %}
-            <a href="{{ url_for('dashboard') }}" class="dock-item">
-                <span class="dock-icon">👤</span>
-                <span>Profile</span>
-            </a>
-        {% else %}
-            <a href="{{ url_for('login') }}" class="dock-item" onclick="openFrontScreenLogin('reader'); return false;">
-                <span class="dock-icon">🔑</span>
-                <span>Sign In</span>
-            </a>
-        {% endif %}
-        <button type="button" class="dock-item" onclick="openCategoriesModal()" aria-label="Explore Categories">
-            <span class="dock-icon">📂</span>
-            <span>Explore</span>
-        </button>
-    </nav>
 
 </body>
 </html>
