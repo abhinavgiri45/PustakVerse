@@ -779,7 +779,7 @@
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
         {% if session.role == 'developer' %}
             
-            <div class="panel" style="border-left: 5px solid #38a169;">
+            <div id="devOnlyAppointOfficial" class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
                     <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
@@ -799,7 +799,7 @@
             </div>
 
             <!-- DEVELOPER EXCLUSIVE: Dynamic Category & Taxonomy Manager -->
-            <div class="panel" style="border-left: 5px solid #6366f1; background: #fafafa; margin-bottom: 25px;">
+            <div id="devOnlyCategoryManager" class="panel" style="border-left: 5px solid #6366f1; background: #fafafa; margin-bottom: 25px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <h2 style="color: #4338ca; margin: 0; display: flex; align-items: center; gap: 8px;">
@@ -877,7 +877,7 @@
                 </div>
             </div>
 
-            <div class="grid-2">
+            <div id="devOnlySettingsGrid" class="grid-2">
                 <div class="panel">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
                         <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
@@ -1003,7 +1003,7 @@
 
             
 
-            <div class="panel" style="border-left: 5px solid #f6ad55;">
+            <div id="devOnlyPendingRemovals" class="panel" style="border-left: 5px solid #f6ad55;">
                 <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Official moderator for platform books.</p>
                 {% if book_del_requests %}
@@ -1042,7 +1042,7 @@
 
                         
             <!-- DEVELOPER: APPOINT LEADERSHIP & EXECUTIVE MANAGEMENT (CEO, CTO, FOUNDER) -->
-            <div class="panel" style="border-left: 5px solid #ea580c; margin-top: 25px; grid-column: span 2;">
+            <div id="devOnlyLeadershipDir" class="panel" style="border-left: 5px solid #ea580c; margin-top: 25px; grid-column: span 2;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                     <div>
                         <h2 style="color: #ea580c; display: flex; align-items: center; gap: 8px; margin: 0;">
@@ -3021,7 +3021,7 @@
         </div>
 
         <!-- DEVELOPER MASTER PANEL: Verification & Approvals Hub -->
-        <div class="grid-2">
+        <div id="devOnlyVerificationHub" class="grid-2">
             <!-- Pending Book Deletions from Officials -->
             <div class="panel" style="border-left: 5px solid #dc2626;">
                 <h2 style="color: #dc2626; display: flex; align-items: center; gap: 6px;">
@@ -3105,7 +3105,7 @@
             </div>
         </div>
 
-        <div class="grid-2">
+        <div id="devOnlyArchiveUserMgmt" class="grid-2">
             <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
             <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
                 <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
@@ -3243,7 +3243,7 @@
         </div>
 
         <!-- DEVELOPER AUDIT TRAIL: Official Activities Log -->
-        <div class="panel" style="border-left: 5px solid #0284c7; margin-top: 30px;">
+        <div id="devOnlyAuditTrail" class="panel" style="border-left: 5px solid #0284c7; margin-top: 30px;">
             <h2 style="color: #0369a1; display: flex; align-items: center; gap: 8px;">
                 <span>📜</span> Real-Time Official Activity Audit Trail
             </h2>
@@ -3271,7 +3271,7 @@
         </div>
 
         <!-- DEVELOPER SUPREME SUITE: API Keys, Database Snapshot, Global Ticker & Drive Scanner -->
-        <div class="panel" style="border-left: 5px solid #ea580c; margin-top: 30px;">
+        <div id="devOnlySupremeSuite" class="panel" style="border-left: 5px solid #ea580c; margin-top: 30px;">
             <h2 style="color: #ea580c; display: flex; align-items: center; gap: 8px;">
                 <span>👑</span> Developer Supreme Power Suite
             </h2>
@@ -5940,6 +5940,29 @@
     });
 </script>
 
+    <!-- Mobile App-Grade Bottom Navigation Dock -->
+    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
+        <a href="{{ url_for('index') }}" class="dock-item">
+            <span class="dock-icon">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('my_library') }}" class="dock-item">
+            <span class="dock-icon">📚</span>
+            <span>Library</span>
+        </a>
+        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center" title="GranthMind AI">
+            <span class="dock-icon">🤖</span>
+            <span style="font-size: 0.62rem; font-weight: 700;">AI</span>
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="dock-item active" style="color: #f97316;">
+            <span class="dock-icon">👤</span>
+            <span>Profile</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="dock-item" style="color: #ef4444;">
+            <span class="dock-icon">🚪</span>
+            <span>Logout</span>
+        </a>
+    </nav>
 </body>
 </html>
 

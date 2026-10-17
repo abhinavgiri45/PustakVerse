@@ -83,6 +83,19 @@
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
     <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
         <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        <div style="padding: 14px 18px; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); border-radius: 10px;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700; margin-bottom: 8px;">Quick Navigation</div>
+            <a href="{{ url_for('index') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #f8fafc; font-weight: 600; text-decoration: none; font-size: 0.95rem;">🏠 Global Library</a>
+            <a href="{{ url_for('my_library') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #f8fafc; font-weight: 600; text-decoration: none; font-size: 0.95rem;">📚 My Library</a>
+            <a href="{{ url_for('ask_ai') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #fb923c; font-weight: 600; text-decoration: none; font-size: 0.95rem;">🤖 GranthMind AI</a>
+            <a href="{{ url_for('contact') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #f8fafc; font-weight: 600; text-decoration: none; font-size: 0.95rem;">📬 Contact Desk</a>
+            {% if session.username %}
+                <a href="{{ url_for('dashboard') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #38bdf8; font-weight: 700; text-decoration: none; font-size: 0.95rem;">👤 My Profile ({{ session.username }})</a>
+                <a href="{{ url_for('logout') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #ef4444; font-weight: 600; text-decoration: none; font-size: 0.9rem;">🚪 Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #ea580c; font-weight: 700; text-decoration: none; font-size: 0.95rem;">🔑 Sign In / Join</a>
+            {% endif %}
+        </div>
         <h3>Browse by category</h3>
         {% for cat in site_catalogs %}
             <a href="/?category={{ cat.name }}">{{ cat.name }}</a>
@@ -160,6 +173,37 @@
         <span>🤖</span>
         <span>Ask AI</span>
     </a>
+
+    <!-- Mobile App-Grade Bottom Navigation Dock -->
+    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
+        <a href="{{ url_for('index') }}" class="dock-item">
+            <span class="dock-icon">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('my_library') }}" class="dock-item">
+            <span class="dock-icon">📚</span>
+            <span>Library</span>
+        </a>
+        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center" title="GranthMind AI">
+            <span class="dock-icon">🤖</span>
+            <span style="font-size: 0.62rem; font-weight: 700;">AI</span>
+        </a>
+        {% if session.username %}
+            <a href="{{ url_for('dashboard') }}" class="dock-item">
+                <span class="dock-icon">👤</span>
+                <span>Profile</span>
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="dock-item">
+                <span class="dock-icon">🔑</span>
+                <span>Sign In</span>
+            </a>
+        {% endif %}
+        <button type="button" class="dock-item" onclick="openNav()" aria-label="Open menu">
+            <span class="dock-icon">☰</span>
+            <span>Menu</span>
+        </button>
+    </nav>
 
     <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
 

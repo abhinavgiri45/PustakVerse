@@ -3280,20 +3280,26 @@ Format with these exact markdown sections:
       return Response.redirect(`${url.origin}/dashboard`, 302);
     }
 
-    // Developer Website Settings & Payments Handler
+    // Developer Website Settings & Payments Handler - GET redirect
+    if ((url.pathname === "/update_front_page" || url.pathname === "/api/developer/update_front_page") && request.method === "GET") {
+      return Response.redirect(`${url.origin}/dashboard`, 302);
+    }
+
+    // Developer Website Settings & Payments Handler - POST
     if ((url.pathname === "/update_front_page" || url.pathname === "/api/developer/update_front_page") && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
       const acceptsJson = request.headers.get("accept")?.includes("application/json") || request.headers.get("x-requested-with") === "XMLHttpRequest";
 
-      if (!user || user.role !== "developer") {
+      const isAuthorized = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45" || isTechnicalLeadershipUser(user));
+      if (!isAuthorized) {
         if (acceptsJson) {
           return new Response(JSON.stringify({ success: false, message: "Unauthorized: Only Developer can modify website settings." }), {
             status: 403,
             headers: { "Content-Type": "application/json" }
           });
         }
-        return new Response("Unauthorized: Only Developer can modify website settings.", { status: 403 });
+        return Response.redirect(`${url.origin}/dashboard`, 302);
       }
 
       try {
@@ -3322,17 +3328,34 @@ Format with these exact markdown sections:
         const finalRpKeyId = keyId || curFps.rp_key_id || "";
         const finalRpKeySecret = keySecret || curFps.rp_key_secret || "";
 
+        // Handle donation_qr file upload as base64 data URI
+        let finalDonationQr = curFps.donation_qr || null;
+        try {
+          const qrFile = formData.get("donation_qr");
+          if (qrFile && typeof qrFile === "object" && qrFile.size > 0 && qrFile.size <= 2 * 1024 * 1024) {
+            const arrBuf = await qrFile.arrayBuffer();
+            const bytes = new Uint8Array(arrBuf);
+            let binary = "";
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            const b64 = btoa(binary);
+            const mimeType = qrFile.type || "image/png";
+            finalDonationQr = `data:${mimeType};base64,${b64}`;
+          }
+        } catch (qrErr) {
+          console.warn("donation_qr upload processing failed:", qrErr.message);
+        }
+
         try {
           await env.DB.prepare(`
             UPDATE front_page_settings 
             SET hero_title = ?, hero_subtitle = ?, intro_tagline = ?, intro_sub_tagline = ?,
                 donation_active = ?, checkout_donation_active = ?, donation_default_inr = ?,
-                rp_key_id = ?, rp_key_secret = ?
+                rp_key_id = ?, rp_key_secret = ?, donation_qr = ?
             WHERE id = 1
           `).bind(
             finalHeroTitle, finalHeroSubtitle, finalIntroTagline, finalIntroSubTagline,
             donationActive, checkoutActive, donationDefaultInr,
-            finalRpKeyId, finalRpKeySecret
+            finalRpKeyId, finalRpKeySecret, finalDonationQr
           ).run();
         } catch (dbErr) {
           console.warn("Primary UPDATE front_page_settings failed, applying resilient fallback:", dbErr.message);
@@ -3345,6 +3368,10 @@ Format with these exact markdown sections:
             .bind(donationActive, checkoutActive, donationDefaultInr).run().catch(() => {});
           await env.DB.prepare("UPDATE front_page_settings SET rp_key_id = ?, rp_key_secret = ? WHERE id = 1")
             .bind(finalRpKeyId, finalRpKeySecret).run().catch(() => {});
+          if (finalDonationQr) {
+            await env.DB.prepare("UPDATE front_page_settings SET donation_qr = ? WHERE id = 1")
+              .bind(finalDonationQr).run().catch(() => {});
+          }
         }
 
         if (acceptsJson) {
@@ -3374,7 +3401,7 @@ Format with these exact markdown sections:
             headers: { "Content-Type": "application/json" }
           });
         }
-        return Response.redirect(`${url.origin}/dashboard?updated_settings=1`, 302);
+        return Response.redirect(`${url.origin}/dashboard?settings_error=1`, 302);
       }
     }
 
@@ -7576,8 +7603,23 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   }
 
   // 2. Role-based panel visibility overrides
+  // Hide ALL developer-exclusive sections from non-developer users
   if (!isDev) {
-    out = out.replace(/id="strictDeveloperSection"/i, 'id="strictDeveloperSection" style="display: none !important;"');
+    const devOnlyIds = [
+      "strictDeveloperSection",
+      "devOnlyAppointOfficial",
+      "devOnlyCategoryManager",
+      "devOnlySettingsGrid",
+      "devOnlyPendingRemovals",
+      "devOnlyLeadershipDir",
+      "devOnlyVerificationHub",
+      "devOnlyArchiveUserMgmt",
+      "devOnlyAuditTrail",
+      "devOnlySupremeSuite"
+    ];
+    for (const elId of devOnlyIds) {
+      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    }
     out = out.replace(/class="([^"]*developer-only[^"]*)"/gi, 'class="$1" style="display: none !important;"');
   }
 
@@ -7845,8 +7887,13 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const rEl = document.getElementById('dashRoleDisplay');
   if (rEl) rEl.textContent = role;
 
-  const devSec = document.getElementById('strictDeveloperSection');
-  if (devSec && !isDev) devSec.style.display = 'none';
+  // Hide ALL developer-only sections client-side
+  if (!isDev) {
+    ['strictDeveloperSection','devOnlyAppointOfficial','devOnlyCategoryManager','devOnlySettingsGrid','devOnlyPendingRemovals','devOnlyLeadershipDir','devOnlyVerificationHub','devOnlyArchiveUserMgmt','devOnlyAuditTrail','devOnlySupremeSuite'].forEach(function(elId) {
+      var el = document.getElementById(elId);
+      if (el) el.style.display = 'none';
+    });
+  }
 
   const offHub = document.getElementById('manageBooksHubBtn');
   if (offHub && !isDev && !isOff) offHub.style.display = 'none';

@@ -69,6 +69,16 @@
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
     <aside id="mySidebar" class="sidebar" aria-label="Browse categories">
         <button type="button" class="close-btn" onclick="closeNav()" aria-label="Close navigation">&times;</button>
+        <div style="padding: 14px 18px; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); border-radius: 10px;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700; margin-bottom: 8px;">Quick Navigation</div>
+            <a href="/" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #f8fafc; font-weight: 600; text-decoration: none; font-size: 0.95rem;">🏠 Global Library</a>
+            <a href="/my-library" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #f8fafc; font-weight: 600; text-decoration: none; font-size: 0.95rem;">📚 My Library</a>
+            <a href="/ask_ai" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #fb923c; font-weight: 600; text-decoration: none; font-size: 0.95rem;">🤖 GranthMind AI</a>
+            <a href="/contact" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #f8fafc; font-weight: 600; text-decoration: none; font-size: 0.95rem;">📬 Contact Desk</a>
+            
+                <a href="/login" style="display: flex; align-items: center; gap: 8px; padding: 7px 0; color: #ea580c; font-weight: 700; text-decoration: none; font-size: 0.95rem;">🔑 Sign In / Join</a>
+            
+        </div>
         <h3>Browse by category</h3>
         
             <a href="/?category=Fiction">Fiction</a>
@@ -227,7 +237,7 @@
             </p>
             <div id="twoFactorAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
             <form action="/login" method="POST" id="twoFactorForm" onsubmit="handleTwoFactorSubmit(event)">
-                <input type="hidden" name="csrf_token" value="fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373">
+                <input type="hidden" name="csrf_token" value="bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0">
                 <input type="hidden" name="action" value="verify_2fa">
                 <div class="form-group">
                     <label>Verification Code</label>
@@ -253,7 +263,7 @@
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
-                    <input type="hidden" name="csrf_token" value="fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373">
+                    <input type="hidden" name="csrf_token" value="bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -289,7 +299,7 @@
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
-                    <input type="hidden" name="csrf_token" value="fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373">
+                    <input type="hidden" name="csrf_token" value="bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -501,7 +511,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -565,7 +575,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -600,7 +610,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -630,7 +640,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'fb25905cb61f39daf2bbf78a9f81d66257dcfe7f463d0ebfc4847c4029e02373' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'bf7de62152da610d759e90fecab6101e400f0d55a55193070f4dd431b4f2fae0' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();
@@ -945,6 +955,32 @@
         <span>🤖</span>
         <span>Ask AI</span>
     </a>
+
+    <!-- Mobile App-Grade Bottom Navigation Dock -->
+    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
+        <a href="/" class="dock-item">
+            <span class="dock-icon">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="/my-library" class="dock-item">
+            <span class="dock-icon">📚</span>
+            <span>Library</span>
+        </a>
+        <a href="/ask_ai" class="dock-item dock-ai-center" title="GranthMind AI">
+            <span class="dock-icon">🤖</span>
+            <span style="font-size: 0.62rem; font-weight: 700;">AI</span>
+        </a>
+        
+            <a href="/login" class="dock-item">
+                <span class="dock-icon">🔑</span>
+                <span>Sign In</span>
+            </a>
+        
+        <button type="button" class="dock-item" onclick="openNav()" aria-label="Open menu">
+            <span class="dock-icon">☰</span>
+            <span>Menu</span>
+        </button>
+    </nav>
 
     <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
 
