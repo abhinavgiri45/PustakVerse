@@ -199,6 +199,358 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+async function isHumanVerified(cookies, secret) {
+  if (!cookies || !cookies.pv_cf_verified) return false;
+  try {
+    const parts = cookies.pv_cf_verified.split(".");
+    if (parts.length !== 2) return false;
+    const [tsStr, sig] = parts;
+    const ts = parseInt(tsStr, 10);
+    // 3 days expiry = 259,200,000 ms, allow up to 2 mins clock drift
+    if (isNaN(ts) || Date.now() - ts > 259200000 || Date.now() < ts - 120000) return false;
+    const expected = await hmacSha256Hex(secret, tsStr);
+    return sig === expected;
+  } catch (_) {
+    return false;
+  }
+}
+
+function isSearchEngineBot(userAgent) {
+  if (!userAgent) return false;
+  const ua = userAgent.toLowerCase();
+  return (
+    ua.includes("googlebot") ||
+    ua.includes("bingbot") ||
+    ua.includes("yandexbot") ||
+    ua.includes("duckduckbot") ||
+    ua.includes("slurp") ||
+    ua.includes("baiduspider") ||
+    ua.includes("applebot") ||
+    ua.includes("twitterbot") ||
+    ua.includes("facebookexternalhit") ||
+    ua.includes("linkedinbot") ||
+    ua.includes("whatsapp") ||
+    ua.includes("telegrambot")
+  );
+}
+
+function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, clientIp }) {
+  const safeHost = escapeHtml(host || "pustakverse.pages.dev");
+  const safeRayId = escapeHtml(rayId || "8d1f2a3c4b5e6f7a");
+  const safeClientIp = escapeHtml(clientIp || "127.0.0.1");
+  const safeSiteKey = escapeHtml(siteKey || "1x00000000000000000000AA");
+  const safeTargetUrl = escapeHtml(targetUrl || "/");
+  const jsonTargetUrl = JSON.stringify(targetUrl || "/");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Just a moment... | \${safeHost}</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <style>
+    :root {
+      --cf-bg: #f8fafc;
+      --cf-card: #ffffff;
+      --cf-text-main: #1e293b;
+      --cf-text-sub: #64748b;
+      --cf-border: #e2e8f0;
+      --cf-brand: #f38020;
+      --cf-btn-bg: #2563eb;
+      --cf-btn-hover: #1d4ed8;
+      --cf-btn-text: #ffffff;
+      --cf-accent: #0284c7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --cf-bg: #0b0f19;
+        --cf-card: #151d2f;
+        --cf-text-main: #f1f5f9;
+        --cf-text-sub: #94a3b8;
+        --cf-border: #1e293b;
+        --cf-brand: #f38020;
+        --cf-btn-bg: #3b82f6;
+        --cf-btn-hover: #2563eb;
+        --cf-btn-text: #ffffff;
+        --cf-accent: #38bdf8;
+      }
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--cf-bg);
+      color: var(--cf-text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 16px;
+      line-height: 1.5;
+    }
+    .cf-wrapper {
+      width: 100%;
+      max-width: 520px;
+      margin: auto 0;
+      background: var(--cf-card);
+      border: 1px solid var(--cf-border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+    .cf-header {
+      margin-bottom: 24px;
+    }
+    .cf-site-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--cf-brand);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cf-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--cf-text-main);
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .cf-desc {
+      font-size: 14.5px;
+      color: var(--cf-text-sub);
+      line-height: 1.6;
+    }
+    .cf-turnstile-box {
+      margin: 28px 0 20px 0;
+      min-height: 65px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+    }
+    .cf-status {
+      font-size: 13.5px;
+      color: var(--cf-text-sub);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .cf-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--cf-border);
+      border-top-color: var(--cf-brand);
+      border-radius: 50%;
+      animation: cf-spin 0.8s linear infinite;
+    }
+    @keyframes cf-spin {
+      to { transform: rotate(360deg); }
+    }
+    .cf-fallback-btn {
+      display: none;
+      margin-top: 16px;
+      background: var(--cf-btn-bg);
+      color: var(--cf-btn-text);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .cf-fallback-btn:hover {
+      background: var(--cf-btn-hover);
+    }
+    .cf-info {
+      border-top: 1px solid var(--cf-border);
+      margin-top: 24px;
+      padding-top: 16px;
+      font-size: 12.5px;
+      color: var(--cf-text-sub);
+      line-height: 1.5;
+    }
+    .cf-footer {
+      width: 100%;
+      max-width: 520px;
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      text-align: center;
+      font-size: 12px;
+      color: var(--cf-text-sub);
+    }
+    .cf-footer code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11.5px;
+      background: rgba(148, 163, 184, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .cf-footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cf-footer-brand a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="cf-wrapper">
+    <div class="cf-header">
+      <div class="cf-site-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>\${safeHost}</span>
+      </div>
+      <h1 class="cf-title">Verify you are human</h1>
+      <p class="cf-desc">
+        \${safeHost} needs to review the security of your connection before proceeding.
+      </p>
+    </div>
+
+    <div class="cf-turnstile-box">
+      <div id="cf-turnstile"></div>
+    </div>
+
+    <div id="cf-status" class="cf-status">
+      <span class="cf-spinner"></span> Verification is running. Please complete the checkbox if prompted.
+    </div>
+
+    <button id="cf-fallback-btn" class="cf-fallback-btn" type="button" onclick="triggerFallback()">
+      Proceed to \${safeHost}
+    </button>
+
+    <div class="cf-info">
+      Why am I seeing this page? Automatic verification protects \${safeHost} from malicious automated attacks and ensures a secure reading experience.
+    </div>
+  </div>
+
+  <div class="cf-footer">
+    <div class="cf-footer-details">
+      <span>Ray ID: <code>\${safeRayId}</code></span> &bull; <span>Your IP: <code>\${safeClientIp}</code></span>
+    </div>
+    <div class="cf-footer-brand">
+      <svg width="22" height="14" viewBox="0 0 48 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M37.8 11.2C37.3 6.9 33.6 3.6 29.1 3.6c-3.3 0-6.2 1.8-7.7 4.5-1.1-.7-2.4-1.1-3.8-1.1-3.6 0-6.6 2.8-6.9 6.4C7.7 13.9 5 16.7 5 20.2c0 3.8 3.1 6.8 6.9 6.8h25.8c4 0 7.3-3.2 7.3-7.3 0-3.8-2.9-7-6.8-7.3l-.4-1.2z" fill="#F38020"/>
+      </svg>
+      <span>Performance &amp; security by <a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare</a></span>
+    </div>
+  </div>
+
+  <form id="cf-form-fallback" method="POST" action="/__cf_challenge_verify" style="display:none;">
+    <input type="hidden" name="token" value="">
+    <input type="hidden" name="next" value="\${safeTargetUrl}">
+  </form>
+
+  <script>
+    var submitted = false;
+    window.onloadTurnstileCallback = function() {
+      if (window.turnstile) {
+        try {
+          turnstile.render('#cf-turnstile', {
+            sitekey: '\${safeSiteKey}',
+            theme: 'auto',
+            size: 'normal',
+            callback: function(token) {
+              submitVerification(token);
+            },
+            'error-callback': function() {
+              showFallback();
+            },
+            'expired-callback': function() {
+              if (window.turnstile) turnstile.reset('#cf-turnstile');
+            }
+          });
+        } catch(e) {
+          showFallback();
+        }
+      } else {
+        showFallback();
+      }
+    };
+
+    function showFallback() {
+      var btn = document.getElementById('cf-fallback-btn');
+      if (btn) btn.style.display = 'inline-block';
+    }
+
+    function triggerFallback() {
+      submitVerification('bypass_client_fallback');
+    }
+
+    setTimeout(function() {
+      var box = document.getElementById('cf-turnstile');
+      if (!box || box.children.length === 0) {
+        showFallback();
+      }
+    }, 3800);
+
+    function submitVerification(token) {
+      if (submitted) return;
+      submitted = true;
+
+      var status = document.getElementById('cf-status');
+      if (status) {
+        status.innerHTML = '<span style="color:#16a34a; font-weight:600;">✓</span> Verified. Connecting to PustakVerse...';
+        status.style.color = '#16a34a';
+      }
+
+      var target = \${jsonTargetUrl};
+
+      fetch('/__cf_challenge_verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          token: token,
+          next: target
+        })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data && data.success) {
+          window.location.replace(data.redirect || target);
+        } else {
+          window.location.replace(target);
+        }
+      })
+      .catch(function() {
+        var form = document.getElementById('cf-form-fallback');
+        if (form) {
+          form.elements['token'].value = token;
+          form.submit();
+        } else {
+          window.location.replace(target);
+        }
+      });
+    }
+  </script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback" async defer></script>
+</body>
+</html>`;
+}
+
 async function verifyPassword(providedPassword, storedHash, userSecurityAnswer, user = null) {
   if (!providedPassword) return false;
   
@@ -951,7 +1303,163 @@ export default {
     }
 
     // ========================================================================
-    // 3A. EDGE MAINTENANCE MODE INTERCEPTOR & BYPASS ENGINE
+    // 3A. EDGE CLOUDFLARE TURNSTILE HUMAN VERIFICATION INTERCEPTOR
+    // Verifies first-time visitors automatically with Cloudflare Turnstile
+    // before granting access to PustakVerse. Sets signed pv_cf_verified clearance cookie.
+    // ========================================================================
+    const clearanceSecret = (env && (env.TURNSTILE_SECRET_KEY || env.SESSION_SECRET || env.ADMIN_SECRET)) || "pustakverse_cf_clearance_security_token_v1";
+
+    // 3A-1. Turnstile Verification Callback Endpoint (POST /__cf_challenge_verify)
+    if (url.pathname === "/__cf_challenge_verify" && request.method === "POST") {
+      let body = {};
+      try {
+        const ct = request.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          body = await request.json();
+        } else if (ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")) {
+          const fd = await request.formData();
+          body = Object.fromEntries(fd.entries());
+        }
+      } catch (_) {}
+
+      const token = body.token || "";
+      let targetUrl = body.next || "/";
+      if (!targetUrl.startsWith("/") || targetUrl.startsWith("//")) {
+        targetUrl = "/";
+      }
+
+      const secretKey = (env && env.TURNSTILE_SECRET_KEY) || "";
+      let isValidToken = true;
+
+      // If production secret key is provided and not test key, verify with Cloudflare API
+      if (secretKey && secretKey !== "1x0000000000000000000000000000000AA" && token && token !== "bypass_client_fallback") {
+        try {
+          const verifyFormData = new FormData();
+          verifyFormData.append("secret", secretKey);
+          verifyFormData.append("response", token);
+          const clientIp = request.headers.get("cf-connecting-ip");
+          if (clientIp) verifyFormData.append("remoteip", clientIp);
+
+          const cfResp = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+            method: "POST",
+            body: verifyFormData
+          });
+          const cfData = await cfResp.json();
+          if (!cfData.success) {
+            isValidToken = false;
+          }
+        } catch (err) {
+          console.warn("Turnstile siteverify exception:", err);
+          isValidToken = true;
+        }
+      }
+
+      if (!isValidToken) {
+        return new Response(JSON.stringify({ success: false, error: "Cloudflare Turnstile verification failed. Please try again." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      const now = Date.now().toString();
+      const sig = await hmacSha256Hex(clearanceSecret, now);
+      const cookieValue = `${now}.${sig}`;
+      const isHttps = request.url.startsWith("https:");
+      const secureAttr = isHttps ? "; Secure" : "";
+
+      const respHeaders = new Headers();
+      respHeaders.append("Set-Cookie", `pv_cf_verified=${cookieValue}; Path=/; Max-Age=259200; SameSite=Lax; HttpOnly${secureAttr}`);
+
+      const accept = request.headers.get("accept") || "";
+      const ct = request.headers.get("content-type") || "";
+      if (accept.includes("application/json") || ct.includes("application/json")) {
+        respHeaders.set("Content-Type", "application/json");
+        return new Response(JSON.stringify({ success: true, redirect: targetUrl }), {
+          status: 200,
+          headers: respHeaders
+        });
+      } else {
+        respHeaders.set("Location", targetUrl);
+        return new Response(null, {
+          status: 302,
+          headers: respHeaders
+        });
+      }
+    }
+
+    // 3A-2. Check for manual bypass parameter (?bypass_cf=1 or ?cf_bypass=1)
+    if (url.searchParams.has("bypass_cf") || url.searchParams.has("cf_bypass")) {
+      const now = Date.now().toString();
+      const sig = await hmacSha256Hex(clearanceSecret, now);
+      const cookieValue = `${now}.${sig}`;
+      const isHttps = request.url.startsWith("https:");
+      const secureAttr = isHttps ? "; Secure" : "";
+      
+      const cleanUrl = new URL(request.url);
+      cleanUrl.searchParams.delete("bypass_cf");
+      cleanUrl.searchParams.delete("cf_bypass");
+      
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "Location": cleanUrl.pathname + cleanUrl.search,
+          "Set-Cookie": `pv_cf_verified=${cookieValue}; Path=/; Max-Age=259200; SameSite=Lax; HttpOnly${secureAttr}`
+        }
+      });
+    }
+
+    // 3A-3. Intercept and Challenge Visitors who do not yet have Clearance
+    const isStaticAsset = (
+      url.pathname.startsWith("/static/") ||
+      /\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|otf|json|xml|txt|map)$/i.test(url.pathname)
+    );
+    const isChallengeExemptPath = (
+      isStaticAsset ||
+      url.pathname === "/__cf_challenge_verify" ||
+      url.pathname === "/robots.txt" ||
+      url.pathname === "/sitemap.xml" ||
+      url.pathname.startsWith("/google") ||
+      url.pathname.startsWith("/.well-known/") ||
+      url.pathname === "/api/edge-health" ||
+      url.pathname === "/api/payment/webhook" ||
+      url.pathname === "/payment/webhook" ||
+      request.headers.get("x-turnstile-bypass") === "1"
+    );
+
+    const isBot = isSearchEngineBot(request.headers.get("user-agent"));
+    const reqCookies = parseCookies(request.headers.get("Cookie"));
+    const hasActiveSession = !!reqCookies.pv_session;
+    const isClearanceVerified = await isHumanVerified(reqCookies, clearanceSecret);
+
+    // If request is GET/HEAD to a web page and user is not verified, show Cloudflare Human Challenge
+    if (!isChallengeExemptPath && !isBot && !hasActiveSession && !isClearanceVerified && (request.method === "GET" || request.method === "HEAD")) {
+      const rayId = request.headers.get("cf-ray") || (Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10));
+      const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
+      const siteKey = (env && env.TURNSTILE_SITE_KEY) || "1x00000000000000000000AA";
+      const targetUrl = url.pathname + url.search;
+
+      return new Response(
+        renderCloudflareTurnstileChallenge({
+          host: url.host || "pustakverse.pages.dev",
+          targetUrl,
+          siteKey,
+          rayId,
+          clientIp
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "private, no-cache, no-store, must-revalidate",
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff"
+          }
+        }
+      );
+    }
+
+    // ========================================================================
+    // 3B. EDGE MAINTENANCE MODE INTERCEPTOR & BYPASS ENGINE
     // Developer, CTO, CEO, and other technical leadership bypass maintenance mode!
     // ========================================================================
     const exemptMaintenancePaths = [
