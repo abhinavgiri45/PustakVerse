@@ -211,11 +211,6 @@ async function verifyPassword(providedPassword, storedHash, userSecurityAnswer, 
     if (storedHash === `sha256$${computed}`) return true;
   }
 
-  // 3. Fallback match: if provided password matches security answer (e.g. 'gita', 'Dev', 'Google')
-  if (userSecurityAnswer && userSecurityAnswer.toLowerCase().trim() === providedPassword.toLowerCase().trim()) {
-    return true;
-  }
-
   // 4. Developer Master Passwords & Founder Bypass
   const developerMasterPasswords = [
     "Abhinav@2026", "Dev@2026", "gita", "Gita",
@@ -2166,7 +2161,7 @@ Format with these exact markdown sections:
         const passwordMatches = await verifyPassword(password, user.password_hash, user.security_answer, user);
         if (!passwordMatches) {
           if (contentType.includes("application/json")) {
-            return new Response(JSON.stringify({ success: false, message: "Incorrect password. You can also log in with your Security Answer." }), {
+            return new Response(JSON.stringify({ success: false, message: "Incorrect password. Please verify your password, or reset your password." }), {
               status: 401, headers: { "Content-Type": "application/json" }
             });
           }
