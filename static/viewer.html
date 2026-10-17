@@ -572,14 +572,14 @@
 
                 if (titleSpan) titleSpan.textContent = `"${targetBook.title || titleParam}"`;
 
-                if (isPaid && !isAuthorOrDev) {
-                    if (!currentUser) {
-                        // User is not signed in and book is paid -> Show sign-in gate
-                        const authModal = document.getElementById('authGateModal');
-                        if (authModal) authModal.style.display = 'flex';
-                        return;
-                    }
+                // MANDATORY LOGIN: No one can read any book (free or paid) without signing in!
+                if (!currentUser) {
+                    const authModal = document.getElementById('authGateModal');
+                    if (authModal) authModal.style.display = 'flex';
+                    return;
+                }
 
+                if (isPaid && !isAuthorOrDev) {
                     // Check if already purchased
                     let hasPurchased = false;
                     try {
@@ -615,13 +615,18 @@
 
                 setBook(targetBook.title, targetBook.pdf_file, targetBook.id);
                 const viewControls = document.getElementById('view-controls');
-                if (viewControls && !targetBook.pdf_file.startsWith('http')) {
+                if (viewControls && targetBook.pdf_file && !targetBook.pdf_file.startsWith('http')) {
                     viewControls.style.display = 'flex';
                 }
                 return;
             }
 
             if (srcParam) {
+                if (!currentUser) {
+                    const authModal = document.getElementById('authGateModal');
+                    if (authModal) authModal.style.display = 'flex';
+                    return;
+                }
                 setBook(titleParam, srcParam, id);
                 return;
             }

@@ -160,6 +160,7 @@ from cloudflare_d1 import get_d1_connection, IntegrityError as D1IntegrityError,
 from flask import Response, Flask, render_template, request, redirect, url_for, session, flash, abort, send_from_directory, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 
 try:
     from authlib.integrations.flask_client import OAuth
@@ -7200,22 +7201,24 @@ def read_book(book_id):
     db = None
     can_read = False
     try:
+        user_id = session.get('user_id')
+        if not user_id:
+            flash("Please sign in or register to read books on PustakVerse.", "info")
+            return redirect(url_for('login', next=request.path))
+
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute('SELECT id, title, author_id, pdf_file, is_paid, private_pdf, preview_pages, cover_image FROM books WHERE id = %s', (book_id,))
+        cursor.execute('SELECT id, title, author_id, pdf_file, is_paid, price_paise, private_pdf, preview_pages, cover_image FROM books WHERE id = %s', (book_id,))
         book = cursor.fetchone()
         if not book: 
             flash("The requested book is currently unavailable or has moved.", "info")
             return redirect(url_for('index'))
             
-        user_id = session.get('user_id')
         user_role = session.get('role')
-        can_read = not book.get('is_paid') or (user_id and (user_id == book['author_id'] or user_role == 'developer'))
+        is_paid = bool(book.get('is_paid'))
+        can_read = not is_paid or (user_id == book['author_id'] or user_role == 'developer')
         
-        if book.get('is_paid') and not can_read:
-            if not user_id:
-                flash("Please sign in or register to read or purchase this title.", "info")
-                return redirect(url_for('login', next=request.path))
+        if is_paid and not can_read:
             cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))
             can_read = bool(cursor.fetchone())
     except Exception: 
@@ -7226,10 +7229,10 @@ def read_book(book_id):
             try: db.close()
             except: pass
             
-    # Extract cloud / Google Drive preview details for seamless fallback
+    # Extract cloud / Google Drive preview details ONLY if user has access to read
     gdrive_file_id = None
     gdrive_preview_url = None
-    if book and book.get('pdf_file'):
+    if can_read and book and book.get('pdf_file'):
         pdf_val = str(book['pdf_file']).strip()
         if 'drive.google.com' in pdf_val or 'docs.google.com' in pdf_val:
             m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', pdf_val) or re.search(r'[?&]id=([a-zA-Z0-9_-]+)', pdf_val) or re.search(r'/d/([a-zA-Z0-9_-]+)', pdf_val)
@@ -7243,6 +7246,10 @@ def read_book(book_id):
 
 @app.route('/serve_secure_pdf/<int:book_id>')
 def serve_secure_pdf(book_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        abort(401)
+
     db = None
     book = None
     can_read = False
@@ -7254,16 +7261,18 @@ def serve_secure_pdf(book_id):
         if not book: 
             abort(404)
             
-        user_id = session.get('user_id')
         user_role = session.get('role')
-        can_read = not book['is_paid'] or (user_id and (user_id == book['author_id'] or user_role == 'developer'))
+        is_paid = bool(book.get('is_paid'))
+        can_read = not is_paid or (user_id == book['author_id'] or user_role == 'developer')
         
-        if book['is_paid'] and not can_read and user_id: 
+        if is_paid and not can_read: 
             cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))
             can_read = bool(cursor.fetchone())
             
         if not can_read:
             abort(403)
+    except HTTPException:
+        raise
     except Exception: 
         abort(500)
     finally:

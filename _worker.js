@@ -4407,7 +4407,7 @@ Format with these exact markdown sections:
           results = fallbackRes.results || [];
         }
 
-        // Attach custom badges
+        // Attach custom badges & sanitize pdf_file so unauthorized users never receive PDF URLs
         try {
           const allBadgesRes = await env.DB.prepare(
             `SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC`
@@ -4417,27 +4417,47 @@ Format with these exact markdown sections:
             if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
             badgesByBook[bg.book_id].push(bg);
           });
+
+          let purchasedBookIds = new Set();
+          if (sessionUser && sessionUser.id) {
+            try {
+              const pRes = await env.DB.prepare(
+                "SELECT book_id FROM purchases WHERE user_id = ? AND status = 'paid'"
+              ).bind(sessionUser.id).all();
+              (pRes?.results || []).forEach(p => purchasedBookIds.add(p.book_id));
+            } catch (_) {}
+          }
+
+          const sanitizeBookForApi = (b) => {
+            const isPaidBook = !!b.is_paid && ((b.price_paise || 0) > 0);
+            const isDevOrAuthor = sessionUser && (sessionUser.role === 'developer' || sessionUser.id === b.author_id);
+            const hasPurchased = sessionUser && purchasedBookIds.has(b.id);
+            const canRead = sessionUser && (!isPaidBook || isDevOrAuthor || hasPurchased);
+            return {
+              ...b,
+              pdf_file: canRead ? b.pdf_file : null,
+              cover_image: resolveEffectiveBookCover(b),
+              custom_badges: badgesByBook[b.id] || []
+            };
+          };
+
           results = results.map(b => {
             if (b.id === 9999) {
-              return {
+              return sanitizeBookForApi({
                 ...b,
                 title: "PustakVerse Premium Edition: Test Payment Guide",
                 author_name: (b.author_name && b.author_name !== "Author" && b.author_name !== "PustakVerse Library") ? b.author_name : "PustakVerse Official",
                 catalog: "Academic",
                 price_paise: 100,
                 is_paid: 1,
-                cover_image: resolveEffectiveBookCover({ ...b, cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80" }),
-                custom_badges: badgesByBook[b.id] || []
-              };
+                cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80"
+              });
             }
-            return {
-              ...b,
-              cover_image: resolveEffectiveBookCover(b),
-              custom_badges: badgesByBook[b.id] || []
-            };
+            return sanitizeBookForApi(b);
           });
 
           if (!results.find(b => b.id === 9999)) {
+            const canRead9999 = sessionUser && (sessionUser.role === 'developer' || purchasedBookIds.has(9999));
             results.unshift({
               id: 9999,
               title: "PustakVerse Premium Edition: Test Payment Guide",
@@ -4449,6 +4469,7 @@ Format with these exact markdown sections:
               is_quarantined: 0,
               description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).",
               cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+              pdf_file: canRead9999 ? "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing" : null,
               custom_badges: []
             });
           }
@@ -6311,6 +6332,18 @@ Format with these exact markdown sections:
       } catch (_) {}
     }
 
+    // MANDATORY AUTHENTICATION: Without login no one can read a single book (free or paid) on PustakVerse!
+    const isViewerRoute = !!readMatch || 
+                          url.pathname.startsWith("/read_book") || 
+                          url.pathname.startsWith("/viewer") || 
+                          url.pathname.startsWith("/read") ||
+                          url.pathname === "/viewer.html";
+
+    if (isViewerRoute && !edgeCurrentUser) {
+      const nextUrl = encodeURIComponent(url.pathname + url.search);
+      return Response.redirect(`${url.origin}/login?next=${nextUrl}`, 302);
+    }
+
     if (targetBookId && env.DB) {
       try {
         let book = await env.DB.prepare(
@@ -6330,20 +6363,19 @@ Format with these exact markdown sections:
         }
 
         if (book) {
-          let canRead = true;
-          if (book.is_paid && book.price_paise > 0) {
+          const isPaid = !!book.is_paid && book.price_paise > 0;
+          let canRead = !isPaid;
+          if (isPaid) {
             canRead = false;
-            if (edgeCurrentUser) {
-              if (edgeCurrentUser.id === book.author_id || edgeCurrentUser.role === "developer") {
-                canRead = true;
-              } else {
-                try {
-                  const purchase = await env.DB.prepare(
-                    "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
-                  ).bind(edgeCurrentUser.id, targetBookId).first();
-                  if (purchase) canRead = true;
-                } catch (_) {}
-              }
+            if (edgeCurrentUser.id === book.author_id || edgeCurrentUser.role === "developer" || isTechnicalLeadershipUser(edgeCurrentUser)) {
+              canRead = true;
+            } else {
+              try {
+                const purchase = await env.DB.prepare(
+                  "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+                ).bind(edgeCurrentUser.id, targetBookId).first();
+                if (purchase) canRead = true;
+              } catch (_) {}
             }
           }
 
