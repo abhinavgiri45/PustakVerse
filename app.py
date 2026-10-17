@@ -801,7 +801,6 @@ def train_ai_on_book(book_id, title, description='', catalog='General', pdf_text
     Ingests and trains GranthMind AI on a specific book's metadata, concepts, and text.
     Extracts core themes, chapter insights, and domain terminology into ai_knowledge_base.
     """
-    global _learned_memory_cache
     if not title:
         return False
 
@@ -2733,6 +2732,55 @@ def call_provider_live_api(provider, model_id, prompt, attachment_path='', timeo
     return ''
 
 
+def call_configured_ai_model(config, prompt):
+    provider = (config.get('provider_type') or 'gemini').lower().strip()
+    model_id = (config.get('model_id') or 'gemini-2.0-flash').strip()
+    return call_provider_live_api(provider, model_id, prompt)
+
+
+def save_and_process_ai_attachment(uploaded_file):
+    if not uploaded_file or not getattr(uploaded_file, 'filename', None):
+        return None
+    try:
+        fname = secure_filename(uploaded_file.filename)
+        upload_dir = os.path.join(app.config.get('UPLOAD_FOLDER', 'static/uploads'), 'ai_attachments')
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, fname)
+        uploaded_file.save(file_path)
+        is_image = fname.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif'))
+        extracted_text = ''
+        if fname.lower().endswith(('.txt', '.md', '.csv', '.json')):
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    extracted_text = f.read(5000)
+            except Exception:
+                pass
+        return {
+            'filename': fname,
+            'file_path': file_path,
+            'extracted_text': extracted_text,
+            'is_image': is_image
+        }
+    except Exception as e:
+        logging.warning("Error processing AI attachment: %s", e)
+        return None
+
+
+def get_front_page_settings():
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM front_page_settings WHERE id = 1")
+        return cursor.fetchone() or {}
+    except Exception:
+        return {}
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
 def build_ai_free_response(question, book_title='', book_description='', screenshot_text='', book_text='', chat_history=None, attachment_text='', attachment_path='', selected_model_id=None, mode='study', system_instruction='', current_user_name=None):
     cleaned_question = (question or '').strip()
     if not cleaned_question and not screenshot_text and not attachment_text and not attachment_path:
@@ -3604,6 +3652,9 @@ def send_pending_author(to_email, username):
 def send_approved_author(to_email, username): 
     return send_email_wrapper(to_email, 'Your PustakVerse Author Account is Approved!', generate_html_email("Account Approved", f"<p>Hello <strong>{username}</strong>,</p><p>Congratulations! Your Author account is officially approved.</p>"))
 
+def send_welcome_author(to_email, username):
+    return send_approved_author(to_email, username)
+
 def send_official_welcome(to_email, username, password): 
     return send_email_wrapper(to_email, 'Welcome to the PustakVerse Official Team', generate_html_email("Official Privileges Granted", f"<p>Hello <strong>{username}</strong>,</p><p>Welcome to the administrative team!</p><p>Username: <strong>{username}</strong><br>Temporary Password: <strong>{password}</strong></p>"))
 
@@ -4368,7 +4419,7 @@ def broadcast_maintenance_notice_to_users(start_time, end_time, reason):
 </body>
 </html>"""
             try:
-                send_email_notification(u_email, subject, html)
+                send_email_wrapper(u_email, subject, html)
             except Exception:
                 pass
     except Exception as e:
@@ -6021,32 +6072,6 @@ def official_handle_author_username_request(req_id, action):
     except Exception as e:
         logging.error(f"Error handling author username request #{req_id}: {e}")
         flash("Database error processing request.", "error")
-    finally:
-        if db:
-            try: db.close()
-            except: pass
-    return redirect(url_for('dashboard'))
-        
-    if not re.match(r'^[a-zA-Z0-9_]+$', new_username): 
-        flash("Username can only contain letters, numbers, and underscores (no spaces or special characters).", "error")
-        return redirect(url_for('dashboard'))
-
-    db = None
-    try:
-        db = get_db_connection()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s AND id != %s", (new_username, session['user_id']))
-        
-        if cursor.fetchone(): 
-            flash("Username is already taken.", "error")
-            return redirect(url_for('dashboard'))
-
-        cursor.execute("UPDATE users SET username = %s WHERE id = %s", (new_username, session['user_id']))
-        db.commit()
-        session['username'] = new_username
-        flash("Username updated successfully!", "success")
-    except Exception: 
-        flash("Database connection error.", "error")
     finally:
         if db:
             try: db.close()
