@@ -405,27 +405,13 @@
         <div class="header-left">
             <span class="book-title-header" id="book-title-wrap">📖 Reading: <strong id="book-title-display">Loading Book...</strong></span>
             
-            <div class="page-nav-controls" id="page-nav-controls">
-                <button type="button" class="view-btn" onclick="prevPage()" title="Previous Page (Shortcut: Left Arrow / PageUp)" aria-label="Previous Page">◀</button>
-                <div class="page-jump-box" title="Type page number and press Enter or Go">
-                    <span class="page-label">Pg</span>
-                    <input type="number" id="jumpPageInput" min="1" value="1" inputmode="numeric" pattern="[0-9]*" class="page-input" aria-label="Page number">
-                    <button type="button" class="view-btn page-go-btn" onclick="jumpToPage()" title="Jump to page">Go</button>
-                </div>
-                <button type="button" class="view-btn" onclick="nextPage()" title="Next Page (Shortcut: Right Arrow / PageDown)" aria-label="Next Page">▶</button>
-                <button type="button" class="view-btn quick-jump-btn" onclick="promptJumpToPage()" title="Open any page instantly (Keypad Shortcut: Press G)">⚡ Jump</button>
-            </div>
-
             <div class="view-controls" title="Reading Color Mode">
                 <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('paper')" id="themeBtn_paper" title="Paper Light Mode">☀️ Light</button>
                 <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('sepia')" id="themeBtn_sepia" title="Sepia Eye-Care Mode">📜 Sepia</button>
                 <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('dark')" id="themeBtn_dark" title="Dark Night Mode">🌙 Dark</button>
             </div>
 
-            <div class="view-controls" title="Zoom & Fullscreen">
-                <button type="button" class="view-btn" onclick="zoomReader(-0.1)" title="Zoom Out (-)">−</button>
-                <button type="button" class="view-btn" onclick="resetReaderZoom()" id="zoomLevelDisplay" title="Reset Zoom">100%</button>
-                <button type="button" class="view-btn" onclick="zoomReader(0.1)" title="Zoom In (+)">+</button>
+            <div class="view-controls" title="Fullscreen">
                 <button type="button" class="view-btn" onclick="toggleReaderFullscreen()" id="fullscreenBtn" title="Toggle Fullscreen">⛶ Fullscreen</button>
             </div>
 
