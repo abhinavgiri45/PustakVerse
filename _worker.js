@@ -4758,7 +4758,7 @@ Format with these exact markdown sections:
       }
 
       try {
-        const book = await env.DB.prepare(
+        let book = await env.DB.prepare(
           `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
                   b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret,
                   u.username as author_name
@@ -5201,7 +5201,7 @@ Format with these exact markdown sections:
             try {
                 const formData = new FormData();
                 formData.append('donation_inr', donationInr);
-                const res = await fetch(`/api/checkout/create_order/${BOOK_ID}`, {
+                const res = await fetch('/api/checkout/create_order/' + BOOK_ID, {
                     method: 'POST',
                     body: formData
                 });
