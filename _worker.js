@@ -163,18 +163,29 @@ async function verifySession(sessionCookie, env = null) {
 }
 
 function getSessionUser(requestOrCookie) {
-  let cookieHeader = "";
+  if (!requestOrCookie) return null;
+  let sessionStr = "";
   if (typeof requestOrCookie === "string") {
-    cookieHeader = requestOrCookie;
-  } else if (requestOrCookie && typeof requestOrCookie === "object" && requestOrCookie.headers) {
-    cookieHeader = requestOrCookie.headers.get("Cookie") || "";
+    if (requestOrCookie.includes("pv_session=")) {
+      const c = parseCookies(requestOrCookie);
+      sessionStr = c.pv_session || "";
+    } else {
+      sessionStr = requestOrCookie;
+    }
+  } else if (typeof requestOrCookie === "object") {
+    if (requestOrCookie.headers && typeof requestOrCookie.headers.get === "function") {
+      const c = parseCookies(requestOrCookie.headers.get("Cookie") || "");
+      sessionStr = c.pv_session || "";
+    } else if (requestOrCookie.pv_session) {
+      sessionStr = requestOrCookie.pv_session;
+    }
   }
-  const cookies = parseCookies(cookieHeader);
-  if (!cookies.pv_session) return null;
+  if (!sessionStr) return null;
   try {
-    const raw = JSON.parse(atob(cookies.pv_session));
+    const raw = JSON.parse(atob(sessionStr));
     if (!raw || typeof raw !== "object") return null;
     const uid = raw.id || raw.user_id;
+    if (!uid) return null;
     raw.id = uid;
     raw.user_id = uid;
     return raw;
@@ -2446,6 +2457,7 @@ Format with these exact markdown sections:
 
           // Issue session cookie
           const userSessionData = JSON.stringify({
+            id: newUser.id,
             user_id: newUser.id,
             username: newUser.username,
             role: newUser.role,
@@ -2622,6 +2634,7 @@ Format with these exact markdown sections:
 
         // Issue permanent session cookie
         const sessionPayload = JSON.stringify({
+          id: pending.user_id,
           user_id: pending.user_id,
           username: pending.username,
           role: pending.role,
@@ -2759,6 +2772,7 @@ Format with these exact markdown sections:
 
         // Issue standard session cookie (readers without 2FA)
         const sessionPayload = JSON.stringify({
+          id: user.id,
           user_id: user.id,
           username: user.username,
           role: user.role,
@@ -2887,6 +2901,7 @@ Format with these exact markdown sections:
       }
 
       const sessionPayload = JSON.stringify({
+        id: user.id,
         user_id: user.id,
         username: user.username,
         role: user.role,
@@ -2959,6 +2974,7 @@ Format with these exact markdown sections:
         }
 
         const sessionPayload = JSON.stringify({
+          id: user.id,
           user_id: user.id,
           username: user.username,
           role: user.role,
@@ -3101,6 +3117,7 @@ Format with these exact markdown sections:
         });
 
         const sessionPayload = JSON.stringify({
+          id: user.id,
           user_id: user.id,
           username: user.username,
           role: user.role,
@@ -5333,11 +5350,7 @@ Format with these exact markdown sections:
     // 6-quater. Executive Grant Badge: POST /executive/powers/grant_badge
     if (url.pathname === "/executive/powers/grant_badge" && request.method === "POST" && env.DB) {
       try {
-        const cookies = parseCookies(request.headers.get("Cookie"));
-        let user = null;
-        if (cookies.pv_session) {
-          try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-        }
+        const user = getSessionUser(request);
         const isPrivileged = user && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user));
         if (!isPrivileged) {
           return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
@@ -5392,11 +5405,7 @@ Format with these exact markdown sections:
     const removeBadgeMatch = url.pathname.match(/^\/executive\/powers\/remove_badge\/(\d+)$/);
     if (removeBadgeMatch && request.method === "POST" && env.DB) {
       try {
-        const cookies = parseCookies(request.headers.get("Cookie"));
-        let user = null;
-        if (cookies.pv_session) {
-          try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-        }
+        const user = getSessionUser(request);
         const isPrivileged = user && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user));
         if (!isPrivileged) {
           return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
@@ -5425,13 +5434,9 @@ Format with these exact markdown sections:
     // 6A-1. Check Purchase Status API: GET /api/d1/check_purchase?book_id=...
     if (url.pathname === "/api/d1/check_purchase" && env.DB) {
       const bookId = parseInt(url.searchParams.get("book_id"), 10);
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let user = null;
-      if (cookies.pv_session) {
-        try { user = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const user = getSessionUser(request);
 
-      if (!user || !bookId) {
+      if (!user || !user.id || !bookId) {
         return new Response(JSON.stringify({ purchased: false }), {
           headers: { "Content-Type": "application/json" }
         });
@@ -5456,13 +5461,9 @@ Format with these exact markdown sections:
     const buyMatch = url.pathname.match(/^\/buy_book\/(\d+)/);
     if (buyMatch && env.DB) {
       const targetBookId = parseInt(buyMatch[1], 10);
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         const redirectUrl = `${url.origin}/login?next=${encodeURIComponent(url.pathname)}`;
         return Response.redirect(redirectUrl, 302);
       }
@@ -5950,13 +5951,9 @@ Format with these exact markdown sections:
     const createOrderMatch = url.pathname.match(/^\/api\/checkout\/create_order\/(\d+)/);
     if (createOrderMatch && request.method === "POST" && env.DB) {
       const targetBookId = parseInt(createOrderMatch[1], 10);
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         return new Response(JSON.stringify({ success: false, error: "Please sign in before purchasing." }), {
           status: 401, headers: { "Content-Type": "application/json" }
         });
@@ -6066,7 +6063,7 @@ Format with these exact markdown sections:
           await env.DB.prepare(
             `INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, author_earning_paise, status)
              VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
-          ).bind(sessionUser.id, targetBookId, razorpayOrderId, totalPaise, activeDonation * 100, feePaise, authorEarningPaise).run();
+          ).bind(sessionUser.id, targetBookId, razorpayOrderId, totalPaise || 0, (activeDonation * 100) || 0, feePaise || 0, authorEarningPaise || 0).run();
         } catch (_) {}
 
         return new Response(JSON.stringify({
@@ -6087,13 +6084,9 @@ Format with these exact markdown sections:
 
     // 6A-4. Edge Payment Verification: POST /payment/verify
     if (url.pathname === "/payment/verify" && request.method === "POST" && env.DB) {
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         return Response.redirect(`${url.origin}/login`, 302);
       }
 
@@ -6241,13 +6234,9 @@ Format with these exact markdown sections:
 
     // 6A-5. User Saved & Purchased Books API: GET /api/user/saved_books
     if (url.pathname === "/api/user/saved_books" && env.DB) {
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         return new Response(JSON.stringify({ logged_in: false, books: [] }), {
           headers: { "Content-Type": "application/json" }
         });
@@ -6325,13 +6314,9 @@ Format with these exact markdown sections:
     const saveBookMatch = url.pathname.match(/^\/save_book\/(\d+)/);
     if (saveBookMatch && request.method === "POST" && env.DB) {
       const bookId = parseInt(saveBookMatch[1], 10);
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         return Response.redirect(`${url.origin}/login`, 302);
       }
 
@@ -6346,21 +6331,17 @@ Format with these exact markdown sections:
 
     // 6A-7. My Library Edge Proxy: /my-library & /my_library
     if ((url.pathname === "/my-library" || url.pathname === "/my_library") && env.DB) {
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      if (!cookies.pv_session) {
+      const sessionUser = getSessionUser(request);
+      if (!sessionUser || !sessionUser.id) {
         return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
       }
     }
 
     // 6A-7a. User Payment History API: GET /api/user/payment_history
     if ((url.pathname === "/api/user/payment_history" || url.pathname === "/api/user/payment-history") && env.DB) {
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         return new Response(JSON.stringify({ success: false, error: "Unauthorized", purchases: [] }), {
           status: 401, headers: { "Content-Type": "application/json" }
         });
@@ -6397,8 +6378,8 @@ Format with these exact markdown sections:
     // 6A-7b. Payment History Edge Auth Proxy: /payment_history & /payment-history
     if ((url.pathname === "/payment_history" || url.pathname === "/payment_history/" ||
          url.pathname === "/payment-history" || url.pathname === "/payment-history/") && env.DB) {
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      if (!cookies.pv_session) {
+      const sessionUser = getSessionUser(request);
+      if (!sessionUser || !sessionUser.id) {
         return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
       }
     }
@@ -6407,13 +6388,9 @@ Format with these exact markdown sections:
     const invoiceMatch = url.pathname.match(/^\/invoice\/([^\/]+)/);
     if (invoiceMatch && env.DB) {
       const orderId = decodeURIComponent(invoiceMatch[1]);
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      let sessionUser = null;
-      if (cookies.pv_session) {
-        try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-      }
+      const sessionUser = getSessionUser(request);
 
-      if (!sessionUser) {
+      if (!sessionUser || !sessionUser.id) {
         return Response.redirect(`${url.origin}/login?next=${encodeURIComponent(url.pathname)}`, 302);
       }
 
@@ -6577,14 +6554,10 @@ Format with these exact markdown sections:
           };
         }
 
-        const reqCookies = parseCookies(request.headers.get("Cookie"));
-        let edgeUser = null;
-        if (reqCookies.pv_session) {
-          try { edgeUser = JSON.parse(atob(reqCookies.pv_session)); } catch (_) {}
-        }
+        const edgeUser = getSessionUser(request);
 
         let isPurchased = false;
-        if (edgeUser && env.DB) {
+        if (edgeUser && edgeUser.id && env.DB) {
           try {
             const purchase = await env.DB.prepare(
               "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
@@ -7306,13 +7279,7 @@ Format with these exact markdown sections:
     const targetBookId = readMatch ? parseInt(readMatch[1], 10) : (queryId ? parseInt(queryId, 10) : null);
 
     // Extract current user from session cookie if present
-    const reqCookies = parseCookies(request.headers.get("Cookie"));
-    let edgeCurrentUser = null;
-    if (reqCookies.pv_session) {
-      try {
-        edgeCurrentUser = JSON.parse(atob(reqCookies.pv_session));
-      } catch (_) {}
-    }
+    const edgeCurrentUser = getSessionUser(request);
 
     // MANDATORY AUTHENTICATION: Without login no one can read a single book (free or paid) on PustakVerse!
     const isViewerRoute = !!readMatch || 
