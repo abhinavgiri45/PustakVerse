@@ -40,13 +40,46 @@
             color: #f39c12;
         }
 
-        /* --- NEW: View Controls --- */
-        .view-controls {
+        /* --- Responsive Header & View Controls --- */
+        .view-controls, .page-nav-controls {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            gap: 6px;
             background: #2c3e50;
             padding: 4px 8px;
             border-radius: 6px;
+        }
+        .page-jump-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #475569;
+        }
+        .page-label {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            font-weight: 700;
+            user-select: none;
+        }
+        .page-input {
+            width: 48px;
+            padding: 2px 4px;
+            border: 1px solid #64748b;
+            border-radius: 3px;
+            background: #0f172a;
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+        .page-input::-webkit-outer-spin-button,
+        .page-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
         .view-btn {
             background: transparent;
@@ -58,6 +91,10 @@
             font-size: 0.85rem;
             font-weight: 600;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.2;
         }
         .view-btn:hover {
             background: #34495e;
@@ -67,11 +104,101 @@
             background: #e67e22;
             color: white;
         }
+        .page-go-btn {
+            background: #e67e22 !important;
+            color: white !important;
+            padding: 2px 8px !important;
+            font-size: 0.78rem !important;
+            border-radius: 3px !important;
+        }
+        .page-go-btn:hover {
+            background: #d35400 !important;
+        }
+        .quick-jump-btn {
+            background: linear-gradient(135deg, #e67e22, #d35400) !important;
+            color: white !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 6px rgba(230, 126, 34, 0.4);
+        }
+
+        /* Keypad phones & Accessibility: High contrast D-pad focus indicators */
+        .view-btn:focus, 
+        .page-input:focus, 
+        .header a:focus,
+        button:focus {
+            outline: 2px solid #e67e22 !important;
+            outline-offset: 2px !important;
+        }
+
+        .book-title-header {
+            max-width: 320px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            vertical-align: middle;
+        }
 
         iframe {
             width: 100%;
-            height: calc(100vh - 48px); /* Adjusted for header height */
+            height: calc(100vh - 48px);
             border: none;
+            display: block;
+        }
+
+        /* Mobile & Keypad Phone Responsive Styles */
+        @media (max-width: 768px) {
+            .header {
+                padding: 8px 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .header-left, .header > div:last-child {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .book-title-header {
+                max-width: 220px;
+                font-size: 0.88rem;
+            }
+            .view-controls, .page-nav-controls {
+                gap: 4px;
+                padding: 3px 6px;
+            }
+            .view-btn {
+                padding: 4px 7px;
+                font-size: 0.78rem;
+            }
+            iframe {
+                height: calc(100vh - 86px);
+            }
+        }
+
+        @media (max-width: 380px) {
+            /* Keypad phones (e.g. JioPhone / KaiOS 240x320, 320x240) */
+            .header {
+                padding: 4px 6px;
+                gap: 5px;
+            }
+            .book-title-header {
+                max-width: 150px;
+                font-size: 0.8rem;
+            }
+            .view-btn {
+                padding: 3px 5px;
+                font-size: 0.72rem;
+            }
+            .page-input {
+                width: 36px;
+                font-size: 0.78rem;
+                padding: 1px 2px;
+            }
+            iframe {
+                height: calc(100vh - 100px);
+            }
         }
         
         /* Overlay to block transparent clicks if necessary */
@@ -187,8 +314,19 @@
 
     <div class="header">
         <div class="header-left">
-            <span>📖 Reading: <strong id="book-title-display">Loading Book...</strong></span>
+            <span class="book-title-header" id="book-title-wrap">📖 Reading: <strong id="book-title-display">Loading Book...</strong></span>
             
+            <div class="page-nav-controls" id="page-nav-controls">
+                <button type="button" class="view-btn" onclick="prevPage()" title="Previous Page (Shortcut: Left Arrow / PageUp)" aria-label="Previous Page">◀</button>
+                <div class="page-jump-box" title="Type page number and press Enter or Go">
+                    <span class="page-label">Pg</span>
+                    <input type="number" id="jumpPageInput" min="1" value="1" inputmode="numeric" pattern="[0-9]*" class="page-input" aria-label="Page number">
+                    <button type="button" class="view-btn page-go-btn" onclick="jumpToPage()" title="Jump to page">Go</button>
+                </div>
+                <button type="button" class="view-btn" onclick="nextPage()" title="Next Page (Shortcut: Right Arrow / PageDown)" aria-label="Next Page">▶</button>
+                <button type="button" class="view-btn quick-jump-btn" onclick="promptJumpToPage()" title="Open any page instantly (Keypad Shortcut: Press G)">⚡ Jump</button>
+            </div>
+
             <div class="view-controls" id="view-controls" style="display: none;">
                 <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
                 <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
@@ -253,20 +391,79 @@
         </div>
     </div>
 
-    <!-- Advanced Protection & View Scripts -->
     <script>
         let currentPdfUrl = "";
+        let currentViewMode = "FitH";
+        let currentPage = 1;
+        let currentBookId = null;
 
-        function changeView(viewMode) {
-            const frame = document.getElementById('pdf-frame');
+        function jumpToPage(pageNo) {
             if (!currentPdfUrl) return;
-            frame.src = currentPdfUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
+
+            if (typeof pageNo === 'undefined' || pageNo === null) {
+                const input = document.getElementById('jumpPageInput');
+                if (input) pageNo = parseInt(input.value, 10);
+            } else {
+                pageNo = parseInt(pageNo, 10);
+            }
+
+            if (isNaN(pageNo) || pageNo < 1) pageNo = 1;
+            currentPage = pageNo;
+
+            const input = document.getElementById('jumpPageInput');
+            if (input) input.value = pageNo;
+
+            const frame = document.getElementById('pdf-frame');
+            if (!frame) return;
+
+            const cleanBase = currentPdfUrl.split('#')[0];
+            if (cleanBase.includes('drive.google.com')) {
+                frame.src = cleanBase + '#page=' + pageNo;
+            } else {
+                frame.src = cleanBase + '#page=' + pageNo + '&toolbar=0&navpanes=0&scrollbar=0&view=' + currentViewMode;
+            }
+
+            try {
+                if (currentBookId) {
+                    localStorage.setItem('pv_page_' + currentBookId, pageNo);
+                }
+            } catch (_) {}
         }
 
-        function setBook(title, pdfUrl) {
+        function promptJumpToPage() {
+            const requested = prompt('Enter page number to open instantly:', currentPage);
+            if (requested !== null && requested.trim() !== '') {
+                const parsed = parseInt(requested.trim(), 10);
+                if (!isNaN(parsed) && parsed >= 1) {
+                    jumpToPage(parsed);
+                } else {
+                    alert('Please enter a valid page number (1 or higher).');
+                }
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                jumpToPage(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            jumpToPage(currentPage + 1);
+        }
+
+        function changeView(viewMode) {
+            currentViewMode = viewMode;
+            jumpToPage(currentPage);
+        }
+
+        function setBook(title, pdfUrl, bookId) {
+            if (bookId) currentBookId = bookId;
             if (title) {
                 document.getElementById('book-title-display').textContent = title;
                 document.getElementById('page-title').textContent = 'Reading: ' + title + ' - PustakVerse';
+                const wrap = document.getElementById('book-title-wrap');
+                if (wrap) wrap.title = title;
             }
             if (pdfUrl) {
                 let cleanUrl = pdfUrl;
@@ -274,15 +471,29 @@
                     cleanUrl = cleanUrl.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
                 }
                 currentPdfUrl = cleanUrl;
-                const frame = document.getElementById('pdf-frame');
-                if (frame) {
-                    frame.src = cleanUrl;
-                }
+                
+                // Check if user previously saved a page for this book
+                let initialPage = 1;
+                try {
+                    if (currentBookId) {
+                        const saved = localStorage.getItem('pv_page_' + currentBookId);
+                        if (saved) {
+                            const p = parseInt(saved, 10);
+                            if (!isNaN(p) && p > 1) initialPage = p;
+                        }
+                    }
+                } catch (_) {}
+
+                jumpToPage(initialPage);
             }
         }
 
         // Disable common keyboard shortcuts used for saving/printing/inspecting
         document.addEventListener('keydown', function(e) {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -291,6 +502,18 @@
                 e.preventDefault();
                 alert('Downloading and Printing are disabled to protect author copyrights.');
                 return false;
+            }
+
+            // Keypad phone & keyboard navigation shortcuts
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault();
+                prevPage();
+            } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+                e.preventDefault();
+                nextPage();
+            } else if (e.key === 'g' || e.key === 'G') {
+                e.preventDefault();
+                promptJumpToPage();
             }
         });
 
@@ -390,7 +613,7 @@
                     }
                 }
 
-                setBook(targetBook.title, targetBook.pdf_file);
+                setBook(targetBook.title, targetBook.pdf_file, targetBook.id);
                 const viewControls = document.getElementById('view-controls');
                 if (viewControls && !targetBook.pdf_file.startsWith('http')) {
                     viewControls.style.display = 'flex';
@@ -399,13 +622,24 @@
             }
 
             if (srcParam) {
-                setBook(titleParam, srcParam);
+                setBook(titleParam, srcParam, id);
                 return;
             }
 
             // Fallback default
             if (!currentPdfUrl) {
                 document.getElementById('book-title-display').textContent = 'PustakVerse Library';
+            }
+
+            const pageInput = document.getElementById('jumpPageInput');
+            if (pageInput) {
+                pageInput.addEventListener('keydown', function(ev) {
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        jumpToPage();
+                        pageInput.blur();
+                    }
+                });
             }
         });
     </script>

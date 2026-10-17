@@ -8455,13 +8455,46 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             color: #f39c12;
         }
 
-        /* --- View Controls --- */
-        .view-controls {
+        /* --- Responsive Header & View Controls --- */
+        .view-controls, .page-nav-controls {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            gap: 6px;
             background: #2c3e50;
             padding: 4px 8px;
             border-radius: 6px;
+        }
+        .page-jump-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #475569;
+        }
+        .page-label {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            font-weight: 700;
+            user-select: none;
+        }
+        .page-input {
+            width: 48px;
+            padding: 2px 4px;
+            border: 1px solid #64748b;
+            border-radius: 3px;
+            background: #0f172a;
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+        .page-input::-webkit-outer-spin-button,
+        .page-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
         .view-btn {
             background: transparent;
@@ -8473,6 +8506,10 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             font-size: 0.85rem;
             font-weight: 600;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.2;
         }
         .view-btn:hover {
             background: #34495e;
@@ -8482,11 +8519,101 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             background: #e67e22;
             color: white;
         }
+        .page-go-btn {
+            background: #e67e22 !important;
+            color: white !important;
+            padding: 2px 8px !important;
+            font-size: 0.78rem !important;
+            border-radius: 3px !important;
+        }
+        .page-go-btn:hover {
+            background: #d35400 !important;
+        }
+        .quick-jump-btn {
+            background: linear-gradient(135deg, #e67e22, #d35400) !important;
+            color: white !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 6px rgba(230, 126, 34, 0.4);
+        }
+
+        /* Keypad phones & Accessibility: High contrast D-pad focus indicators */
+        .view-btn:focus, 
+        .page-input:focus, 
+        .header a:focus,
+        button:focus {
+            outline: 2px solid #e67e22 !important;
+            outline-offset: 2px !important;
+        }
+
+        .book-title-header {
+            max-width: 320px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            vertical-align: middle;
+        }
 
         iframe {
             width: 100%;
-            height: calc(100vh - 48px); /* Adjusted for header height */
+            height: calc(100vh - 48px);
             border: none;
+            display: block;
+        }
+
+        /* Mobile & Keypad Phone Responsive Styles */
+        @media (max-width: 768px) {
+            .header {
+                padding: 8px 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .header-left, .header > div:last-child {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .book-title-header {
+                max-width: 220px;
+                font-size: 0.88rem;
+            }
+            .view-controls, .page-nav-controls {
+                gap: 4px;
+                padding: 3px 6px;
+            }
+            .view-btn {
+                padding: 4px 7px;
+                font-size: 0.78rem;
+            }
+            iframe {
+                height: calc(100vh - 86px);
+            }
+        }
+
+        @media (max-width: 380px) {
+            /* Keypad phones (e.g. JioPhone / KaiOS 240x320, 320x240) */
+            .header {
+                padding: 4px 6px;
+                gap: 5px;
+            }
+            .book-title-header {
+                max-width: 150px;
+                font-size: 0.8rem;
+            }
+            .view-btn {
+                padding: 3px 5px;
+                font-size: 0.72rem;
+            }
+            .page-input {
+                width: 36px;
+                font-size: 0.78rem;
+                padding: 1px 2px;
+            }
+            iframe {
+                height: calc(100vh - 100px);
+            }
         }
         
         /* Overlay to block transparent clicks */
@@ -8601,8 +8728,21 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
     <div class="header">
         <div class="header-left">
-            <span>📖 Reading: <strong>${escapeHtml(book.title || "Book")}</strong></span>
+            <span class="book-title-header" title="${escapeHtml(book.title || "Book")}">📖 Reading: <strong>${escapeHtml(book.title || "Book")}</strong></span>
             
+            ${canRead ? `
+            <div class="page-nav-controls" id="pageNavControls">
+                <button type="button" class="view-btn" onclick="prevPage()" title="Previous Page (Shortcut: Left Arrow / PageUp)" aria-label="Previous Page">◀</button>
+                <div class="page-jump-box" title="Type page number and press Enter or Go">
+                    <span class="page-label">Pg</span>
+                    <input type="number" id="jumpPageInput" min="1" value="1" inputmode="numeric" pattern="[0-9]*" class="page-input" aria-label="Page number">
+                    <button type="button" class="view-btn page-go-btn" onclick="jumpToPage()" title="Jump to page">Go</button>
+                </div>
+                <button type="button" class="view-btn" onclick="nextPage()" title="Next Page (Shortcut: Right Arrow / PageDown)" aria-label="Next Page">▶</button>
+                <button type="button" class="view-btn quick-jump-btn" onclick="promptJumpToPage()" title="Open any page instantly (Keypad Shortcut: Press G)">⚡ Jump</button>
+            </div>
+            ` : ""}
+
             ${(!isHttp && canRead) ? `
             <div class="view-controls">
                 <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
@@ -8672,14 +8812,103 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
     <!-- Advanced Protection & View Scripts -->
     <script>
-        function changeView(viewMode) {
-            const frame = document.getElementById('pdf-frame');
-            const baseUrl = "${escapeHtml(pdfUrl)}";
-            if (!baseUrl) return;
-            frame.src = baseUrl + "#toolbar=0&navpanes=0&scrollbar=0&view=" + viewMode;
+        let currentViewMode = "FitH";
+        let currentPage = 1;
+
+        function getCleanPdfUrl() {
+            const raw = "${escapeHtml(pdfUrl)}";
+            if (!raw || raw === 'about:blank') return '';
+            return raw.split('#')[0];
         }
 
+        function jumpToPage(pageNo) {
+            const base = getCleanPdfUrl();
+            if (!base) return;
+
+            if (typeof pageNo === 'undefined' || pageNo === null) {
+                const input = document.getElementById('jumpPageInput');
+                if (input) pageNo = parseInt(input.value, 10);
+            } else {
+                pageNo = parseInt(pageNo, 10);
+            }
+
+            if (isNaN(pageNo) || pageNo < 1) pageNo = 1;
+            currentPage = pageNo;
+
+            const input = document.getElementById('jumpPageInput');
+            if (input) input.value = pageNo;
+
+            const frame = document.getElementById('pdf-frame');
+            if (!frame) return;
+
+            if (base.includes('drive.google.com')) {
+                frame.src = base + '#page=' + pageNo;
+            } else {
+                frame.src = base + '#page=' + pageNo + '&toolbar=0&navpanes=0&scrollbar=0&view=' + currentViewMode;
+            }
+
+            try {
+                const bookKey = 'pv_page_${book.id || 0}';
+                localStorage.setItem(bookKey, pageNo);
+            } catch (_) {}
+        }
+
+        function promptJumpToPage() {
+            const requested = prompt('Enter page number to open instantly:', currentPage);
+            if (requested !== null && requested.trim() !== '') {
+                const parsed = parseInt(requested.trim(), 10);
+                if (!isNaN(parsed) && parsed >= 1) {
+                    jumpToPage(parsed);
+                } else {
+                    alert('Please enter a valid page number (1 or higher).');
+                }
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                jumpToPage(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            jumpToPage(currentPage + 1);
+        }
+
+        function changeView(viewMode) {
+            currentViewMode = viewMode;
+            jumpToPage(currentPage);
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            try {
+                const bookKey = 'pv_page_${book.id || 0}';
+                const saved = localStorage.getItem(bookKey);
+                if (saved) {
+                    const p = parseInt(saved, 10);
+                    if (!isNaN(p) && p > 1) {
+                        jumpToPage(p);
+                    }
+                }
+            } catch (_) {}
+
+            const input = document.getElementById('jumpPageInput');
+            if (input) {
+                input.addEventListener('keydown', function(ev) {
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        jumpToPage();
+                        input.blur();
+                    }
+                });
+            }
+        });
+
         document.addEventListener('keydown', function(e) {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -8688,6 +8917,17 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 e.preventDefault();
                 alert('Downloading and Printing are disabled to protect author copyrights.');
                 return false;
+            }
+
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault();
+                prevPage();
+            } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+                e.preventDefault();
+                nextPage();
+            } else if (e.key === 'g' || e.key === 'G') {
+                e.preventDefault();
+                promptJumpToPage();
             }
         });
 
