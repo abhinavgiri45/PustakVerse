@@ -3618,7 +3618,7 @@ Format with these exact markdown sections:
         let allUsers = [];
         let bookDelRequests = [];
         let usernameRequests = [];
-        if (user.role === "developer" && env.DB) {
+        if ((user.role === "developer" || user.role === "official") && env.DB) {
           try {
             await ensureModerationTables(env);
             const uRes = await env.DB.prepare("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users ORDER BY id ASC LIMIT 100").all();
@@ -9052,6 +9052,77 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     } else {
       out = out.replace(/<p>No users found matching that filter\.<\/p>/i, usersTable);
     }
+  }
+
+  // 5D-2. Inject Official Community Platform Users Management Table
+  if ((isDev || isOff) && allUsers && allUsers.length > 0 && out.includes('id="platformUsersTableBody"')) {
+    const platformUserRowsHtml = allUsers.map(u => {
+      const uRole = (u.role || 'reader').toLowerCase();
+      const initial = (u.username || 'U').substring(0, 2).toUpperCase();
+      let roleGradient = '#3b82f6, #0284c7';
+      let roleBadge = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);">📖 Reader</span>';
+
+      if (uRole === 'developer') {
+        roleGradient = '#f59e0b, #ef4444';
+        roleBadge = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);">👑 Developer</span>';
+      } else if (uRole === 'official') {
+        roleGradient = '#10b981, #059669';
+        roleBadge = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">🏛️ Official</span>';
+      } else if (uRole === 'author') {
+        roleGradient = '#8b5cf6, #6366f1';
+        roleBadge = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">✍️ Author</span>';
+      }
+
+      let actionsHtml = '';
+      if (uRole === 'developer') {
+        actionsHtml = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">🛡️ Protected Admin</span>';
+      } else {
+        actionsHtml = `
+          <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('${u.id}', '${escapeHtml(u.username)}')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+              <span>✉</span> Notice
+            </button>
+            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('${u.id}', '${escapeHtml(u.username)}')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
+              <span>🚩</span> Report Dev
+            </button>
+          </div>
+        `;
+      }
+
+      return `
+        <tr class="platform-user-row" data-username="${escapeHtml((u.username || '').toLowerCase())}" data-email="${escapeHtml((u.email || '').toLowerCase())}" data-role="${escapeHtml(uRole)}">
+          <td style="padding: 14px 18px; vertical-align: middle;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, ${roleGradient}); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                ${escapeHtml(initial)}
+              </div>
+              <div>
+                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                  <span>${escapeHtml(u.username)}</span>
+                  ${uRole === 'developer' ? '<span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>' : ''}
+                </div>
+                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                  Member ID: #${u.id}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td style="padding: 14px 18px; vertical-align: middle;">
+            <a href="mailto:${escapeHtml(u.email || '')}" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
+              <span>✉</span> ${escapeHtml(u.email || 'No email')}
+            </a>
+          </td>
+          <td style="padding: 14px 18px; vertical-align: middle;">
+            ${roleBadge}
+          </td>
+          <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+            ${actionsHtml}
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    out = out.replace(/<tbody id="platformUsersTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="platformUsersTableBody">${platformUserRowsHtml}</tbody>`);
   }
 
   // 5E. Inject Pending Book Removal Requests

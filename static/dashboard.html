@@ -1067,8 +1067,41 @@
                         <tbody>
                             
                             <tr>
-                                <td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">
-                                    No other officials currently registered. You can promote users to Official status in the User Management panel.
+                                <td>
+                                    <strong>rohit_moderator</strong>
+                                    <span style="display: block; font-size: 0.75rem; color: #64748b;">Staff Member</span>
+                                </td>
+                                <td><a href="mailto:rohit.official@pustakverse.com" style="color: #0284c7; text-decoration: none; font-size: 0.85rem;">rohit.official@pustakverse.com</a></td>
+                                <td>
+                                    <span style="background: #f1f5f9; color: #0f172a; font-weight: 800; font-size: 0.82rem; padding: 4px 10px; border-radius: 6px; display: inline-block;">
+                                        Official Moderator
+                                    </span>
+                                </td>
+                                <td>
+                                    
+                                    
+                                        <span style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">
+                                            🛡️ Moderator Tier
+                                        </span>
+                                    
+                                </td>
+                                <td style="text-align: right;">
+                                    <form action="/developer/officials/assign_post/4" method="POST" style="display: inline-flex; gap: 6px; align-items: center;">
+                                        <input type="hidden" name="csrf_token" value="">
+                                        <select name="designation" style="padding: 5px 8px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; margin: 0; background: white;">
+                                            <option value="Chief Executive Officer (CEO)" >CEO (Absolute Power)</option>
+                                            <option value="Chief Technology Officer (CTO)" >CTO (Absolute Power)</option>
+                                            <option value="Chief Operating Officer (COO)" >COO (Operations Power)</option>
+                                            <option value="Chief Product Officer (CPO)" >CPO (Product Power)</option>
+                                            <option value="Chief Content Officer (CCO)" >CCO (Editorial Power)</option>
+                                            <option value="Senior Legal Counsel" >Senior Legal Counsel</option>
+                                            <option value="Community Director" >Community Director</option>
+                                            <option value="Official Moderator" selected>Official Moderator</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-dark" style="padding: 6px 12px; font-size: 0.78rem;">
+                                            Update Post
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                             
@@ -2035,54 +2068,387 @@
         <!-- OFFICIAL USER MANAGEMENT -->
         
         <div id="roleSectionOfficialUsers" class="role-section-official">
-            <div class="panel">
-                <h2>Manage Platform Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search readers or authors..." value="" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" >All Readers & Authors</option>
-                        <option value="reader" >Readers Only</option>
-                        <option value="author" >Authors Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
+            <div class="panel" style="border-left: 4px solid #3b82f6;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2 style="margin: 0 0 6px 0; display: flex; align-items: center; gap: 10px; font-size: 1.45rem;">
+                            <span>👥</span> Manage Platform Users
+                            <span id="platformUserCountBadge" style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+                                Community Directory
+                            </span>
+                        </h2>
+                        <p style="margin: 0; color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
+                            Search profiles, send username policy revision notices, or file disciplinary reports to the Developer.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Sleek Toolbar with Live Filter -->
+                <div class="user-filter-toolbar" style="display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; align-items: center; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); padding: 14px 16px; border-radius: 12px;">
+                    <div style="position: relative; flex: 1; min-width: 250px;">
+                        <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 0.95rem; opacity: 0.6; pointer-events: none;">🔍</span>
+                        <input type="text" id="platformUserSearchInput" placeholder="Search by username or email address..." style="width: 100%; padding: 10px 14px 10px 40px; margin: 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(15, 23, 42, 0.6); color: inherit; font-size: 0.9rem; transition: border-color 0.2s;" oninput="filterPlatformUsersTable()">
+                    </div>
+                    <div style="min-width: 180px;">
+                        <select id="platformUserRoleSelect" style="width: 100%; padding: 10px 14px; margin: 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(15, 23, 42, 0.6); color: inherit; font-size: 0.9rem; font-weight: 500; cursor: pointer;" onchange="filterPlatformUsersTable()">
+                            <option value="all">All Roles & Members</option>
+                            <option value="reader">📖 Readers Only</option>
+                            <option value="author">✍️ Authors Only</option>
+                            <option value="official">🏛️ Officials Only</option>
+                            <option value="developer">👑 Developers Only</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-sm btn-dark" onclick="resetPlatformUsersFilter()" style="padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                        <span>↺</span> Reset Filter
+                    </button>
+                </div>
 
                 
                     <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email Address</th>
-                                <th>Role</th>
-                                <th>Actions</th>
-                            </tr>
-                            
-                            <tr>
-                                <td style="font-weight: 500;">abhinavgiri45</td>
-                                <td style="color: #4a5568;">abhinavgiri370@gmail.com</td>
-                                <td style="text-transform: capitalize;">developer</td>
-                                <td>
-                                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                                        <!-- OFFICIAL POWER: Send Username Update Notice -->
-                                        <form action="/official/notify_username/1" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px 6px; font-size: 0.78rem; width: 140px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-dark" title="Send email notice to change username">Notice</button>
-                                        </form>
+                        <table id="platformUsersTable" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                            <thead>
+                                <tr style="background: rgba(15, 23, 42, 0.5);">
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">User Profile</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Email Address</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Moderation Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="platformUsersTableBody">
+                                
+                                <tr class="platform-user-row" data-username="abhinavgiri45" data-email="abhinavgiri370@gmail.com" data-role="developer">
+                                    <!-- Column 1: Profile -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #ef4444); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                                                ab
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                    <span>abhinavgiri45</span>
+                                                    
+                                                    <span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>
+                                                    
+                                                </div>
+                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                    Member ID: #1
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
 
-                                        <!-- OFFICIAL LIMITATION: Request deletion via Developer Verification -->
-                                        <form action="/request_deletion/1" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Report to Dev..." required style="padding: 4px 6px; font-size: 0.78rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-orange" title="Submit report for Developer review">Report Dev</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            
+                                    <!-- Column 2: Email -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <a href="mailto:abhinavgiri370@gmail.com" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
+                                            <span>✉</span> abhinavgiri370@gmail.com
+                                        </a>
+                                    </td>
+
+                                    <!-- Column 3: Role Badge -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);">
+                                            👑 Developer
+                                        </span>
+                                        
+                                    </td>
+
+                                    <!-- Column 4: Moderation Actions -->
+                                    <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+                                        
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">
+                                            🛡️ Protected Admin
+                                        </span>
+                                        
+                                    </td>
+                                </tr>
+                                
+                                <tr class="platform-user-row" data-username="aarav_sharma" data-email="aarav.author@pustakverse.com" data-role="author">
+                                    <!-- Column 1: Profile -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                                                aa
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                    <span>aarav_sharma</span>
+                                                    
+                                                </div>
+                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                    Member ID: #2
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Column 2: Email -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <a href="mailto:aarav.author@pustakverse.com" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
+                                            <span>✉</span> aarav.author@pustakverse.com
+                                        </a>
+                                    </td>
+
+                                    <!-- Column 3: Role Badge -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">
+                                            ✍️ Author
+                                        </span>
+                                        
+                                    </td>
+
+                                    <!-- Column 4: Moderation Actions -->
+                                    <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+                                        
+                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('2', 'aarav_sharma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                                <span>✉</span> Notice
+                                            </button>
+                                            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('2', 'aarav_sharma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
+                                                <span>🚩</span> Report Dev
+                                            </button>
+                                        </div>
+                                        
+                                    </td>
+                                </tr>
+                                
+                                <tr class="platform-user-row" data-username="priya_verma" data-email="priya.reader@gmail.com" data-role="reader">
+                                    <!-- Column 1: Profile -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #0284c7); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                                                pr
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                    <span>priya_verma</span>
+                                                    
+                                                </div>
+                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                    Member ID: #3
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Column 2: Email -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <a href="mailto:priya.reader@gmail.com" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
+                                            <span>✉</span> priya.reader@gmail.com
+                                        </a>
+                                    </td>
+
+                                    <!-- Column 3: Role Badge -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);">
+                                            📖 Reader
+                                        </span>
+                                        
+                                    </td>
+
+                                    <!-- Column 4: Moderation Actions -->
+                                    <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+                                        
+                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('3', 'priya_verma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                                <span>✉</span> Notice
+                                            </button>
+                                            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('3', 'priya_verma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
+                                                <span>🚩</span> Report Dev
+                                            </button>
+                                        </div>
+                                        
+                                    </td>
+                                </tr>
+                                
+                                <tr class="platform-user-row" data-username="rohit_moderator" data-email="rohit.official@pustakverse.com" data-role="official">
+                                    <!-- Column 1: Profile -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                                                ro
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                    <span>rohit_moderator</span>
+                                                    
+                                                </div>
+                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                    Member ID: #4
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Column 2: Email -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <a href="mailto:rohit.official@pustakverse.com" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
+                                            <span>✉</span> rohit.official@pustakverse.com
+                                        </a>
+                                    </td>
+
+                                    <!-- Column 3: Role Badge -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">
+                                            🏛️ Official
+                                        </span>
+                                        
+                                    </td>
+
+                                    <!-- Column 4: Moderation Actions -->
+                                    <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+                                        
+                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('4', 'rohit_moderator')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                                <span>✉</span> Notice
+                                            </button>
+                                            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('4', 'rohit_moderator')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
+                                                <span>🚩</span> Report Dev
+                                            </button>
+                                        </div>
+                                        
+                                    </td>
+                                </tr>
+                                
+                            </tbody>
                         </table>
+                    </div>
+                    <div id="platformUsersEmptyNotice" style="display: none; padding: 24px; text-align: center; color: #94a3b8; font-size: 0.92rem; background: rgba(15, 23, 42, 0.3); border-radius: 8px; margin-top: 10px;">
+                        No users found matching the active search or role criteria.
                     </div>
                 
             </div>
         </div>
+
+        <!-- OFFICIAL USER NOTICE MODAL -->
+        <div id="officialNoticeModal" class="pv-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+            <div class="pv-modal-card" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 14px; max-width: 480px; width: 100%; padding: 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                        <span>✉️</span> Send Username Revision Notice
+                    </h3>
+                    <button type="button" onclick="closeOfficialNoticeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0 4px;">&times;</button>
+                </div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 18px;">
+                    Issue an official notification to <strong id="noticeTargetUsernameDisplay" style="color: #38bdf8;">@user</strong> requiring them to modify their username to conform with PustakVerse community guidelines.
+                </p>
+                <form id="officialNoticeForm" action="" method="POST">
+                    <div style="margin-bottom: 18px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Policy Reason / Clause</label>
+                        <textarea name="reason" id="noticeReasonInput" required rows="3" placeholder="e.g. Username contains promotional links, offensive terms, or impersonates an entity..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.88rem; resize: vertical; box-sizing: border-box;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn-sm btn-dark" onclick="closeOfficialNoticeModal()" style="padding: 9px 16px; border-radius: 8px;">Cancel</button>
+                        <button type="submit" class="btn-sm btn-dark" style="padding: 9px 20px; border-radius: 8px; background: #2563eb; color: #ffffff; border: none; font-weight: 600;">Dispatch Notice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- OFFICIAL USER REPORT TO DEV MODAL -->
+        <div id="officialReportModal" class="pv-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+            <div class="pv-modal-card" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 14px; max-width: 480px; width: 100%; padding: 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px; color: #f97316;">
+                        <span>🚩</span> Report User to Developer
+                    </h3>
+                    <button type="button" onclick="closeOfficialReportModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0 4px;">&times;</button>
+                </div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 18px;">
+                    Submit a formal disciplinary or deletion request for <strong id="reportTargetUsernameDisplay" style="color: #fb923c;">@user</strong> for Developer Supreme review.
+                </p>
+                <form id="officialReportForm" action="" method="POST">
+                    <div style="margin-bottom: 18px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Violation Grounds / Evidence</label>
+                        <textarea name="reason" id="reportReasonInput" required rows="3" placeholder="e.g. Severe terms violation, intellectual property infringement, or malicious activity..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.88rem; resize: vertical; box-sizing: border-box;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn-sm btn-dark" onclick="closeOfficialReportModal()" style="padding: 9px 16px; border-radius: 8px;">Cancel</button>
+                        <button type="submit" class="btn-sm btn-orange" style="padding: 9px 20px; border-radius: 8px; font-weight: 600;">Submit to Developer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function filterPlatformUsersTable() {
+            var searchVal = (document.getElementById('platformUserSearchInput')?.value || '').toLowerCase().trim();
+            var roleVal = (document.getElementById('platformUserRoleSelect')?.value || 'all').toLowerCase();
+            var rows = document.querySelectorAll('.platform-user-row');
+            var visibleCount = 0;
+
+            rows.forEach(function(row) {
+                var uName = (row.getAttribute('data-username') || '').toLowerCase();
+                var uEmail = (row.getAttribute('data-email') || '').toLowerCase();
+                var uRole = (row.getAttribute('data-role') || '').toLowerCase();
+
+                var matchesSearch = !searchVal || uName.indexOf(searchVal) !== -1 || uEmail.indexOf(searchVal) !== -1;
+                var matchesRole = (roleVal === 'all') || (uRole === roleVal);
+
+                if (matchesSearch && matchesRole) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            var emptyMsg = document.getElementById('platformUsersEmptyNotice');
+            if (emptyMsg) {
+                emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        }
+
+        function resetPlatformUsersFilter() {
+            var sInput = document.getElementById('platformUserSearchInput');
+            var rSelect = document.getElementById('platformUserRoleSelect');
+            if (sInput) sInput.value = '';
+            if (rSelect) rSelect.value = 'all';
+            filterPlatformUsersTable();
+        }
+
+        function openOfficialNoticeModal(userId, username) {
+            var modal = document.getElementById('officialNoticeModal');
+            var form = document.getElementById('officialNoticeForm');
+            var userSpan = document.getElementById('noticeTargetUsernameDisplay');
+            var input = document.getElementById('noticeReasonInput');
+            if (form) form.action = '/official/notify_username/' + userId;
+            if (userSpan) userSpan.textContent = '@' + username;
+            if (input) input.value = '';
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeOfficialNoticeModal() {
+            var modal = document.getElementById('officialNoticeModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function openOfficialReportModal(userId, username) {
+            var modal = document.getElementById('officialReportModal');
+            var form = document.getElementById('officialReportForm');
+            var userSpan = document.getElementById('reportTargetUsernameDisplay');
+            var input = document.getElementById('reportReasonInput');
+            if (form) form.action = '/request_deletion/' + userId;
+            if (userSpan) userSpan.textContent = '@' + username;
+            if (input) input.value = '';
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeOfficialReportModal() {
+            var modal = document.getElementById('officialReportModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.addEventListener('click', function(e) {
+            var nModal = document.getElementById('officialNoticeModal');
+            var rModal = document.getElementById('officialReportModal');
+            if (e.target === nModal) closeOfficialNoticeModal();
+            if (e.target === rModal) closeOfficialReportModal();
+        });
+        </script>
         
 
         <!-- BOTTOM DEVELOPER SECTION (Supreme Master Controls) -->
@@ -2303,6 +2669,147 @@
 
                                         <!-- Permanent Force Delete -->
                                         <form action="/admin_delete_user/1" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">aarav_sharma</div>
+                                    <small style="color: #64748b;">aarav.author@pustakverse.com</small><br>
+                                    <small style="color: #94a3b8;">Active: 10 mins ago</small>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; text-transform: capitalize; color: #d97706;">author</span>
+                                    
+                                </td>
+                                <td>
+                                    <!-- Power: Instant Role Switcher -->
+                                    <form action="/developer/change_role/2" method="POST" style="display: flex; gap: 4px; align-items: center;">
+                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
+                                            <option value="reader" >Reader</option>
+                                            <option value="author" selected>Author</option>
+                                            <option value="official" >Official</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                                        <!-- Power: Unlock Locked Accounts -->
+                                        
+
+                                        <!-- Power: Send Username Notice -->
+                                        <form action="/official/notify_username/2" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
+                                        </form>
+
+                                        <!-- Warn User -->
+                                        <form action="/warn_user/2" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
+                                        </form>
+
+                                        <!-- Permanent Force Delete -->
+                                        <form action="/admin_delete_user/2" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">priya_verma</div>
+                                    <small style="color: #64748b;">priya.reader@gmail.com</small><br>
+                                    <small style="color: #94a3b8;">Active: Today</small>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; text-transform: capitalize; color: #2563eb;">reader</span>
+                                    
+                                </td>
+                                <td>
+                                    <!-- Power: Instant Role Switcher -->
+                                    <form action="/developer/change_role/3" method="POST" style="display: flex; gap: 4px; align-items: center;">
+                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
+                                            <option value="reader" selected>Reader</option>
+                                            <option value="author" >Author</option>
+                                            <option value="official" >Official</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                                        <!-- Power: Unlock Locked Accounts -->
+                                        
+
+                                        <!-- Power: Send Username Notice -->
+                                        <form action="/official/notify_username/3" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
+                                        </form>
+
+                                        <!-- Warn User -->
+                                        <form action="/warn_user/3" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
+                                        </form>
+
+                                        <!-- Permanent Force Delete -->
+                                        <form action="/admin_delete_user/3" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-red">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">rohit_moderator</div>
+                                    <small style="color: #64748b;">rohit.official@pustakverse.com</small><br>
+                                    <small style="color: #94a3b8;">Active: 1 hour ago</small>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; text-transform: capitalize; color: #16a34a;">official</span>
+                                    
+                                </td>
+                                <td>
+                                    <!-- Power: Instant Role Switcher -->
+                                    <form action="/developer/change_role/4" method="POST" style="display: flex; gap: 4px; align-items: center;">
+                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
+                                            <option value="reader" >Reader</option>
+                                            <option value="author" >Author</option>
+                                            <option value="official" selected>Official</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                                        <!-- Power: Unlock Locked Accounts -->
+                                        
+
+                                        <!-- Power: Send Username Notice -->
+                                        <form action="/official/notify_username/4" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
+                                        </form>
+
+                                        <!-- Warn User -->
+                                        <form action="/warn_user/4" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
+                                        </form>
+
+                                        <!-- Permanent Force Delete -->
+                                        <form action="/admin_delete_user/4" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
                                             <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
                                             <button type="submit" class="btn-sm btn-red">Delete</button>
                                         </form>

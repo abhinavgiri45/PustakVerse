@@ -226,7 +226,10 @@ def build():
                 ],
                 pending_authors=[],
                 all_users=[
-                    {'id': 1, 'username': 'abhinavgiri45', 'email': 'abhinavgiri370@gmail.com', 'role': 'developer', 'last_activity': 'Active now', 'failed_attempts': 0, 'locked_until': None}
+                    {'id': 1, 'username': 'abhinavgiri45', 'email': 'abhinavgiri370@gmail.com', 'role': 'developer', 'last_activity': 'Active now', 'failed_attempts': 0, 'locked_until': None},
+                    {'id': 2, 'username': 'aarav_sharma', 'email': 'aarav.author@pustakverse.com', 'role': 'author', 'last_activity': '10 mins ago', 'failed_attempts': 0, 'locked_until': None},
+                    {'id': 3, 'username': 'priya_verma', 'email': 'priya.reader@gmail.com', 'role': 'reader', 'last_activity': 'Today', 'failed_attempts': 0, 'locked_until': None},
+                    {'id': 4, 'username': 'rohit_moderator', 'email': 'rohit.official@pustakverse.com', 'role': 'official', 'last_activity': '1 hour ago', 'failed_attempts': 0, 'locked_until': None}
                 ],
                 searched_users=[],
                 official_logs=[],
