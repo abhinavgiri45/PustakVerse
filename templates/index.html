@@ -327,44 +327,70 @@
             box-sizing: border-box;
         }
         @media (max-width: 768px) {
+            body {
+                padding-bottom: 74px !important;
+            }
             .navbar { 
                 flex-direction: row !important; 
-                padding: 10px 14px !important; 
+                padding: 8px 12px !important; 
                 justify-content: space-between !important;
                 align-items: center !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
+                min-height: 50px !important;
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 1000 !important;
             }
             .navbar-brand img, .logo-img {
-                height: 36px !important;
-                max-width: 130px !important;
+                height: 34px !important;
+                max-width: 120px !important;
             }
             .navbar-links { 
                 display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
                 gap: 6px !important;
                 margin-left: auto !important;
                 flex-wrap: nowrap !important;
-                overflow-x: auto !important;
+                overflow-x: visible !important;
             }
-            .navbar-links a {
-                padding: 6px 12px !important;
-                font-size: 0.8rem !important;
-                min-height: 36px !important;
+            /* Hide useless/redundant desktop links on mobile phone screens */
+            .navbar-links a[href*="tools"],
+            .navbar-links a[href*="contact"],
+            .navbar-links a[href*="my_library"],
+            .navbar-links a[href*="my-library"] {
+                display: none !important;
+            }
+            .navbar-links a, .navbar-links button {
+                padding: 6px 10px !important;
+                font-size: 0.78rem !important;
+                min-height: 34px !important;
                 border-radius: 20px !important;
                 white-space: nowrap !important;
+                margin: 0 !important;
+                display: inline-flex !important;
+                align-items: center !important;
             }
             .hero-section { 
-                padding: 30px 16px !important;
+                padding: 24px 14px 18px !important; 
                 width: 100% !important;
                 box-sizing: border-box !important;
+                margin-top: 0 !important;
+                position: relative !important;
+                z-index: 1 !important;
             }
             .hero-section h1 { 
-                font-size: 1.85rem !important; 
-                line-height: 1.2 !important;
+                font-size: 1.7rem !important; 
+                line-height: 1.25 !important;
+                margin: 6px 0 !important;
+                word-break: break-word !important;
             }
             .hero-section p {
-                font-size: 0.95rem !important;
-                margin-top: 6px !important;
+                font-size: 0.9rem !important;
+                margin-top: 4px !important;
+                margin-bottom: 12px !important;
             }
             .search-container {
                 width: 100% !important;
@@ -1445,8 +1471,36 @@
         </div>
     </div>
 
-
-    
+    <!-- Mobile App-Grade Bottom Navigation Dock -->
+    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
+        <a href="/" class="dock-item active">
+            <span class="dock-icon">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('my_library') }}" class="dock-item">
+            <span class="dock-icon">📚</span>
+            <span>Library</span>
+        </a>
+        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center" title="GranthMind AI">
+            <span class="dock-icon">🤖</span>
+            <span>AI</span>
+        </a>
+        {% if session.user_id %}
+            <a href="{{ url_for('dashboard') }}" class="dock-item">
+                <span class="dock-icon">👤</span>
+                <span>Profile</span>
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="dock-item">
+                <span class="dock-icon">🔑</span>
+                <span>Sign In</span>
+            </a>
+        {% endif %}
+        <button type="button" class="dock-item" onclick="openCategoriesModal()" aria-label="Explore Categories">
+            <span class="dock-icon">📂</span>
+            <span>Explore</span>
+        </button>
+    </nav>
 
 </body>
 </html>

@@ -176,33 +176,40 @@
 
     <!-- Mobile App-Grade Bottom Navigation Dock -->
     <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
-        <a href="{{ url_for('index') }}" class="dock-item">
+        <a href="{{ url_for('index') }}" class="dock-item {% if request.endpoint == 'index' %}active{% endif %}">
             <span class="dock-icon">🏠</span>
             <span>Home</span>
         </a>
-        <a href="{{ url_for('my_library') }}" class="dock-item">
+        <a href="{{ url_for('my_library') }}" class="dock-item {% if request.endpoint == 'my_library' %}active{% endif %}">
             <span class="dock-icon">📚</span>
             <span>Library</span>
         </a>
-        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center" title="GranthMind AI">
+        <a href="{{ url_for('ask_ai') }}" class="dock-item dock-ai-center {% if request.endpoint == 'ask_ai' %}active{% endif %}" title="GranthMind AI">
             <span class="dock-icon">🤖</span>
-            <span style="font-size: 0.62rem; font-weight: 700;">AI</span>
+            <span>AI</span>
         </a>
         {% if session.username %}
-            <a href="{{ url_for('dashboard') }}" class="dock-item">
+            <a href="{{ url_for('dashboard') }}" class="dock-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
                 <span class="dock-icon">👤</span>
                 <span>Profile</span>
             </a>
         {% else %}
-            <a href="{{ url_for('login') }}" class="dock-item">
+            <a href="{{ url_for('login') }}" class="dock-item {% if request.endpoint == 'login' %}active{% endif %}">
                 <span class="dock-icon">🔑</span>
                 <span>Sign In</span>
             </a>
         {% endif %}
-        <button type="button" class="dock-item" onclick="openNav()" aria-label="Open menu">
-            <span class="dock-icon">☰</span>
-            <span>Menu</span>
-        </button>
+        {% if request.endpoint in ['login', 'register', 'forgot_password', 'google_set_password'] %}
+            <a href="{{ url_for('contact') }}" class="dock-item {% if request.endpoint == 'contact' %}active{% endif %}" title="Help & Support">
+                <span class="dock-icon">💬</span>
+                <span>Help</span>
+            </a>
+        {% else %}
+            <button type="button" class="dock-item" onclick="openNav()" aria-label="Open menu">
+                <span class="dock-icon">☰</span>
+                <span>Menu</span>
+            </button>
+        {% endif %}
     </nav>
 
     <button class="back-to-top" id="backToTop" type="button" onclick="scrollToTop()" aria-label="Back to top">↑</button>
