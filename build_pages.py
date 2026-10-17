@@ -226,16 +226,28 @@ def build():
                 ],
                 pending_authors=[],
                 all_users=[
-                    {'id': 1, 'username': 'abhinavgiri45', 'email': 'abhinavgiri370@gmail.com', 'role': 'developer', 'last_activity': 'Active now', 'failed_attempts': 0, 'locked_until': None},
-                    {'id': 2, 'username': 'aarav_sharma', 'email': 'aarav.author@pustakverse.com', 'role': 'author', 'last_activity': '10 mins ago', 'failed_attempts': 0, 'locked_until': None},
-                    {'id': 3, 'username': 'priya_verma', 'email': 'priya.reader@gmail.com', 'role': 'reader', 'last_activity': 'Today', 'failed_attempts': 0, 'locked_until': None},
-                    {'id': 4, 'username': 'rohit_moderator', 'email': 'rohit.official@pustakverse.com', 'role': 'official', 'last_activity': '1 hour ago', 'failed_attempts': 0, 'locked_until': None}
+                    {'id': 1, 'username': 'abhinavgiri45', 'email': 'abhinavgiri370@gmail.com', 'role': 'developer', 'can_publish': 1, 'last_activity': 'Active now', 'failed_attempts': 0, 'locked_until': None},
+                    {'id': 2, 'username': 'aarav_sharma', 'email': 'aarav.author@pustakverse.com', 'role': 'author', 'can_publish': 1, 'last_activity': '10 mins ago', 'failed_attempts': 0, 'locked_until': None},
+                    {'id': 3, 'username': 'priya_verma', 'email': 'priya.reader@gmail.com', 'role': 'reader', 'can_publish': 0, 'last_activity': 'Today', 'failed_attempts': 0, 'locked_until': None},
+                    {'id': 4, 'username': 'rohit_moderator', 'email': 'rohit.official@pustakverse.com', 'role': 'official', 'can_publish': 1, 'last_activity': '1 hour ago', 'failed_attempts': 0, 'locked_until': None}
                 ],
                 searched_users=[],
                 official_logs=[],
                 del_requests=[],
                 book_del_requests=[],
                 username_requests=[],
+                pending_archive_books=[
+                    {
+                        'id': 99,
+                        'title': 'Ancient Sanskrit Epics: Annotated Digital Edition',
+                        'author_name': 'aarav_sharma',
+                        'author_email': 'aarav.author@pustakverse.com',
+                        'cover_image': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80',
+                        'pdf_file': 'https://drive.google.com/file/d/sample_drive_pdf_id/view?usp=sharing',
+                        'description': 'Historical academic research and public domain translations submitted for free archiving.',
+                        'created_at': '2026-10-18 01:00:00'
+                    }
+                ],
                 search_query='',
                 show_delete_otp_form=False,
                 client_ip='127.0.0.1',

@@ -3770,6 +3770,36 @@ def ensure_payment_schema():
         except Exception: pass
 
         try:
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'can_publish'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN can_publish INT NOT NULL DEFAULT 0")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'archive_status'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN archive_status VARCHAR(50) DEFAULT 'approved'")
+        except Exception: pass
+
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS archive_approval_requests (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    book_id INT NOT NULL,
+                    author_id INT NOT NULL,
+                    author_username VARCHAR(100),
+                    title VARCHAR(255) NOT NULL,
+                    pdf_link VARCHAR(1000),
+                    cover_link VARCHAR(1000),
+                    reason TEXT,
+                    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+                    reviewed_by INT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        except Exception: pass
+
+        try:
             cursor.execute("SHOW COLUMNS FROM front_page_settings LIKE 'maintenance_mode'")
             if not cursor.fetchone():
                 cursor.execute("ALTER TABLE front_page_settings ADD COLUMN maintenance_mode BOOLEAN NOT NULL DEFAULT FALSE")
@@ -7580,8 +7610,11 @@ def dashboard():
         search_query = request.args.get('search', '')
         role_filter = request.args.get('role_filter', 'all')
         
-        cursor.execute("SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity FROM users WHERE id = %s", (session['user_id'],))
+        cursor.execute("SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity, COALESCE(can_publish, 0) as can_publish FROM users WHERE id = %s", (session['user_id'],))
         user_profile = cursor.fetchone() or {}
+        
+        can_user_publish = (role == 'developer') or (role == 'author') or (role == 'official' and bool(user_profile.get('can_publish', 0)))
+        session['can_publish'] = can_user_publish
         
         two_factor_enabled = bool(user_profile.get('two_factor_enabled'))
         
@@ -7611,6 +7644,10 @@ def dashboard():
             return redirect(url_for('dashboard'))
 
         if request.method == 'POST' and 'title' in request.form:
+            if not can_user_publish:
+                flash("You do not have permission to publish books.", "error")
+                return redirect(url_for('dashboard'))
+
             if role != 'developer':
                 cursor.execute("SELECT upload_freeze FROM front_page_settings WHERE id = 1")
                 fps_freeze = cursor.fetchone() or {}
@@ -7618,14 +7655,14 @@ def dashboard():
                     flash("Book publishing is temporarily paused by the Developer for system maintenance.", "error")
                     return redirect(url_for('dashboard'))
 
-            catalog = request.form.get('catalog', '')
+            catalog = request.form.get('catalog', '').strip()
+            is_archive = catalog.lower() == 'archives'
+
             if role == 'author':
                 cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
-                if not cursor.fetchone()['is_verified']:
+                auth_user = cursor.fetchone() or {}
+                if not auth_user.get('is_verified'):
                     flash("Must be verified to publish.", "error")
-                    return redirect(url_for('dashboard'))
-                if catalog.lower() == 'archives':
-                    flash("Cannot publish to Archives.", "error")
                     return redirect(url_for('dashboard'))
 
             description = request.form.get('description', '').strip()
@@ -7714,18 +7751,39 @@ def dashboard():
                     # Automatically mint a 100% unique, globally compliant standard SBIN for this book
                     user_sbin = generate_valid_sbin(cursor)
 
+                is_quarantined = 1 if (is_archive and role == 'author') else 0
+                archive_status = 'pending' if (is_archive and role == 'author') else 'approved'
+
                 cursor.execute(
-                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn, is_quarantined, archive_status) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid,
                      price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret,
-                     rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description, user_sbin, user_sbin)
+                     rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description, user_sbin, user_sbin,
+                     is_quarantined, archive_status)
                 )
                 new_book_id = cursor.lastrowid
                 db.commit()
                 try:
                     threading.Thread(target=train_ai_on_book, args=(new_book_id, request.form['title'], description, request.form['catalog'], ''), daemon=True).start()
                 except Exception: pass
+
+                if is_archive and role == 'author':
+                    try:
+                        cursor.execute(
+                            "INSERT INTO archive_approval_requests (book_id, author_id, author_username, title, pdf_link, cover_link, reason, status) "
+                            "VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')",
+                            (new_book_id, session['user_id'], user_profile.get('username') or session.get('username'), request.form['title'], f_pdf, f_cov, description)
+                        )
+                        db.commit()
+                    except Exception: pass
+                    flash("Archive Submission Sent for Editorial Review! As the public Archives is a curated, 100% free repository, your book will go live once approved by platform officials.", "success")
+                    return redirect(url_for('dashboard'))
+
+                if is_archive and (role == 'developer' or role == 'official'):
+                    flash("Direct Archive Publication Live! Your book has been published directly into the public Archives repository without requiring approval.", "success")
+                    return redirect(url_for('dashboard'))
+
                 if is_paid and rp_verified:
                     flash("Book published successfully! Your Razorpay payment details were verified.", "success")
                 elif is_paid:
@@ -7776,7 +7834,7 @@ def dashboard():
 
         if role == 'developer':
             params = []
-            base_query = "SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users WHERE role != 'developer'"
+            base_query = "SELECT id, username, email, role, last_activity, failed_attempts, locked_until, COALESCE(can_publish, 0) as can_publish FROM users WHERE role != 'developer'"
             
             if search_query: 
                 base_query += " AND (username LIKE %s OR email LIKE %s)"
@@ -7804,6 +7862,19 @@ def dashboard():
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id WHERE books.catalog = 'Archives' ORDER BY books.created_at DESC")
             archive_books = clean_book_data(cursor.fetchall())
             
+            try:
+                cursor.execute("""
+                    SELECT b.id, b.title, b.cover_image, b.pdf_file, b.description, b.created_at, b.archive_status, b.is_quarantined,
+                           u.username as author_name, u.email as author_email
+                    FROM books b
+                    LEFT JOIN users u ON b.author_id = u.id
+                    WHERE LOWER(b.catalog) = 'archives' AND (b.archive_status = 'pending' OR b.is_quarantined = 1)
+                    ORDER BY b.id DESC LIMIT 50
+                """)
+                pending_archive_books = cursor.fetchall() or []
+            except Exception:
+                pending_archive_books = []
+
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
             try:
@@ -7865,18 +7936,31 @@ def dashboard():
             except Exception:
                 am_pin_lockouts = []
 
-            return render_template('dashboard.html', archive_books=archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team, am_pin_lockouts=am_pin_lockouts)
+            return render_template('dashboard.html', archive_books=archive_books, pending_archive_books=pending_archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team, am_pin_lockouts=am_pin_lockouts)
 
         if role == 'official':
             if search_query: 
-                cursor.execute("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
+                cursor.execute("SELECT id, username, email, role, last_activity, failed_attempts, locked_until, COALESCE(can_publish, 0) as can_publish FROM users WHERE role IN ('reader', 'author') AND (username LIKE %s OR email LIKE %s)", (f"%{search_query}%", f"%{search_query}%"))
             else: 
-                cursor.execute("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users WHERE role IN ('reader', 'author') ORDER BY last_activity DESC LIMIT 100")
+                cursor.execute("SELECT id, username, email, role, last_activity, failed_attempts, locked_until, COALESCE(can_publish, 0) as can_publish FROM users WHERE role IN ('reader', 'author') ORDER BY last_activity DESC LIMIT 100")
                 
             all_users = cursor.fetchall()
             
             cursor.execute("SELECT id, username, email, verification_reason, last_activity FROM users WHERE role = 'author' AND is_verified = FALSE")
             pending_authors = cursor.fetchall()
+
+            try:
+                cursor.execute("""
+                    SELECT b.id, b.title, b.cover_image, b.pdf_file, b.description, b.created_at, b.archive_status, b.is_quarantined,
+                           u.username as author_name, u.email as author_email
+                    FROM books b
+                    LEFT JOIN users u ON b.author_id = u.id
+                    WHERE LOWER(b.catalog) = 'archives' AND (b.archive_status = 'pending' OR b.is_quarantined = 1)
+                    ORDER BY b.id DESC LIMIT 50
+                """)
+                pending_archive_books = cursor.fetchall() or []
+            except Exception:
+                pending_archive_books = []
             
             cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
@@ -7904,7 +7988,7 @@ def dashboard():
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 100")
             official_logs = cursor.fetchall()
             
-            return render_template('dashboard.html', pending_authors=pending_authors, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, official_designation=exec_info['designation'], is_absolute_power=exec_info['is_absolute'], post_tier=exec_info['post_tier'], leadership_team=leadership_team, all_categories=all_categories, official_logs=official_logs)
+            return render_template('dashboard.html', pending_authors=pending_authors, pending_archive_books=pending_archive_books, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, official_designation=exec_info['designation'], is_absolute_power=exec_info['is_absolute'], post_tier=exec_info['post_tier'], leadership_team=leadership_team, all_categories=all_categories, official_logs=official_logs)
 
         if role == 'author':
             cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
@@ -8424,14 +8508,132 @@ def create_official():
     db = None
     try:
         raw_password = request.form['password']
+        can_publish = 1 if request.form.get('can_publish') in ['1', 'on', 'true'] else 0
         db = get_db_connection()
         cursor = db.cursor()
-        cursor.execute("INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer) VALUES (%s, %s, %s, 'official', TRUE, 'Dev', 'Dev')", (request.form['username'], request.form['email'], generate_password_hash(raw_password)))
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN can_publish INT DEFAULT 0")
+            db.commit()
+        except Exception: pass
+        cursor.execute("INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, can_publish) VALUES (%s, %s, %s, 'official', TRUE, 'Dev', 'Dev', %s)", (request.form['username'], request.form['email'], generate_password_hash(raw_password), can_publish))
         db.commit()
         send_official_welcome(request.form['email'], request.form['username'], raw_password)
         flash("Official created and welcome email sent!", "success")
     except Exception: 
         flash("Database error.", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/developer/toggle_official_publishing/<int:user_id>', methods=['POST'])
+def developer_toggle_official_publishing(user_id):
+    if session.get('role') != 'developer':
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+    
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN can_publish INT DEFAULT 0")
+            db.commit()
+        except Exception: pass
+        cursor.execute("SELECT id, username, email, role, COALESCE(can_publish, 0) as can_publish FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            flash("User not found.", "error")
+            return redirect(url_for('dashboard'))
+        if user['role'] != 'official':
+            flash("Can only toggle publishing rights for platform officials.", "error")
+            return redirect(url_for('dashboard'))
+        
+        new_val = 0 if user.get('can_publish') else 1
+        cursor.execute("UPDATE users SET can_publish = %s WHERE id = %s", (new_val, user_id))
+        db.commit()
+        
+        status_str = "granted" if new_val else "revoked"
+        log_official_activity(session['user_id'], f"Developer {status_str} publishing power for official '{user['username']}'")
+        flash(f"Publishing authority successfully {status_str} for official '{user['username']}'.", "success")
+    except Exception as e:
+        flash(f"Error toggling publishing rights: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/official/approve_archive_book/<int:book_id>', methods=['POST'])
+def official_approve_archive_book(book_id):
+    if session.get('role') not in ['developer', 'official']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+    
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, title, author_id, catalog FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            flash("Book not found.", "error")
+            return redirect(url_for('dashboard'))
+        
+        try:
+            cursor.execute("ALTER TABLE books ADD COLUMN archive_status VARCHAR(50) DEFAULT 'approved'")
+            db.commit()
+        except Exception: pass
+        
+        cursor.execute("UPDATE books SET is_quarantined = 0, archive_status = 'approved' WHERE id = %s", (book_id,))
+        try:
+            cursor.execute("UPDATE archive_approval_requests SET status = 'approved', reviewed_by = %s WHERE book_id = %s", (session['user_id'], book_id))
+        except Exception: pass
+        db.commit()
+        
+        log_official_activity(session['user_id'], f"Approved Archive publication for book '{book['title']}' (ID: {book_id})")
+        flash(f"Book '{book['title']}' approved! It is now live in the Archives public repository.", "success")
+    except Exception as e:
+        flash(f"Error approving book: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return redirect(url_for('dashboard'))
+
+@app.route('/official/reject_archive_book/<int:book_id>', methods=['POST'])
+def official_reject_archive_book(book_id):
+    if session.get('role') not in ['developer', 'official']:
+        flash("Unauthorized.", "error")
+        return redirect(url_for('dashboard'))
+    
+    reason = request.form.get('reason', 'Does not meet Archives curation standards.').strip()
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, title, author_id FROM books WHERE id = %s", (book_id,))
+        book = cursor.fetchone()
+        if not book:
+            flash("Book not found.", "error")
+            return redirect(url_for('dashboard'))
+        
+        try:
+            cursor.execute("ALTER TABLE books ADD COLUMN archive_status VARCHAR(50) DEFAULT 'approved'")
+            db.commit()
+        except Exception: pass
+        
+        cursor.execute("UPDATE books SET archive_status = 'rejected', is_quarantined = 1 WHERE id = %s", (book_id,))
+        try:
+            cursor.execute("UPDATE archive_approval_requests SET status = 'rejected', reviewed_by = %s, reason = %s WHERE book_id = %s", (session['user_id'], reason, book_id))
+        except Exception: pass
+        db.commit()
+        
+        log_official_activity(session['user_id'], f"Rejected Archive publication for book '{book['title']}' (ID: {book_id}): {reason}")
+        flash(f"Archive submission for '{book['title']}' rejected.", "info")
+    except Exception as e:
+        flash(f"Error rejecting book: {str(e)}", "error")
     finally:
         if db:
             try: db.close()

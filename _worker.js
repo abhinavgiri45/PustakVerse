@@ -143,12 +143,21 @@ async function verifySession(sessionCookie, env = null) {
   if (env && env.DB && user.id) {
     try {
       const dbUser = await env.DB.prepare(
-        "SELECT id, username, email, role, official_designation, is_verified, two_factor_enabled, avatar_url, sbin_wallet_address, wallet_balance_inr FROM users WHERE id = ? LIMIT 1"
+        "SELECT id, username, email, role, official_designation, is_verified, two_factor_enabled, avatar_url, sbin_wallet_address, wallet_balance_inr, COALESCE(can_publish, 0) as can_publish FROM users WHERE id = ? LIMIT 1"
       ).bind(user.id).first();
       if (dbUser) {
         user = { ...user, ...dbUser, user_id: dbUser.id, id: dbUser.id };
       }
-    } catch (_) {}
+    } catch (_) {
+      try {
+        const dbUser = await env.DB.prepare(
+          "SELECT id, username, email, role, official_designation, is_verified, two_factor_enabled, avatar_url, sbin_wallet_address, wallet_balance_inr FROM users WHERE id = ? LIMIT 1"
+        ).bind(user.id).first();
+        if (dbUser) {
+          user = { ...user, ...dbUser, user_id: dbUser.id, id: dbUser.id, can_publish: 0 };
+        }
+      } catch (__) {}
+    }
   }
   return user;
 }
@@ -3341,13 +3350,14 @@ Format with these exact markdown sections:
         is_verified: 1,
         created_at: "2026-10-01",
         last_activity: "Active now",
-        two_factor_enabled: 0
+        two_factor_enabled: 0,
+        can_publish: sessionUser.can_publish ? 1 : 0
       };
 
       if (env.DB) {
         try {
           const dbRow = await env.DB.prepare(
-            "SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity, author_bio, social_links_json FROM users WHERE id = ? OR LOWER(username) = LOWER(?) LIMIT 1"
+            "SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity, author_bio, social_links_json, COALESCE(can_publish, 0) as can_publish FROM users WHERE id = ? OR LOWER(username) = LOWER(?) LIMIT 1"
           ).bind(sessionUser.user_id || 0, sessionUser.username || "").first();
           if (dbRow) {
             user = { ...user, ...dbRow };
@@ -3379,6 +3389,11 @@ Format with these exact markdown sections:
 
           // Publish a New Book
           if (formData.has("title") || formData.has("pdf_link")) {
+            const canPublish = user.role === "developer" || user.role === "author" || (user.role === "official" && Boolean(user.can_publish));
+            if (!canPublish) {
+              return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>You do not have permission to publish books.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } });
+            }
+
             const title = (formData.get("title") || "").trim();
             if (!title) {
               return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Book Title is required.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
@@ -3422,11 +3437,21 @@ Format with these exact markdown sections:
               normCover = (driveCover && driveCover !== pdfLink) ? driveCover : "/static/PustakVerse.png";
             }
 
-            const isPaid = formData.get("is_paid") === "on" || formData.get("is_paid") === "true";
+            const isArchive = catalog.toLowerCase() === "archives";
+            const rawIsPaid = formData.get("is_paid") === "on" || formData.get("is_paid") === "true";
+            let isPaid = isArchive ? false : rawIsPaid;
             let pricePaise = 0;
             if (isPaid) {
               const rawInr = parseFloat(formData.get("price_inr") || "0");
               pricePaise = Math.round((isNaN(rawInr) ? 0 : rawInr) * 100);
+            }
+
+            let isQuarantined = 0;
+            let archiveStatus = "approved";
+            if (isArchive && user.role === "author") {
+              // Normal authors require editorial approval before archive publication goes live
+              isQuarantined = 1;
+              archiveStatus = "pending";
             }
 
             const rpKeyId = (formData.get("rp_key_id") || "").trim() || null;
@@ -3448,29 +3473,33 @@ Format with these exact markdown sections:
                 `INSERT INTO books (
                    title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
                    preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                   created_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                   is_quarantined, archive_status, created_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
               ).bind(
                 title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo
+                5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
+                isQuarantined, archiveStatus
               ).run();
             } catch (insertErr) {
               const errMsg = String(insertErr?.message || insertErr);
-              if (errMsg.includes("no column named isbn")) {
+              if (errMsg.includes("no column named archive_status") || errMsg.includes("no column named isbn")) {
                 try {
-                  await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run();
+                  await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run().catch(() => {});
+                  await env.DB.prepare("ALTER TABLE books ADD COLUMN archive_status TEXT DEFAULT 'approved'").run().catch(() => {});
+                  await env.DB.prepare("ALTER TABLE books ADD COLUMN is_quarantined INTEGER DEFAULT 0").run().catch(() => {});
                   await env.DB.prepare(
                     `INSERT INTO books (
                        title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
                        preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                       created_at
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                       is_quarantined, archive_status, created_at
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
                   ).bind(
                     title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                    5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo
+                    5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
+                    isQuarantined, archiveStatus
                   ).run();
                 } catch (retryErr) {
-                  // Fallback without isbn column
+                  // Fallback without new columns
                   await env.DB.prepare(
                     `INSERT INTO books (
                        title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
@@ -3492,12 +3521,30 @@ Format with these exact markdown sections:
               await env.DB.prepare("INSERT OR IGNORE INTO catalogs (name) VALUES (?)").bind(catalog).run();
             } catch (_) {}
 
-            // Auto-promote reader to author
+            // Auto-promote reader to author if applicable
             if (user.role === "reader") {
               try {
                 await env.DB.prepare("UPDATE users SET role = 'author', is_verified = 1 WHERE id = ?").bind(user.id).run();
                 user.role = "author";
               } catch (_) {}
+            }
+
+            if (isArchive && user.role === "author") {
+              try {
+                const bRow = await env.DB.prepare("SELECT id FROM books WHERE sbin_no = ? ORDER BY id DESC LIMIT 1").bind(sbinNo).first().catch(() => null);
+                const bId = bRow?.id || 0;
+                await env.DB.prepare(
+                  `INSERT INTO archive_approval_requests (book_id, author_id, author_username, title, pdf_link, cover_link, reason, status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
+                ).bind(bId, user.id, user.username, title, normPdf, normCover, description).run();
+              } catch (_) {}
+              console.log(`✓ [ARCHIVE SUBMISSION PENDING REVIEW] "${title}" by author ${user.username}`);
+              return Response.redirect(`${url.origin}/dashboard?archive_pending=1`, 302);
+            }
+
+            if (isArchive && (user.role === "developer" || user.role === "official")) {
+              console.log(`✓ [DIRECT ARCHIVE PUBLICATION LIVE] "${title}" by authorized ${user.role} ${user.username}`);
+              return Response.redirect(`${url.origin}/dashboard?archive_published=1`, 302);
             }
 
             console.log(`✓ [BOOK PUBLISHED AT EDGE] "${title}" by ${user.username} | SBIN: ${sbinNo}`);
@@ -3621,7 +3668,7 @@ Format with these exact markdown sections:
         if ((user.role === "developer" || user.role === "official") && env.DB) {
           try {
             await ensureModerationTables(env);
-            const uRes = await env.DB.prepare("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users ORDER BY id ASC LIMIT 100").all();
+            const uRes = await env.DB.prepare("SELECT id, username, email, role, last_activity, failed_attempts, locked_until, COALESCE(can_publish, 0) as can_publish FROM users ORDER BY id ASC LIMIT 100").all();
             allUsers = uRes?.results || [];
           } catch (_) {}
           try {
@@ -3636,9 +3683,20 @@ Format with these exact markdown sections:
             ).all();
             usernameRequests = unReqRes?.results || [];
           } catch (_) {}
+          try {
+            const pArchRes = await env.DB.prepare(
+              `SELECT b.id, b.title, b.author_id, b.catalog, b.pdf_file, b.cover_image, b.description, b.created_at,
+                      COALESCE(u.username, 'Author') as author_name, COALESCE(u.email, '') as author_email
+               FROM books b
+               LEFT JOIN users u ON b.author_id = u.id
+               WHERE LOWER(b.catalog) = 'archives' AND (b.archive_status = 'pending' OR b.is_quarantined = 1)
+               ORDER BY b.id DESC LIMIT 50`
+            ).all();
+            pendingArchiveBooks = pArchRes?.results || [];
+          } catch (_) {}
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests);
+        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests, pendingArchiveBooks);
         return new Response(personalized, {
           status: 200,
           headers: {
@@ -3810,13 +3868,98 @@ Format with these exact markdown sections:
       const offUsername = (formData.get("username") || "").trim();
       const offEmail = (formData.get("email") || "").trim();
       const offPassword = formData.get("password") || "";
+      const canPublishVal = (formData.get("can_publish") === "1" || formData.get("can_publish") === "on") ? 1 : 0;
       if (offUsername && offEmail && offPassword) {
         const hash = `sha256$${await sha256Hex(offPassword)}`;
-        await env.DB.prepare(
-          "INSERT OR REPLACE INTO users (username, email, password_hash, role, is_verified, two_factor_enabled, security_question, security_answer) VALUES (?, ?, ?, 'official', 1, 1, 'Official Platform Access', 'Authorized')"
-        ).bind(offUsername, offEmail, hash).run();
+        try {
+          await env.DB.prepare(
+            "INSERT OR REPLACE INTO users (username, email, password_hash, role, is_verified, two_factor_enabled, security_question, security_answer, can_publish) VALUES (?, ?, ?, 'official', 1, 1, 'Official Platform Access', 'Authorized', ?)"
+          ).bind(offUsername, offEmail, hash, canPublishVal).run();
+        } catch (_) {
+          await env.DB.prepare(
+            "INSERT OR REPLACE INTO users (username, email, password_hash, role, is_verified, two_factor_enabled, security_question, security_answer) VALUES (?, ?, ?, 'official', 1, 1, 'Official Platform Access', 'Authorized')"
+          ).bind(offUsername, offEmail, hash).run();
+        }
       }
       return Response.redirect(`${url.origin}/dashboard`, 302);
+    }
+
+    // Toggle Official Publishing Rights: POST /developer/toggle_official_publishing/:id
+    const togglePubMatch = url.pathname.match(/^\/developer\/toggle_official_publishing\/(\d+)/);
+    if (togglePubMatch && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || user.role !== "developer") {
+        return new Response("Unauthorized: Only Developer can toggle official publishing permissions.", { status: 403 });
+      }
+      const targetUserId = parseInt(togglePubMatch[1], 10);
+      try {
+        await env.DB.prepare("ALTER TABLE users ADD COLUMN can_publish INTEGER DEFAULT 0").run().catch(() => {});
+        const targetUser = await env.DB.prepare("SELECT id, username, role, COALESCE(can_publish, 0) as can_publish FROM users WHERE id = ?").bind(targetUserId).first();
+        if (targetUser && targetUser.role === "official") {
+          const newVal = targetUser.can_publish ? 0 : 1;
+          await env.DB.prepare("UPDATE users SET can_publish = ? WHERE id = ?").bind(newVal, targetUserId).run();
+          try {
+            await env.DB.prepare("INSERT INTO official_activities (official_id, action, timestamp) VALUES (?, ?, datetime('now'))")
+              .bind(user.id, `Developer ${newVal ? 'granted' : 'revoked'} book publishing power for official '${targetUser.username}'`).run();
+          } catch (_) {}
+        }
+      } catch (err) {
+        console.error("Toggle official publishing error:", err);
+      }
+      return Response.redirect(`${url.origin}/dashboard?official_pub_toggled=1`, 302);
+    }
+
+    // Approve Archive Book: POST /official/approve_archive_book/:id
+    const approveArchiveMatch = url.pathname.match(/^\/official\/approve_archive_book\/(\d+)/);
+    if (approveArchiveMatch && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || (user.role !== "developer" && user.role !== "official")) {
+        return new Response("Unauthorized: Only Developer and Officials can moderate Archives.", { status: 403 });
+      }
+      const bookId = parseInt(approveArchiveMatch[1], 10);
+      try {
+        const b = await env.DB.prepare("SELECT id, title FROM books WHERE id = ?").bind(bookId).first();
+        await env.DB.prepare("UPDATE books SET is_quarantined = 0, archive_status = 'approved' WHERE id = ?").bind(bookId).run();
+        try {
+          await env.DB.prepare("UPDATE archive_approval_requests SET status = 'approved', reviewed_by = ? WHERE book_id = ?").bind(user.id, bookId).run();
+        } catch (_) {}
+        try {
+          await env.DB.prepare("INSERT INTO official_activities (official_id, action, timestamp) VALUES (?, ?, datetime('now'))")
+            .bind(user.id, `Approved Archive publication for book '${b?.title || bookId}' (ID: ${bookId})`).run();
+        } catch (_) {}
+      } catch (err) {
+        console.error("Approve archive book error:", err);
+      }
+      return Response.redirect(`${url.origin}/dashboard?archive_approved=1`, 302);
+    }
+
+    // Reject Archive Book: POST /official/reject_archive_book/:id
+    const rejectArchiveMatch = url.pathname.match(/^\/official\/reject_archive_book\/(\d+)/);
+    if (rejectArchiveMatch && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user || (user.role !== "developer" && user.role !== "official")) {
+        return new Response("Unauthorized: Only Developer and Officials can moderate Archives.", { status: 403 });
+      }
+      const bookId = parseInt(rejectArchiveMatch[1], 10);
+      const formData = await request.formData().catch(() => new FormData());
+      const reason = (formData.get("reason") || "Submission does not meet Archives curation standards.").trim();
+      try {
+        const b = await env.DB.prepare("SELECT id, title FROM books WHERE id = ?").bind(bookId).first();
+        await env.DB.prepare("UPDATE books SET is_quarantined = 1, archive_status = 'rejected' WHERE id = ?").bind(bookId).run();
+        try {
+          await env.DB.prepare("UPDATE archive_approval_requests SET status = 'rejected', reviewed_by = ?, reason = ? WHERE book_id = ?").bind(user.id, reason, bookId).run();
+        } catch (_) {}
+        try {
+          await env.DB.prepare("INSERT INTO official_activities (official_id, action, timestamp) VALUES (?, ?, datetime('now'))")
+            .bind(user.id, `Rejected Archive publication for book '${b?.title || bookId}' (ID: ${bookId})`).run();
+        } catch (_) {}
+      } catch (err) {
+        console.error("Reject archive book error:", err);
+      }
+      return Response.redirect(`${url.origin}/dashboard?archive_rejected=1`, 302);
     }
 
     // Add Live Category
@@ -7989,13 +8132,36 @@ async function ensureBooksTable(env) {
     ["is_quarantined", "INTEGER NOT NULL DEFAULT 0"],
     ["is_featured", "INTEGER NOT NULL DEFAULT 0"],
     ["sbin_no", "TEXT DEFAULT NULL"],
-    ["isbn", "TEXT DEFAULT NULL"]
+    ["isbn", "TEXT DEFAULT NULL"],
+    ["archive_status", "TEXT DEFAULT 'approved'"]
   ];
   for (const [col, colType] of bookCols) {
     try {
       await env.DB.prepare(`ALTER TABLE books ADD COLUMN ${col} ${colType}`).run();
     } catch (_) {}
   }
+
+  try {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN can_publish INTEGER DEFAULT 0").run();
+  } catch (_) {}
+
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS archive_approval_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id INTEGER NOT NULL,
+        author_id INTEGER NOT NULL,
+        author_username TEXT,
+        title TEXT NOT NULL,
+        pdf_link TEXT,
+        cover_link TEXT,
+        reason TEXT,
+        status TEXT DEFAULT 'pending',
+        reviewed_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (_) {}
 
   // Ensure official test paid book exists for payment gateway testing & verification
   try {
@@ -8426,7 +8592,7 @@ function stripElementById(html, id) {
   return html;
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null, allUsers = [], bookDelRequests = [], usernameRequests = []) {
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null, allUsers = [], bookDelRequests = [], usernameRequests = [], pendingArchiveBooks = []) {
   const username = user.username || "Reader";
   const role = (user.role || "reader").toLowerCase();
   const email = user.email || "";
@@ -8434,6 +8600,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const isOff = role === "official";
   const isAuthor = role === "author";
   const isReader = role === "reader" || (!isDev && !isOff && !isAuthor);
+  const canPublish = isDev || isAuthor || (isOff && Boolean(user.can_publish));
   const is2faActive = isDev || isOff || Boolean(user.two_factor_enabled);
 
   let out = html;
@@ -8603,6 +8770,21 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     } else if (url.searchParams.get("cache_purged") === "1") {
       const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚡</span><div>System cache successfully purged.</div></div>`;
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("archive_pending") === "1") {
+      const banner = `<div style="background: #fef3c7; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #92400e; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🏛️</span><div>Archive Submission Sent for Editorial Review! As the public Archives is a curated, 100% free repository, your book will go live once approved by platform officials.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("archive_published") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">👑</span><div>Direct Archive Publication Live! Your book has been published directly into the public Archives repository without requiring approval.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("archive_approved") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✅</span><div>Archive Book Approved! The book is now live in the completely free public Archives library.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("archive_rejected") === "1") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">❌</span><div>Archive Book Submission Rejected and removed from the curation queue.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("official_pub_toggled") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚡</span><div>Official Book Publishing Authority updated and synced live!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     }
   }
 
@@ -8652,14 +8834,23 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
   }
 
-  // Strip Author Publishing & Creator Suites for Readers & Officials
+  // Strip Author Publishing Suite for users without publishing authority
+  if (!canPublish) {
+    const pubElementsToStrip = [
+      "headerAuthorActions",
+      "authorPublishingSection",
+      "roleSectionAuthor"
+    ];
+    for (const elId of pubElementsToStrip) {
+      out = stripElementById(out, elId);
+    }
+  }
+
+  // Strip pure Author-only showcase and coupons for non-authors
   if (!isDev && !isAuthor) {
     const authElementsToStrip = [
-      "headerAuthorActions",
       "navAuthorShowcase",
-      "roleSectionAuthor",
-      "authorCouponsSection",
-      "authorPublishingSection"
+      "authorCouponsSection"
     ];
     for (const elId of authElementsToStrip) {
       out = stripElementById(out, elId);
@@ -8710,19 +8901,24 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "#headerOfficialDevActions",
       "#roleSectionOfficial",
       "#roleSectionOfficialUsers",
+      "#pendingArchiveApprovalsPanel",
       "#navManageBooks",
       "#manageBooksHubBtn"
+    );
+  }
+  if (!canPublish) {
+    hiddenSelectors.push(
+      "#headerAuthorActions",
+      "#authorPublishingSection",
+      "#roleSectionAuthor"
     );
   }
   if (!isDev && !isAuthor) {
     hiddenSelectors.push(
       ".role-section-author",
       ".author-only",
-      "#headerAuthorActions",
       "#navAuthorShowcase",
-      "#roleSectionAuthor",
-      "#authorCouponsSection",
-      "#authorPublishingSection"
+      "#authorCouponsSection"
     );
   }
   if (!isDev && !isReader) {
@@ -9001,6 +9197,21 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
           <td>
             <span style="font-weight: 700; text-transform: capitalize; color: ${roleColor};">${escapeHtml(u.role)}</span>
             ${isLocked ? '<br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">🔒 Locked</span>' : ''}
+            ${u.role === 'official' ? `
+              <div style="margin-top: 5px;">
+                <form action="/developer/toggle_official_publishing/${u.id}" method="POST" style="margin: 0; display: inline-block;">
+                  ${u.can_publish ? `
+                    <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
+                      <span>🚀</span> Can Publish (Revoke)
+                    </button>
+                  ` : `
+                    <button type="submit" class="btn-sm" style="background: #64748b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official cannot publish books. Click to grant publishing authority.">
+                      <span>🔒</span> No Publish (Grant)
+                    </button>
+                  `}
+                </form>
+              </div>
+            ` : ''}
           </td>
           <td>
             <form action="/developer/change_role/${u.id}" method="POST" style="display: flex; gap: 4px; align-items: center;">
@@ -9218,6 +9429,62 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
   }
 
+  // 5G. Hydrate Pending Archive Books for Developer & Officials
+  if ((isDev || isOff) && pendingArchiveBooks) {
+    if (pendingArchiveBooks.length > 0) {
+      out = out.replace(/id="archivePendingCountBadge">[\s\S]*?<\/span>/i, `id="archivePendingCountBadge"><span>📋</span> ${pendingArchiveBooks.length} Pending Review</span>`);
+      const archRowsHtml = pendingArchiveBooks.map(b => `
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <img src="${escapeHtml(b.cover_image || '/static/PustakVerse.png')}" alt="Cover" style="width: 44px; height: 60px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onerror="this.src='/static/PustakVerse.png'">
+              <div>
+                <strong style="color: #0f172a; font-size: 0.92rem; display: block;">${escapeHtml(b.title)}</strong>
+                <span style="background: #f1f5f9; color: #475569; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Archives</span>
+              </div>
+            </div>
+          </td>
+          <td style="padding: 12px;">
+            <strong style="color: #334155; font-size: 0.88rem;">${escapeHtml(b.author_name || 'Author')}</strong><br>
+            <small style="color: #64748b;">${escapeHtml(b.author_email || '')}</small><br>
+            <small style="color: #94a3b8;">${escapeHtml(b.created_at || '')}</small>
+          </td>
+          <td style="padding: 12px;">
+            ${b.pdf_file ? `
+            <a href="${escapeHtml(b.pdf_file)}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #86efac; color: #15803d; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.82rem; font-weight: 700;">
+              <span>📖</span> Open Google Drive PDF ↗
+            </a>` : `<span style="color: #94a3b8; font-size: 0.82rem;">No link provided</span>`}
+          </td>
+          <td style="padding: 12px; max-width: 250px;">
+            <div style="font-size: 0.82rem; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;" title="${escapeHtml(b.description || 'No synopsis')}">
+              ${escapeHtml(b.description || 'No synopsis provided.')}
+            </div>
+          </td>
+          <td style="padding: 12px; text-align: right; white-space: nowrap;">
+            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+              <form action="/official/approve_archive_book/${b.id}" method="POST" style="margin: 0;">
+                <button type="submit" class="btn-sm btn-green" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>✅</span> Approve
+                </button>
+              </form>
+              <form action="/official/reject_archive_book/${b.id}" method="POST" style="margin: 0;" onsubmit="return confirm('Reject this archive book submission?');">
+                <button type="submit" class="btn-sm btn-red" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>❌</span> Reject
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+      out = out.replace(/<tbody id="archiveApprovalsTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="archiveApprovalsTableBody">\n${archRowsHtml}\n</tbody>`);
+    } else {
+      out = out.replace(
+        /<tbody id="archiveApprovalsTableBody">[\s\S]*?<\/tbody>/i,
+        `<tbody id="archiveApprovalsTableBody">\n<tr id="noArchivePendingRow"><td colspan="5" style="text-align: center; padding: 30px; color: #64748b; font-size: 0.9rem;"><span style="font-size: 1.6rem; display: block; margin-bottom: 6px;">✨</span>No books currently awaiting Archive approval. The public archive is up to date.</td></tr>\n</tbody>`
+      );
+    }
+  }
+
   // 6. Append edge live sync script before </body>
   const edgeSyncScript = `
 <script>
@@ -9228,6 +9495,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const isOff = ${isOff};
   const isAuthor = ${isAuthor};
   const isReader = ${isReader};
+  const canPublish = ${canPublish};
 
   // Sync username and role elements
   const uEl = document.getElementById('dashUsernameDisplay');
@@ -9273,6 +9541,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       'headerOfficialDevActions',
       'roleSectionOfficial',
       'roleSectionOfficialUsers',
+      'pendingArchiveApprovalsPanel',
       'navManageBooks',
       'officialModerationSuite',
       'manageBooksHubBtn'
@@ -9285,20 +9554,29 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     });
   }
 
-  // 3. Remove Author publishing studio from Readers and pure Officials
-  if (!isDev && !isAuthor) {
+  // 3. Remove Author publishing studio from non-publishing users
+  if (!canPublish) {
     [
       'headerAuthorActions',
+      'authorPublishingSection',
+      'roleSectionAuthor'
+    ].forEach(function(elId) {
+      var el = document.getElementById(elId);
+      if (el) el.remove();
+    });
+  }
+  if (!isDev && !isAuthor) {
+    [
       'navAuthorShowcase',
-      'roleSectionAuthor',
-      'authorCouponsSection',
-      'authorPublishingSection'
+      'authorCouponsSection'
     ].forEach(function(elId) {
       var el = document.getElementById(elId);
       if (el) el.remove();
     });
     document.querySelectorAll('.author-only, .role-section-author').forEach(function(el) {
-      el.remove();
+      if (!canPublish || (el.id !== 'headerAuthorActions' && el.id !== 'authorPublishingSection' && el.id !== 'roleSectionAuthor')) {
+        el.remove();
+      }
     });
   }
 
