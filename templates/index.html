@@ -527,6 +527,199 @@
         .badge-color-violet { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
         .badge-color-orange { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
 
+        /* Front Screen Login Card Modal */
+        .front-login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 16px;
+        }
+        .front-login-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .front-login-card {
+            position: relative;
+            background: var(--pv-surface, #ffffff);
+            color: var(--pv-text, #1e293b);
+            border: 1px solid var(--pv-card-border, #e2e8f0);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            padding: 28px 24px 20px;
+            z-index: 2;
+            animation: pvModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        @keyframes pvModalPop {
+            0% { opacity: 0; transform: scale(0.92) translateY(12px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .front-login-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            line-height: 1;
+            color: var(--pv-text-muted, #64748b);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: color 0.2s, background 0.2s;
+        }
+        .front-login-close:hover {
+            color: var(--pv-text, #1e293b);
+            background: rgba(148, 163, 184, 0.15);
+        }
+        .front-login-header {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .front-login-tabs {
+            display: flex;
+            background: var(--pv-filter-item-bg, #f8fafc);
+            border: 1px solid var(--pv-card-border, #e2e8f0);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+        .front-tab-btn {
+            flex: 1;
+            padding: 9px 8px;
+            border: none;
+            background: none;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--pv-text-muted, #64748b);
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .front-tab-btn:hover {
+            color: var(--pv-text, #1e293b);
+        }
+        .front-tab-btn.active {
+            background: var(--pv-surface, #ffffff);
+            color: #ea580c;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .front-tab-content {
+            display: none;
+        }
+        .front-tab-content.active {
+            display: block;
+        }
+        .front-form-group {
+            margin-bottom: 14px;
+        }
+        .front-form-group label {
+            display: block;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--pv-text, #1e293b);
+            margin-bottom: 6px;
+        }
+        .front-form-group input {
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 0.95rem;
+            border: 1.5px solid var(--pv-card-border, #cbd5e1);
+            background: var(--pv-filter-item-bg, #f8fafc);
+            color: var(--pv-text, #1e293b);
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+        .front-form-group input:focus {
+            border-color: #ea580c;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
+            background: var(--pv-surface, #ffffff);
+        }
+        .front-pw-toggle {
+            position: absolute;
+            right: 12px;
+            top: 34px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            user-select: none;
+            opacity: 0.65;
+        }
+        .front-pw-toggle:hover { opacity: 1; }
+        .front-btn-submit {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .front-btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+        }
+        .front-btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 11px;
+            background: var(--pv-filter-item-bg, #f8fafc);
+            border: 1.5px solid var(--pv-card-border, #cbd5e1);
+            border-radius: 10px;
+            color: var(--pv-text, #1e293b);
+            font-size: 0.92rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+        .front-btn-google:hover {
+            border-color: #ea580c;
+            background: var(--pv-surface, #ffffff);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .front-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 16px 0;
+            color: var(--pv-text-muted, #64748b);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .front-divider::before, .front-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--pv-card-border, #e2e8f0);
+        }
+        .front-divider span { padding: 0 10px; }
+
 </style>
 </head>
 <body>
@@ -543,10 +736,10 @@
             <a href="{{ url_for('my_library') }}">📚 My Library</a>
             <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             {% if session.user_id %}
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('logout') }}" style="background: #e53e3e; border-radius: 25px;">Logout</a>
+                <a href="{{ url_for('dashboard') }}" id="navDashboardLink">Dashboard</a>
+                <a href="{{ url_for('logout') }}" id="navLogoutLink" style="background: #e53e3e; border-radius: 25px;">Logout</a>
             {% else %}
-                <a href="{{ url_for('login') }}" style="background: #992b00; border-radius: 25px;">Sign In / Login</a>
+                <a href="{{ url_for('login') }}" id="navSignInLink" onclick="openFrontScreenLogin('reader'); return false;" style="background: #992b00; border-radius: 25px;">Sign In / Login</a>
             {% endif %}
         </div>
     </nav>
@@ -583,6 +776,10 @@
             <span id="heroStreakContainer" style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 9px 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
                 📖 <span id="heroStreakDisplay">Open a Book to Start Streak</span>
             </span>
+            <button type="button" id="heroFrontLoginBtn" onclick="openFrontScreenLogin('reader')" style="display: {% if session.user_id %}none{% else %}inline-flex{% endif %}; align-items: center; gap: 8px; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: #ffffff; border: none; border-radius: 999px; padding: 9px 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4); transition: transform 0.2s, box-shadow 0.2s;" title="Instant Reader Sign In">
+                <span>🔑</span>
+                <span>Reader Sign In</span>
+            </button>
         </div>
     </div>
 
@@ -1468,8 +1665,10 @@
             } else if (e.key === 'Escape') {
                 closeCategoriesModal();
                 closeShortcutsModal();
+                closeFrontScreenLogin();
             }
         });
+
         function openShortcutsModal() {
             const m = document.getElementById('shortcutsModal');
             if (m) m.style.display = 'flex';
@@ -1479,10 +1678,375 @@
             if (m) m.style.display = 'none';
         }
 
+        /* FRONT SCREEN LOGIN CARD MODAL ENGINE */
+        function openFrontScreenLogin(tab) {
+            const modal = document.getElementById('frontScreenLoginModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                if (tab) switchFrontTab(tab);
+            }
+        }
+
+        function closeFrontScreenLogin() {
+            const modal = document.getElementById('frontScreenLoginModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+                cancelFront2fa();
+            }
+        }
+
+        function switchFrontTab(tabId) {
+            document.querySelectorAll('.front-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.front-tab-content').forEach(c => c.classList.remove('active'));
+            const cap = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            const btn = document.getElementById('frontTab' + cap + 'Btn');
+            const content = document.getElementById('frontTab' + cap);
+            if (btn) btn.classList.add('active');
+            if (content) content.classList.add('active');
+            const alertBox = document.getElementById('frontLoginAlert');
+            if (alertBox) alertBox.style.display = 'none';
+        }
+
+        function toggleFrontPassword(inputId, toggleEl) {
+            const inp = document.getElementById(inputId);
+            if (!inp) return;
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                if (toggleEl) toggleEl.textContent = '🔒';
+            } else {
+                inp.type = 'password';
+                if (toggleEl) toggleEl.textContent = '👁️';
+            }
+        }
+
+        function showFrontLoginAlert(msg, isSuccess = false) {
+            const alertBox = document.getElementById('frontLoginAlert');
+            if (!alertBox) return;
+            alertBox.style.display = 'block';
+            if (isSuccess) {
+                alertBox.style.background = '#dcfce7';
+                alertBox.style.color = '#166534';
+                alertBox.style.border = '1px solid #86efac';
+            } else {
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.border = '1px solid #fca5a5';
+            }
+            alertBox.textContent = msg;
+        }
+
+        async function handleFrontReaderLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('frontReaderSubmitBtn');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+
+            const username = document.getElementById('frontReaderUsername').value.trim();
+            const password = document.getElementById('frontReaderPassword').value;
+            const rememberMe = document.getElementById('frontReaderRemember').checked;
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'login',
+                        login_portal: 'reader',
+                        username: username,
+                        password: password,
+                        remember_me: rememberMe
+                    })
+                });
+                const data = await res.json();
+                if (data.require_2fa) {
+                    showFront2fa(data.email || 'your registered email');
+                } else if (data.success) {
+                    btn.textContent = '✓ Welcome Back!';
+                    btn.style.background = '#16a34a';
+                    showFrontLoginAlert('Signed in successfully! Redirecting...', true);
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/dashboard';
+                    }, 400);
+                } else {
+                    showFrontLoginAlert(data.message || 'Incorrect username or password.');
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            } catch (err) {
+                showFrontLoginAlert('Network error occurred. Redirecting to sign in page...');
+                setTimeout(() => { window.location.href = '/login'; }, 1000);
+            }
+        }
+
+        async function handleFrontOfficialLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('frontOfficialSubmitBtn');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Authenticating portal...';
+
+            const username = document.getElementById('frontOfficialUsername').value.trim();
+            const password = document.getElementById('frontOfficialPassword').value;
+            const rememberMe = document.getElementById('frontOfficialRemember').checked;
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'login',
+                        login_portal: 'author_official',
+                        username: username,
+                        password: password,
+                        remember_me: rememberMe
+                    })
+                });
+                const data = await res.json();
+                if (data.require_2fa) {
+                    showFront2fa(data.email || 'your official email');
+                } else if (data.success) {
+                    btn.textContent = '✓ Portal Verified!';
+                    btn.style.background = '#16a34a';
+                    showFrontLoginAlert('Official authorized! Entering dashboard...', true);
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/dashboard';
+                    }, 400);
+                } else {
+                    showFrontLoginAlert(data.message || 'Access denied. Verify credentials or role clearance.');
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            } catch (err) {
+                showFrontLoginAlert('Network error. Redirecting to official login page...');
+                setTimeout(() => { window.location.href = '/login?tab=official'; }, 1000);
+            }
+        }
+
+        function showFront2fa(email) {
+            document.getElementById('frontAuthMainView').style.display = 'none';
+            document.getElementById('front2faView').style.display = 'block';
+            document.getElementById('front2faEmailDisplay').textContent = email;
+            const alertBox = document.getElementById('frontLoginAlert');
+            if (alertBox) alertBox.style.display = 'none';
+            const otpInput = document.getElementById('front2faOtp');
+            if (otpInput) {
+                otpInput.value = '';
+                setTimeout(() => otpInput.focus(), 100);
+            }
+        }
+
+        function cancelFront2fa() {
+            const f2fa = document.getElementById('front2faView');
+            const fmain = document.getElementById('frontAuthMainView');
+            if (f2fa) f2fa.style.display = 'none';
+            if (fmain) fmain.style.display = 'block';
+            const alertBox = document.getElementById('frontLoginAlert');
+            if (alertBox) alertBox.style.display = 'none';
+        }
+
+        async function handleFront2faSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('front2faSubmitBtn');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Verifying security code...';
+
+            const otp = document.getElementById('front2faOtp').value.replace(/\s+/g, '');
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'verify_2fa',
+                        otp: otp
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    btn.textContent = '✓ Code Verified!';
+                    btn.style.background = '#16a34a';
+                    showFrontLoginAlert('Code verified! Loading your dashboard...', true);
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/dashboard';
+                    }, 400);
+                } else {
+                    showFrontLoginAlert(data.message || 'Invalid or expired 6-digit code. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            } catch (err) {
+                showFrontLoginAlert('Connection issue during verification.');
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        // Auto-detect login/register triggers in URL hash or query parameters
+        document.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash.toLowerCase();
+            const urlParams = new URLSearchParams(window.location.search);
+            if (hash === '#login' || urlParams.get('login') === '1') {
+                openFrontScreenLogin('reader');
+            } else if (hash === '#register' || urlParams.get('register') === '1') {
+                openFrontScreenLogin('register');
+            } else if (hash === '#author' || hash === '#official') {
+                openFrontScreenLogin('official');
+            }
+
+            // Sync auth state if user is logged in
+            fetch('/api/user/me')
+                .then(r => r.ok ? r.json() : null)
+                .then(user => {
+                    if (user && user.logged_in) {
+                        const heroBtn = document.getElementById('heroFrontLoginBtn');
+                        if (heroBtn) heroBtn.style.display = 'none';
+                        const navSignIn = document.getElementById('navSignInLink');
+                        if (navSignIn) {
+                            navSignIn.href = '/dashboard';
+                            navSignIn.textContent = 'Dashboard';
+                            navSignIn.onclick = null;
+                            navSignIn.style.background = '';
+                        }
+                    }
+                })
+                .catch(() => {});
+        });
+
     </script>
 
 
 
+
+    <!-- FRONT SCREEN LOGIN CARD MODAL -->
+    <div id="frontScreenLoginModal" class="front-login-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="frontModalTitle">
+        <div class="front-login-backdrop" onclick="closeFrontScreenLogin()"></div>
+        <div class="front-login-card">
+            <!-- Close Button -->
+            <button type="button" class="front-login-close" onclick="closeFrontScreenLogin()" aria-label="Close dialog">&times;</button>
+            
+            <!-- Header / Logo -->
+            <div class="front-login-header">
+                <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="PustakVerse" style="height: 44px; width: auto; object-fit: contain; margin-bottom: 6px;">
+                <div id="frontModalTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--pv-text, #1e293b);">Access PustakVerse</div>
+                <p style="font-size: 0.84rem; color: var(--pv-text-muted, #64748b); margin: 4px 0 0 0;">Read books, track progress & explore world knowledge</p>
+            </div>
+
+            <!-- Inline Alert Box -->
+            <div id="frontLoginAlert" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; margin-bottom: 16px; text-align: center;"></div>
+
+            <!-- 2FA Verification View (Hidden by default) -->
+            <div id="front2faView" style="display: none; padding-top: 10px;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <span style="font-size: 2.2rem;">🔐</span>
+                    <h3 style="margin: 8px 0 4px 0; font-size: 1.2rem; color: var(--pv-text, #1e293b);">Two-Step Verification</h3>
+                    <p style="font-size: 0.84rem; color: var(--pv-text-muted, #64748b); line-height: 1.4;">
+                        Enter the 6-digit code sent to <strong id="front2faEmailDisplay" style="color: var(--pv-text, #1e293b);">your email</strong>:
+                    </p>
+                </div>
+                <form onsubmit="handleFront2faSubmit(event)">
+                    <div class="front-form-group">
+                        <input type="text" id="front2faOtp" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 6px; font-size: 1.35rem; text-align: center; font-weight: 800; padding: 12px; border-radius: 8px;">
+                    </div>
+                    <button type="submit" id="front2faSubmitBtn" class="front-btn-submit" style="background: #2d3748; margin-top: 10px;">Verify & Continue</button>
+                </form>
+                <div style="text-align: center; margin-top: 14px;">
+                    <button type="button" onclick="cancelFront2fa()" style="background: none; border: none; color: #ea580c; font-size: 0.85rem; font-weight: 700; cursor: pointer;">← Back to Login</button>
+                </div>
+            </div>
+
+            <!-- Main Login / Register Area -->
+            <div id="frontAuthMainView">
+                <!-- Tabs -->
+                <div class="front-login-tabs">
+                    <button type="button" class="front-tab-btn active" id="frontTabReaderBtn" onclick="switchFrontTab('reader')">📖 Reader</button>
+                    <button type="button" class="front-tab-btn" id="frontTabOfficialBtn" onclick="switchFrontTab('official')">🏛️ Author</button>
+                    <button type="button" class="front-tab-btn" id="frontTabRegisterBtn" onclick="switchFrontTab('register')">✨ Register</button>
+                </div>
+
+                <!-- Tab 1: Reader Login -->
+                <div id="frontTabReader" class="front-tab-content active">
+                    <a href="/login/google" class="front-btn-google">
+                        <svg style="width: 20px; height: 20px; margin-right: 10px;" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </a>
+                    
+                    <div class="front-divider"><span>or with username</span></div>
+
+                    <form onsubmit="handleFrontReaderLogin(event)">
+                        <div class="front-form-group">
+                            <label>Username</label>
+                            <input type="text" id="frontReaderUsername" required placeholder="Enter your username">
+                        </div>
+                        <div class="front-form-group" style="position: relative;">
+                            <label>Password</label>
+                            <input type="password" id="frontReaderPassword" required placeholder="Enter your password">
+                            <span class="front-pw-toggle" onclick="toggleFrontPassword('frontReaderPassword', this)">👁️</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 0.82rem;">
+                            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--pv-text-muted, #64748b);">
+                                <input type="checkbox" id="frontReaderRemember" checked style="accent-color: #ea580c;">
+                                <span>Remember me</span>
+                            </label>
+                            <a href="/forgot_password" style="color: #ea580c; text-decoration: none; font-weight: 700;">Forgot Password?</a>
+                        </div>
+                        <button type="submit" id="frontReaderSubmitBtn" class="front-btn-submit" style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);">Sign In to Library</button>
+                    </form>
+                </div>
+
+                <!-- Tab 2: Author / Staff Login -->
+                <div id="frontTabOfficial" class="front-tab-content">
+                    <form onsubmit="handleFrontOfficialLogin(event)">
+                        <div class="front-form-group">
+                            <label>Author / Official Username</label>
+                            <input type="text" id="frontOfficialUsername" required placeholder="Official username">
+                        </div>
+                        <div class="front-form-group" style="position: relative;">
+                            <label>Password</label>
+                            <input type="password" id="frontOfficialPassword" required placeholder="Enter password">
+                            <span class="front-pw-toggle" onclick="toggleFrontPassword('frontOfficialPassword', this)">👁️</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 0.82rem;">
+                            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--pv-text-muted, #64748b);">
+                                <input type="checkbox" id="frontOfficialRemember" checked style="accent-color: #ea580c;">
+                                <span>Remember me</span>
+                            </label>
+                            <a href="/forgot_password" style="color: #ea580c; text-decoration: none; font-weight: 700;">Forgot Password?</a>
+                        </div>
+                        <button type="submit" id="frontOfficialSubmitBtn" class="front-btn-submit" style="background: #1e293b;">Secure Portal Sign In</button>
+                    </form>
+                </div>
+
+                <!-- Tab 3: Fast Registration -->
+                <div id="frontTabRegister" class="front-tab-content">
+                    <a href="/login/google?mode=signup" class="front-btn-google" style="margin-bottom: 14px;">
+                        <svg style="width: 20px; height: 20px; margin-right: 10px;" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        Sign up with Google (Fast & Verified)
+                    </a>
+                    <div class="front-divider"><span>or complete registration</span></div>
+                    <div style="text-align: center; margin-top: 14px;">
+                        <a href="/register" class="front-btn-submit" style="display: block; text-decoration: none; background: #0284c7; color: white;">Full Registration with OTP →</a>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 14px; font-size: 0.78rem; color: var(--pv-text-muted, #64748b);">
+                By continuing, you agree to PustakVerse <a href="/terms" style="color: #ea580c; text-decoration: none; font-weight: 700;">Terms</a> & <a href="/contact" style="color: #ea580c; text-decoration: none; font-weight: 700;">Community Rules</a>.
+            </div>
+        </div>
+    </div>
 
     <!-- KEYBOARD SHORTCUTS MODAL (?) -->
     <div id="shortcutsModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 999999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px);">
@@ -1534,7 +2098,7 @@
                 <span>Profile</span>
             </a>
         {% else %}
-            <a href="{{ url_for('login') }}" class="dock-item">
+            <a href="{{ url_for('login') }}" class="dock-item" onclick="openFrontScreenLogin('reader'); return false;">
                 <span class="dock-icon">🔑</span>
                 <span>Sign In</span>
             </a>

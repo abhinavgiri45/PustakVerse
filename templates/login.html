@@ -2,39 +2,98 @@
 {% block content %}
 
 <style>
-    /* INSTANTLY HIDE UNNECESSARY BASE.HTML ELEMENTS (Search, Menu, Telegram Popup) */
+    /* INSTANTLY HIDE ALL UNNECESSARY BASE.HTML ELEMENTS (Floating AI, Mobile Dock, Footer, Search, Menu, Telegram Popup, Overlays) */
     .nav-search, .search-container, .search-bar { display: none !important; }
-    .nav-links a:not(.custom-back-btn) { display: none !important; } 
+    .nav-links a:not(.custom-back-btn):not(.theme-toggle) { display: none !important; } 
     .menu-btn, .menu-toggle, .hamburger, .sidebar-toggle, .menu-icon, .hamburger-btn { display: none !important; pointer-events: none; }
-    .sidebar, .side-menu, #sidebar, .mobile-menu { display: none !important; }
+    .sidebar, .side-menu, #sidebar, .mobile-menu, #mySidebar, #sidebarOverlay { display: none !important; }
     .overlay, .sidebar-overlay, #sidebar-overlay, .blur-overlay { display: none !important; }
     #tgPopup, .popup-overlay, #telegramPopup, .telegram-popup, #telegram-modal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
     
-    /* CUSTOM 'BACK' BUTTON STYLING */
+    /* REMOVE ALL CLUTTER FROM LOGIN & AUTH PAGES */
+    #floatingAiBtn,
+    .mobile-bottom-dock,
+    footer,
+    footer.main-footer,
+    .scroll-progress-container,
+    #backToTop,
+    .theme-banner,
+    .global-announcement-banner {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* CUSTOM 'BACK' & THEME BUTTON STYLING */
     .nav-links .custom-back-btn { 
         display: inline-flex !important; 
         color: #f8fafc !important; 
-        font-weight: 600 !important; 
+        font-weight: 700 !important; 
         text-decoration: none; 
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.12);
         padding: 8px 18px;
         border-radius: 25px;
         transition: 0.2s;
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .nav-links .custom-back-btn:hover {
         background: #f66d2f !important;
         color: white !important;
+        border-color: #f66d2f !important;
     }
 
-    /* FORM STYLING */
+    /* FORM STYLING & DYNAMIC THEME SUPPORT */
     :root {
         --primary-orange: #f66d2f;
         --primary-orange-hover: #e05c24;
         --card-bg: #ffffff;
+        --card-border: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-muted: #64748b;
+        --input-bg: #f8fafc;
+        --input-border: #cbd5e1;
+        --tab-inactive: #f8fafc;
     }
 
-    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 20px; z-index: 10; position: relative; }
-    .auth-box { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; margin: 0 auto; }
+    .dark-theme,
+    html.dark-theme,
+    body.dark-theme {
+        --primary-orange: #f97316;
+        --primary-orange-hover: #ea580c;
+        --card-bg: #1e293b;
+        --card-border: rgba(255, 255, 255, 0.12);
+        --text-primary: #f8fafc;
+        --text-muted: #94a3b8;
+        --input-bg: #0f172a;
+        --input-border: #334155;
+        --tab-inactive: #0f172a;
+    }
+
+    .auth-wrapper {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+        z-index: 10;
+        position: relative;
+    }
+    .auth-box {
+        background: var(--card-bg);
+        width: 100%;
+        max-width: 480px;
+        border-radius: 16px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+        border: 1px solid var(--card-border);
+        margin: 0 auto;
+        color: var(--text-primary);
+        transition: background 0.2s ease, border-color 0.2s ease;
+    }
 
     .flash-wrapper { padding: 15px 20px 0 20px; }
     .flash { padding: 12px; border-radius: 6px; text-align: center; font-weight: 500; font-size: 0.95rem; margin-bottom: 5px; }
@@ -42,49 +101,138 @@
     .flash.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .flash.info { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
 
-    .tabs { display: flex; border-bottom: 2px solid #edf2f7; background: #f8fafc; }
-    .tab-btn { flex: 1; padding: 15px 10px; text-align: center; background: none; border: none; font-weight: 600; color: #718096; cursor: pointer; transition: 0.2s; font-size: 0.95rem; border-bottom: 3px solid transparent; margin-bottom: -2px; }
-    .tab-btn:hover { color: #2d3748; background: #f1f5f9; }
-    .tab-btn.active { color: var(--primary-orange); border-bottom-color: var(--primary-orange); background: white; }
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid var(--card-border);
+        background: var(--tab-inactive);
+    }
+    .tab-btn {
+        flex: 1;
+        padding: 15px 10px;
+        text-align: center;
+        background: none;
+        border: none;
+        font-weight: 700;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.95rem;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+    }
+    .tab-btn:hover {
+        color: var(--text-primary);
+        background: rgba(234, 88, 12, 0.05);
+    }
+    .tab-btn.active {
+        color: var(--primary-orange);
+        border-bottom-color: var(--primary-orange);
+        background: var(--card-bg);
+    }
 
     .form-area { padding: 30px; display: none; }
     .form-area.active { display: block; }
-    .form-area h2 { text-align: center; margin-top: 0; color: #2d3748; margin-bottom: 25px; font-size: 1.6rem; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .form-area h2 {
+        text-align: center;
+        margin-top: 0;
+        color: var(--text-primary);
+        margin-bottom: 25px;
+        font-size: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
 
     .form-group { margin-bottom: 20px; position: relative; }
-    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #4a5568; }
-    .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 1rem; background: #f8fafc; transition: 0.2s; }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary-orange); background: white; box-shadow: 0 0 0 3px rgba(246, 109, 47, 0.1); }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--input-border);
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 1rem;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        transition: 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-orange);
+        background: var(--card-bg);
+        box-shadow: 0 0 0 3px rgba(246, 109, 47, 0.15);
+    }
     
     .toggle-password { position: absolute; right: 12px; top: 38px; cursor: pointer; font-size: 1.2rem; user-select: none; opacity: 0.7; }
     .toggle-password:hover { opacity: 1; }
 
-    .btn-submit { width: 100%; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 1.05rem; cursor: pointer; transition: 0.2s; color: white; }
+    .btn-submit { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; transition: 0.2s; color: white; }
     .btn-submit.orange { background: var(--primary-orange); }
     .btn-submit.orange:hover { background: var(--primary-orange-hover); }
     .btn-submit.dark { background: #2d3748; }
     .btn-submit.dark:hover { background: #1a202c; }
 
-    .forgot-link { display: block; text-align: right; margin-top: -10px; margin-bottom: 20px; font-size: 0.85rem; color: #3182ce; text-decoration: none; }
-    .forgot-link:hover { text-decoration: underline; color: #0284c7; }
+    .forgot-link { display: block; text-align: right; margin-top: -10px; margin-bottom: 20px; font-size: 0.85rem; color: #f97316; text-decoration: none; font-weight: 600; }
+    .forgot-link:hover { text-decoration: underline; color: #ea580c; }
 
-    .divider { display: flex; align-items: center; text-align: center; margin: 25px 0 20px 0; color: #a0aec0; font-size: 0.9rem; font-weight: 600; }
-    .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
+    .divider { display: flex; align-items: center; text-align: center; margin: 25px 0 20px 0; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
+    .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--card-border); }
 
-    .btn-google { display: flex; align-items: center; justify-content: center; width: 100%; background-color: #ffffff; color: #3c4043; border: 1px solid #dadce0; padding: 12px; border-radius: 6px; font-weight: 600; font-size: 1.05rem; text-decoration: none; transition: 0.2s; box-sizing: border-box; }
-    .btn-google:hover { background-color: #f8f9fa; box-shadow: 0 1px 3px rgba(60,64,67,0.3); border-color: #d2e3fc;}
+    .btn-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--input-border);
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        text-decoration: none;
+        transition: 0.2s;
+        box-sizing: border-box;
+    }
+    .btn-google:hover {
+        background-color: var(--card-bg);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        border-color: var(--primary-orange);
+    }
     .google-icon { width: 22px; height: 22px; margin-right: 12px; }
 
     #usernameStatus { display: block; margin-top: 5px; font-size: 0.85rem; font-weight: 600; }
-    .terms-checkbox-group { display: flex; align-items: flex-start; gap: 10px; margin-top: 25px; margin-bottom: 20px; padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; }
+    .terms-checkbox-group {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 25px;
+        margin-bottom: 20px;
+        padding: 12px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        border-radius: 8px;
+    }
     .terms-checkbox-group input { width: auto; margin-top: 4px; cursor: pointer; transform: scale(1.2); }
     .terms-checkbox-group label { font-size: 0.85rem; color: #166534; line-height: 1.4; margin-bottom: 0; cursor: pointer; }
-    .terms-checkbox-group a { color: #047857; font-weight: bold; text-decoration: underline; }
+    .dark-theme .terms-checkbox-group label,
+    html.dark-theme .terms-checkbox-group label,
+    body.dark-theme .terms-checkbox-group label { color: #6ee7b7; }
+    .terms-checkbox-group a { color: var(--primary-orange); font-weight: bold; text-decoration: underline; }
 
     @media (max-width: 768px) {
-        .tabs { flex-direction: column; }
-        .tab-btn { border-bottom: none; border-left: 4px solid transparent; text-align: left; padding: 12px 20px; border-bottom: 1px solid #edf2f7;}
-        .tab-btn.active { border-bottom: 1px solid #edf2f7; border-left-color: var(--primary-orange); }
+        .tabs { flex-direction: row; }
+        .tab-btn { padding: 12px 6px; font-size: 0.82rem; }
+        .auth-wrapper { padding: 20px 12px; }
+        .auth-box { border-radius: 12px; }
+        .form-area { padding: 20px 16px; }
     }
 </style>
 
@@ -289,11 +437,16 @@
 </div>
 
 <script>
-    // INJECT THE CLEAN BACK BUTTON AND FORCE-CLOSE SIDEBAR/MODALS
+    // INJECT THE CLEAN BACK BUTTON & THEME TOGGLE, AND FORCE-CLEANUP ALL CLUTTER
     document.addEventListener('DOMContentLoaded', () => {
         const navLinks = document.querySelector('.nav-links');
         if (navLinks) {
-            navLinks.insertAdjacentHTML('beforeend', '<a href="/" class="custom-back-btn">← Back to Library</a>');
+            if (!navLinks.querySelector('.custom-back-btn')) {
+                navLinks.insertAdjacentHTML('beforeend', '<a href="/" class="custom-back-btn">← Back to Library</a>');
+            }
+            if (!navLinks.querySelector('.theme-toggle')) {
+                navLinks.insertAdjacentHTML('beforeend', '<button type="button" class="theme-toggle" onclick="toggleTheme()" style="background: rgba(255, 255, 255, 0.12); color: white; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 20px; padding: 6px 14px; font-weight: 700; cursor: pointer; margin-left: 8px;">🌙 Theme</button>');
+            }
         }
 
         // Auto-switch to register tab if URL path is /register or has ?tab=register or #register
@@ -313,10 +466,16 @@
             switchTab('reader', rdrBtn);
         }
 
-        // Force hide telegram popup and overlay just in case CSS misses it
-        const telegramPopup = document.getElementById('telegramPopup');
-        const overlay = document.querySelector('.overlay');
-        const sidebar = document.querySelector('.sidebar');
+        // Remove floating AI button, mobile dock, footer, overlays, telegram popups
+        const floatBtn = document.getElementById('floatingAiBtn');
+        if (floatBtn) floatBtn.remove();
+        const dock = document.querySelector('.mobile-bottom-dock');
+        if (dock) dock.remove();
+        const footer = document.querySelector('footer');
+        if (footer) footer.style.display = 'none';
+        const telegramPopup = document.getElementById('telegramPopup') || document.getElementById('tgPopup');
+        const overlay = document.querySelector('.overlay') || document.getElementById('sidebarOverlay');
+        const sidebar = document.querySelector('.sidebar') || document.getElementById('mySidebar');
         if (telegramPopup) telegramPopup.style.display = 'none';
         if (overlay) overlay.style.display = 'none';
         if (sidebar) sidebar.style.display = 'none';

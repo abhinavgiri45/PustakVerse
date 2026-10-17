@@ -213,7 +213,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.65rem;
             font-weight: 800;
-            color: var(--nav-bg);
+            color: var(--text-dark);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -263,12 +263,14 @@
             justify-content: center;
             font-size: 1.5rem;
             flex-shrink: 0;
+            background: rgba(234, 88, 12, 0.08);
+            border: 1px solid rgba(234, 88, 12, 0.2);
         }
 
         .channel-title {
             font-weight: 800;
             font-size: 1rem;
-            color: var(--nav-bg);
+            color: var(--text-dark);
             display: block;
             margin-bottom: 2px;
         }
@@ -313,9 +315,16 @@
             position: relative;
         }
         .leader-card.founder-card {
-            border: 2px solid #f97316;
-            background: linear-gradient(180deg, #ffffff 0%, #fffbf7 100%);
-            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);
+            border: 2px solid #ea580c;
+            background: linear-gradient(180deg, var(--card-bg) 0%, rgba(234, 88, 12, 0.06) 100%);
+            box-shadow: 0 10px 30px rgba(234, 88, 12, 0.12);
+        }
+        .dark-theme .leader-card.founder-card,
+        html.dark-theme .leader-card.founder-card,
+        body.dark-theme .leader-card.founder-card {
+            background: linear-gradient(180deg, #1e293b 0%, #291a0e 100%);
+            border: 2px solid #ea580c;
+            box-shadow: 0 10px 30px rgba(234, 88, 12, 0.25);
         }
 
         .circle-avatar-wrap {
@@ -329,7 +338,7 @@
             height: 100%;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid #e2e8f0;
+            border: 3px solid var(--border-line);
         }
         .founder-card .circle-avatar { border-color: #ea580c; }
 
@@ -353,19 +362,20 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.35rem;
             font-weight: 800;
-            color: var(--nav-bg);
+            color: var(--text-dark);
             margin-bottom: 4px;
         }
 
         .role-badge {
             display: inline-block;
-            background: #f1f5f9;
-            color: #334155;
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-dark);
             font-size: 0.78rem;
             font-weight: 800;
             padding: 4px 12px;
             border-radius: 20px;
             margin-bottom: 12px;
+            border: 1px solid var(--border-line);
         }
         .founder-badge {
             background: #ffedd5;
@@ -375,7 +385,7 @@
 
         .leader-bio {
             font-size: 0.88rem;
-            color: #475569;
+            color: var(--text-muted);
             line-height: 1.55;
             margin-bottom: 18px;
             flex: 1;
@@ -383,7 +393,7 @@
 
         .leader-contacts {
             width: 100%;
-            background: #f8fafc;
+            background: rgba(148, 163, 184, 0.08);
             border: 1px solid var(--border-line);
             border-radius: 14px;
             padding: 14px 16px;
@@ -401,7 +411,7 @@
         }
         .contact-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
         .contact-link {
-            color: #0f172a;
+            color: var(--text-dark);
             text-decoration: none;
             font-weight: 700;
             word-break: break-all;
@@ -425,9 +435,9 @@
             font-size: 0.78rem;
             font-weight: 700;
             text-decoration: none;
-            background: #f1f5f9;
-            color: #334155;
-            border: 1px solid #e2e8f0;
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--text-dark);
+            border: 1px solid var(--border-line);
             transition: all 0.2s ease;
         }
         .social-pill:hover {
@@ -454,20 +464,44 @@
             justify-content: center;
             padding: 20px;
         }
+
         .mail-modal-box {
-            background: white;
+            background: var(--card-bg);
+            color: var(--text-dark);
             border-radius: 20px;
             max-width: 440px;
             width: 100%;
             padding: 28px 24px;
             text-align: center;
             box-shadow: 0 25px 60px rgba(0,0,0,0.3);
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border-line);
+        }
+
+        .theme-toggle {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ffffff !important;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            text-decoration: none;
+        }
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.24);
+            border-color: rgba(255, 255, 255, 0.45);
+            transform: translateY(-1px);
         }
 
         @media (max-width: 768px) {
-            nav { padding: 10px 16px; }
-            .nav-actions { gap: 8px; }
+            nav { padding: 10px 16px; flex-wrap: wrap; gap: 10px; }
+            .nav-actions { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
             .nav-link { font-size: 0.8rem; padding: 6px 10px; }
             .btn-girionix-nav { font-size: 0.78rem; padding: 6px 12px; }
             .hero-banner { padding: 36px 16px; }
@@ -520,12 +554,12 @@
                         <span class="channel-title">Founder Support & Direct Desk</span>
                         <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; font-weight: 800; white-space: nowrap;">👑 Founder</span>
                     </div>
-                    <span class="channel-sub" style="color: #475569; font-weight: 600; word-break: break-all;">abhinavgiri370@gmail.com</span>
+                    <span class="channel-sub" style="color: var(--text-muted); font-weight: 600; word-break: break-all;">abhinavgiri370@gmail.com</span>
                     <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;" onclick="event.stopPropagation()">
                         <a href="https://mail.google.com/mail/?view=cm&fs=1&to=abhinavgiri370@gmail.com&su=PustakVerse%20Direct%20Inquiry%20%26%20Founder%20Support&body=Hello%20Abhinav%2C%0A%0AI%20am%20reaching%20out%20regarding%20PustakVerse...%0A%0AMy%20Name%3A%0AMy%20Contact%20Info%3A" target="_blank" rel="noopener noreferrer" class="mail-mini-btn" style="background: #ea580c; color: white;">
                             📨 Click here to send mail via Gmail
                         </a>
-                        <button type="button" onclick="copyEmailText('abhinavgiri370@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
+                        <button type="button" onclick="copyEmailText('abhinavgiri370@gmail.com')" class="mail-mini-btn" style="background: rgba(148, 163, 184, 0.12); color: var(--text-dark); border: 1px solid var(--border-line); cursor: pointer;">
                             📋 Copy
                         </button>
                     </div>
@@ -542,12 +576,12 @@
                         <span class="channel-title">General Support & Helpdesk</span>
                         <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 800; white-space: nowrap;">Support Desk</span>
                     </div>
-                    <span class="channel-sub" style="color: #475569; font-weight: 600; word-break: break-all;">noreply.pustakverse@gmail.com</span>
+                    <span class="channel-sub" style="color: var(--text-muted); font-weight: 600; word-break: break-all;">noreply.pustakverse@gmail.com</span>
                     <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;" onclick="event.stopPropagation()">
                         <a href="https://mail.google.com/mail/?view=cm&fs=1&to=noreply.pustakverse@gmail.com&su=PustakVerse%20Helpdesk%20Support%20Request&body=Hello%20PustakVerse%20Support%20Team%2C%0A%0AI%20would%20like%20assistance%20with...%0A%0AMy%20Username%20%2F%20Email%3A" target="_blank" rel="noopener noreferrer" class="mail-mini-btn" style="background: #0284c7; color: white;">
                             📨 Click here to send mail via Gmail
                         </a>
-                        <button type="button" onclick="copyEmailText('noreply.pustakverse@gmail.com')" class="mail-mini-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;">
+                        <button type="button" onclick="copyEmailText('noreply.pustakverse@gmail.com')" class="mail-mini-btn" style="background: rgba(148, 163, 184, 0.12); color: var(--text-dark); border: 1px solid var(--border-line); cursor: pointer;">
                             📋 Copy
                         </button>
                     </div>
@@ -640,7 +674,7 @@
                     <div class="contact-row">
                         <span class="contact-icon">📧</span>
                         <div>
-                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Official Email</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Official Email</span>
                             <a href="mailto:{{ leader.email }}" class="contact-link">{{ leader.email }}</a>
                         </div>
                     </div>
@@ -649,7 +683,7 @@
                     <div class="contact-row">
                         <span class="contact-icon">📞</span>
                         <div>
-                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
                             <a href="tel:{{ leader.phone }}" class="contact-link">{{ leader.phone }}</a>
                         </div>
                     </div>
@@ -659,8 +693,8 @@
                     <div class="contact-row">
                         <span class="contact-icon">📍</span>
                         <div>
-                            <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
-                            <span style="font-weight: 600; color: #0f172a;">{{ leader.address }}</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
+                            <span style="font-weight: 600; color: var(--text-dark);">{{ leader.address }}</span>
                         </div>
                     </div>
                     {% endif %}
@@ -709,19 +743,19 @@
     <div id="mailComposeModal" class="mail-modal-overlay" onclick="closeMailModal(event)">
         <div class="mail-modal-box" onclick="event.stopPropagation()">
             <div style="font-size: 2.4rem; margin-bottom: 8px;">📬</div>
-            <h3 id="modalRecipientTitle" style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Compose Message</h3>
+            <h3 id="modalRecipientTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">Compose Message</h3>
             <p id="modalRecipientEmail" style="font-family: monospace; font-size: 0.92rem; color: #ea580c; font-weight: 700; margin-bottom: 20px; word-break: break-all;"></p>
             
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
                 <a id="modalGmailLink" href="#" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 16px; border-radius: 12px; background: #ea580c; color: white; text-decoration: none; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);">
                     <span>📨</span> Click here to send mail via Gmail
                 </a>
-                <button type="button" id="modalCopyBtn" onclick="copyModalEmail()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
+                <button type="button" id="modalCopyBtn" onclick="copyModalEmail()" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: rgba(148, 163, 184, 0.12); color: var(--text-dark); border: 1px solid var(--border-line); font-weight: 700; font-size: 0.92rem; cursor: pointer;">
                     <span>📋</span> Copy Email Address to Clipboard
                 </button>
             </div>
 
-            <button type="button" onclick="document.getElementById('mailComposeModal').style.display='none'" style="background: none; border: none; color: #64748b; font-weight: 700; cursor: pointer; font-size: 0.85rem;">
+            <button type="button" onclick="document.getElementById('mailComposeModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); font-weight: 700; cursor: pointer; font-size: 0.85rem;">
                 Close
             </button>
         </div>
@@ -838,10 +872,10 @@
                             </div>
                             ${leader.bio ? `<p class="leader-bio">${escapeHtmlLead(leader.bio)}</p>` : ''}
                             <div class="leader-contacts">
-                                <div class="contact-row">
+                                 <div class="contact-row">
                                     <span class="contact-icon">📧</span>
                                     <div>
-                                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Official Email</span>
+                                        <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Official Email</span>
                                         <a href="mailto:${escapeHtmlLead(leader.email)}" class="contact-link">${escapeHtmlLead(leader.email)}</a>
                                     </div>
                                 </div>
@@ -849,7 +883,7 @@
                                 <div class="contact-row">
                                     <span class="contact-icon">📞</span>
                                     <div>
-                                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
+                                        <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
                                         <a href="tel:${escapeHtmlLead(leader.phone)}" class="contact-link">${escapeHtmlLead(leader.phone)}</a>
                                     </div>
                                 </div>` : ''}
@@ -857,8 +891,8 @@
                                 <div class="contact-row">
                                     <span class="contact-icon">📍</span>
                                     <div>
-                                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
-                                        <span style="font-weight: 600; color: #0f172a;">${escapeHtmlLead(leader.address)}</span>
+                                        <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
+                                        <span style="font-weight: 600; color: var(--text-dark);">${escapeHtmlLead(leader.address)}</span>
                                     </div>
                                 </div>` : ''}
                             </div>
