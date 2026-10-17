@@ -106,6 +106,7 @@ def build():
             session['post_tier'] = 1
             
             master_dash_html = render_template('dashboard.html',
+                render_all_roles=True,
                 all_categories=[
                     {'id': 1, 'name': 'Fiction', 'book_count': 12},
                     {'id': 2, 'name': 'Non-Fiction', 'book_count': 8},

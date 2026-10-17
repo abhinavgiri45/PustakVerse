@@ -3291,7 +3291,7 @@ Format with these exact markdown sections:
       const user = await verifySession(cookies.pv_session, env);
       const acceptsJson = request.headers.get("accept")?.includes("application/json") || request.headers.get("x-requested-with") === "XMLHttpRequest";
 
-      const isAuthorized = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45" || isTechnicalLeadershipUser(user));
+      const isAuthorized = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45");
       if (!isAuthorized) {
         if (acceptsJson) {
           return new Response(JSON.stringify({ success: false, message: "Unauthorized: Only Developer can modify website settings." }), {
@@ -3441,7 +3441,7 @@ Format with these exact markdown sections:
     if ((url.pathname === "/appoint_leader" || url.pathname === "/developer/leadership/add") && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      const isPrivileged = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45");
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45");
       if (!user || !isPrivileged) {
         return new Response("Unauthorized", { status: 403 });
       }
@@ -3481,7 +3481,7 @@ Format with these exact markdown sections:
       const leaderId = parseInt(editLeaderMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      const isPrivileged = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45");
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45");
       if (!user || !isPrivileged) {
         return new Response("Unauthorized", { status: 403 });
       }
@@ -3530,7 +3530,7 @@ Format with these exact markdown sections:
       const leaderId = parseInt(delLeaderMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      const isPrivileged = user && (user.role === "developer" || user.role === "official" || user.username?.toLowerCase() === "abhinavgiri45");
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45");
       const isAjax = request.headers.get("X-Requested-With") === "XMLHttpRequest" || request.headers.get("Accept")?.includes("application/json");
 
       if (!user || !isPrivileged) {
@@ -7484,11 +7484,12 @@ function renderContactLeadershipCards(leaders) {
 
 function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null) {
   const username = user.username || "Reader";
-  const role = user.role || "reader";
+  const role = (user.role || "reader").toLowerCase();
   const email = user.email || "";
   const isDev = role === "developer";
   const isOff = role === "official";
   const isAuthor = role === "author";
+  const isReader = role === "reader" || (!isDev && !isOff && !isAuthor);
   const is2faActive = isDev || isOff || Boolean(user.two_factor_enabled);
 
   let out = html;
@@ -7603,15 +7604,20 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   }
 
   // 2. Role-based panel visibility overrides
-  // Hide ALL developer-exclusive sections from non-developer users
+  // DEVELOPER-EXCLUSIVE SECTIONS (Hidden from Official, Author, Reader)
   if (!isDev) {
     const devOnlyIds = [
+      "roleSectionDeveloperTop",
+      "roleSectionDeveloperBottom",
       "strictDeveloperSection",
       "devOnlyAppointOfficial",
       "devOnlyCategoryManager",
       "devOnlySettingsGrid",
       "devOnlyPendingRemovals",
       "devOnlyLeadershipDir",
+      "devOnlyStaffPosts",
+      "devOnlyUsernameRequests",
+      "devOnlyUserDelRequests",
       "devOnlyVerificationHub",
       "devOnlyArchiveUserMgmt",
       "devOnlyAuditTrail",
@@ -7623,9 +7629,40 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     out = out.replace(/class="([^"]*developer-only[^"]*)"/gi, 'class="$1" style="display: none !important;"');
   }
 
+  // OFFICIAL MODERATION TOOLS (Hidden from Readers & Authors)
   if (!isDev && !isOff) {
-    out = out.replace(/id="officialModerationSuite"/i, 'id="officialModerationSuite" style="display: none !important;"');
-    out = out.replace(/id="manageBooksHubBtn"/i, 'id="manageBooksHubBtn" style="display: none !important;"');
+    const offOnlyIds = [
+      "headerOfficialDevActions",
+      "roleSectionOfficial",
+      "roleSectionOfficialUsers",
+      "officialModerationSuite",
+      "manageBooksHubBtn"
+    ];
+    for (const elId of offOnlyIds) {
+      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    }
+  }
+
+  // AUTHOR PUBLISHING & STUDIO TOOLS (Hidden from Readers & pure Officials)
+  if (!isDev && !isAuthor) {
+    const authOnlyIds = [
+      "headerAuthorActions",
+      "roleSectionAuthor",
+      "authorPublishingSection"
+    ];
+    for (const elId of authOnlyIds) {
+      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    }
+  }
+
+  // READER POWER SUITE (Hidden from Authors & pure Officials, visible to Readers & Devs)
+  if (!isDev && !isReader) {
+    const readerOnlyIds = [
+      "roleSectionReader"
+    ];
+    for (const elId of readerOnlyIds) {
+      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    }
   }
 
   // 3. Two-Step Verification Section & Security Score
@@ -7880,6 +7917,8 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const role = "${escapeHtml(role)}";
   const isDev = ${isDev};
   const isOff = ${isOff};
+  const isAuthor = ${isAuthor};
+  const isReader = ${isReader};
 
   // Sync username and role elements
   const uEl = document.getElementById('dashUsernameDisplay');
@@ -7887,16 +7926,68 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const rEl = document.getElementById('dashRoleDisplay');
   if (rEl) rEl.textContent = role;
 
-  // Hide ALL developer-only sections client-side
+  // 1. Hide ALL developer-only sections client-side
   if (!isDev) {
-    ['strictDeveloperSection','devOnlyAppointOfficial','devOnlyCategoryManager','devOnlySettingsGrid','devOnlyPendingRemovals','devOnlyLeadershipDir','devOnlyVerificationHub','devOnlyArchiveUserMgmt','devOnlyAuditTrail','devOnlySupremeSuite'].forEach(function(elId) {
+    [
+      'roleSectionDeveloperTop',
+      'roleSectionDeveloperBottom',
+      'strictDeveloperSection',
+      'devOnlyAppointOfficial',
+      'devOnlyCategoryManager',
+      'devOnlySettingsGrid',
+      'devOnlyPendingRemovals',
+      'devOnlyLeadershipDir',
+      'devOnlyStaffPosts',
+      'devOnlyUsernameRequests',
+      'devOnlyUserDelRequests',
+      'devOnlyVerificationHub',
+      'devOnlyArchiveUserMgmt',
+      'devOnlyAuditTrail',
+      'devOnlySupremeSuite'
+    ].forEach(function(elId) {
+      var el = document.getElementById(elId);
+      if (el) el.style.display = 'none';
+    });
+    document.querySelectorAll('.developer-only').forEach(function(el) {
+      el.style.display = 'none';
+    });
+  }
+
+  // 2. Hide official moderation tools from Readers and Authors
+  if (!isDev && !isOff) {
+    [
+      'headerOfficialDevActions',
+      'roleSectionOfficial',
+      'roleSectionOfficialUsers',
+      'officialModerationSuite',
+      'manageBooksHubBtn'
+    ].forEach(function(elId) {
       var el = document.getElementById(elId);
       if (el) el.style.display = 'none';
     });
   }
 
-  const offHub = document.getElementById('manageBooksHubBtn');
-  if (offHub && !isDev && !isOff) offHub.style.display = 'none';
+  // 3. Hide Author publishing studio from Readers and pure Officials
+  if (!isDev && !isAuthor) {
+    [
+      'headerAuthorActions',
+      'roleSectionAuthor',
+      'authorPublishingSection'
+    ].forEach(function(elId) {
+      var el = document.getElementById(elId);
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  // 4. Hide Reader suite from Authors and pure Officials (keep for Readers and Devs)
+  if (!isDev && !isReader) {
+    [
+      'roleSectionReader'
+    ].forEach(function(elId) {
+      var el = document.getElementById(elId);
+      if (el) el.style.display = 'none';
+    });
+  }
 
   if (typeof window.deleteLeader !== 'function') {
     window.deleteLeader = async function(leaderId, leaderName, isFounder, btn) {

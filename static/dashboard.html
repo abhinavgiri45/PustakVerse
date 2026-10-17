@@ -379,8 +379,17 @@
             <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">developer</strong></p>
         </div>
         
+            <div id="headerAuthorActions" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <a href="#authorPublishingSection" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
+                    <span>🚀</span> Publish a New Book
+                </a>
+                <a href="/author/abhinavgiri45" target="_blank" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35); font-size: 0.95rem;">
+                    <span>👤</span> View Public Profile →
+                </a>
+            </div>
         
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        
+            <div id="headerOfficialDevActions" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <button type="button" id="headerEndMaintenanceBtn" onclick="endMaintenanceMode()" style="display: none; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;">
                     <span>🟢</span> End Maintenance Break
                 </button>
@@ -401,10 +410,16 @@
 
         <!-- STRICT AUTHOR ONLY SECTION (TOP OF CONTAINER FOR AUTHORS) -->
         
+        <div id="roleSectionAuthor" class="role-section-author">
+            
+
+            
+        </div>
+        
 
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
         
-            
+        <div id="roleSectionDeveloperTop" class="role-section-developer">
             <div id="devOnlyAppointOfficial" class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="/create_official" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
@@ -844,7 +859,7 @@
             
             <!-- ABSOLUTE EXECUTIVES (FOUNDER, CEO, CTO): APPOINT & DELEGATE OFFICIAL POSTS & POWERS -->
             
-            <div class="panel" style="border-left: 5px solid #0284c7; grid-column: span 2; margin-top: 25px;">
+            <div id="devOnlyStaffPosts" class="panel" style="border-left: 5px solid #0284c7; grid-column: span 2; margin-top: 25px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                     <div>
                         <h2 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin: 0;">
@@ -883,7 +898,7 @@
 
 
             <!-- DEVELOPER: PENDING USERNAME CHANGE REQUESTS (OFFICIALS & AUTHORS) -->
-            <div class="panel" style="border-left: 5px solid #8b5cf6;">
+            <div id="devOnlyUsernameRequests" class="panel" style="border-left: 5px solid #8b5cf6;">
                 <h2 style="color: #6d28d9; display: flex; align-items: center; gap: 8px;">
                     <span>🛡️</span> Pending Official & Author Username Change Requests
                 </h2>
@@ -894,13 +909,14 @@
             </div>
 
 
-            <div class="panel" style="border-left: 5px solid #e53e3e;">
+            <div id="devOnlyUserDelRequests" class="panel" style="border-left: 5px solid #e53e3e;">
                 <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Official moderator for user termination.</p>
                 
                     <p>No pending user deletion requests.</p>
                 
             </div>
+        </div>
         
 
         <div class="grid-2">
@@ -1121,6 +1137,47 @@
 
     </script>
 
+        
+        <div id="roleSectionReader" class="role-section-reader">
+            <!-- READER POWER SUITE: Shelves, Book Requests & Habit Goals -->
+            <div class="grid-2" style="margin-top: 25px;">
+                <!-- 1. Custom Reading Shelves -->
+                <div class="panel" style="border-left: 4px solid #3b82f6;">
+                    <h2 style="color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
+                        <span>📚</span> My Custom Reading Shelves
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Organize your reading journey into curated collections like "Want to Read", "Favorites", and "Tech Stack 2026".</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                        <input type="text" id="dashShelfName" placeholder="New Shelf Name (e.g. UPSC Prelims)..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <button type="button" onclick="createReaderShelf()" class="btn-sm btn-dark" style="padding: 8px 14px;">+ Create</button>
+                    </div>
+                    <div id="dashShelvesContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 10px;">Loading your shelves...</div>
+                    </div>
+                </div>
+
+                <!-- 2. Book Acquisition & Community Wishlist -->
+                <div class="panel" style="border-left: 4px solid #ea580c;">
+                    <h2 style="color: #ea580c; display: flex; align-items: center; gap: 8px;">
+                        <span>💡</span> Book Acquisition Wishlist Hub
+                    </h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Request rare books, academic papers, or classic archives to be acquired by verified authors and curators.</p>
+                    <form onsubmit="submitBookRequest(event)" style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="reqBookTitle" placeholder="Book Title *" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <input type="text" id="reqBookAuthor" placeholder="Author / Publisher *" required style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <input type="text" id="reqBookNotes" placeholder="Edition, ISBN, or topic details..." style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                        <button type="submit" class="btn-sm btn-orange" style="align-self: flex-start; padding: 8px 18px;">Submit Acquisition Request</button>
+                    </form>
+                    <div id="reqStatusMsg" style="display: none; margin-top: 10px; font-size: 0.84rem; padding: 6px 10px; border-radius: 6px;"></div>
+                </div>
+            </div>
+
+            <div class="panel" style="text-align: center; padding: 40px; margin-top: 25px;">
+                <h2 style="border: none; margin-bottom: 6px;">Explore the Universe of Knowledge</h2>
+                <p style="color: var(--text-light); margin-bottom: 20px;">Browse thousands of free and premium books in the Global Library.</p>
+                <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library →</a>
+            </div>
+        </div>
         
 
         
@@ -2444,9 +2501,60 @@
 
         <!-- OFFICIAL USER MANAGEMENT -->
         
+        <div id="roleSectionOfficialUsers" class="role-section-official">
+            <div class="panel">
+                <h2>Manage Platform Users</h2>
+                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search readers or authors..." value="" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
+                        <option value="all" >All Readers & Authors</option>
+                        <option value="reader" >Readers Only</option>
+                        <option value="author" >Authors Only</option>
+                    </select>
+                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
+                </form>
+
+                
+                    <div class="table-scroll-container">
+                        <table>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email Address</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                            
+                            <tr>
+                                <td style="font-weight: 500;">abhinavgiri45</td>
+                                <td style="color: #4a5568;">abhinavgiri370@gmail.com</td>
+                                <td style="text-transform: capitalize;">developer</td>
+                                <td>
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                        <!-- OFFICIAL POWER: Send Username Update Notice -->
+                                        <form action="/official/notify_username/1" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px 6px; font-size: 0.78rem; width: 140px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-dark" title="Send email notice to change username">Notice</button>
+                                        </form>
+
+                                        <!-- OFFICIAL LIMITATION: Request deletion via Developer Verification -->
+                                        <form action="/request_deletion/1" method="POST" style="display: flex; gap: 4px;">
+                                            <input type="text" name="reason" placeholder="Report to Dev..." required style="padding: 4px 6px; font-size: 0.78rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <button type="submit" class="btn-sm btn-orange" title="Submit report for Developer review">Report Dev</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                        </table>
+                    </div>
+                
+            </div>
+        </div>
+        
 
         <!-- BOTTOM DEVELOPER SECTION (Supreme Master Controls) -->
         
+        <div id="roleSectionDeveloperBottom" class="role-section-developer">
         
         
         <!-- DEVELOPER MASTER PANEL: Platform Health, Emergency Maintenance & FastCache -->
@@ -2693,6 +2801,7 @@
             </div>
         </div>
 
+        </div>
         
 
     </div>

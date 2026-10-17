@@ -366,7 +366,7 @@
             <a href="{{ url_for('management_self_published_books') }}" style="color: #fb923c; font-weight: 700;">📖 Manage Books</a>
             {% endif %}
             {% if session.role == 'author' %}
-            <a href="{{ url_for('author_profile', username=session.username) }}" target="_blank" style="color: #fb923c; font-weight: 700;">👤 My Author Showcase</a>
+            <a href="{{ url_for('public_author_profile', username=session.username) }}" target="_blank" style="color: #fb923c; font-weight: 700;">👤 My Author Showcase</a>
             {% endif %}
             <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             <a href="{{ url_for('logout') }}">
@@ -380,18 +380,18 @@
             <h1>Welcome, {{ session.username }}</h1>
             <p>Your Role: <strong style="color: var(--primary-orange); text-transform: capitalize;">{{ session.role }}</strong></p>
         </div>
-        {% if session.role == 'author' %}
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        {% if session.role in ['author', 'developer'] or render_all_roles %}
+            <div id="headerAuthorActions" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <a href="#authorPublishingSection" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); font-size: 0.95rem;">
                     <span>🚀</span> Publish a New Book
                 </a>
-                <a href="{{ url_for('author_profile', username=session.username) }}" target="_blank" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35); font-size: 0.95rem;">
+                <a href="{{ url_for('public_author_profile', username=session.username) }}" target="_blank" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35); font-size: 0.95rem;">
                     <span>👤</span> View Public Profile →
                 </a>
             </div>
         {% endif %}
-        {% if session.role in ['developer', 'official'] %}
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        {% if session.role in ['developer', 'official'] or render_all_roles %}
+            <div id="headerOfficialDevActions" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <button type="button" id="headerEndMaintenanceBtn" onclick="endMaintenanceMode()" style="display: {{ 'inline-flex' if sys.maintenance_mode else 'none' }}; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;">
                     <span>🟢</span> End Maintenance Break
                 </button>
@@ -415,8 +415,9 @@
         {% endwith %}
 
         <!-- STRICT AUTHOR ONLY SECTION (TOP OF CONTAINER FOR AUTHORS) -->
-        {% if session.role == 'author' %}
-            {% if not session.is_verified %}
+        {% if session.role in ['author', 'developer'] or render_all_roles %}
+        <div id="roleSectionAuthor" class="role-section-author">
+            {% if not session.is_verified and session.role == 'author' %}
                 <div class="panel" style="border-left: 5px solid var(--primary-orange); margin-bottom: 24px;">
                     <h2 style="color: var(--primary-orange); display: flex; align-items: center; gap: 8px;">
                         <span>⏳</span> Author Account Under Review
@@ -774,11 +775,12 @@
                 </div>
             </div>
             {% endif %}
+        </div>
         {% endif %}
 
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
-        {% if session.role == 'developer' %}
-            
+        {% if session.role == 'developer' or render_all_roles %}
+        <div id="roleSectionDeveloperTop" class="role-section-developer">
             <div id="devOnlyAppointOfficial" class="panel" style="border-left: 5px solid #38a169;">
                 <h2 style="color: #2f855a;">Appoint New Official</h2>
                 <form action="{{ url_for('create_official') }}" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
@@ -1146,7 +1148,7 @@
             
             <!-- ABSOLUTE EXECUTIVES (FOUNDER, CEO, CTO): APPOINT & DELEGATE OFFICIAL POSTS & POWERS -->
             {% if session.role == 'developer' or is_absolute_power %}
-            <div class="panel" style="border-left: 5px solid #0284c7; grid-column: span 2; margin-top: 25px;">
+            <div id="devOnlyStaffPosts" class="panel" style="border-left: 5px solid #0284c7; grid-column: span 2; margin-top: 25px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                     <div>
                         <h2 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin: 0;">
@@ -1248,7 +1250,7 @@
 
 
             <!-- DEVELOPER: PENDING USERNAME CHANGE REQUESTS (OFFICIALS & AUTHORS) -->
-            <div class="panel" style="border-left: 5px solid #8b5cf6;">
+            <div id="devOnlyUsernameRequests" class="panel" style="border-left: 5px solid #8b5cf6;">
                 <h2 style="color: #6d28d9; display: flex; align-items: center; gap: 8px;">
                     <span>🛡️</span> Pending Official & Author Username Change Requests
                 </h2>
@@ -1299,7 +1301,7 @@
             </div>
 
 
-            <div class="panel" style="border-left: 5px solid #e53e3e;">
+            <div id="devOnlyUserDelRequests" class="panel" style="border-left: 5px solid #e53e3e;">
                 <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Official moderator for user termination.</p>
                 {% if del_requests %}
@@ -1333,6 +1335,7 @@
                     <p>No pending user deletion requests.</p>
                 {% endif %}
             </div>
+        </div>
         {% endif %}
 
         <div class="grid-2">
@@ -1680,7 +1683,8 @@
 
     </script>
 
-        {% if session.role == 'reader' %}
+        {% if session.role in ['reader', 'developer'] or render_all_roles %}
+        <div id="roleSectionReader" class="role-section-reader">
             <!-- READER POWER SUITE: Shelves, Book Requests & Habit Goals -->
             <div class="grid-2" style="margin-top: 25px;">
                 <!-- 1. Custom Reading Shelves -->
@@ -1719,6 +1723,7 @@
                 <p style="color: var(--text-light); margin-bottom: 20px;">Browse thousands of free and premium books in the Global Library.</p>
                 <a href="/" class="btn-sm btn-orange" style="padding: 12px 25px; text-decoration: none;">Browse Library →</a>
             </div>
+        </div>
         {% endif %}
 
         {% if session.role in ['author', 'developer'] %}
@@ -2803,7 +2808,8 @@
         {% endif %}
 
         <!-- OFFICIAL USER MANAGEMENT -->
-        {% if session.role == 'official' %}
+        {% if session.role in ['official', 'developer'] or render_all_roles %}
+        <div id="roleSectionOfficialUsers" class="role-section-official">
             <div class="panel">
                 <h2>Manage Platform Users</h2>
                 <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -2853,10 +2859,12 @@
                     <p>No users found matching that filter.</p>
                 {% endif %}
             </div>
+        </div>
         {% endif %}
 
         <!-- BOTTOM DEVELOPER SECTION (Supreme Master Controls) -->
-        {% if session.role == 'developer' %}
+        {% if session.role == 'developer' or render_all_roles %}
+        <div id="roleSectionDeveloperBottom" class="role-section-developer">
         
         {% set sys = system_metrics | default({}) %}
         <!-- DEVELOPER MASTER PANEL: Platform Health, Emergency Maintenance & FastCache -->
@@ -3335,6 +3343,7 @@
             </div>
         </div>
 
+        </div>
         {% endif %}
 
     </div>
