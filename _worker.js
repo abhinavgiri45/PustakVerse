@@ -7482,6 +7482,41 @@ function renderContactLeadershipCards(leaders) {
   }).join("\n");
 }
 
+function stripElementById(html, id) {
+  if (!html || !id) return html;
+  const regex = new RegExp('<([a-zA-Z0-9]+)[^>]*\\bid\\s*=\\s*["\']' + id + '["\'][^>]*>', 'i');
+  let match = regex.exec(html);
+  while (match) {
+    const tagName = match[1].toLowerCase();
+    const startIndex = match.index;
+    let searchIndex = startIndex + match[0].length;
+    let depth = 1;
+    const tagFinder = new RegExp('<(/?)([a-zA-Z0-9]+)(?:\\s+[^>]*)?>', 'gi');
+    tagFinder.lastIndex = searchIndex;
+    let tagMatch;
+    let endIndex = -1;
+    while ((tagMatch = tagFinder.exec(html)) !== null) {
+      if (tagMatch[2].toLowerCase() !== tagName) continue;
+      if (tagMatch[1] === '/') {
+        depth--;
+        if (depth === 0) {
+          endIndex = tagMatch.index + tagMatch[0].length;
+          break;
+        }
+      } else if (!tagMatch[0].endsWith('/>')) {
+        depth++;
+      }
+    }
+    if (endIndex !== -1) {
+      html = html.slice(0, startIndex) + html.slice(endIndex);
+    } else {
+      html = html.slice(0, startIndex) + html.slice(startIndex + match[0].length);
+    }
+    match = regex.exec(html);
+  }
+  return html;
+}
+
 function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null) {
   const username = user.username || "Reader";
   const role = (user.role || "reader").toLowerCase();
@@ -7603,10 +7638,11 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
   }
 
-  // 2. Role-based panel visibility overrides
-  // DEVELOPER-EXCLUSIVE SECTIONS (Hidden from Official, Author, Reader)
+  // 2. Multi-Tier Role-Based Security Enforcement
+  // TIER 1: PHYSICAL HTML NODE STRIPPING
+  // Strip Developer-Only Sections for all non-developer users
   if (!isDev) {
-    const devOnlyIds = [
+    const devElementsToStrip = [
       "roleSectionDeveloperTop",
       "roleSectionDeveloperBottom",
       "strictDeveloperSection",
@@ -7621,47 +7657,118 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "devOnlyVerificationHub",
       "devOnlyArchiveUserMgmt",
       "devOnlyAuditTrail",
-      "devOnlySupremeSuite"
+      "devOnlySupremeSuite",
+      "scheduleMaintenanceModal",
+      "headerEndMaintenanceBtn",
+      "devEndMaintenanceDirectBtn",
+      "developerAiModelsContainer"
     ];
-    for (const elId of devOnlyIds) {
-      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    for (const elId of devElementsToStrip) {
+      out = stripElementById(out, elId);
     }
-    out = out.replace(/class="([^"]*developer-only[^"]*)"/gi, 'class="$1" style="display: none !important;"');
   }
 
-  // OFFICIAL MODERATION TOOLS (Hidden from Readers & Authors)
+  // Strip Official Moderation Tools for Readers & Authors
   if (!isDev && !isOff) {
-    const offOnlyIds = [
+    const offElementsToStrip = [
       "headerOfficialDevActions",
       "roleSectionOfficial",
       "roleSectionOfficialUsers",
+      "navManageBooks",
       "officialModerationSuite",
       "manageBooksHubBtn"
     ];
-    for (const elId of offOnlyIds) {
-      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    for (const elId of offElementsToStrip) {
+      out = stripElementById(out, elId);
     }
   }
 
-  // AUTHOR PUBLISHING & STUDIO TOOLS (Hidden from Readers & pure Officials)
+  // Strip Author Publishing & Creator Suites for Readers & Officials
   if (!isDev && !isAuthor) {
-    const authOnlyIds = [
+    const authElementsToStrip = [
       "headerAuthorActions",
+      "navAuthorShowcase",
       "roleSectionAuthor",
+      "authorCouponsSection",
       "authorPublishingSection"
     ];
-    for (const elId of authOnlyIds) {
-      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    for (const elId of authElementsToStrip) {
+      out = stripElementById(out, elId);
     }
   }
 
-  // READER POWER SUITE (Hidden from Authors & pure Officials, visible to Readers & Devs)
+  // Strip Reader Power Suite for Authors & Officials
   if (!isDev && !isReader) {
-    const readerOnlyIds = [
+    const readerElementsToStrip = [
       "roleSectionReader"
     ];
-    for (const elId of readerOnlyIds) {
-      out = out.replace(new RegExp(`id="${elId}"`, 'i'), `id="${elId}" style="display: none !important;"`);
+    for (const elId of readerElementsToStrip) {
+      out = stripElementById(out, elId);
+    }
+  }
+
+  // TIER 2: STRICT CSS GUARD ENFORCEMENT
+  const hiddenSelectors = [];
+  if (!isDev) {
+    hiddenSelectors.push(
+      ".role-section-developer",
+      ".developer-only",
+      "#roleSectionDeveloperTop",
+      "#roleSectionDeveloperBottom",
+      "#strictDeveloperSection",
+      "#devOnlyAppointOfficial",
+      "#devOnlyCategoryManager",
+      "#devOnlySettingsGrid",
+      "#devOnlyPendingRemovals",
+      "#devOnlyLeadershipDir",
+      "#devOnlyStaffPosts",
+      "#devOnlyUsernameRequests",
+      "#devOnlyUserDelRequests",
+      "#devOnlyVerificationHub",
+      "#devOnlyArchiveUserMgmt",
+      "#devOnlyAuditTrail",
+      "#devOnlySupremeSuite",
+      "#scheduleMaintenanceModal",
+      "#headerEndMaintenanceBtn",
+      "#devEndMaintenanceDirectBtn"
+    );
+  }
+  if (!isDev && !isOff) {
+    hiddenSelectors.push(
+      ".role-section-official",
+      ".official-only",
+      "#headerOfficialDevActions",
+      "#roleSectionOfficial",
+      "#roleSectionOfficialUsers",
+      "#navManageBooks",
+      "#manageBooksHubBtn"
+    );
+  }
+  if (!isDev && !isAuthor) {
+    hiddenSelectors.push(
+      ".role-section-author",
+      ".author-only",
+      "#headerAuthorActions",
+      "#navAuthorShowcase",
+      "#roleSectionAuthor",
+      "#authorCouponsSection",
+      "#authorPublishingSection"
+    );
+  }
+  if (!isDev && !isReader) {
+    hiddenSelectors.push(
+      ".role-section-reader",
+      ".reader-only",
+      "#roleSectionReader"
+    );
+  }
+
+  if (hiddenSelectors.length > 0) {
+    const guardCss = `<style id="pvRoleGuardEnforcer">\n      ${hiddenSelectors.join(",\n      ")} {\n        display: none !important;\n        visibility: hidden !important;\n        height: 0 !important;\n        max-height: 0 !important;\n        overflow: hidden !important;\n        pointer-events: none !important;\n        margin: 0 !important;\n        padding: 0 !important;\n        border: none !important;\n      }\n    </style>`;
+    if (out.includes("</head>")) {
+      out = out.replace("</head>", `${guardCss}\n</head>`);
+    } else {
+      out = guardCss + out;
     }
   }
 
@@ -7926,7 +8033,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   const rEl = document.getElementById('dashRoleDisplay');
   if (rEl) rEl.textContent = role;
 
-  // 1. Hide ALL developer-only sections client-side
+  // 1. Remove ALL developer-only sections client-side
   if (!isDev) {
     [
       'roleSectionDeveloperTop',
@@ -7943,49 +8050,65 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       'devOnlyVerificationHub',
       'devOnlyArchiveUserMgmt',
       'devOnlyAuditTrail',
-      'devOnlySupremeSuite'
+      'devOnlySupremeSuite',
+      'scheduleMaintenanceModal',
+      'headerEndMaintenanceBtn',
+      'devEndMaintenanceDirectBtn',
+      'developerAiModelsContainer'
     ].forEach(function(elId) {
       var el = document.getElementById(elId);
-      if (el) el.style.display = 'none';
+      if (el) el.remove();
     });
-    document.querySelectorAll('.developer-only').forEach(function(el) {
-      el.style.display = 'none';
+    document.querySelectorAll('.developer-only, .role-section-developer').forEach(function(el) {
+      el.remove();
     });
   }
 
-  // 2. Hide official moderation tools from Readers and Authors
+  // 2. Remove official moderation tools from Readers and Authors
   if (!isDev && !isOff) {
     [
       'headerOfficialDevActions',
       'roleSectionOfficial',
       'roleSectionOfficialUsers',
+      'navManageBooks',
       'officialModerationSuite',
       'manageBooksHubBtn'
     ].forEach(function(elId) {
       var el = document.getElementById(elId);
-      if (el) el.style.display = 'none';
+      if (el) el.remove();
+    });
+    document.querySelectorAll('.official-only, .role-section-official').forEach(function(el) {
+      el.remove();
     });
   }
 
-  // 3. Hide Author publishing studio from Readers and pure Officials
+  // 3. Remove Author publishing studio from Readers and pure Officials
   if (!isDev && !isAuthor) {
     [
       'headerAuthorActions',
+      'navAuthorShowcase',
       'roleSectionAuthor',
+      'authorCouponsSection',
       'authorPublishingSection'
     ].forEach(function(elId) {
       var el = document.getElementById(elId);
-      if (el) el.style.display = 'none';
+      if (el) el.remove();
+    });
+    document.querySelectorAll('.author-only, .role-section-author').forEach(function(el) {
+      el.remove();
     });
   }
 
-  // 4. Hide Reader suite from Authors and pure Officials (keep for Readers and Devs)
+  // 4. Remove Reader suite from Authors and pure Officials (keep for Readers and Devs)
   if (!isDev && !isReader) {
     [
       'roleSectionReader'
     ].forEach(function(elId) {
       var el = document.getElementById(elId);
-      if (el) el.style.display = 'none';
+      if (el) el.remove();
+    });
+    document.querySelectorAll('.reader-only, .role-section-reader').forEach(function(el) {
+      el.remove();
     });
   }
 
