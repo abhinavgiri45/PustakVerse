@@ -201,6 +201,95 @@
             }
         }
         
+        /* Reading Progress Bar */
+        .reader-progress-track {
+            width: 100%;
+            height: 3px;
+            background: #0f172a;
+            position: relative;
+            z-index: 100;
+        }
+        .reader-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ea580c, #f59e0b, #10b981);
+            width: 2%;
+            transition: width 0.3s ease;
+        }
+
+        /* Reader Color Modes & Themes */
+        body.theme-sepia .iframe-container {
+            background: #fbf0d9;
+        }
+        body.theme-sepia iframe {
+            filter: sepia(0.42) contrast(0.96) brightness(0.96) !important;
+        }
+        body.theme-dark .iframe-container {
+            background: #111827;
+        }
+        body.theme-dark iframe {
+            filter: invert(0.88) hue-rotate(180deg) contrast(1.05) !important;
+        }
+        body.theme-paper .iframe-container {
+            background: #2b2b2b;
+        }
+        body.theme-paper iframe {
+            filter: none !important;
+        }
+
+        /* Iframe Container & Smooth Zoom */
+        .iframe-container {
+            width: 100%;
+            height: calc(100vh - 51px);
+            overflow: auto;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            background: #2b2b2b;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            transition: transform 0.2s ease, filter 0.2s ease;
+            transform-origin: top center;
+        }
+
+        /* Forensic Digital DRM Watermark Overlay */
+        .drm-watermark-overlay {
+            position: fixed;
+            top: 51px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 9998;
+            overflow: hidden;
+            opacity: 0.10;
+            user-select: none;
+            -webkit-user-select: none;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .drm-watermark-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 130px;
+            transform: rotate(-24deg) scale(1.15);
+            width: 150%;
+            text-align: center;
+        }
+        .drm-watermark-item {
+            font-size: 1.05rem;
+            font-weight: 800;
+            font-family: 'Courier New', monospace;
+            color: #94a3b8;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
         /* Overlay to block transparent clicks if necessary */
         #protection-overlay {
             position: absolute;
@@ -310,7 +399,7 @@
     </style>
 </head>
 <!-- Prevent Right Click entirely on the body -->
-<body oncontextmenu="return false;">
+<body oncontextmenu="return false;" class="theme-paper">
 
     <div class="header">
         <div class="header-left">
@@ -325,6 +414,19 @@
                 </div>
                 <button type="button" class="view-btn" onclick="nextPage()" title="Next Page (Shortcut: Right Arrow / PageDown)" aria-label="Next Page">▶</button>
                 <button type="button" class="view-btn quick-jump-btn" onclick="promptJumpToPage()" title="Open any page instantly (Keypad Shortcut: Press G)">⚡ Jump</button>
+            </div>
+
+            <div class="view-controls" title="Reading Color Mode">
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('paper')" id="themeBtn_paper" title="Paper Light Mode">☀️ Light</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('sepia')" id="themeBtn_sepia" title="Sepia Eye-Care Mode">📜 Sepia</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('dark')" id="themeBtn_dark" title="Dark Night Mode">🌙 Dark</button>
+            </div>
+
+            <div class="view-controls" title="Zoom & Fullscreen">
+                <button type="button" class="view-btn" onclick="zoomReader(-0.1)" title="Zoom Out (-)">−</button>
+                <button type="button" class="view-btn" onclick="resetReaderZoom()" id="zoomLevelDisplay" title="Reset Zoom">100%</button>
+                <button type="button" class="view-btn" onclick="zoomReader(0.1)" title="Zoom In (+)">+</button>
+                <button type="button" class="view-btn" onclick="toggleReaderFullscreen()" id="fullscreenBtn" title="Toggle Fullscreen">⛶ Fullscreen</button>
             </div>
 
             <div class="view-controls" id="view-controls" style="display: none;">
@@ -342,13 +444,32 @@
         </div>
     </div>
 
-    <!-- Embed the Document with a default view of FitH (Fit Width) -->
-    <iframe id="pdf-frame" 
-            src="about:blank" 
-            sandbox="allow-scripts allow-same-origin">
-    </iframe>
+    <!-- Reading Progress Indicator -->
+    <div class="reader-progress-track" title="Reading Progress Indicator">
+        <div id="readerProgressBar" class="reader-progress-bar" style="width: 2%;"></div>
+    </div>
+
+    <!-- Embed Document Container -->
+    <div class="iframe-container" id="iframeContainer">
+        <iframe id="pdf-frame" 
+                src="about:blank" 
+                sandbox="allow-scripts allow-same-origin">
+        </iframe>
+    </div>
 
     <div id="protection-overlay"></div>
+
+    <!-- FORENSIC DRM WATERMARK OVERLAY -->
+    <div class="drm-watermark-overlay" id="drmWatermarkLayer" aria-hidden="true">
+        <div class="drm-watermark-grid" id="drmWatermarkGrid">
+            <div class="drm-watermark-item">Licensed Reader · PustakVerse Secure DRM · All Rights Reserved</div>
+            <div class="drm-watermark-item">Licensed Reader · PustakVerse Secure DRM · All Rights Reserved</div>
+            <div class="drm-watermark-item">Licensed Reader · PustakVerse Secure DRM · All Rights Reserved</div>
+            <div class="drm-watermark-item">Licensed Reader · PustakVerse Secure DRM · All Rights Reserved</div>
+            <div class="drm-watermark-item">Licensed Reader · PustakVerse Secure DRM · All Rights Reserved</div>
+            <div class="drm-watermark-item">Licensed Reader · PustakVerse Secure DRM · All Rights Reserved</div>
+        </div>
+    </div>
 
     <!-- MANDATORY SIGN-IN GATING MODAL -->
     <div class="gate-modal-backdrop" id="authGateModal">
@@ -396,6 +517,53 @@
         let currentViewMode = "FitH";
         let currentPage = 1;
         let currentBookId = null;
+        let currentZoom = 1.0;
+        let currentTheme = 'paper';
+
+        function setReaderTheme(theme) {
+            currentTheme = theme;
+            document.body.classList.remove('theme-paper', 'theme-sepia', 'theme-dark');
+            document.body.classList.add('theme-' + theme);
+            document.querySelectorAll('.theme-btn').forEach(b => b.style.opacity = '0.65');
+            const activeBtn = document.getElementById('themeBtn_' + theme);
+            if (activeBtn) activeBtn.style.opacity = '1';
+            try { localStorage.setItem('pv_reader_theme', theme); } catch (_) {}
+        }
+
+        function zoomReader(delta) {
+            currentZoom = Math.min(2.0, Math.max(0.6, Math.round((currentZoom + delta) * 10) / 10));
+            const frame = document.getElementById('pdf-frame');
+            if (frame) frame.style.transform = 'scale(' + currentZoom + ')';
+            const disp = document.getElementById('zoomLevelDisplay');
+            if (disp) disp.innerText = Math.round(currentZoom * 100) + '%';
+        }
+
+        function resetReaderZoom() {
+            currentZoom = 1.0;
+            const frame = document.getElementById('pdf-frame');
+            if (frame) frame.style.transform = 'scale(1)';
+            const disp = document.getElementById('zoomLevelDisplay');
+            if (disp) disp.innerText = '100%';
+        }
+
+        function toggleReaderFullscreen() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (btn) btn.innerText = '⤢ Exit';
+                }).catch(() => {});
+            } else {
+                document.exitFullscreen().then(() => {
+                    if (btn) btn.innerText = '⛶ Fullscreen';
+                }).catch(() => {});
+            }
+        }
+
+        function updateReadingProgress(pageNo) {
+            const prog = Math.min(100, Math.max(3, pageNo * 4));
+            const bar = document.getElementById('readerProgressBar');
+            if (bar) bar.style.width = prog + '%';
+        }
 
         function jumpToPage(pageNo) {
             if (!currentPdfUrl) return;
@@ -412,6 +580,8 @@
 
             const input = document.getElementById('jumpPageInput');
             if (input) input.value = pageNo;
+
+            updateReadingProgress(pageNo);
 
             const frame = document.getElementById('pdf-frame');
             if (!frame) return;
@@ -488,6 +658,37 @@
             }
         }
 
+        function updateDrmWatermark(user, bookId) {
+            const layer = document.getElementById('drmWatermarkLayer');
+            const grid = document.getElementById('drmWatermarkGrid');
+            if (!layer || !grid || !user) return;
+
+            const readerText = `Licensed to ${user.username || 'Reader'} (${user.email || 'ID #' + user.id}) · PV-LIC-${bookId || 0}-${user.id} · Digital DRM Protected`;
+            grid.innerHTML = `
+                <div class="drm-watermark-item">${readerText}</div>
+                <div class="drm-watermark-item">${readerText}</div>
+                <div class="drm-watermark-item">${readerText}</div>
+                <div class="drm-watermark-item">${readerText}</div>
+                <div class="drm-watermark-item">${readerText}</div>
+                <div class="drm-watermark-item">${readerText}</div>
+            `;
+            layer.style.display = 'flex';
+        }
+
+        // Anti-theft window defocus blur shield
+        window.addEventListener('blur', function() {
+            const frame = document.getElementById('pdf-frame');
+            if (frame) frame.style.filter = 'blur(14px)';
+        });
+
+        window.addEventListener('focus', function() {
+            const frame = document.getElementById('pdf-frame');
+            if (frame) {
+                frame.style.filter = '';
+                setReaderTheme(currentTheme);
+            }
+        });
+
         // Disable common keyboard shortcuts used for saving/printing/inspecting
         document.addEventListener('keydown', function(e) {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
@@ -497,10 +698,11 @@
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
+                (e.key === 'PrintScreen') ||
                 (e.ctrlKey && e.shiftKey && e.key === 'I') ||
                 (e.ctrlKey && e.shiftKey && e.key === 'C')) {
                 e.preventDefault();
-                alert('Downloading and Printing are disabled to protect author copyrights.');
+                alert('Downloading, Printing, and Screen Extraction are disabled to protect author copyrights.');
                 return false;
             }
 
@@ -524,6 +726,12 @@
 
         // Dynamic book loader and authentication gating for static / client-side views
         document.addEventListener("DOMContentLoaded", async function() {
+            try {
+                const savedTheme = localStorage.getItem('pv_reader_theme');
+                if (savedTheme) setReaderTheme(savedTheme);
+                else setReaderTheme('paper');
+            } catch (_) {}
+
             const params = new URLSearchParams(window.location.search);
             const id = params.get('id') || params.get('book_id');
             const srcParam = params.get('src') || params.get('url');
@@ -613,6 +821,7 @@
                     }
                 }
 
+                updateDrmWatermark(currentUser, targetBook.id);
                 setBook(targetBook.title, targetBook.pdf_file, targetBook.id);
                 const viewControls = document.getElementById('view-controls');
                 if (viewControls && targetBook.pdf_file && !targetBook.pdf_file.startsWith('http')) {
@@ -627,6 +836,7 @@
                     if (authModal) authModal.style.display = 'flex';
                     return;
                 }
+                updateDrmWatermark(currentUser, id);
                 setBook(titleParam, srcParam, id);
                 return;
             }

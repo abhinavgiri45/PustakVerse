@@ -496,6 +496,9 @@
                 <button type="button" class="shelf-tab-btn active" onclick="filterByShelf('all', this)">
                     📚 All Books (0)
                 </button>
+                <button type="button" class="shelf-tab-btn" onclick="filterByShelf('purchased', this)">
+                    💎 Purchased (<span id="purchasedShelfCount">0</span>)
+                </button>
                 <button type="button" class="shelf-tab-btn" onclick="filterByShelf('reading', this)">
                     📖 Currently Reading (<span id="readingShelfCount">0</span>)
                 </button>
@@ -554,6 +557,7 @@
         function initShelfStatuses() {
             let readingCount = 0;
             let completedCount = 0;
+            let purchasedCount = 0;
             const cards = document.querySelectorAll('.book-card');
             
             cards.forEach(card => {
@@ -566,12 +570,15 @@
                 
                 if (savedStatus === 'reading') readingCount++;
                 if (savedStatus === 'completed') completedCount++;
+                if (card.getAttribute('data-purchased') === '1') purchasedCount++;
             });
 
             const rEl = document.getElementById('readingShelfCount');
             const cEl = document.getElementById('completedShelfCount');
+            const pEl = document.getElementById('purchasedShelfCount');
             if (rEl) rEl.textContent = readingCount;
             if (cEl) cEl.textContent = completedCount;
+            if (pEl) pEl.textContent = purchasedCount;
         }
 
         function updateShelfStatus(bookId, newStatus) {
@@ -601,9 +608,17 @@
                 let author = card.getAttribute('data-author') || '';
                 let catalog = card.getAttribute('data-catalog') || '';
                 let shelf = card.getAttribute('data-shelf') || 'saved';
+                let isPurchased = card.getAttribute('data-purchased') === '1';
 
                 let matchesSearch = title.includes(input) || author.includes(input) || catalog.includes(input);
-                let matchesShelf = (currentShelf === 'all') || (shelf === currentShelf);
+                let matchesShelf = false;
+                if (currentShelf === 'all') {
+                    matchesShelf = true;
+                } else if (currentShelf === 'purchased') {
+                    matchesShelf = isPurchased;
+                } else {
+                    matchesShelf = (shelf === currentShelf);
+                }
 
                 if (matchesSearch && matchesShelf) {
                     card.style.display = 'flex';

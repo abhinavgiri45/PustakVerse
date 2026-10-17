@@ -68,6 +68,38 @@ async function sha256Hex(message) {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function hmacSha256Hex(secret, message) {
+  if (!secret || !message) return "";
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sigBuffer = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  const hashArray = Array.from(new Uint8Array(sigBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyHmacSha256(secret, payload, signature) {
+  if (!secret || !payload || !signature) return false;
+  try {
+    const expected = await hmacSha256Hex(secret, payload);
+    if (!expected || expected.length !== signature.length) return false;
+    let match = 0;
+    const a = expected.toLowerCase();
+    const b = signature.trim().toLowerCase();
+    for (let i = 0; i < a.length; i++) {
+      match |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return match === 0;
+  } catch (_) {
+    return false;
+  }
+}
+
 function parseCookies(cookieHeader) {
   const list = {};
   if (!cookieHeader) return list;
@@ -5390,39 +5422,143 @@ Format with these exact markdown sections:
       const formData = await request.formData().catch(() => new FormData());
       const orderId = formData.get("razorpay_order_id") || "";
       const paymentId = formData.get("razorpay_payment_id") || "";
+      const signature = formData.get("razorpay_signature") || formData.get("signature") || "";
       const bookId = parseInt(formData.get("book_id") || "0", 10);
 
-      if (orderId) {
-        try {
-          await env.DB.prepare(
-            "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
-          ).bind(paymentId, orderId, sessionUser.id).run();
-
-          // Check book ID from purchase record if missing from form
-          let targetBookId = bookId;
-          if (!targetBookId) {
-            const pur = await env.DB.prepare("SELECT book_id FROM purchases WHERE razorpay_order_id = ?").bind(orderId).first();
-            if (pur) targetBookId = pur.book_id;
-          }
-
-          if (targetBookId) {
-            try {
-              await env.DB.prepare(
-                `INSERT OR IGNORE INTO purchases (user_id, book_id, razorpay_order_id, razorpay_payment_id, amount_paise, donation_paise, fee_paise, author_earning_paise, status, paid_at)
-                 VALUES (?, ?, ?, ?, 100, 0, 2, 98, 'paid', datetime('now'))`
-              ).bind(sessionUser.id, targetBookId, orderId, paymentId).run();
-            } catch (_) {}
-
-            // ALWAYS guarantee saved in reader's personal library!
-            await env.DB.prepare(
-              "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
-            ).bind(sessionUser.id, targetBookId).run();
-          }
-        } catch (_) {}
+      if (!orderId || !paymentId) {
+        return new Response(JSON.stringify({ success: false, error: "Missing order_id or payment_id" }), {
+          status: 400, headers: { "Content-Type": "application/json" }
+        });
       }
 
-      // Seamless redirect: take reader straight to their personal library with unlock message
-      return Response.redirect(`${url.origin}/my-library?purchased=1`, 302);
+      try {
+        // Query purchase record and associated keys
+        const pur = await env.DB.prepare(
+          `SELECT p.*, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.title as book_title
+           FROM purchases p
+           JOIN books b ON p.book_id = b.id
+           WHERE p.razorpay_order_id = ? AND p.user_id = ?`
+        ).bind(orderId, sessionUser.id).first();
+
+        let fps = {};
+        try {
+          fps = await env.DB.prepare(
+            "SELECT rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1"
+          ).first() || {};
+        } catch (_) {}
+
+        const gatewayKeySecret = (pur && pur.author_key_secret) || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
+
+        // Cryptographic HMAC-SHA256 Signature Verification
+        if (gatewayKeySecret) {
+          const payloadToVerify = `${orderId}|${paymentId}`;
+          const isSignatureValid = await verifyHmacSha256(gatewayKeySecret, payloadToVerify, signature);
+          if (!isSignatureValid) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "Cryptographic signature verification failed. Potential payment forgery detected."
+            }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        }
+
+        // Update purchase record to 'paid'
+        await env.DB.prepare(
+          "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
+        ).bind(paymentId, orderId, sessionUser.id).run();
+
+        // Target book ID
+        let targetBookId = bookId || (pur && pur.book_id);
+        if (!targetBookId) {
+          const lookup = await env.DB.prepare("SELECT book_id FROM purchases WHERE razorpay_order_id = ?").bind(orderId).first();
+          if (lookup) targetBookId = lookup.book_id;
+        }
+
+        if (targetBookId) {
+          // Guarantee addition to personal_library
+          await env.DB.prepare(
+            "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+          ).bind(sessionUser.id, targetBookId).run();
+        }
+
+        const isAjax = request.headers.get("Accept")?.includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest";
+        if (isAjax) {
+          return new Response(JSON.stringify({
+            success: true,
+            book_id: targetBookId,
+            redirect_url: `/my-library?purchased=1&book_id=${targetBookId || ''}`
+          }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        return Response.redirect(`${url.origin}/my-library?purchased=1&book_id=${targetBookId || ''}`, 302);
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 6A-4b. Edge Razorpay Automated Webhook: POST /api/payment/webhook or /payment/webhook
+    if ((url.pathname === "/api/payment/webhook" || url.pathname === "/payment/webhook") && request.method === "POST" && env.DB) {
+      try {
+        const bodyText = await request.text();
+        const rzpSignature = request.headers.get("x-razorpay-signature") || "";
+
+        let fps = {};
+        try {
+          fps = await env.DB.prepare(
+            "SELECT rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1"
+          ).first() || {};
+        } catch (_) {}
+
+        const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
+
+        if (webhookSecret && rzpSignature) {
+          const isValid = await verifyHmacSha256(webhookSecret, bodyText, rzpSignature);
+          if (!isValid) {
+            return new Response(JSON.stringify({ error: "Invalid webhook signature" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        }
+
+        let payload = {};
+        try { payload = JSON.parse(bodyText); } catch (_) {}
+        const event = payload.event;
+
+        if (event === "order.paid" || event === "payment.captured") {
+          const paymentEntity = payload.payload?.payment?.entity || {};
+          const orderId = paymentEntity.order_id || payload.payload?.order?.entity?.id;
+          const paymentId = paymentEntity.id;
+
+          if (orderId) {
+            const purchase = await env.DB.prepare("SELECT * FROM purchases WHERE razorpay_order_id = ?").bind(orderId).first();
+            if (purchase) {
+              await env.DB.prepare(
+                "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE id = ?"
+              ).bind(paymentId || purchase.razorpay_payment_id || "WEBHOOK_CAPTURED", purchase.id).run();
+
+              await env.DB.prepare(
+                "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+              ).bind(purchase.user_id, purchase.book_id).run();
+            }
+          }
+        }
+
+        return new Response(JSON.stringify({ status: "ok" }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     }
 
     // 6A-5. User Saved & Purchased Books API: GET /api/user/saved_books
@@ -8782,6 +8918,95 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             pointer-events: none;
         }
 
+        /* Reading Progress Bar */
+        .reader-progress-track {
+            width: 100%;
+            height: 3px;
+            background: #0f172a;
+            position: relative;
+            z-index: 100;
+        }
+        .reader-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ea580c, #f59e0b, #10b981);
+            width: 2%;
+            transition: width 0.3s ease;
+        }
+
+        /* Reader Color Modes & Themes */
+        body.theme-sepia .iframe-container {
+            background: #fbf0d9;
+        }
+        body.theme-sepia iframe {
+            filter: sepia(0.42) contrast(0.96) brightness(0.96) !important;
+        }
+        body.theme-dark .iframe-container {
+            background: #111827;
+        }
+        body.theme-dark iframe {
+            filter: invert(0.88) hue-rotate(180deg) contrast(1.05) !important;
+        }
+        body.theme-paper .iframe-container {
+            background: #2b2b2b;
+        }
+        body.theme-paper iframe {
+            filter: none !important;
+        }
+
+        /* Iframe Container & Smooth Zoom */
+        .iframe-container {
+            width: 100%;
+            height: calc(100vh - 51px);
+            overflow: auto;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            background: #2b2b2b;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            transition: transform 0.2s ease, filter 0.2s ease;
+            transform-origin: top center;
+        }
+
+        /* Forensic Digital DRM Watermark Overlay */
+        .drm-watermark-overlay {
+            position: fixed;
+            top: 51px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 9998;
+            overflow: hidden;
+            opacity: 0.10;
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drm-watermark-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 130px;
+            transform: rotate(-24deg) scale(1.15);
+            width: 150%;
+            text-align: center;
+        }
+        .drm-watermark-item {
+            font-size: 1.05rem;
+            font-weight: 800;
+            font-family: 'Courier New', monospace;
+            color: #94a3b8;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
         /* Mandatory Sign-in / Premium Lock Modal */
         .gate-modal-backdrop {
             position: fixed;
@@ -8879,7 +9104,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         }
     </style>
 </head>
-<body oncontextmenu="return false;">
+<body oncontextmenu="return false;" class="theme-paper">
 
     <div class="header">
         <div class="header-left">
@@ -8895,6 +9120,19 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 </div>
                 <button type="button" class="view-btn" onclick="nextPage()" title="Next Page (Shortcut: Right Arrow / PageDown)" aria-label="Next Page">▶</button>
                 <button type="button" class="view-btn quick-jump-btn" onclick="promptJumpToPage()" title="Open any page instantly (Keypad Shortcut: Press G)">⚡ Jump</button>
+            </div>
+
+            <div class="view-controls" title="Reading Color Mode">
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('paper')" id="themeBtn_paper" title="Paper Light Mode">☀️ Light</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('sepia')" id="themeBtn_sepia" title="Sepia Eye-Care Mode">📜 Sepia</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('dark')" id="themeBtn_dark" title="Dark Night Mode">🌙 Dark</button>
+            </div>
+
+            <div class="view-controls" title="Zoom & Fullscreen">
+                <button type="button" class="view-btn" onclick="zoomReader(-0.1)" title="Zoom Out (-)">−</button>
+                <button type="button" class="view-btn" onclick="resetReaderZoom()" id="zoomLevelDisplay" title="Reset Zoom">100%</button>
+                <button type="button" class="view-btn" onclick="zoomReader(0.1)" title="Zoom In (+)">+</button>
+                <button type="button" class="view-btn" onclick="toggleReaderFullscreen()" id="fullscreenBtn" title="Toggle Fullscreen">⛶ Fullscreen</button>
             </div>
             ` : ""}
 
@@ -8917,13 +9155,34 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         </div>
     </div>
 
-    <!-- Embed Document -->
-    <iframe id="pdf-frame" 
-            src="${escapeHtml(iframeSrc)}" 
-            sandbox="allow-scripts allow-same-origin">
-    </iframe>
+    <!-- Reading Progress Indicator -->
+    <div class="reader-progress-track" title="Reading Progress Indicator">
+        <div id="readerProgressBar" class="reader-progress-bar" style="width: 2%;"></div>
+    </div>
+
+    <!-- Embed Document Container -->
+    <div class="iframe-container" id="iframeContainer">
+        <iframe id="pdf-frame" 
+                src="${escapeHtml(iframeSrc)}" 
+                sandbox="allow-scripts allow-same-origin">
+        </iframe>
+    </div>
 
     <div id="protection-overlay"></div>
+
+    <!-- FORENSIC DRM WATERMARK OVERLAY -->
+    ${(canRead && currentUser) ? `
+    <div class="drm-watermark-overlay" id="drmWatermarkLayer" aria-hidden="true">
+        <div class="drm-watermark-grid">
+            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+        </div>
+    </div>
+    ` : ""}
 
     <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL (ONLY FOR PREMIUM PAID UNPURCHASED TITLES) -->
     ${(!canRead) ? `
@@ -8965,15 +9224,62 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
     </div>
     ` : ""}
 
-    <!-- Advanced Protection & View Scripts -->
+    <!-- Advanced Protection, Themes & View Scripts -->
     <script>
         let currentViewMode = "FitH";
         let currentPage = 1;
+        let currentZoom = 1.0;
+        let currentTheme = 'paper';
 
         function getCleanPdfUrl() {
             const raw = "${escapeHtml(pdfUrl)}";
             if (!raw || raw === 'about:blank') return '';
             return raw.split('#')[0];
+        }
+
+        function setReaderTheme(theme) {
+            currentTheme = theme;
+            document.body.classList.remove('theme-paper', 'theme-sepia', 'theme-dark');
+            document.body.classList.add('theme-' + theme);
+            document.querySelectorAll('.theme-btn').forEach(b => b.style.opacity = '0.65');
+            const activeBtn = document.getElementById('themeBtn_' + theme);
+            if (activeBtn) activeBtn.style.opacity = '1';
+            try { localStorage.setItem('pv_reader_theme', theme); } catch (_) {}
+        }
+
+        function zoomReader(delta) {
+            currentZoom = Math.min(2.0, Math.max(0.6, Math.round((currentZoom + delta) * 10) / 10));
+            const frame = document.getElementById('pdf-frame');
+            if (frame) frame.style.transform = 'scale(' + currentZoom + ')';
+            const disp = document.getElementById('zoomLevelDisplay');
+            if (disp) disp.innerText = Math.round(currentZoom * 100) + '%';
+        }
+
+        function resetReaderZoom() {
+            currentZoom = 1.0;
+            const frame = document.getElementById('pdf-frame');
+            if (frame) frame.style.transform = 'scale(1)';
+            const disp = document.getElementById('zoomLevelDisplay');
+            if (disp) disp.innerText = '100%';
+        }
+
+        function toggleReaderFullscreen() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (btn) btn.innerText = '⤢ Exit';
+                }).catch(() => {});
+            } else {
+                document.exitFullscreen().then(() => {
+                    if (btn) btn.innerText = '⛶ Fullscreen';
+                }).catch(() => {});
+            }
+        }
+
+        function updateReadingProgress(pageNo) {
+            const prog = Math.min(100, Math.max(3, pageNo * 4));
+            const bar = document.getElementById('readerProgressBar');
+            if (bar) bar.style.width = prog + '%';
         }
 
         function jumpToPage(pageNo) {
@@ -8992,6 +9298,8 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
             const input = document.getElementById('jumpPageInput');
             if (input) input.value = pageNo;
+
+            updateReadingProgress(pageNo);
 
             const frame = document.getElementById('pdf-frame');
             if (!frame) return;
@@ -9037,6 +9345,12 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
         window.addEventListener('DOMContentLoaded', function() {
             try {
+                const savedTheme = localStorage.getItem('pv_reader_theme');
+                if (savedTheme) setReaderTheme(savedTheme);
+                else setReaderTheme('paper');
+            } catch (_) {}
+
+            try {
                 const bookKey = 'pv_page_${book.id || 0}';
                 const saved = localStorage.getItem(bookKey);
                 if (saved) {
@@ -9059,6 +9373,20 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             }
         });
 
+        // Anti-theft window defocus blur shield
+        window.addEventListener('blur', function() {
+            const frame = document.getElementById('pdf-frame');
+            if (frame) frame.style.filter = 'blur(14px)';
+        });
+
+        window.addEventListener('focus', function() {
+            const frame = document.getElementById('pdf-frame');
+            if (frame) {
+                frame.style.filter = '';
+                setReaderTheme(currentTheme);
+            }
+        });
+
         document.addEventListener('keydown', function(e) {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
                 return;
@@ -9067,10 +9395,11 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
+                (e.key === 'PrintScreen') ||
                 (e.ctrlKey && e.shiftKey && e.key === 'I') ||
                 (e.ctrlKey && e.shiftKey && e.key === 'C')) {
                 e.preventDefault();
-                alert('Downloading and Printing are disabled to protect author copyrights.');
+                alert('Downloading, Printing, and Screen Extraction are disabled to protect author copyrights.');
                 return false;
             }
 
