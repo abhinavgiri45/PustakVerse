@@ -1186,6 +1186,7 @@
             <div id="devOnlyPendingRemovals" class="panel" style="border-left: 5px solid #f6ad55;">
                 <h2 style="color: #dd6b20;">Pending Book Removal Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Official moderator for platform books.</p>
+                <div id="devBookDelRequestsContainer">
                 {% if book_del_requests %}
                     <div class="table-scroll-container">
                         <table>
@@ -1218,6 +1219,7 @@
                 {% else %}
                     <p>No pending book deletion requests.</p>
                 {% endif %}
+                </div>
             </div>
 
                         
@@ -1433,6 +1435,7 @@
                     <span>🛡️</span> Pending Official & Author Username Change Requests
                 </h2>
                 <p style="color: #64748b; margin-bottom: 20px;">Review and approve/reject username modification requests submitted by Platform Officials and Authors.</p>
+                <div id="devUsernameRequestsContainer">
                 {% if username_requests %}
                     <div class="table-scroll-container">
                         <table>
@@ -1476,12 +1479,14 @@
                 {% else %}
                     <p style="color: #64748b;">No pending username change requests.</p>
                 {% endif %}
+                </div>
             </div>
 
 
             <div id="devOnlyUserDelRequests" class="panel" style="border-left: 5px solid #e53e3e;">
                 <h2 style="color: #e53e3e;">Pending User Deletion Requests</h2>
                 <p style="color: #718096; margin-bottom: 20px;">Reports submitted by Official moderator for user termination.</p>
+                <div id="devUserDelRequestsContainer">
                 {% if del_requests %}
                     <div class="table-scroll-container">
                         <table>
@@ -1512,6 +1517,7 @@
                 {% else %}
                     <p>No pending user deletion requests.</p>
                 {% endif %}
+                </div>
             </div>
         </div>
         {% endif %}
@@ -2925,7 +2931,7 @@
             </div>
 
             <!-- DEVELOPER USER MANAGEMENT (Security, Unlock & Role Reassignment) -->
-            <div class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
+            <div id="devOnlyUserManagementPanel" class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
                 <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
                 <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
                     <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
@@ -2938,7 +2944,8 @@
                     <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
                 </form>
 
-                {% if searched_users %}
+                <div id="devUserTableContainer">
+                {% if searched_users or all_users %}
                     <div class="table-scroll-container">
                         <table>
                             <tr>
@@ -2947,7 +2954,7 @@
                                 <th>Role Reassign</th>
                                 <th>Actions</th>
                             </tr>
-                            {% for user in searched_users %}
+                            {% for user in (searched_users or all_users) %}
                             <tr>
                                 <td>
                                     <div style="font-weight: 600;">{{ user.username }}</div>
@@ -3006,6 +3013,7 @@
                 {% else %}
                     <p>No users found matching that filter.</p>
                 {% endif %}
+                </div>
             </div>
         </div>
 

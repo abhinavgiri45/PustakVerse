@@ -1065,6 +1065,48 @@
             } catch (_) {}
         }
 
+        function escapeHtmlCat(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        async function hydrateCategoriesFromD1() {
+            try {
+                const res = await fetch('/api/d1/catalogs');
+                if (!res.ok) return;
+                const cats = await res.json();
+                if (!Array.isArray(cats) || cats.length === 0) return;
+
+                const grid = document.getElementById('modalCategoriesGrid');
+                if (grid) {
+                    let modalHtml = `
+                        <button type="button" onclick="selectModalCategory('all', '🌟 All Books')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; text-align: left; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                            🌟 All Books
+                        </button>
+                        <button type="button" onclick="selectModalCategory('free', '🆓 Free Books')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; text-align: left; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                            🆓 Free Books
+                        </button>
+                        <button type="button" onclick="selectModalCategory('stars', '⭐ 4.5+ Rating')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; text-align: left; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                            ⭐ 4.5+ Rating
+                        </button>
+                    `;
+                    cats.forEach(c => {
+                        const cName = c.name;
+                        modalHtml += `
+                            <button type="button" onclick="selectModalCategory('category:${encodeURIComponent(cName)}', '${escapeHtmlCat(cName)}')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; text-align: left; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                                📖 ${escapeHtmlCat(cName)}
+                            </button>
+                        `;
+                    });
+                    modalHtml += `
+                        <button type="button" onclick="selectModalCategory('category:Archives', '🏛️ Archives')" class="modal-cat-item" style="padding: 12px; border-radius: 12px; text-align: left; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;">
+                            🏛️ Classic Archives
+                        </button>
+                    `;
+                    grid.innerHTML = modalHtml;
+                }
+            } catch (_) {}
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             // Ensure bypass maintenance flag is persisted across edge sessions
             if (window.location.search.includes('bypass_maintenance') || window.location.pathname.includes('bypass_maintenance')) {
@@ -1086,6 +1128,7 @@
             }
 
             hydrateBooksFromD1();
+            hydrateCategoriesFromD1();
             checkEdgeSession();
             checkGlobalAnnouncement();
             let currentItems = 10;

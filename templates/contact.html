@@ -775,6 +775,101 @@
                 alert('Copied: ' + text);
             });
         }
+
+        function escapeHtmlLead(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        async function hydrateLeadership() {
+            try {
+                const res = await fetch('/api/leadership');
+                if (!res.ok) return;
+                const leaders = await res.json();
+                if (!Array.isArray(leaders) || leaders.length === 0) return;
+
+                const grid = document.querySelector('.leadership-grid');
+                if (!grid) return;
+
+                let html = '';
+                leaders.forEach(leader => {
+                    const isFounder = Boolean(leader.is_founder) || 
+                        (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) ||
+                        (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+
+                    let photoSrc = '/static/PustakVerse.png';
+                    if (leader.photo && (leader.photo.startsWith('http://') || leader.photo.startsWith('https://') || leader.photo.startsWith('/'))) {
+                        photoSrc = leader.photo;
+                    } else if (leader.photo && leader.photo !== 'PustakVerse.png') {
+                        photoSrc = `/static/uploads/leadership/${leader.photo}`;
+                    }
+
+                    const founderCardClass = isFounder ? 'founder-card' : '';
+                    const founderCrown = isFounder ? '<span class="founder-crown" title="Founder">👑</span>' : '';
+                    const founderBadge = isFounder ? `
+                        <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em;">
+                            👑 Founder
+                        </span>` : '';
+                    const roleBadgeClass = isFounder ? 'role-badge founder-badge' : 'role-badge';
+
+                    let socialsHtml = '';
+                    const hasSocials = leader.instagram_id || leader.x_id || leader.linkedin_id || leader.github_id || leader.website_url;
+                    if (hasSocials) {
+                        socialsHtml = `
+                            <div class="leader-socials">
+                                ${leader.linkedin_id ? `<a href="${escapeHtmlLead(leader.linkedin_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn linkedin" title="LinkedIn Profile">💼</a>` : ''}
+                                ${leader.x_id ? `<a href="${escapeHtmlLead(leader.x_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn x-social" title="X (Twitter)">✖</a>` : ''}
+                                ${leader.instagram_id ? `<a href="${escapeHtmlLead(leader.instagram_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn instagram" title="Instagram">📷</a>` : ''}
+                                ${leader.github_id ? `<a href="${escapeHtmlLead(leader.github_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn github" title="GitHub">🐙</a>` : ''}
+                                ${leader.website_url ? `<a href="${escapeHtmlLead(leader.website_url)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn website" title="Website">🌐</a>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        <div class="leader-card ${founderCardClass}">
+                            <div class="circle-avatar-wrap">
+                                <img src="${escapeHtmlLead(photoSrc)}" alt="${escapeHtmlLead(leader.name)}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
+                                ${founderCrown}
+                            </div>
+                            <h3 class="leader-name">${escapeHtmlLead(leader.name)}</h3>
+                            <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                                ${founderBadge}
+                                <span class="${roleBadgeClass}">${escapeHtmlLead(leader.role_title || 'Executive')}</span>
+                            </div>
+                            ${leader.bio ? `<p class="leader-bio">${escapeHtmlLead(leader.bio)}</p>` : ''}
+                            <div class="leader-contacts">
+                                <div class="contact-row">
+                                    <span class="contact-icon">📧</span>
+                                    <div>
+                                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Official Email</span>
+                                        <a href="mailto:${escapeHtmlLead(leader.email)}" class="contact-link">${escapeHtmlLead(leader.email)}</a>
+                                    </div>
+                                </div>
+                                ${leader.phone ? `
+                                <div class="contact-row">
+                                    <span class="contact-icon">📞</span>
+                                    <div>
+                                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Direct Phone</span>
+                                        <a href="tel:${escapeHtmlLead(leader.phone)}" class="contact-link">${escapeHtmlLead(leader.phone)}</a>
+                                    </div>
+                                </div>` : ''}
+                                ${leader.address ? `
+                                <div class="contact-row">
+                                    <span class="contact-icon">📍</span>
+                                    <div>
+                                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; display: block;">Location / Headquarters</span>
+                                        <span style="font-weight: 600; color: #0f172a;">${escapeHtmlLead(leader.address)}</span>
+                                    </div>
+                                </div>` : ''}
+                            </div>
+                            ${socialsHtml}
+                        </div>
+                    `;
+                });
+                grid.innerHTML = html;
+            } catch (_) {}
+        }
+        document.addEventListener('DOMContentLoaded', hydrateLeadership);
     </script>
 </body>
 </html>

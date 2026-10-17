@@ -8305,6 +8305,39 @@ def api_front_page_settings():
             try: db.close()
             except: pass
 
+@app.route('/api/d1/catalogs', methods=['GET'])
+@app.route('/api/catalogs', methods=['GET'])
+def api_catalogs():
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT c.id, c.name, COUNT(b.id) AS book_count FROM catalogs c LEFT JOIN books b ON c.name = b.catalog GROUP BY c.id, c.name ORDER BY c.name ASC")
+        cats = cursor.fetchall() or []
+        return jsonify(cats)
+    except Exception as ex:
+        return jsonify([]), 200
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+@app.route('/api/leadership', methods=['GET'])
+def api_leadership():
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC")
+        leaders = cursor.fetchall() or []
+        return jsonify(leaders)
+    except Exception as ex:
+        return jsonify([]), 200
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 @app.route('/add_catalog', methods=['POST'])
 def add_catalog():
     if session.get('role') != 'developer': 

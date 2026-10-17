@@ -2844,12 +2844,21 @@ Format with these exact markdown sections:
       if (env.DB) {
         try {
           const dbRow = await env.DB.prepare(
-            "SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity FROM users WHERE id = ? OR LOWER(username) = LOWER(?) LIMIT 1"
+            "SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity, author_bio, social_links_json FROM users WHERE id = ? OR LOWER(username) = LOWER(?) LIMIT 1"
           ).bind(sessionUser.user_id || 0, sessionUser.username || "").first();
           if (dbRow) {
             user = { ...user, ...dbRow };
           }
-        } catch (_) {}
+        } catch (_) {
+          try {
+            const dbRow = await env.DB.prepare(
+              "SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity FROM users WHERE id = ? OR LOWER(username) = LOWER(?) LIMIT 1"
+            ).bind(sessionUser.user_id || 0, sessionUser.username || "").first();
+            if (dbRow) {
+              user = { ...user, ...dbRow };
+            }
+          } catch (__) {}
+        }
       }
 
       // Handle POST actions on dashboard (e.g., toggle_2fa, publish book)
@@ -3103,7 +3112,30 @@ Format with these exact markdown sections:
           }
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps);
+        let allUsers = [];
+        let bookDelRequests = [];
+        let usernameRequests = [];
+        if (user.role === "developer" && env.DB) {
+          try {
+            await ensureModerationTables(env);
+            const uRes = await env.DB.prepare("SELECT id, username, email, role, last_activity, failed_attempts, locked_until FROM users ORDER BY id ASC LIMIT 100").all();
+            allUsers = uRes?.results || [];
+          } catch (_) {}
+          try {
+            const bReqRes = await env.DB.prepare(
+              "SELECT r.id, r.book_id, r.reason, b.title as book_title, COALESCE(u.username, 'Author') as author_name, COALESCE(uo.username, 'Official') as official_name FROM book_deletion_requests r JOIN books b ON r.book_id = b.id LEFT JOIN users u ON b.author_id = u.id LEFT JOIN users uo ON r.requested_by = uo.id WHERE r.status = 'pending' ORDER BY r.id DESC LIMIT 50"
+            ).all();
+            bookDelRequests = bReqRes?.results || [];
+          } catch (_) {}
+          try {
+            const unReqRes = await env.DB.prepare(
+              "SELECT r.id, r.user_id, r.new_username, r.reason, u.username as current_username, u.email, u.role FROM username_requests r JOIN users u ON r.user_id = u.id WHERE r.status = 'pending' ORDER BY r.id DESC LIMIT 50"
+            ).all();
+            usernameRequests = unReqRes?.results || [];
+          } catch (_) {}
+        }
+
+        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests);
         return new Response(personalized, {
           status: 200,
           headers: {
@@ -6354,23 +6386,23 @@ Format with these exact markdown sections:
     }
 
     // 6A-10. Developer & Official User Management Actions:
-    // Change Role: POST /developer/change_role/:id
-    const roleMatch = url.pathname.match(/^\/developer\/change_role\/(\d+)/);
+    // Change Role: POST /developer/change_role/:id or /developer_change_role/:id
+    const roleMatch = url.pathname.match(/^\/(?:developer\/change_role|developer_change_role)\/(\d+)/);
     if (roleMatch && request.method === "POST" && env.DB) {
       const targetUserId = parseInt(roleMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
       if (!user || user.role !== "developer") return Response.redirect(`${url.origin}/dashboard`, 302);
       const formData = await request.formData().catch(() => new FormData());
-      const newRole = (formData.get("role") || "").toString().trim();
+      const newRole = (formData.get("new_role") || formData.get("role") || "").toString().trim().toLowerCase();
       if (["reader", "author", "official", "developer"].includes(newRole)) {
         await env.DB.prepare("UPDATE users SET role = ? WHERE id = ?").bind(newRole, targetUserId).run();
       }
       return Response.redirect(`${url.origin}/dashboard?role_changed=1`, 302);
     }
 
-    // Unlock User: POST /developer_unlock_user/:id
-    const unlockUserMatch = url.pathname.match(/^\/developer_unlock_user\/(\d+)/);
+    // Unlock User: POST /developer_unlock_user/:id or /developer/unlock_user/:id
+    const unlockUserMatch = url.pathname.match(/^\/(?:developer\/unlock_user|developer_unlock_user)\/(\d+)/);
     if (unlockUserMatch && request.method === "POST" && env.DB) {
       const targetUserId = parseInt(unlockUserMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -6381,17 +6413,17 @@ Format with these exact markdown sections:
       return Response.redirect(`${url.origin}/dashboard?user_unlocked=1`, 302);
     }
 
-    // Admin Delete User: POST /admin_delete_user/:id
-    const adminDelUserMatch = url.pathname.match(/^\/admin_delete_user\/(\d+)/);
+    // Admin Delete User: POST /admin_delete_user/:id or /developer/delete_user/:id
+    const adminDelUserMatch = url.pathname.match(/^\/(?:admin_delete_user|developer\/delete_user)\/(\d+)/);
     if (adminDelUserMatch && request.method === "POST" && env.DB) {
       const targetUserId = parseInt(adminDelUserMatch[1], 10);
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
       if (user && user.role === "developer" && targetUserId !== user.id) {
-        await env.DB.prepare("DELETE FROM personal_library WHERE user_id = ?").bind(targetUserId).run();
-        await env.DB.prepare("DELETE FROM interactions WHERE user_id = ?").bind(targetUserId).run();
-        await env.DB.prepare("DELETE FROM books WHERE author_id = ?").bind(targetUserId).run();
-        await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(targetUserId).run();
+        await env.DB.prepare("DELETE FROM personal_library WHERE user_id = ?").bind(targetUserId).run().catch(() => {});
+        await env.DB.prepare("DELETE FROM interactions WHERE user_id = ?").bind(targetUserId).run().catch(() => {});
+        await env.DB.prepare("DELETE FROM books WHERE author_id = ?").bind(targetUserId).run().catch(() => {});
+        await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(targetUserId).run().catch(() => {});
       }
       return Response.redirect(`${url.origin}/dashboard?user_deleted=1`, 302);
     }
@@ -6429,8 +6461,158 @@ Format with these exact markdown sections:
       return Response.redirect(`${url.origin}/dashboard?cache_purged=1`, 302);
     }
 
-    // Handle Author Username Request: POST /official/handle_author_username_request/:req_id/:action
-    const authReqMatch = url.pathname.match(/^\/official\/handle_author_username_request\/(\d+)\/(approve|reject)/);
+    // Change Username: POST /change_username
+    if (url.pathname === "/change_username" && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) return Response.redirect(`${url.origin}/login`, 302);
+
+      const formData = await request.formData().catch(() => new FormData());
+      const newUsername = (formData.get("new_username") || "").toString().trim();
+      const reason = (formData.get("reason") || "").toString().trim();
+
+      if (!newUsername || newUsername.length < 3 || newUsername.length > 30 || !/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+        return Response.redirect(`${url.origin}/dashboard?username_error=invalid`, 302);
+      }
+
+      const existing = await env.DB.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?").bind(newUsername, user.id).first();
+      if (existing) {
+        return Response.redirect(`${url.origin}/dashboard?username_error=taken`, 302);
+      }
+
+      await ensureModerationTables(env);
+
+      if (user.role === "official" || user.role === "author") {
+        await env.DB.prepare(
+          "INSERT INTO username_requests (user_id, new_username, reason, status) VALUES (?, ?, ?, 'pending')"
+        ).bind(user.id, newUsername, reason || "Profile update").run();
+        return Response.redirect(`${url.origin}/dashboard?req_submitted=1`, 302);
+      } else {
+        await env.DB.prepare("UPDATE users SET username = ? WHERE id = ?").bind(newUsername, user.id).run();
+        const sessionPayload = btoa(JSON.stringify({
+          user_id: user.id,
+          username: newUsername,
+          role: user.role,
+          email: user.email,
+          auth_time: Date.now()
+        }));
+        const headers = new Headers();
+        headers.set("Location", "/dashboard?username_changed=1");
+        headers.append("Set-Cookie", `pv_session=${sessionPayload}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${url.protocol === "https:" ? "; Secure" : ""}`);
+        return new Response(null, { status: 302, headers });
+      }
+    }
+
+    // Send Change Password OTP: POST /send_change_password_otp
+    if (url.pathname === "/send_change_password_otp" && request.method === "POST") {
+      return Response.redirect(`${url.origin}/dashboard?otp_sent=1`, 302);
+    }
+
+    // Change Password: POST /change_password
+    if (url.pathname === "/change_password" && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (!user) return Response.redirect(`${url.origin}/login`, 302);
+      const formData = await request.formData().catch(() => new FormData());
+      const oldPassword = formData.get("old_password") || "";
+      const newPassword = formData.get("new_password") || "";
+      if (oldPassword && newPassword && newPassword.length >= 6) {
+        const curUser = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?").bind(user.id).first();
+        const oldHash = `sha256$${await sha256Hex(oldPassword)}`;
+        if (curUser && (curUser.password_hash === oldHash || curUser.password_hash?.endsWith(await sha256Hex(oldPassword)))) {
+          const newHash = `sha256$${await sha256Hex(newPassword)}`;
+          await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(newHash, user.id).run();
+          return Response.redirect(`${url.origin}/dashboard?password_changed=1`, 302);
+        }
+      }
+      return Response.redirect(`${url.origin}/dashboard?password_error=1`, 302);
+    }
+
+    // Request Book Deletion: POST /request_book_deletion/:id
+    const reqBookDelMatch = url.pathname.match(/^\/request_book_deletion\/(\d+)/);
+    if (reqBookDelMatch && request.method === "POST" && env.DB) {
+      const bookId = parseInt(reqBookDelMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (user && (user.role === "official" || user.role === "developer")) {
+        const formData = await request.formData().catch(() => new FormData());
+        const reason = (formData.get("reason") || "Policy violation").toString().trim();
+        await ensureModerationTables(env);
+        await env.DB.prepare(
+          "INSERT INTO book_deletion_requests (book_id, requested_by, reason, status) VALUES (?, ?, ?, 'pending')"
+        ).bind(bookId, user.id, reason).run();
+      }
+      return Response.redirect(`${url.origin}/dashboard?req_submitted=1`, 302);
+    }
+
+    // Handle Book Deletion: POST /handle_book_deletion/:id/:action
+    const handleBookDelMatch = url.pathname.match(/^\/handle_book_deletion\/(\d+)\/(approve|reject)/);
+    if (handleBookDelMatch && request.method === "POST" && env.DB) {
+      const reqId = parseInt(handleBookDelMatch[1], 10);
+      const action = handleBookDelMatch[2];
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (user && user.role === "developer") {
+        await ensureModerationTables(env);
+        const reqRow = await env.DB.prepare("SELECT * FROM book_deletion_requests WHERE id = ?").bind(reqId).first();
+        if (reqRow) {
+          if (action === "approve") {
+            await env.DB.prepare("DELETE FROM personal_library WHERE book_id = ?").bind(reqRow.book_id).run().catch(() => {});
+            await env.DB.prepare("DELETE FROM books WHERE id = ?").bind(reqRow.book_id).run().catch(() => {});
+            await env.DB.prepare("UPDATE book_deletion_requests SET status = 'approved' WHERE id = ?").bind(reqId).run();
+          } else {
+            await env.DB.prepare("UPDATE book_deletion_requests SET status = 'rejected' WHERE id = ?").bind(reqId).run();
+          }
+        }
+      }
+      return Response.redirect(`${url.origin}/dashboard?req_processed=1`, 302);
+    }
+
+    // Request User Deletion: POST /request_deletion/:id
+    const reqUserDelMatch = url.pathname.match(/^\/request_deletion\/(\d+)/);
+    if (reqUserDelMatch && request.method === "POST" && env.DB) {
+      const targetUserId = parseInt(reqUserDelMatch[1], 10);
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (user && (user.role === "official" || user.role === "developer")) {
+        const formData = await request.formData().catch(() => new FormData());
+        const reason = (formData.get("reason") || "Policy violation").toString().trim();
+        await ensureModerationTables(env);
+        await env.DB.prepare(
+          "INSERT INTO deletion_requests (target_user_id, requested_by, reason, status) VALUES (?, ?, ?, 'pending')"
+        ).bind(targetUserId, user.id, reason).run();
+      }
+      return Response.redirect(`${url.origin}/dashboard?req_submitted=1`, 302);
+    }
+
+    // Handle User Deletion: POST /handle_deletion/:id/:action
+    const handleUserDelMatch = url.pathname.match(/^\/handle_deletion\/(\d+)\/(approve|reject)/);
+    if (handleUserDelMatch && request.method === "POST" && env.DB) {
+      const reqId = parseInt(handleUserDelMatch[1], 10);
+      const action = handleUserDelMatch[2];
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      if (user && user.role === "developer") {
+        await ensureModerationTables(env);
+        const reqRow = await env.DB.prepare("SELECT * FROM deletion_requests WHERE id = ?").bind(reqId).first();
+        if (reqRow) {
+          if (action === "approve") {
+            const uid = reqRow.target_user_id;
+            await env.DB.prepare("DELETE FROM personal_library WHERE user_id = ?").bind(uid).run().catch(() => {});
+            await env.DB.prepare("DELETE FROM interactions WHERE user_id = ?").bind(uid).run().catch(() => {});
+            await env.DB.prepare("DELETE FROM books WHERE author_id = ?").bind(uid).run().catch(() => {});
+            await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(uid).run().catch(() => {});
+            await env.DB.prepare("UPDATE deletion_requests SET status = 'approved' WHERE id = ?").bind(reqId).run();
+          } else {
+            await env.DB.prepare("UPDATE deletion_requests SET status = 'rejected' WHERE id = ?").bind(reqId).run();
+          }
+        }
+      }
+      return Response.redirect(`${url.origin}/dashboard?req_processed=1`, 302);
+    }
+
+    // Handle Username Request: POST /(developer|official)/handle_(author_)?username_request/:id/:action
+    const authReqMatch = url.pathname.match(/^\/(?:developer\/handle_username_request|official\/handle_author_username_request)\/(\d+)\/(approve|reject)/);
     if (authReqMatch && request.method === "POST" && env.DB) {
       const reqId = parseInt(authReqMatch[1], 10);
       const action = authReqMatch[2];
@@ -6438,6 +6620,7 @@ Format with these exact markdown sections:
       const user = await verifySession(cookies.pv_session, env);
       if (user && (user.role === "developer" || user.role === "official")) {
         try {
+          await ensureModerationTables(env);
           const reqItem = await env.DB.prepare("SELECT * FROM username_requests WHERE id = ?").bind(reqId).first();
           if (reqItem) {
             if (action === "approve") {
@@ -6450,6 +6633,23 @@ Format with these exact markdown sections:
         } catch (_) {}
       }
       return Response.redirect(`${url.origin}/dashboard?req_processed=1`, 302);
+    }
+
+    // Live Leadership Roster API: GET /api/leadership
+    if (url.pathname === "/api/leadership" && env.DB) {
+      try {
+        await ensureLeadershipTable(env);
+        const lRes = await env.DB.prepare(
+          "SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC"
+        ).all();
+        return new Response(JSON.stringify({ success: true, leaders: lRes.results || [] }), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" }
+        });
+      } catch (lErr) {
+        return new Response(JSON.stringify({ success: false, leaders: [] }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
     }
 
     // 6B. Read Book / Secure Viewer Route: /read_book/:id, /viewer/:id, /read/:id, /viewer.html?id=...
@@ -7564,6 +7764,44 @@ async function ensureFrontPageSettingsTable(env) {
   }
 }
 
+async function ensureModerationTables(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS username_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        new_username TEXT NOT NULL,
+        reason TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS book_deletion_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id INTEGER NOT NULL,
+        requested_by INTEGER NOT NULL,
+        reason TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS deletion_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_user_id INTEGER NOT NULL,
+        requested_by INTEGER NOT NULL,
+        reason TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (err) {
+    console.warn("ensureModerationTables warning:", err.message);
+  }
+}
+
 function renderContactLeadershipCards(leaders) {
   if (!leaders || leaders.length === 0) return "";
   return leaders.map(leader => {
@@ -7685,7 +7923,7 @@ function stripElementById(html, id) {
   return html;
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null) {
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null, allUsers = [], bookDelRequests = [], usernameRequests = []) {
   const username = user.username || "Reader";
   const role = (user.role || "reader").toLowerCase();
   const email = user.email || "";
@@ -7770,6 +8008,20 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
   }
 
+  // Hydrate Author Creator Profile (Bio & Social Links)
+  if (user.author_bio) {
+    out = out.replace(/<textarea name="author_bio"[^>]*>[\s\S]*?<\/textarea>/i, `<textarea name="author_bio" rows="2" placeholder="Write a short summary about your background, publications, or research..." style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.88rem;">${escapeHtml(user.author_bio)}</textarea>`);
+  }
+  if (user.social_links_json) {
+    try {
+      const soc = JSON.parse(user.social_links_json);
+      if (soc.github) out = out.replace(/name="social_github"\s*(?:value="[^"]*")?/i, `name="social_github" value="${escapeHtml(soc.github)}"`);
+      if (soc.linkedin) out = out.replace(/name="social_linkedin"\s*(?:value="[^"]*")?/i, `name="social_linkedin" value="${escapeHtml(soc.linkedin)}"`);
+      if (soc.twitter) out = out.replace(/name="social_twitter"\s*(?:value="[^"]*")?/i, `name="social_twitter" value="${escapeHtml(soc.twitter)}"`);
+      if (soc.website) out = out.replace(/name="social_website"\s*(?:value="[^"]*")?/i, `name="social_website" value="${escapeHtml(soc.website)}"`);
+    } catch (_) {}
+  }
+
   // 1. Personalized User & Role in Header
   out = out.replace(/Welcome,\s*(?:\{\{\s*session\.username\s*\}\}|[A-Za-z0-9_]+)/g, `Welcome, <span id="dashUsernameDisplay">${escapeHtml(username)}</span>`);
   out = out.replace(/Your Role:\s*<strong[^>]*>[\s\S]*?<\/strong>/gi, `Your Role: <strong id="dashRoleDisplay" style="color: var(--primary-orange); text-transform: capitalize;">${escapeHtml(role)}</strong>`);
@@ -7803,6 +8055,51 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     } else if (url.searchParams.get("added_leader") === "1") {
       const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🎉</span><div>New executive appointed and published to leadership roster!</div></div>`;
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("role_changed") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">👤</span><div>User role successfully updated and synced live across PustakVerse!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("user_unlocked") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🔓</span><div>Account successfully unlocked and failed login attempts counter reset!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("user_deleted") === "1") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🗑️</span><div>User account and all related library data permanently removed.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("username_changed") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✨</span><div>Username successfully updated and active across your session!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("username_error") === "taken") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚠️</span><div>That username is already taken. Please choose another username.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("username_error") === "invalid") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚠️</span><div>Username must be 3-30 characters (letters, numbers, underscores only).</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("req_submitted") === "1") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">📋</span><div>Request submitted successfully for review!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("req_processed") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✅</span><div>Request processed and status updated.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("password_changed") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🔒</span><div>Account password updated successfully!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("password_error") === "1") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚠️</span><div>Incorrect current password or invalid new password (minimum 6 characters).</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("profile_updated") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✍️</span><div>Creator bio and social links updated and synced to your author showcase!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("ticker_updated") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">📢</span><div>Global platform announcement published and live across all pages!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("ticker_cleared") === "1") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🧹</span><div>Global announcement banner cleared.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("freeze_toggled") === "1") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">❄️</span><div>Upload freeze status toggled.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("cache_purged") === "1") {
+      const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚡</span><div>System cache successfully purged.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     }
   }
 
@@ -7824,6 +8121,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "devOnlyUserDelRequests",
       "devOnlyVerificationHub",
       "devOnlyArchiveUserMgmt",
+      "devOnlyUserManagementPanel",
       "devOnlyAuditTrail",
       "devOnlySupremeSuite",
       "scheduleMaintenanceModal",
@@ -7894,6 +8192,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "#devOnlyUserDelRequests",
       "#devOnlyVerificationHub",
       "#devOnlyArchiveUserMgmt",
+      "#devOnlyUserManagementPanel",
       "#devOnlyAuditTrail",
       "#devOnlySupremeSuite",
       "#scheduleMaintenanceModal",
@@ -8184,6 +8483,167 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     out = out.replace(/(<table[^>]*>[\s\S]*?Executive Name & Role[\s\S]*?<\/thead>\s*)<tbody>[\s\S]*?<\/tbody>/i, `$1<tbody id="leadershipTableBody">${leaderRowsHtml}</tbody>`);
   }
 
+  // 5D. Inject Developer User Management Table
+  if (isDev && allUsers && allUsers.length > 0) {
+    const userRowsHtml = allUsers.map(u => {
+      const isLocked = Boolean(u.locked_until || (u.failed_attempts && u.failed_attempts >= 5));
+      const roleColor = u.role === 'official' ? '#16a34a' : (u.role === 'author' ? '#d97706' : '#2563eb');
+      return `
+        <tr>
+          <td>
+            <div style="font-weight: 600;">${escapeHtml(u.username)}</div>
+            <small style="color: #64748b;">${escapeHtml(u.email || '')}</small><br>
+            <small style="color: #94a3b8;">Active: ${escapeHtml(u.last_activity || 'Recently')}</small>
+          </td>
+          <td>
+            <span style="font-weight: 700; text-transform: capitalize; color: ${roleColor};">${escapeHtml(u.role)}</span>
+            ${isLocked ? '<br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">🔒 Locked</span>' : ''}
+          </td>
+          <td>
+            <form action="/developer/change_role/${u.id}" method="POST" style="display: flex; gap: 4px; align-items: center;">
+              <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
+                <option value="reader" ${u.role === 'reader' ? 'selected' : ''}>Reader</option>
+                <option value="author" ${u.role === 'author' ? 'selected' : ''}>Author</option>
+                <option value="official" ${u.role === 'official' ? 'selected' : ''}>Official</option>
+              </select>
+              <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+            </form>
+          </td>
+          <td>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+              ${(u.locked_until || (u.failed_attempts && u.failed_attempts > 0)) ? `
+                <form action="/developer/unlock_user/${u.id}" method="POST">
+                  <button type="submit" class="btn-sm btn-green" title="Reset failed attempts and unlock">🔓 Unlock</button>
+                </form>
+              ` : ''}
+              <form action="/official/notify_username/${u.id}" method="POST" style="display: flex; gap: 4px;">
+                <input type="text" name="reason" placeholder="Username policy..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
+              </form>
+              <form action="/admin_delete_user/${u.id}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
+                <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                <button type="submit" class="btn-sm btn-red">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    const usersTable = `
+      <div class="table-scroll-container" id="devUserTableContainer">
+        <table>
+          <tr>
+            <th>User</th>
+            <th>Role & Status</th>
+            <th>Role Reassign</th>
+            <th>Actions</th>
+          </tr>
+          ${userRowsHtml}
+        </table>
+      </div>
+    `;
+
+    if (out.includes('id="devUserTableContainer"')) {
+      out = out.replace(/<div[^>]*id="devUserTableContainer"[^>]*>[\s\S]*?<\/div>\s*<\/div>/i, `${usersTable}</div>`);
+    } else {
+      out = out.replace(/<p>No users found matching that filter\.<\/p>/i, usersTable);
+    }
+  }
+
+  // 5E. Inject Pending Book Removal Requests
+  if (isDev && bookDelRequests && bookDelRequests.length > 0) {
+    const bookReqRows = bookDelRequests.map(req => `
+      <tr>
+        <td style="font-weight: bold;">${escapeHtml(req.book_title || 'Book #' + req.book_id)}</td>
+        <td>${escapeHtml(req.author_name || 'Author')}</td>
+        <td>${escapeHtml(req.official_name || 'Official')}</td>
+        <td style="color: #c53030;">${escapeHtml(req.reason)}</td>
+        <td style="display: flex; gap: 10px;">
+          <form action="/handle_book_deletion/${req.id}/approve" method="POST" style="display: flex; flex-direction: column; gap: 5px;">
+            <input type="text" name="reason" placeholder="Reason to send Author..." required style="padding: 5px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+            <button type="submit" class="btn-sm btn-red">Approve & Delete Book</button>
+          </form>
+          <form action="/handle_book_deletion/${req.id}/reject" method="POST">
+            <button type="submit" class="btn-sm btn-dark">Reject Report</button>
+          </form>
+        </td>
+      </tr>
+    `).join("");
+
+    const bookReqTable = `
+      <div class="table-scroll-container" id="devBookDelRequestsContainer">
+        <table>
+          <tr>
+            <th>Reported Book</th>
+            <th>Author</th>
+            <th>Reported By (Official Moderator)</th>
+            <th>Reason Given</th>
+            <th>Your Decision</th>
+          </tr>
+          ${bookReqRows}
+        </table>
+      </div>
+    `;
+
+    if (out.includes('id="devBookDelRequestsContainer"')) {
+      out = out.replace(/<div[^>]*id="devBookDelRequestsContainer"[^>]*>[\s\S]*?<\/div>/i, bookReqTable);
+    } else {
+      out = out.replace(/<p>No pending book deletion requests\.<\/p>/i, bookReqTable);
+    }
+  }
+
+  // 5F. Inject Pending Username Change Requests
+  if (isDev && usernameRequests && usernameRequests.length > 0) {
+    const unReqRows = usernameRequests.map(req => `
+      <tr>
+        <td><strong>${escapeHtml(req.current_username)}</strong> <span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; text-transform:capitalize;">${escapeHtml(req.role || 'Official')}</span></td>
+        <td><code>${escapeHtml(req.current_username)}</code></td>
+        <td><strong style="color: #2563eb;">${escapeHtml(req.new_username)}</strong></td>
+        <td style="color: #475569; font-size: 0.88rem;">${escapeHtml(req.reason)}</td>
+        <td>
+          <div style="display: flex; gap: 8px;">
+            <form action="/developer/handle_username_request/${req.id}/approve" method="POST">
+              <button type="submit" class="btn-sm btn-green" onclick="return confirm('Approve username change for ${escapeHtml(req.current_username)} to ${escapeHtml(req.new_username)}?');">
+                ✓ Approve
+              </button>
+            </form>
+            <form action="/developer/handle_username_request/${req.id}/reject" method="POST">
+              <button type="submit" class="btn-sm btn-dark" onclick="return confirm('Reject username change request?');">
+                ✕ Reject
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+
+    const unReqTable = `
+      <div class="table-scroll-container" id="devUsernameRequestsContainer">
+        <table>
+          <thead>
+            <tr>
+              <th>User & Role</th>
+              <th>Current Username</th>
+              <th>Requested New Username</th>
+              <th>Reason Given</th>
+              <th>Your Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${unReqRows}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    if (out.includes('id="devUsernameRequestsContainer"')) {
+      out = out.replace(/<div[^>]*id="devUsernameRequestsContainer"[^>]*>[\s\S]*?<\/div>/i, unReqTable);
+    } else {
+      out = out.replace(/<p style="color: #64748b;">No pending username change requests\.<\/p>/i, unReqTable);
+    }
+  }
+
   // 6. Append edge live sync script before </body>
   const edgeSyncScript = `
 <script>
@@ -8217,6 +8677,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       'devOnlyUserDelRequests',
       'devOnlyVerificationHub',
       'devOnlyArchiveUserMgmt',
+      'devOnlyUserManagementPanel',
       'devOnlyAuditTrail',
       'devOnlySupremeSuite',
       'scheduleMaintenanceModal',
