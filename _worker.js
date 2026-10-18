@@ -5869,16 +5869,16 @@ Format with these exact markdown sections:
 
         ${checkoutDonationActive ? `
         <div class="donation-box" id="donationContainer">
-            <label class="donation-header">
-                <input type="checkbox" id="donationCheckbox" onchange="handleDonationToggle()">
-                <div>
+            <div class="donation-header" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="donationCheckbox" checked onchange="handleDonationToggle()" onclick="handleDonationToggle()" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary-orange); cursor: pointer;">
+                <label for="donationCheckbox" style="cursor: pointer; flex: 1;">
                     <span class="donation-title">🎁 Donate to PustakVerse Team</span>
                     <span class="donation-desc">Contribute to the developer team for servers, AI polymath models & cloud storage.</span>
-                </div>
-            </label>
-            <div class="donation-input-row" id="donationInputWrap" style="display: none;">
+                </label>
+            </div>
+            <div class="donation-input-row" id="donationInputWrap" style="display: flex;">
                 <span style="font-size: 0.82rem; font-weight: 700; color: #166534;">Contribution: ₹</span>
-                <input type="number" id="donationAmountInput" class="donation-input" value="${defaultDonationInr}" min="1" max="5000" step="1" oninput="calculateTotal()">
+                <input type="number" id="donationAmountInput" class="donation-input" value="${defaultDonationInr}" min="1" max="5000" step="1" oninput="calculateTotal()" onchange="calculateTotal()">
                 <span style="font-size: 0.75rem; color: #64748b;">(Optional, editable)</span>
             </div>
         </div>
@@ -5907,19 +5907,19 @@ Format with these exact markdown sections:
                 <span id="couponDiscountDisplay" style="font-weight: 700;">-₹0.00</span>
             </div>
             ${checkoutDonationActive ? `
-            <div class="price-row" id="donationSummaryRow" style="display: none;">
+            <div class="price-row" id="donationSummaryRow" style="display: flex;">
                 <span>PustakVerse Team Donation</span>
                 <span id="donationDisplay" style="color: #166534; font-weight: 800;">₹${defaultDonationInr.toFixed(2)}</span>
             </div>
             ` : ""}
             <div class="total-row">
                 <span>Total to Pay (One-Time)</span>
-                <span id="totalDisplay" style="color: var(--primary-orange);">₹${((book.price_paise || 0) / 100).toFixed(2)}</span>
+                <span id="totalDisplay" style="color: var(--primary-orange);">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span>
             </div>
         </div>
 
         <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
-            <span>🔒 Pay <span id="payBtnAmount">₹${((book.price_paise || 0) / 100).toFixed(2)}</span> with Razorpay</span>
+            <span>🔒 Pay <span id="payBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
         </button>
 
         <a href="/read_book/${book.id}" class="btn-cancel">← Return to Book Page</a>
@@ -5944,8 +5944,9 @@ Format with these exact markdown sections:
         function handleDonationToggle() {
             const cb = document.getElementById('donationCheckbox');
             const wrap = document.getElementById('donationInputWrap');
+            const isChecked = !!(cb && cb.checked);
             if (wrap) {
-                wrap.style.display = (cb && cb.checked) ? 'flex' : 'none';
+                wrap.style.display = isChecked ? 'flex' : 'none';
             }
             calculateTotal();
         }
@@ -5954,8 +5955,18 @@ Format with these exact markdown sections:
             let donationInr = 0;
             const cb = document.getElementById('donationCheckbox');
             const input = document.getElementById('donationAmountInput');
-            if (DONATION_ENABLED && cb && cb.checked && input) {
-                donationInr = Math.max(0, parseInt(input.value, 10) || 0);
+            const summaryRow = document.getElementById('donationSummaryRow');
+            const donationDisplay = document.getElementById('donationDisplay');
+            const totalDisplay = document.getElementById('totalDisplay');
+            const payBtnAmount = document.getElementById('payBtnAmount');
+
+            const isDonationActive = Boolean(DONATION_ENABLED && cb && cb.checked);
+
+            if (isDonationActive && input) {
+                const val = parseFloat(input.value || '0');
+                if (!isNaN(val) && val > 0) {
+                    donationInr = Math.round(val);
+                }
             }
 
             let effectivePricePaise = BASE_PRICE_PAISE;
@@ -5978,17 +5989,17 @@ Format with these exact markdown sections:
             const totalPaise = effectivePricePaise + (donationInr * 100);
             const formattedTotal = '₹' + (totalPaise / 100).toFixed(2);
 
-            const totalDisplay = document.getElementById('totalDisplay');
-            if (totalDisplay) totalDisplay.textContent = formattedTotal;
-
-            const payBtnAmount = document.getElementById('payBtnAmount');
-            if (payBtnAmount) payBtnAmount.textContent = formattedTotal;
-
-            const donRow = document.getElementById('donationSummaryRow');
-            if (donRow) {
-                donRow.style.display = (cb && cb.checked && donationInr > 0) ? 'flex' : 'none';
-                const donDisp = document.getElementById('donationDisplay');
-                if (donDisp) donDisp.textContent = '₹' + donationInr.toFixed(2);
+            if (summaryRow) {
+                summaryRow.style.display = (isDonationActive && donationInr > 0) ? 'flex' : 'none';
+            }
+            if (donationDisplay) {
+                donationDisplay.textContent = '₹' + donationInr.toFixed(2);
+            }
+            if (totalDisplay) {
+                totalDisplay.textContent = formattedTotal;
+            }
+            if (payBtnAmount) {
+                payBtnAmount.textContent = formattedTotal;
             }
 
             return { donationInr, totalPaise, appliedCouponCode };
@@ -6217,7 +6228,10 @@ Format with these exact markdown sections:
         // Attach listeners and sync on load
         document.addEventListener('DOMContentLoaded', function() {
             const cb = document.getElementById('donationCheckbox');
-            if (cb) cb.addEventListener('change', handleDonationToggle);
+            if (cb) {
+                cb.addEventListener('change', handleDonationToggle);
+                cb.addEventListener('click', handleDonationToggle);
+            }
             const amt = document.getElementById('donationAmountInput');
             if (amt) {
                 amt.addEventListener('input', calculateTotal);
