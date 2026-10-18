@@ -737,6 +737,7 @@
             <a href="{{ url_for('my_library') }}">My Library</a>
             <a href="{{ url_for('payment_history') }}">Payment History</a>
             {% if session.role in ['developer', 'official'] or render_all_roles %}
+            <a id="navManageUsers" class="official-only" href="#roleSectionOfficialUsers" style="color: #60a5fa; font-weight: 700;">👥 Manage Users</a>
             <a id="navManageBooks" class="official-only" href="{{ url_for('management_self_published_books') }}" style="color: #fb923c; font-weight: 700;">📖 Manage Books</a>
             {% endif %}
             {% if session.role in ['author', 'developer'] or render_all_roles %}
@@ -771,6 +772,9 @@
                 <button type="button" id="headerEndMaintenanceBtn" class="developer-only" onclick="endMaintenanceMode()" style="display: {{ 'inline-flex' if sys.maintenance_mode else 'none' }}; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;">
                     <span>🟢</span> End Maintenance Break
                 </button>
+                <a href="#roleSectionOfficialUsers" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); font-size: 0.95rem;">
+                    <span>👥</span> Manage Users ⚡
+                </a>
                 <a href="/admin/activity-monitor" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); font-size: 0.95rem;">
                     <span>📊</span> User Activity Monitor 🔒
                 </a>
@@ -1518,6 +1522,279 @@
             </div>
             {% endif %}
         </div>
+        {% endif %}
+
+        <!-- OFFICIAL & DEVELOPER USER MANAGEMENT (TOP PRIORITY) -->
+        {% if session.role in ['official', 'developer'] or render_all_roles %}
+        <div id="roleSectionOfficialUsers" class="role-section-official" style="margin-bottom: 25px;">
+            <div class="panel" style="border-left: 4px solid #3b82f6;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2 style="margin: 0 0 6px 0; display: flex; align-items: center; gap: 10px; font-size: 1.45rem;">
+                            <span>👥</span> Manage Platform Users
+                            <span id="platformUserCountBadge" style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+                                Community Directory
+                            </span>
+                        </h2>
+                        <p style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-light, #64748b);">
+                            Search profiles, inspect account statuses, and issue official username policy revision notices.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Sleek Toolbar with Live Filter -->
+                <div class="user-filter-toolbar">
+                    <div style="position: relative; flex: 1; min-width: 250px;">
+                        <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 0.95rem; opacity: 0.6; pointer-events: none;">🔍</span>
+                        <input type="text" id="platformUserSearchInput" placeholder="Search by username or email address..." style="width: 100%; padding: 10px 14px 10px 40px; margin: 0; border-radius: 8px; font-size: 0.9rem;" oninput="filterPlatformUsersTable()">
+                    </div>
+                    <div style="min-width: 180px;">
+                        <select id="platformUserRoleSelect" style="width: 100%; padding: 10px 14px; margin: 0; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer;" onchange="filterPlatformUsersTable()">
+                            <option value="all">All Roles & Members</option>
+                            <option value="reader">📖 Readers Only</option>
+                            <option value="author">✍️ Authors Only</option>
+                            <option value="official">🏛️ Officials Only</option>
+                            <option value="developer">👑 Developers Only</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-sm btn-dark" onclick="resetPlatformUsersFilter()" style="padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                        <span>↺</span> Reset Filter
+                    </button>
+                </div>
+
+                {% if all_users %}
+                    <div class="table-scroll-container">
+                        <table id="platformUsersTable" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">User Profile</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Email Address</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role & Status</th>
+                                    <th class="developer-only" style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Role Reassign</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="platformUsersTableBody">
+                                {% for user in all_users %}
+                                <tr class="platform-user-row" data-username="{{ user.username | lower }}" data-email="{{ user.email | lower }}" data-role="{{ user.role | lower }}">
+                                    <!-- Column 1: Profile -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, {% if user.role == 'developer' %}#f59e0b, #ef4444{% elif user.role == 'official' %}#10b981, #059669{% elif user.role == 'author' %}#8b5cf6, #6366f1{% else %}#3b82f6, #0284c7{% endif %}); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                                                {{ user.username[:2] }}
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
+                                                    <span>{{ user.username }}</span>
+                                                    {% if user.role == 'developer' %}
+                                                    <span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
+                                                    Member ID: #{{ user.id }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Column 2: Email -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        <a href="mailto:{{ user.email }}" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
+                                            <span>✉</span> {{ user.email }}
+                                        </a>
+                                    </td>
+
+                                    <!-- Column 3: Role Badge & Status -->
+                                    <td style="padding: 14px 18px; vertical-align: middle;">
+                                        {% if user.role == 'developer' %}
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);">
+                                            👑 Developer
+                                        </span>
+                                        {% elif user.role == 'official' %}
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">
+                                            🏛️ Official
+                                        </span>
+                                        {% elif user.role == 'author' %}
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">
+                                            ✍️ Author
+                                        </span>
+                                        {% else %}
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);">
+                                            📖 Reader
+                                        </span>
+                                        {% endif %}
+
+                                        {% if user.locked_until or (user.failed_attempts and user.failed_attempts >= 5) %}
+                                            <br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">🔒 Locked</span>
+                                        {% endif %}
+
+                                        {% if user.role == 'official' %}
+                                            <div class="developer-only" style="margin-top: 6px;">
+                                                <form action="/developer/toggle_official_publishing/{{ user.id }}" method="POST" style="margin: 0; display: inline-block;">
+                                                    {% if user.can_publish %}
+                                                        <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
+                                                            <span>🚀</span> Can Publish (Revoke)
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="submit" class="btn-sm" style="background: #64748b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official cannot publish books. Click to grant publishing authority.">
+                                                            <span>🔒</span> No Publish (Grant)
+                                                        </button>
+                                                    {% endif %}
+                                                </form>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Column 4: Role Reassign (Developer Only) -->
+                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+                                        {% if user.role == 'developer' and session.get('user_id') != user.id %}
+                                            <span style="font-size: 0.78rem; color: #94a3b8;">Protected</span>
+                                        {% else %}
+                                            <form action="{{ url_for('developer_change_role', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <option value="reader" {% if user.role == 'reader' %}selected{% endif %}>Reader</option>
+                                                    <option value="author" {% if user.role == 'author' %}selected{% endif %}>Author</option>
+                                                    <option value="official" {% if user.role == 'official' %}selected{% endif %}>Official</option>
+                                                </select>
+                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Column 5: Actions -->
+                                    <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
+                                        {% if user.role == 'developer' and session.get('user_id') != user.id %}
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">
+                                            🛡️ Protected Admin
+                                        </span>
+                                        {% else %}
+                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('{{ user.id }}', '{{ user.username }}')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
+                                                <span>✉</span> Notice
+                                            </button>
+
+                                            <!-- Developer Only Security Controls -->
+                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                <!-- Unlock Button -->
+                                                {% if user.locked_until or (user.failed_attempts and user.failed_attempts > 0) %}
+                                                <form action="{{ url_for('developer_unlock_user', user_id=user.id) }}" method="POST" style="margin: 0;">
+                                                    <button type="submit" class="btn-sm btn-green" style="padding: 5px 8px; font-size: 0.75rem;" title="Reset failed attempts and unlock">🔓 Unlock</button>
+                                                </form>
+                                                {% endif %}
+
+                                                <!-- Warn User Form -->
+                                                <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+                                                </form>
+
+                                                <!-- Permanent Force Delete Form -->
+                                                <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+                                                </form>
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="platformUsersEmptyNotice" style="display: none; padding: 24px; text-align: center; color: #94a3b8; font-size: 0.92rem; background: rgba(15, 23, 42, 0.3); border-radius: 8px; margin-top: 10px;">
+                        No users found matching the active search or role criteria.
+                    </div>
+                {% else %}
+                    <p style="color: #94a3b8;">No platform users found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- OFFICIAL USER NOTICE MODAL -->
+        <div id="officialNoticeModal" class="pv-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+            <div class="pv-modal-card" style="border-radius: 14px; max-width: 480px; width: 100%; padding: 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                        <span>✉️</span> Send Username Revision Notice
+                    </h3>
+                    <button type="button" onclick="closeOfficialNoticeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0 4px;">&times;</button>
+                </div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 18px;">
+                    Issue an official notification to <strong id="noticeTargetUsernameDisplay" style="color: #38bdf8;">@user</strong> requiring them to modify their username to conform with PustakVerse community guidelines.
+                </p>
+                <form id="officialNoticeForm" action="" method="POST">
+                    <div style="margin-bottom: 18px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Policy Reason / Clause</label>
+                        <textarea name="reason" id="noticeReasonInput" required rows="3" placeholder="e.g. Username contains promotional links, offensive terms, or impersonates an entity..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.88rem; resize: vertical; box-sizing: border-box;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn-sm btn-dark" onclick="closeOfficialNoticeModal()" style="padding: 9px 16px; border-radius: 8px;">Cancel</button>
+                        <button type="submit" class="btn-sm btn-dark" style="padding: 9px 20px; border-radius: 8px; background: #2563eb; color: #ffffff; border: none; font-weight: 600;">Dispatch Notice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function filterPlatformUsersTable() {
+            var searchVal = (document.getElementById('platformUserSearchInput')?.value || '').toLowerCase().trim();
+            var roleVal = (document.getElementById('platformUserRoleSelect')?.value || 'all').toLowerCase();
+            var rows = document.querySelectorAll('.platform-user-row');
+            var visibleCount = 0;
+
+            rows.forEach(function(row) {
+                var uName = (row.getAttribute('data-username') || '').toLowerCase();
+                var uEmail = (row.getAttribute('data-email') || '').toLowerCase();
+                var uRole = (row.getAttribute('data-role') || '').toLowerCase();
+
+                var matchesSearch = !searchVal || uName.indexOf(searchVal) !== -1 || uEmail.indexOf(searchVal) !== -1;
+                var matchesRole = (roleVal === 'all') || (uRole === roleVal);
+
+                if (matchesSearch && matchesRole) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            var emptyMsg = document.getElementById('platformUsersEmptyNotice');
+            if (emptyMsg) {
+                emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        }
+
+        function resetPlatformUsersFilter() {
+            var sInput = document.getElementById('platformUserSearchInput');
+            var rSelect = document.getElementById('platformUserRoleSelect');
+            if (sInput) sInput.value = '';
+            if (rSelect) rSelect.value = 'all';
+            filterPlatformUsersTable();
+        }
+
+        function openOfficialNoticeModal(userId, username) {
+            var modal = document.getElementById('officialNoticeModal');
+            var form = document.getElementById('officialNoticeForm');
+            var userSpan = document.getElementById('noticeTargetUsernameDisplay');
+            var input = document.getElementById('noticeReasonInput');
+            if (form) form.action = '/official/notify_username/' + userId;
+            if (userSpan) userSpan.textContent = '@' + username;
+            if (input) input.value = '';
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeOfficialNoticeModal() {
+            var modal = document.getElementById('officialNoticeModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.addEventListener('click', function(e) {
+            var nModal = document.getElementById('officialNoticeModal');
+            if (e.target === nModal) closeOfficialNoticeModal();
+        });
+        </script>
         {% endif %}
 
         <!-- STRICT DEVELOPER ONLY SECTION (TOP) -->
@@ -3370,280 +3647,6 @@
             </div>
         </div>
         {% endif %}
-
-        <!-- OFFICIAL USER MANAGEMENT -->
-        {% if session.role in ['official', 'developer'] or render_all_roles %}
-        <div id="roleSectionOfficialUsers" class="role-section-official">
-            <div class="panel" style="border-left: 4px solid #3b82f6;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-                    <div>
-                        <h2 style="margin: 0 0 6px 0; display: flex; align-items: center; gap: 10px; font-size: 1.45rem;">
-                            <span>👥</span> Manage Platform Users
-                            <span id="platformUserCountBadge" style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 10px; border-radius: 20px; font-weight: 700;">
-                                Community Directory
-                            </span>
-                        </h2>
-                        <p style="margin: 0; color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
-                            Search profiles, inspect account statuses, and issue official username policy revision notices.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Sleek Toolbar with Live Filter -->
-                <div class="user-filter-toolbar" style="display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; align-items: center; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); padding: 14px 16px; border-radius: 12px;">
-                    <div style="position: relative; flex: 1; min-width: 250px;">
-                        <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 0.95rem; opacity: 0.6; pointer-events: none;">🔍</span>
-                        <input type="text" id="platformUserSearchInput" placeholder="Search by username or email address..." style="width: 100%; padding: 10px 14px 10px 40px; margin: 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(15, 23, 42, 0.6); color: inherit; font-size: 0.9rem; transition: border-color 0.2s;" oninput="filterPlatformUsersTable()">
-                    </div>
-                    <div style="min-width: 180px;">
-                        <select id="platformUserRoleSelect" style="width: 100%; padding: 10px 14px; margin: 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(15, 23, 42, 0.6); color: inherit; font-size: 0.9rem; font-weight: 500; cursor: pointer;" onchange="filterPlatformUsersTable()">
-                            <option value="all">All Roles & Members</option>
-                            <option value="reader">📖 Readers Only</option>
-                            <option value="author">✍️ Authors Only</option>
-                            <option value="official">🏛️ Officials Only</option>
-                            <option value="developer">👑 Developers Only</option>
-                        </select>
-                    </div>
-                    <button type="button" class="btn-sm btn-dark" onclick="resetPlatformUsersFilter()" style="padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-                        <span>↺</span> Reset Filter
-                    </button>
-                </div>
-
-                {% if all_users %}
-                    <div class="table-scroll-container">
-                        <table id="platformUsersTable" style="width: 100%; border-collapse: separate; border-spacing: 0;">
-                            <thead>
-                                <tr>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">User Profile</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Email Address</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role & Status</th>
-                                    <th class="developer-only" style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Role Reassign</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="platformUsersTableBody">
-                                {% for user in all_users %}
-                                <tr class="platform-user-row" data-username="{{ user.username | lower }}" data-email="{{ user.email | lower }}" data-role="{{ user.role | lower }}">
-                                    <!-- Column 1: Profile -->
-                                    <td style="padding: 14px 18px; vertical-align: middle;">
-                                        <div style="display: flex; align-items: center; gap: 12px;">
-                                            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, {% if user.role == 'developer' %}#f59e0b, #ef4444{% elif user.role == 'official' %}#10b981, #059669{% elif user.role == 'author' %}#8b5cf6, #6366f1{% else %}#3b82f6, #0284c7{% endif %}); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-                                                {{ user.username[:2] }}
-                                            </div>
-                                            <div>
-                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
-                                                    <span>{{ user.username }}</span>
-                                                    {% if user.role == 'developer' %}
-                                                    <span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>
-                                                    {% endif %}
-                                                </div>
-                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
-                                                    Member ID: #{{ user.id }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- Column 2: Email -->
-                                    <td style="padding: 14px 18px; vertical-align: middle;">
-                                        <a href="mailto:{{ user.email }}" style="color: #60a5fa; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500;">
-                                            <span>✉</span> {{ user.email }}
-                                        </a>
-                                    </td>
-
-                                    <!-- Column 3: Role Badge & Status -->
-                                    <td style="padding: 14px 18px; vertical-align: middle;">
-                                        {% if user.role == 'developer' %}
-                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);">
-                                            👑 Developer
-                                        </span>
-                                        {% elif user.role == 'official' %}
-                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">
-                                            🏛️ Official
-                                        </span>
-                                        {% elif user.role == 'author' %}
-                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">
-                                            ✍️ Author
-                                        </span>
-                                        {% else %}
-                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);">
-                                            📖 Reader
-                                        </span>
-                                        {% endif %}
-
-                                        {% if user.locked_until or (user.failed_attempts and user.failed_attempts >= 5) %}
-                                            <br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">🔒 Locked</span>
-                                        {% endif %}
-
-                                        {% if user.role == 'official' %}
-                                            <div class="developer-only" style="margin-top: 6px;">
-                                                <form action="/developer/toggle_official_publishing/{{ user.id }}" method="POST" style="margin: 0; display: inline-block;">
-                                                    {% if user.can_publish %}
-                                                        <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
-                                                            <span>🚀</span> Can Publish (Revoke)
-                                                        </button>
-                                                    {% else %}
-                                                        <button type="submit" class="btn-sm" style="background: #64748b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official cannot publish books. Click to grant publishing authority.">
-                                                            <span>🔒</span> No Publish (Grant)
-                                                        </button>
-                                                    {% endif %}
-                                                </form>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Column 4: Role Reassign (Developer Only) -->
-                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
-                                        {% if user.role == 'developer' and session.get('user_id') != user.id %}
-                                            <span style="font-size: 0.78rem; color: #94a3b8;">Protected</span>
-                                        {% else %}
-                                            <form action="{{ url_for('developer_change_role', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
-                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
-                                                    <option value="reader" {% if user.role == 'reader' %}selected{% endif %}>Reader</option>
-                                                    <option value="author" {% if user.role == 'author' %}selected{% endif %}>Author</option>
-                                                    <option value="official" {% if user.role == 'official' %}selected{% endif %}>Official</option>
-                                                </select>
-                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
-                                            </form>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Column 5: Actions -->
-                                    <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
-                                        {% if user.role == 'developer' and session.get('user_id') != user.id %}
-                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">
-                                            🛡️ Protected Admin
-                                        </span>
-                                        {% else %}
-                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
-                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('{{ user.id }}', '{{ user.username }}')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
-                                                <span>✉</span> Notice
-                                            </button>
-
-                                            <!-- Developer Only Security Controls -->
-                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
-                                                <!-- Unlock Button -->
-                                                {% if user.locked_until or (user.failed_attempts and user.failed_attempts > 0) %}
-                                                <form action="{{ url_for('developer_unlock_user', user_id=user.id) }}" method="POST" style="margin: 0;">
-                                                    <button type="submit" class="btn-sm btn-green" style="padding: 5px 8px; font-size: 0.75rem;" title="Reset failed attempts and unlock">🔓 Unlock</button>
-                                                </form>
-                                                {% endif %}
-
-                                                <!-- Warn User Form -->
-                                                <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
-                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
-                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
-                                                </form>
-
-                                                <!-- Permanent Force Delete Form -->
-                                                <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
-                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
-                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
-                                                </form>
-                                            </span>
-                                        </div>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="platformUsersEmptyNotice" style="display: none; padding: 24px; text-align: center; color: #94a3b8; font-size: 0.92rem; background: rgba(15, 23, 42, 0.3); border-radius: 8px; margin-top: 10px;">
-                        No users found matching the active search or role criteria.
-                    </div>
-                {% else %}
-                    <p style="color: #94a3b8;">No platform users found.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- OFFICIAL USER NOTICE MODAL -->
-        <div id="officialNoticeModal" class="pv-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
-            <div class="pv-modal-card" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 14px; max-width: 480px; width: 100%; padding: 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
-                        <span>✉️</span> Send Username Revision Notice
-                    </h3>
-                    <button type="button" onclick="closeOfficialNoticeModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0 4px;">&times;</button>
-                </div>
-                <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 18px;">
-                    Issue an official notification to <strong id="noticeTargetUsernameDisplay" style="color: #38bdf8;">@user</strong> requiring them to modify their username to conform with PustakVerse community guidelines.
-                </p>
-                <form id="officialNoticeForm" action="" method="POST">
-                    <div style="margin-bottom: 18px;">
-                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Policy Reason / Clause</label>
-                        <textarea name="reason" id="noticeReasonInput" required rows="3" placeholder="e.g. Username contains promotional links, offensive terms, or impersonates an entity..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.88rem; resize: vertical; box-sizing: border-box;"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button type="button" class="btn-sm btn-dark" onclick="closeOfficialNoticeModal()" style="padding: 9px 16px; border-radius: 8px;">Cancel</button>
-                        <button type="submit" class="btn-sm btn-dark" style="padding: 9px 20px; border-radius: 8px; background: #2563eb; color: #ffffff; border: none; font-weight: 600;">Dispatch Notice</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <script>
-        function filterPlatformUsersTable() {
-            var searchVal = (document.getElementById('platformUserSearchInput')?.value || '').toLowerCase().trim();
-            var roleVal = (document.getElementById('platformUserRoleSelect')?.value || 'all').toLowerCase();
-            var rows = document.querySelectorAll('.platform-user-row');
-            var visibleCount = 0;
-
-            rows.forEach(function(row) {
-                var uName = (row.getAttribute('data-username') || '').toLowerCase();
-                var uEmail = (row.getAttribute('data-email') || '').toLowerCase();
-                var uRole = (row.getAttribute('data-role') || '').toLowerCase();
-
-                var matchesSearch = !searchVal || uName.indexOf(searchVal) !== -1 || uEmail.indexOf(searchVal) !== -1;
-                var matchesRole = (roleVal === 'all') || (uRole === roleVal);
-
-                if (matchesSearch && matchesRole) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            var emptyMsg = document.getElementById('platformUsersEmptyNotice');
-            if (emptyMsg) {
-                emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
-            }
-        }
-
-        function resetPlatformUsersFilter() {
-            var sInput = document.getElementById('platformUserSearchInput');
-            var rSelect = document.getElementById('platformUserRoleSelect');
-            if (sInput) sInput.value = '';
-            if (rSelect) rSelect.value = 'all';
-            filterPlatformUsersTable();
-        }
-
-        function openOfficialNoticeModal(userId, username) {
-            var modal = document.getElementById('officialNoticeModal');
-            var form = document.getElementById('officialNoticeForm');
-            var userSpan = document.getElementById('noticeTargetUsernameDisplay');
-            var input = document.getElementById('noticeReasonInput');
-            if (form) form.action = '/official/notify_username/' + userId;
-            if (userSpan) userSpan.textContent = '@' + username;
-            if (input) input.value = '';
-            if (modal) modal.style.display = 'flex';
-        }
-
-        function closeOfficialNoticeModal() {
-            var modal = document.getElementById('officialNoticeModal');
-            if (modal) modal.style.display = 'none';
-        }
-
-        window.addEventListener('click', function(e) {
-            var nModal = document.getElementById('officialNoticeModal');
-            if (e.target === nModal) closeOfficialNoticeModal();
-        });
-        </script>
-        {% endif %}
-
         <!-- BOTTOM DEVELOPER SECTION (Supreme Master Controls) -->
         {% if session.role == 'developer' or render_all_roles %}
         <div id="roleSectionDeveloperBottom" class="role-section-developer">

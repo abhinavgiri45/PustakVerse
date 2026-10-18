@@ -856,7 +856,7 @@ html.dark-theme [style*="background:#f8fafc"],
 html.dark-theme [style*="background:#f1f5f9"],
 html.dark-theme [style*="background:#edf2f7"],
 html.dark-theme [style*="background:#fff"] {
-    background: rgba(15, 23, 42, 0.8) !important;
+    background: rgba(15, 23, 42, 0.85) !important;
     color: #f1f5f9 !important;
     border-color: rgba(255, 255, 255, 0.12) !important;
 }
@@ -874,28 +874,158 @@ html.dark-theme [style*="background:#fdfdfd"] {
     border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Blue info badges */
-.dark-theme [style*="background: #eff6ff"],
-.dark-theme [style*="background:#eff6ff"],
-html.dark-theme [style*="background: #eff6ff"],
-html.dark-theme [style*="background:#eff6ff"] {
-    background: rgba(30, 58, 138, 0.3) !important;
-    color: #93c5fd !important;
-    border-color: rgba(59, 130, 246, 0.4) !important;
+/* Gradients in Dark Mode */
+.dark-theme [style*="linear-gradient(to right, #fffaf5, #ffffff)"],
+.dark-theme [style*="linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"],
+.dark-theme [style*="linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)"],
+.dark-theme [style*="linear-gradient(135deg, #ffffff"],
+.dark-theme [style*="linear-gradient(to right, #ffffff"],
+.dark-theme [style*="linear-gradient(135deg, #fff"],
+html.dark-theme [style*="linear-gradient(to right, #fffaf5, #ffffff)"],
+html.dark-theme [style*="linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"],
+html.dark-theme [style*="linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)"],
+html.dark-theme [style*="linear-gradient(135deg, #ffffff"],
+html.dark-theme [style*="linear-gradient(to right, #ffffff"],
+html.dark-theme [style*="linear-gradient(135deg, #fff"] {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Green success badges & pills */
+/* Green light containers in Dark Mode (GDrive, 2FA, minted SBIN, etc.) */
+.dark-theme [style*="background: #f0fdf4"],
+.dark-theme [style*="background:#f0fdf4"],
 .dark-theme [style*="background: #ecfdf5"],
 .dark-theme [style*="background:#ecfdf5"],
 .dark-theme [style*="background: #dcfce7"],
 .dark-theme [style*="background:#dcfce7"],
+.dark-theme [style*="background: #bbf7d0"],
+.dark-theme [style*="background:#bbf7d0"],
+html.dark-theme [style*="background: #f0fdf4"],
+html.dark-theme [style*="background:#f0fdf4"],
 html.dark-theme [style*="background: #ecfdf5"],
 html.dark-theme [style*="background:#ecfdf5"],
 html.dark-theme [style*="background: #dcfce7"],
-html.dark-theme [style*="background:#dcfce7"] {
-    background: rgba(16, 185, 129, 0.2) !important;
-    color: #34d399 !important;
-    border-color: rgba(16, 185, 129, 0.35) !important;
+html.dark-theme [style*="background:#dcfce7"],
+html.dark-theme [style*="background: #bbf7d0"],
+html.dark-theme [style*="background:#bbf7d0"] {
+    background: rgba(6, 78, 59, 0.35) !important;
+    border-color: rgba(52, 211, 153, 0.35) !important;
+    color: #ecfdf5 !important;
+}
+
+/* Green text contrast fixes for dark mode */
+.dark-theme [style*="color: #166534"],
+.dark-theme [style*="color:#166534"],
+.dark-theme [style*="color: #15803d"],
+.dark-theme [style*="color:#15803d"],
+.dark-theme [style*="color: #14532d"],
+.dark-theme [style*="color:#14532d"],
+.dark-theme [style*="color: #2f855a"],
+.dark-theme [style*="color:#2f855a"],
+html.dark-theme [style*="color: #166534"],
+html.dark-theme [style*="color:#166534"],
+html.dark-theme [style*="color: #15803d"],
+html.dark-theme [style*="color:#15803d"],
+html.dark-theme [style*="color: #14532d"],
+html.dark-theme [style*="color:#14532d"],
+html.dark-theme [style*="color: #2f855a"],
+html.dark-theme [style*="color:#2f855a"] {
+    color: #6ee7b7 !important;
+}
+
+/* Green container nested labels and inputs in dark mode */
+.dark-theme [style*="background: #f0fdf4"] label,
+.dark-theme [style*="background:#f0fdf4"] label,
+html.dark-theme [style*="background: #f0fdf4"] label,
+html.dark-theme [style*="background:#f0fdf4"] label {
+    color: #a7f3d0 !important;
+}
+
+.dark-theme [style*="background: #f0fdf4"] input,
+.dark-theme [style*="background:#f0fdf4"] input,
+html.dark-theme [style*="background: #f0fdf4"] input,
+html.dark-theme [style*="background:#f0fdf4"] input {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: rgba(52, 211, 153, 0.4) !important;
+}
+
+/* Orange/peach light containers in Dark Mode */
+.dark-theme [style*="background: #fff7ed"],
+.dark-theme [style*="background:#fff7ed"],
+.dark-theme [style*="background: #ffedd5"],
+.dark-theme [style*="background:#ffedd5"],
+.dark-theme [style*="background: #fffaf5"],
+.dark-theme [style*="background:#fffaf5"],
+.dark-theme [style*="background: #fed7aa"],
+.dark-theme [style*="background:#fed7aa"],
+html.dark-theme [style*="background: #fff7ed"],
+html.dark-theme [style*="background:#fff7ed"],
+html.dark-theme [style*="background: #ffedd5"],
+html.dark-theme [style*="background:#ffedd5"],
+html.dark-theme [style*="background: #fffaf5"],
+html.dark-theme [style*="background:#fffaf5"],
+html.dark-theme [style*="background: #fed7aa"],
+html.dark-theme [style*="background:#fed7aa"] {
+    background: rgba(124, 45, 18, 0.35) !important;
+    border-color: rgba(251, 146, 60, 0.35) !important;
+    color: #ffedd5 !important;
+}
+
+/* Orange text contrast fixes for dark mode */
+.dark-theme [style*="color: #c2410c"],
+.dark-theme [style*="color:#c2410c"],
+.dark-theme [style*="color: #9a3412"],
+.dark-theme [style*="color:#9a3412"],
+.dark-theme [style*="color: #7c2d12"],
+.dark-theme [style*="color:#7c2d12"],
+html.dark-theme [style*="color: #c2410c"],
+html.dark-theme [style*="color:#c2410c"],
+html.dark-theme [style*="color: #9a3412"],
+html.dark-theme [style*="color:#9a3412"],
+html.dark-theme [style*="color: #7c2d12"],
+html.dark-theme [style*="color:#7c2d12"] {
+    color: #fdba74 !important;
+}
+
+/* Blue info badges & containers */
+.dark-theme [style*="background: #eff6ff"],
+.dark-theme [style*="background:#eff6ff"],
+.dark-theme [style*="background: #e0e7ff"],
+.dark-theme [style*="background:#e0e7ff"],
+.dark-theme [style*="background: #dbeafe"],
+.dark-theme [style*="background:#dbeafe"],
+html.dark-theme [style*="background: #eff6ff"],
+html.dark-theme [style*="background:#eff6ff"],
+html.dark-theme [style*="background: #e0e7ff"],
+html.dark-theme [style*="background:#e0e7ff"],
+html.dark-theme [style*="background: #dbeafe"],
+html.dark-theme [style*="background:#dbeafe"] {
+    background: rgba(30, 58, 138, 0.35) !important;
+    border-color: rgba(96, 165, 250, 0.35) !important;
+    color: #bfdbfe !important;
+}
+
+/* Blue & Indigo text contrast fixes for dark mode */
+.dark-theme [style*="color: #4338ca"],
+.dark-theme [style*="color:#4338ca"],
+.dark-theme [style*="color: #3730a3"],
+.dark-theme [style*="color:#3730a3"],
+.dark-theme [style*="color: #1e40af"],
+.dark-theme [style*="color:#1e40af"],
+.dark-theme [style*="color: #1d4ed8"],
+.dark-theme [style*="color:#1d4ed8"],
+html.dark-theme [style*="color: #4338ca"],
+html.dark-theme [style*="color:#4338ca"],
+html.dark-theme [style*="color: #3730a3"],
+html.dark-theme [style*="color:#3730a3"],
+html.dark-theme [style*="color: #1e40af"],
+html.dark-theme [style*="color:#1e40af"],
+html.dark-theme [style*="color: #1d4ed8"],
+html.dark-theme [style*="color:#1d4ed8"] {
+    color: #93c5fd !important;
 }
 
 /* Red alert & danger badges */
@@ -935,13 +1065,65 @@ html.dark-theme [style*="background:#fef08a"] {
 .dark-theme [style*="background:#f3e8ff"],
 .dark-theme [style*="background: #faf5ff"],
 .dark-theme [style*="background:#faf5ff"],
+.dark-theme [style*="background: #ede9fe"],
+.dark-theme [style*="background:#ede9fe"],
 html.dark-theme [style*="background: #f3e8ff"],
 html.dark-theme [style*="background:#f3e8ff"],
 html.dark-theme [style*="background: #faf5ff"],
-html.dark-theme [style*="background:#faf5ff"] {
+html.dark-theme [style*="background:#faf5ff"],
+html.dark-theme [style*="background: #ede9fe"],
+html.dark-theme [style*="background:#ede9fe"] {
     background: rgba(168, 85, 247, 0.2) !important;
     color: #c084fc !important;
     border-color: rgba(168, 85, 247, 0.35) !important;
+}
+
+/* Purple text contrast fixes for dark mode */
+.dark-theme [style*="color: #6d28d9"],
+.dark-theme [style*="color:#6d28d9"],
+.dark-theme [style*="color: #4c1d95"],
+.dark-theme [style*="color:#4c1d95"],
+.dark-theme [style*="color: #7c3aed"],
+.dark-theme [style*="color:#7c3aed"],
+html.dark-theme [style*="color: #6d28d9"],
+html.dark-theme [style*="color:#6d28d9"],
+html.dark-theme [style*="color: #4c1d95"],
+html.dark-theme [style*="color:#4c1d95"],
+html.dark-theme [style*="color: #7c3aed"],
+html.dark-theme [style*="color:#7c3aed"] {
+    color: #d8b4fe !important;
+}
+
+/* Autofill normalization across both Light and Dark themes */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark-theme input:-webkit-autofill,
+.dark-theme input:-webkit-autofill:hover, 
+.dark-theme input:-webkit-autofill:focus,
+.dark-theme input:-webkit-autofill:active,
+.dark-theme textarea:-webkit-autofill,
+.dark-theme select:-webkit-autofill,
+html.dark-theme input:-webkit-autofill,
+html.dark-theme input:-webkit-autofill:hover, 
+html.dark-theme input:-webkit-autofill:focus,
+html.dark-theme input:-webkit-autofill:active,
+html.dark-theme textarea:-webkit-autofill,
+html.dark-theme select:-webkit-autofill {
+    -webkit-text-fill-color: #f8fafc !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
+    box-shadow: 0 0 0px 1000px #0f172a inset !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Sticky table headers across dark theme */
@@ -1875,5 +2057,105 @@ html.dark-theme .activity-monitor-launch-card h2 {
 html.dark-theme .activity-monitor-launch-card p {
     color: #cbd5e1 !important;
 }
+
+/* ==========================================================================
+   PLATFORM USERS DIRECTORY & MANAGEMENT SUITE
+   ========================================================================== */
+.user-filter-toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.dark-theme .user-filter-toolbar,
+html.dark-theme .user-filter-toolbar {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+#platformUserSearchInput,
+#platformUserRoleSelect {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1.5px solid #cbd5e1;
+    transition: all 0.2s ease;
+}
+
+#platformUserSearchInput:focus,
+#platformUserRoleSelect:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.dark-theme #platformUserSearchInput,
+.dark-theme #platformUserRoleSelect,
+html.dark-theme #platformUserSearchInput,
+html.dark-theme #platformUserRoleSelect {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark-theme #platformUserSearchInput:focus,
+.dark-theme #platformUserRoleSelect:focus,
+html.dark-theme #platformUserSearchInput:focus,
+html.dark-theme #platformUserRoleSelect:focus {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
+}
+
+#platformUsersTable thead th {
+    background: #f1f5f9;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.dark-theme #platformUsersTable thead th,
+html.dark-theme #platformUsersTable thead th {
+    background: #0f172a !important;
+    color: #cbd5e1 !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.platform-user-row td {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.dark-theme .platform-user-row td,
+html.dark-theme .platform-user-row td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.platform-user-row:hover td {
+    background: #f8fafc;
+}
+
+.dark-theme .platform-user-row:hover td,
+html.dark-theme .platform-user-row:hover td {
+    background: rgba(59, 130, 246, 0.08) !important;
+}
+
+/* Official Notice Modal Theme Support */
+.pv-modal-card {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+}
+
+.dark-theme .pv-modal-card,
+html.dark-theme .pv-modal-card {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
 
 

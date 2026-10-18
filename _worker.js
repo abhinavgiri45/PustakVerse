@@ -11299,6 +11299,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "headerOfficialDevActions",
       "roleSectionOfficial",
       "roleSectionOfficialUsers",
+      "navManageUsers",
       "navManageBooks",
       "officialModerationSuite",
       "manageBooksHubBtn"
@@ -11377,6 +11378,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "#roleSectionOfficial",
       "#roleSectionOfficialUsers",
       "#pendingArchiveApprovalsPanel",
+      "#navManageUsers",
       "#navManageBooks",
       "#manageBooksHubBtn"
     );
@@ -12072,6 +12074,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       'headerOfficialDevActions',
       'roleSectionOfficial',
       'roleSectionOfficialUsers',
+      'navManageUsers',
       'pendingArchiveApprovalsPanel',
       'navManageBooks',
       'officialModerationSuite',
