@@ -7960,6 +7960,8 @@ def serve_secure_pdf(book_id):
 @app.route('/save_book/<int:book_id>', methods=['POST'])
 def save_book(book_id):
     if 'user_id' not in session: 
+        if request.is_json or request.headers.get('Accept', '').find('application/json') != -1 or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'require_login': True, 'redirect': url_for('login')}), 401
         flash("Please sign in or register first.", "error")
         return redirect(url_for('login'))
         
@@ -7973,13 +7975,19 @@ def save_book(book_id):
             if session.get('user_id') != b_info.get('author_id') and session.get('role') != 'developer':
                 cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status IN ('paid', 'completed', 'verified')", (session['user_id'], book_id))
                 if not cursor.fetchone():
+                    if request.is_json or request.headers.get('Accept', '').find('application/json') != -1 or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return jsonify({'success': False, 'require_purchase': True, 'redirect': url_for('buy_book', book_id=book_id)}), 402
                     flash("This is a premium book. Please complete purchase to add to your library.", "info")
                     return redirect(url_for('buy_book', book_id=book_id))
 
         cursor.execute("INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)", (session['user_id'], book_id))
         db.commit()
+        if request.is_json or request.headers.get('Accept', '').find('application/json') != -1 or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'saved': True, 'book_id': book_id})
         flash("Book saved to My Library!", "success")
     except Exception: 
+        if request.is_json or request.headers.get('Accept', '').find('application/json') != -1 or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Database error'}), 500
         flash("Database error.", "error")
     finally:
         if db:

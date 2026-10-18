@@ -399,7 +399,7 @@
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            {% if (purchased_book_ids and book.id in purchased_book_ids) %}
+                            {% if (purchased_book_ids and book.id in purchased_book_ids) or (library_book_ids and book.id in library_book_ids) %}
                                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
                                     ✓ Purchased · In Library
                                 </div>
@@ -563,31 +563,32 @@
                     document.querySelectorAll('.book-card').forEach(function(card) {
                         const bid = Number(card.getAttribute('data-book-id'));
                         if (!bid) return;
-                        const isPaid = card.getAttribute('data-is-paid') === 'true' || !!card.querySelector('form[action*="/buy_book/"]');
-                        const isPurchased = pSet.has(bid);
-                        const inLibrary = isPaid ? isPurchased : lSet.has(bid);
+                        const hasBook = pSet.has(bid) || lSet.has(bid);
+                        if (!hasBook) return;
+
+                        const isPaid = card.getAttribute('data-is-paid') === 'true' || !!card.querySelector('form[action*="/buy_book/"], .btn-premium');
+
+                        const priceDiv = card.querySelector('div[style*="baseline"]');
+                        if (priceDiv) priceDiv.remove();
 
                         const actionsBox = card.querySelector('.book-actions');
                         if (!actionsBox) return;
 
-                        if (isPaid && isPurchased) {
-                            // Hide price display
-                            const priceDiv = actionsBox.querySelector('div[style*="baseline"]');
-                            if (priceDiv) priceDiv.style.display = 'none';
-
+                        if (isPaid) {
                             actionsBox.innerHTML = `
-                                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
+                                <div class="in-library-badge-active" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
                                     ✓ Purchased · In Library
                                 </div>
                                 <div style="display: flex; gap: 8px;">
                                     <a href="/read_book/${bid}" class="btn" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; padding: 8px 6px;">📖 Read Full Book</a>
                                 </div>
                             `;
-                        } else if (!isPaid && inLibrary) {
-                            const saveForm = actionsBox.querySelector('form[action*="/save_book/"]');
+                        } else {
+                            const saveForm = card.querySelector('form[action*="/save_book/"], .btn-save');
                             if (saveForm) {
-                                saveForm.outerHTML = `
-                                    <div style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
+                                const parent = saveForm.closest('form') || saveForm;
+                                parent.outerHTML = `
+                                    <div class="in-library-badge-active" style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
                                         ✓ In Library
                                     </div>
                                 `;
@@ -596,6 +597,52 @@
                     });
                 })
                 .catch(function() {});
+
+            document.addEventListener('submit', async function(e) {
+                const form = e.target;
+                if (form && form.action && form.action.includes('/save_book/')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const m = form.action.match(/\/save_book\/(\d+)/);
+                    const bookId = m ? Number(m[1]) : null;
+                    const btn = form.querySelector('button[type="submit"], .btn-save');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = 'Saving...';
+                    }
+                    try {
+                        const res = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new FormData(form)
+                        });
+                        if (res.status === 401 || (res.redirected && res.url.includes('/login'))) {
+                            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                            return;
+                        }
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok || data.success || data.saved) {
+                            if (bookId) {
+                                const card = form.closest('.book-card');
+                                if (card) {
+                                    form.outerHTML = `
+                                        <div class="in-library-badge-active" style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
+                                            ✓ In Library
+                                        </div>
+                                    `;
+                                }
+                            }
+                        } else {
+                            form.submit();
+                        }
+                    } catch (_) {
+                        form.submit();
+                    }
+                }
+            }, true);
         });
     </script>
 </body>

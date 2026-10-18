@@ -5888,10 +5888,11 @@ Format with these exact markdown sections:
           }
 
           const sanitizeBookForApi = (b) => {
+            const bid = Number(b.id);
             const isPaidBook = !!b.is_paid && ((b.price_paise || 0) > 0);
             const isDevOrAuthor = sessionUser && (sessionUser.role === 'developer' || sessionUser.id === b.author_id);
-            const hasPurchased = sessionUser && (purchasedBookIds.has(b.id) || (isPaidBook && libraryBookIds.has(b.id)));
-            const inLibrary = sessionUser && (libraryBookIds.has(b.id) || purchasedBookIds.has(b.id));
+            const hasPurchased = sessionUser && (purchasedBookIds.has(bid) || (isPaidBook && libraryBookIds.has(bid)));
+            const inLibrary = sessionUser && (libraryBookIds.has(bid) || purchasedBookIds.has(bid));
             const canRead = sessionUser && (!isPaidBook || isDevOrAuthor || hasPurchased);
             return {
               ...b,
@@ -7387,6 +7388,11 @@ Format with these exact markdown sections:
       const sessionUser = getSessionUser(request);
 
       if (!sessionUser || !sessionUser.id) {
+        if (request.headers.get("Accept")?.includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest") {
+          return new Response(JSON.stringify({ success: false, require_login: true, redirect: `${url.origin}/login` }), {
+            status: 401, headers: { "Content-Type": "application/json" }
+          });
+        }
         return Response.redirect(`${url.origin}/login`, 302);
       }
 
@@ -7406,6 +7412,11 @@ Format with these exact markdown sections:
               "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
             ).bind(sessionUser.id, bookId).first();
             if (!purchase) {
+              if (request.headers.get("Accept")?.includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest") {
+                return new Response(JSON.stringify({ success: false, require_purchase: true, redirect: `${url.origin}/buy_book/${bookId}` }), {
+                  status: 402, headers: { "Content-Type": "application/json" }
+                });
+              }
               return Response.redirect(`${url.origin}/buy_book/${bookId}`, 302);
             }
           }
@@ -7416,7 +7427,14 @@ Format with these exact markdown sections:
         ).bind(sessionUser.id, bookId).run();
       } catch (_) {}
 
-      return Response.redirect(`${url.origin}/my-library`, 302);
+      if (request.headers.get("Accept")?.includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest") {
+        return new Response(JSON.stringify({ success: true, saved: true, book_id: bookId }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      const referer = request.headers.get("Referer");
+      return Response.redirect(referer || `${url.origin}/my-library`, 302);
     }
 
     // 6A-7. My Library Edge Proxy: /my-library & /my_library
