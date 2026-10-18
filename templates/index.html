@@ -347,28 +347,29 @@
                 display: flex !important;
                 flex-direction: row !important;
                 align-items: center !important;
-                justify-content: flex-end !important;
+                justify-content: flex-start !important;
                 gap: 6px !important;
                 margin-left: auto !important;
                 flex-wrap: nowrap !important;
-                overflow-x: visible !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                max-width: calc(100% - 130px) !important;
+                padding: 4px 0 !important;
             }
-            /* Hide useless/redundant desktop links on mobile phone screens */
-            .navbar-links a[href*="tools"],
-            .navbar-links a[href*="contact"],
-            .navbar-links a[href*="my_library"],
-            .navbar-links a[href*="my-library"] {
+            .navbar-links::-webkit-scrollbar {
                 display: none !important;
             }
             .navbar-links a, .navbar-links button {
                 padding: 6px 10px !important;
                 font-size: 0.78rem !important;
-                min-height: 34px !important;
+                min-height: 32px !important;
                 border-radius: 20px !important;
                 white-space: nowrap !important;
                 margin: 0 !important;
                 display: inline-flex !important;
                 align-items: center !important;
+                flex-shrink: 0 !important;
             }
             .hero-section { 
                 padding: 24px 14px 18px !important; 
@@ -995,7 +996,7 @@
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            {% if (purchased_book_ids and book.id in purchased_book_ids) or (session.user_id and session.user_id == book.author_id) or session.role == 'developer' %}
+                            {% if purchased_book_ids and book.id in purchased_book_ids %}
                                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
                                     ✓ Purchased · In Library
                                 </div>
@@ -1134,7 +1135,7 @@
                     };
 
                     let actionsHtml = '';
-                    const isPurchased = !!(b.has_purchased || b.can_read);
+                    const isPurchased = !!b.has_purchased;
                     if (isPaid) {
                         if (isPurchased) {
                             actionsHtml = `

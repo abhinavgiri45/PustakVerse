@@ -318,14 +318,14 @@
         <!-- OPTIONAL DONATION BOX (ALLOTTED DIRECTLY TO DEVELOPER ACCOUNT) -->
         <div class="donation-box" id="donationContainer">
             <label class="donation-header">
-                <input type="checkbox" id="donationCheckbox" checked onchange="handleDonationToggle()">
+                <input type="checkbox" id="donationCheckbox" onchange="handleDonationToggle()">
                 <div>
                     <span class="donation-title">🎁 Donate to PustakVerse Team</span>
                     <span class="donation-desc">Contribute to the developer team for servers, AI polymath models & cloud storage.</span>
                 </div>
             </label>
 
-            <div class="donation-input-row" id="donationInputWrap">
+            <div class="donation-input-row" id="donationInputWrap" style="display: none;">
                 <span style="font-size: 0.82rem; font-weight: 700; color: #166534;">Contribution: ₹</span>
                 <input type="number" id="donationAmountInput" class="donation-input" value="{{ default_donation_inr or 10 }}" min="1" max="5000" step="1" oninput="calculateTotal()">
                 <span style="font-size: 0.75rem; color: #64748b;">(Optional, editable)</span>
@@ -359,7 +359,7 @@
             </div>
 
             {% if checkout_donation_active %}
-            <div class="price-row" id="donationSummaryRow">
+            <div class="price-row" id="donationSummaryRow" style="display: none;">
                 <span>PustakVerse Team Donation</span>
                 <span id="donationDisplay" style="color: #166534; font-weight: 800;">₹{{ "%.2f"|format(default_donation_inr or 10) }}</span>
             </div>
@@ -367,13 +367,13 @@
 
             <div class="total-row">
                 <span>Total to Pay (One-Time)</span>
-                <span id="totalDisplay" style="color: var(--primary-orange);">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span>
+                <span id="totalDisplay" style="color: var(--primary-orange);">₹{{ "%.2f"|format(base_price/100) }}</span>
             </div>
         </div>
 
         <!-- SINGLE ONE-TIME PAYMENT BUTTON -->
         <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
-            <span>🔒 Pay <span id="payBtnAmount">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span> Securely</span>
+            <span>🔒 Pay <span id="payBtnAmount">₹{{ "%.2f"|format(base_price/100) }}</span> Securely</span>
         </button>
 
         <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-cancel">← Return to Book Page</a>
@@ -600,20 +600,20 @@
 
                 if (typeof Razorpay === 'undefined') {
                     clearTimeout(watchdog);
+                    resetPayButton();
                     if (confirm('Razorpay gateway SDK is unavailable or blocked by adblocker. Would you like to complete this purchase via instant verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    resetPayButton();
                     return;
                 }
 
-                // If real razorpay order couldn't be registered upstream, provide safe fallback
-                if (!data.is_real_razorpay_order) {
+                // If no real razorpay key is configured (using dummy fallback), offer instant unlock
+                if (!data.razorpay_key || data.razorpay_key.includes('test_pustakverse')) {
                     clearTimeout(watchdog);
                     resetPayButton();
                     const choice = confirm(
                         "Payment Gateway Notice:\n\n" +
-                        "This book is configured with payment credentials requiring standard order synchronization.\n\n" +
+                        "This book is configured with sandbox test credentials.\n\n" +
                         "Would you like to complete this purchase now via Instant Verification (1-click free unlock)?"
                     );
                     if (choice) {
@@ -623,7 +623,7 @@
                 }
 
                 const options = {
-                    key: data.razorpay_key || 'rzp_test_pustakverse',
+                    key: data.razorpay_key,
                     amount: data.amount_paise,
                     currency: "INR",
                     name: "PustakVerse",
@@ -648,7 +648,8 @@
                     }
                 };
 
-                if (data.is_real_razorpay_order && data.order_id) {
+                // CRITICAL: NEVER pass an order_id unless it is a genuine Razorpay order created on Razorpay servers (starts with order_)
+                if (data.is_real_razorpay_order && data.order_id && String(data.order_id).startsWith("order_")) {
                     options.order_id = data.order_id;
                 }
 
@@ -664,19 +665,18 @@
                 } catch (rzpErr) {
                     clearTimeout(watchdog);
                     console.warn("Razorpay open error:", rzpErr);
+                    resetPayButton();
                     if (confirm('Gateway modal could not open (' + rzpErr.message + ').\n\nWould you like to complete purchase via instant verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    resetPayButton();
                 }
 
             } catch (err) {
                 clearTimeout(watchdog);
                 console.error("Payment initialization error:", err);
+                resetPayButton();
                 if (confirm('Network error connecting to payment gateway: ' + err.message + '\n\nWould you like to complete this purchase via instant verification?')) {
                     proceedInstantUnlock();
-                } else {
-                    resetPayButton();
                 }
             }
         }

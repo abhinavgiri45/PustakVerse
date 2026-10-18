@@ -399,7 +399,7 @@
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            {% if (purchased_book_ids and book.id in purchased_book_ids) or (session.user_id and session.user_id == book.author_id) or session.role == 'developer' %}
+                            {% if purchased_book_ids and book.id in purchased_book_ids %}
                                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
                                     ✓ Purchased · In Library
                                 </div>

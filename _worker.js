@@ -2333,10 +2333,15 @@ Format with these exact markdown sections:
 
       await ensureAuthorCouponsTable(env);
 
-      try {
-        const coupon = await env.DB.prepare(
-          "SELECT * FROM author_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? AND is_active = 1 LIMIT 1"
-        ).bind(bookId, code).first();
+        let coupon = await env.DB.prepare(
+          "SELECT id, code, discount_percent, max_uses, times_used, is_active FROM author_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? AND (is_active = 1 OR is_active IS NULL) LIMIT 1"
+        ).bind(bookId, code).first().catch(() => null);
+
+        if (!coupon) {
+          coupon = await env.DB.prepare(
+            "SELECT id, code, discount_percent, max_uses, used_count as times_used, 1 as is_active FROM book_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? LIMIT 1"
+          ).bind(bookId, code).first().catch(() => null);
+        }
 
         if (!coupon) {
           return new Response(JSON.stringify({ success: false, valid: false, message: "Invalid promo code for this title." }), {
@@ -5238,12 +5243,6 @@ Format with these exact markdown sections:
               ).bind(sessionUser.id).all();
               (pRes?.results || []).forEach(p => purchasedBookIds.add(p.book_id));
             } catch (_) {}
-            try {
-              const libRes = await env.DB.prepare(
-                "SELECT book_id FROM personal_library WHERE user_id = ?"
-              ).bind(sessionUser.id).all();
-              (libRes?.results || []).forEach(p => purchasedBookIds.add(p.book_id));
-            } catch (_) {}
           }
 
           const sanitizeBookForApi = (b) => {
@@ -5626,14 +5625,6 @@ Format with these exact markdown sections:
           ).bind(sessionUser.id, targetBookId).first();
         } catch (_) {}
 
-        if (!existingPurchase) {
-          try {
-            existingPurchase = await env.DB.prepare(
-              "SELECT id FROM personal_library WHERE user_id = ? AND book_id = ? LIMIT 1"
-            ).bind(sessionUser.id, targetBookId).first();
-          } catch (_) {}
-        }
-
         if (existingPurchase && !isTester) {
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
         }
@@ -5879,13 +5870,13 @@ Format with these exact markdown sections:
         ${checkoutDonationActive ? `
         <div class="donation-box" id="donationContainer">
             <label class="donation-header">
-                <input type="checkbox" id="donationCheckbox" checked onchange="handleDonationToggle()">
+                <input type="checkbox" id="donationCheckbox" onchange="handleDonationToggle()">
                 <div>
                     <span class="donation-title">🎁 Donate to PustakVerse Team</span>
                     <span class="donation-desc">Contribute to the developer team for servers, AI polymath models & cloud storage.</span>
                 </div>
             </label>
-            <div class="donation-input-row" id="donationInputWrap">
+            <div class="donation-input-row" id="donationInputWrap" style="display: none;">
                 <span style="font-size: 0.82rem; font-weight: 700; color: #166534;">Contribution: ₹</span>
                 <input type="number" id="donationAmountInput" class="donation-input" value="${defaultDonationInr}" min="1" max="5000" step="1" oninput="calculateTotal()">
                 <span style="font-size: 0.75rem; color: #64748b;">(Optional, editable)</span>
@@ -5916,19 +5907,19 @@ Format with these exact markdown sections:
                 <span id="couponDiscountDisplay" style="font-weight: 700;">-₹0.00</span>
             </div>
             ${checkoutDonationActive ? `
-            <div class="price-row" id="donationSummaryRow">
+            <div class="price-row" id="donationSummaryRow" style="display: none;">
                 <span>PustakVerse Team Donation</span>
                 <span id="donationDisplay" style="color: #166534; font-weight: 800;">₹${defaultDonationInr.toFixed(2)}</span>
             </div>
             ` : ""}
             <div class="total-row">
                 <span>Total to Pay (One-Time)</span>
-                <span id="totalDisplay" style="color: var(--primary-orange);">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span>
+                <span id="totalDisplay" style="color: var(--primary-orange);">₹${((book.price_paise || 0) / 100).toFixed(2)}</span>
             </div>
         </div>
 
         <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
-            <span>🔒 Pay <span id="payBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
+            <span>🔒 Pay <span id="payBtnAmount">₹${((book.price_paise || 0) / 100).toFixed(2)}</span> with Razorpay</span>
         </button>
 
         <a href="/read_book/${book.id}" class="btn-cancel">← Return to Book Page</a>
@@ -6135,33 +6126,30 @@ Format with these exact markdown sections:
 
                 if (typeof Razorpay === 'undefined') {
                     clearTimeout(watchdog);
+                    resetPayButton();
                     if (confirm('Razorpay gateway SDK is blocked or unavailable in your browser.\n\nWould you like to complete this purchase via instant simulation unlock?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    resetPayButton();
                     return;
                 }
 
-                // If real Razorpay order could not be registered with Razorpay's API
-                // (e.g. invalid test secret or keys not configured on Razorpay's servers)
-                if (!data.is_real_razorpay_order) {
+                // If no real razorpay key is configured (using dummy fallback), offer instant unlock
+                if (!data.razorpay_key || data.razorpay_key.includes('test_pustakverse')) {
                     clearTimeout(watchdog);
-                    const errMsg = data.order_error || 'Payment gateway could not generate a live order with Razorpay credentials.';
-                    if (confirm('Notice from Payment Gateway:\n' + errMsg + '\n\nWould you like to complete this purchase via Instant Verification?')) {
+                    resetPayButton();
+                    if (confirm('Notice from Payment Gateway:\nThis store is running in Sandbox Simulation mode.\n\nWould you like to complete this purchase via Instant Verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    resetPayButton();
                     return;
                 }
 
                 const options = {
-                    key: data.razorpay_key || 'rzp_test_pustakverse',
+                    key: data.razorpay_key,
                     amount: data.amount_paise,
                     currency: "INR",
                     name: "PustakVerse",
                     description: 'Unlock "' + (data.book_title || 'Book') + '"',
                     image: "/static/PustakVerse.png",
-                    order_id: data.order_id,
                     handler: function (response) {
                         clearTimeout(watchdog);
                         btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
@@ -6181,31 +6169,35 @@ Format with these exact markdown sections:
                     theme: { color: "#ea580c" }
                 };
 
+                // CRITICAL: NEVER pass an order_id unless it is a genuine Razorpay order created on Razorpay servers (starts with order_)
+                if (data.is_real_razorpay_order && data.order_id && String(data.order_id).startsWith("order_")) {
+                    options.order_id = data.order_id;
+                }
+
                 try {
                     const rzp = new Razorpay(options);
                     rzp.on('payment.failed', function(resp) {
                         clearTimeout(watchdog);
                         console.error("Razorpay failure:", resp.error);
                         const reason = resp.error?.description || resp.error?.reason || "Gateway declined payment";
-                        alert("Payment attempt failed: " + reason + "\n\nYou can retry or use the Instant Sandbox Simulator.");
+                        alert("Payment attempt failed: " + reason);
                         resetPayButton();
                     });
                     rzp.open();
                 } catch (rzpErr) {
                     clearTimeout(watchdog);
                     console.warn("Razorpay open error:", rzpErr);
+                    resetPayButton();
                     if (confirm('Gateway modal could not open (' + rzpErr.message + ').\n\nWould you like to complete this purchase via instant verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    resetPayButton();
                 }
             } catch (err) {
                 clearTimeout(watchdog);
                 console.error("Payment initialization error:", err);
+                resetPayButton();
                 if (confirm('Network error connecting to payment gateway: ' + err.message + '\n\nWould you like to complete this purchase via instant verification?')) {
                     proceedInstantUnlock();
-                } else {
-                    resetPayButton();
                 }
             }
         }
@@ -7033,17 +7025,6 @@ Format with these exact markdown sections:
             ).bind(edgeUser.id, bookId).first();
             if (purchase) isPurchased = true;
           } catch (_) {}
-          if (!isPurchased) {
-            try {
-              const inLib = await env.DB.prepare(
-                "SELECT id FROM personal_library WHERE user_id = ? AND book_id = ? LIMIT 1"
-              ).bind(edgeUser.id, bookId).first();
-              if (inLib) {
-                // If it's a paid book, verify ownership via purchase or library
-                isPurchased = true;
-              }
-            } catch (_) {}
-          }
         }
 
         let canRead = false;
@@ -12948,11 +12929,22 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
 
   let actionsHtml = "";
   if (isPaid) {
-    if (canRead) {
+    if (isPurchased) {
       actionsHtml = `
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
           <span>✓ You own full access to this premium book</span>
           <span style="font-size: 0.82rem; background: #d1fae5; padding: 2px 8px; border-radius: 6px;">Active License</span>
+        </div>
+        <div>
+          <a href="/read_book/${book.id}" class="btn btn-dark" style="width: 100%; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>
+          ${donateBtnHtml}
+        </div>
+      `;
+    } else if (currentUser && currentUser.id === book.author_id) {
+      actionsHtml = `
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; font-weight: 700; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span>Author Copy · Full Access</span>
+          <span style="font-size: 0.82rem; background: #dbeafe; padding: 2px 8px; border-radius: 6px;">Creator</span>
         </div>
         <div>
           <a href="/read_book/${book.id}" class="btn btn-dark" style="width: 100%; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>

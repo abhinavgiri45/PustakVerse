@@ -1125,17 +1125,18 @@ input, textarea, select {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        justify-content: flex-end !important;
-        gap: 8px !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
         width: auto !important;
+        max-width: calc(100% - 130px) !important;
         margin-left: auto !important;
         flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        padding: 4px 0 !important;
     }
-    /* Hide useless/redundant desktop links on mobile phone nav */
-    .navbar-links a[href*="tools"],
-    .navbar-links a[href*="contact"],
-    .navbar-links a[href*="my_library"],
-    .navbar-links a[href*="my-library"] {
+    .navbar-links::-webkit-scrollbar {
         display: none !important;
     }
     .navbar-links a, .navbar-links button {
@@ -1144,6 +1145,9 @@ input, textarea, select {
         border-radius: 20px !important;
         white-space: nowrap !important;
         margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
     }
 
     .nav-search {

@@ -906,9 +906,16 @@
                 <!-- BUY / READ / SAVE ACTION BOX -->
                 <div class="action-box">
                     {% if book.is_paid %}
-                        {% if can_read or (purchased_book_ids and book.id in purchased_book_ids) or (session.user_id and session.user_id == book.author_id) or session.role == 'developer' %}
+                        {% if purchased_book_ids and book.id in purchased_book_ids %}
                             <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <span>✓</span> You own full access to this premium book
+                            </div>
+                            <div>
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="width: 100%; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: #0f172a; color: white; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>
+                            </div>
+                        {% elif session.user_id and session.user_id == book.author_id %}
+                            <div style="padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <span>👑</span> Author Copy · Full Access
                             </div>
                             <div>
                                 <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="width: 100%; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: #0f172a; color: white; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>

@@ -309,8 +309,6 @@ def inject_user_purchased_books():
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT book_id FROM purchases WHERE user_id = %s AND status IN ('paid', 'completed', 'verified')", (uid,))
         p_ids = {row['book_id'] for row in cursor.fetchall() if row.get('book_id')}
-        cursor.execute("SELECT book_id FROM personal_library WHERE user_id = %s", (uid,))
-        p_ids.update({row['book_id'] for row in cursor.fetchall() if row.get('book_id')})
         return {'purchased_book_ids': p_ids}
     except Exception:
         return {'purchased_book_ids': set()}
