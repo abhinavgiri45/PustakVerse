@@ -10197,6 +10197,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "devOnlyUsernameRequests",
       "devOnlyUserDelRequests",
       "devOnlyVerificationHub",
+      "devOnlyArchiveBooks",
       "devOnlyArchiveUserMgmt",
       "devOnlyUserManagementPanel",
       "devOnlyAuditTrail",
@@ -10277,6 +10278,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       "#devOnlyUsernameRequests",
       "#devOnlyUserDelRequests",
       "#devOnlyVerificationHub",
+      "#devOnlyArchiveBooks",
       "#devOnlyArchiveUserMgmt",
       "#devOnlyUserManagementPanel",
       "#devOnlyAuditTrail",
@@ -10657,7 +10659,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
   }
 
-  // 5D-2. Inject Official Community Platform Users Management Table
+  // 5D-2. Inject Official & Developer Community Platform Users Management Table
   if ((isDev || isOff) && allUsers && allUsers.length > 0 && out.includes('id="platformUsersTableBody"')) {
     const platformUserRowsHtml = allUsers.map(u => {
       const uRole = (u.role || 'reader').toLowerCase();
@@ -10676,15 +10678,68 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
         roleBadge = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">✍️ Author</span>';
       }
 
+      const isProtected = (uRole === 'developer' && u.id !== user.id) || (u.username && u.username.toLowerCase().startsWith('abhinavgiri') && u.id !== user.id);
+      const isLocked = Boolean(u.locked_until || (u.failed_attempts && u.failed_attempts >= 5));
+
+      let rolePublishHtml = '';
+      if (uRole === 'official') {
+        rolePublishHtml = `
+          <div class="developer-only" style="margin-top: 6px;">
+            <form action="/developer/toggle_official_publishing/${u.id}" method="POST" style="margin: 0; display: inline-block;">
+              ${u.can_publish ? `
+                <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
+                  <span>🚀</span> Can Publish (Revoke)
+                </button>
+              ` : `
+                <button type="submit" class="btn-sm" style="background: #64748b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official cannot publish books. Click to grant publishing authority.">
+                  <span>🔒</span> No Publish (Grant)
+                </button>
+              `}
+            </form>
+          </div>
+        `;
+      }
+
+      let roleReassignHtml = '';
+      if (isProtected) {
+        roleReassignHtml = '<span style="font-size: 0.78rem; color: #94a3b8;">Protected</span>';
+      } else {
+        roleReassignHtml = `
+          <form action="/developer/change_role/${u.id}" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+            <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+              <option value="reader" ${uRole === 'reader' ? 'selected' : ''}>Reader</option>
+              <option value="author" ${uRole === 'author' ? 'selected' : ''}>Author</option>
+              <option value="official" ${uRole === 'official' ? 'selected' : ''}>Official</option>
+            </select>
+            <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+          </form>
+        `;
+      }
+
       let actionsHtml = '';
-      if (uRole === 'developer' || (u.username && u.username.toLowerCase().startsWith('abhinavgiri'))) {
+      if (isProtected) {
         actionsHtml = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">🛡️ Protected Admin</span>';
       } else {
         actionsHtml = `
-          <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('${u.id}', '${escapeHtml(u.username)}')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+          <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('${u.id}', '${escapeHtml(u.username)}')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
               <span>✉</span> Notice
             </button>
+            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+              ${(u.locked_until || (u.failed_attempts && u.failed_attempts > 0)) ? `
+                <form action="/developer/unlock_user/${u.id}" method="POST" style="margin: 0;">
+                  <button type="submit" class="btn-sm btn-green" style="padding: 5px 8px; font-size: 0.75rem;" title="Reset failed attempts and unlock">🔓 Unlock</button>
+                </form>
+              ` : ''}
+              <form action="/warn_user/${u.id}" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+              </form>
+              <form action="/admin_delete_user/${u.id}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+              </form>
+            </span>
           </div>
         `;
       }
@@ -10697,11 +10752,11 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
                 ${escapeHtml(initial)}
               </div>
               <div>
-                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
                   <span>${escapeHtml(u.username)}</span>
                   ${uRole === 'developer' ? '<span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>' : ''}
                 </div>
-                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
                   Member ID: #${u.id}
                 </div>
               </div>
@@ -10714,6 +10769,11 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
           </td>
           <td style="padding: 14px 18px; vertical-align: middle;">
             ${roleBadge}
+            ${isLocked ? '<br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">🔒 Locked</span>' : ''}
+            ${rolePublishHtml}
+          </td>
+          <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+            ${roleReassignHtml}
           </td>
           <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
             ${actionsHtml}
@@ -10907,6 +10967,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       'devOnlyUsernameRequests',
       'devOnlyUserDelRequests',
       'devOnlyVerificationHub',
+      'devOnlyArchiveBooks',
       'devOnlyArchiveUserMgmt',
       'devOnlyUserManagementPanel',
       'devOnlyAuditTrail',

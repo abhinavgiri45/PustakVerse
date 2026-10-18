@@ -3435,11 +3435,12 @@
                     <div class="table-scroll-container">
                         <table id="platformUsersTable" style="width: 100%; border-collapse: separate; border-spacing: 0;">
                             <thead>
-                                <tr style="background: rgba(15, 23, 42, 0.5);">
+                                <tr>
                                     <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">User Profile</th>
                                     <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Email Address</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Moderation Actions</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role & Status</th>
+                                    <th class="developer-only" style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Role Reassign</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="platformUsersTableBody">
@@ -3452,13 +3453,13 @@
                                                 ab
                                             </div>
                                             <div>
-                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
                                                     <span>abhinavgiri45</span>
                                                     
                                                     <span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>
                                                     
                                                 </div>
-                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
                                                     Member ID: #1
                                                 </div>
                                             </div>
@@ -3472,21 +3473,60 @@
                                         </a>
                                     </td>
 
-                                    <!-- Column 3: Role Badge -->
+                                    <!-- Column 3: Role Badge & Status -->
                                     <td style="padding: 14px 18px; vertical-align: middle;">
                                         
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);">
                                             👑 Developer
                                         </span>
                                         
+
+                                        
+
+                                        
                                     </td>
 
-                                    <!-- Column 4: Moderation Actions -->
+                                    <!-- Column 4: Role Reassign (Developer Only) -->
+                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                            <form action="/developer/change_role/1" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <option value="reader" >Reader</option>
+                                                    <option value="author" >Author</option>
+                                                    <option value="official" >Official</option>
+                                                </select>
+                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                            </form>
+                                        
+                                    </td>
+
+                                    <!-- Column 5: Actions -->
                                     <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
                                         
-                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">
-                                            🛡️ Protected Admin
-                                        </span>
+                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('1', 'abhinavgiri45')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
+                                                <span>✉</span> Notice
+                                            </button>
+
+                                            <!-- Developer Only Security Controls -->
+                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                <!-- Unlock Button -->
+                                                
+
+                                                <!-- Warn User Form -->
+                                                <form action="/warn_user/1" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+                                                </form>
+
+                                                <!-- Permanent Force Delete Form -->
+                                                <form action="/admin_delete_user/1" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+                                                </form>
+                                            </span>
+                                        </div>
                                         
                                     </td>
                                 </tr>
@@ -3499,11 +3539,11 @@
                                                 aa
                                             </div>
                                             <div>
-                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
                                                     <span>aarav_sharma</span>
                                                     
                                                 </div>
-                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
                                                     Member ID: #2
                                                 </div>
                                             </div>
@@ -3517,22 +3557,59 @@
                                         </a>
                                     </td>
 
-                                    <!-- Column 3: Role Badge -->
+                                    <!-- Column 3: Role Badge & Status -->
                                     <td style="padding: 14px 18px; vertical-align: middle;">
                                         
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">
                                             ✍️ Author
                                         </span>
                                         
+
+                                        
+
+                                        
                                     </td>
 
-                                    <!-- Column 4: Moderation Actions -->
+                                    <!-- Column 4: Role Reassign (Developer Only) -->
+                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                            <form action="/developer/change_role/2" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <option value="reader" >Reader</option>
+                                                    <option value="author" selected>Author</option>
+                                                    <option value="official" >Official</option>
+                                                </select>
+                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                            </form>
+                                        
+                                    </td>
+
+                                    <!-- Column 5: Actions -->
                                     <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
                                         
-                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('2', 'aarav_sharma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('2', 'aarav_sharma')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
                                             </button>
+
+                                            <!-- Developer Only Security Controls -->
+                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                <!-- Unlock Button -->
+                                                
+
+                                                <!-- Warn User Form -->
+                                                <form action="/warn_user/2" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+                                                </form>
+
+                                                <!-- Permanent Force Delete Form -->
+                                                <form action="/admin_delete_user/2" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+                                                </form>
+                                            </span>
                                         </div>
                                         
                                     </td>
@@ -3546,11 +3623,11 @@
                                                 pr
                                             </div>
                                             <div>
-                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
                                                     <span>priya_verma</span>
                                                     
                                                 </div>
-                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
                                                     Member ID: #3
                                                 </div>
                                             </div>
@@ -3564,22 +3641,59 @@
                                         </a>
                                     </td>
 
-                                    <!-- Column 3: Role Badge -->
+                                    <!-- Column 3: Role Badge & Status -->
                                     <td style="padding: 14px 18px; vertical-align: middle;">
                                         
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);">
                                             📖 Reader
                                         </span>
                                         
+
+                                        
+
+                                        
                                     </td>
 
-                                    <!-- Column 4: Moderation Actions -->
+                                    <!-- Column 4: Role Reassign (Developer Only) -->
+                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                            <form action="/developer/change_role/3" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <option value="reader" selected>Reader</option>
+                                                    <option value="author" >Author</option>
+                                                    <option value="official" >Official</option>
+                                                </select>
+                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                            </form>
+                                        
+                                    </td>
+
+                                    <!-- Column 5: Actions -->
                                     <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
                                         
-                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('3', 'priya_verma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('3', 'priya_verma')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
                                             </button>
+
+                                            <!-- Developer Only Security Controls -->
+                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                <!-- Unlock Button -->
+                                                
+
+                                                <!-- Warn User Form -->
+                                                <form action="/warn_user/3" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+                                                </form>
+
+                                                <!-- Permanent Force Delete Form -->
+                                                <form action="/admin_delete_user/3" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+                                                </form>
+                                            </span>
                                         </div>
                                         
                                     </td>
@@ -3593,11 +3707,11 @@
                                                 ro
                                             </div>
                                             <div>
-                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
                                                     <span>rohit_moderator</span>
                                                     
                                                 </div>
-                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
                                                     Member ID: #4
                                                 </div>
                                             </div>
@@ -3611,22 +3725,69 @@
                                         </a>
                                     </td>
 
-                                    <!-- Column 3: Role Badge -->
+                                    <!-- Column 3: Role Badge & Status -->
                                     <td style="padding: 14px 18px; vertical-align: middle;">
                                         
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">
                                             🏛️ Official
                                         </span>
                                         
+
+                                        
+
+                                        
+                                            <div class="developer-only" style="margin-top: 6px;">
+                                                <form action="/developer/toggle_official_publishing/4" method="POST" style="margin: 0; display: inline-block;">
+                                                    
+                                                        <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
+                                                            <span>🚀</span> Can Publish (Revoke)
+                                                        </button>
+                                                    
+                                                </form>
+                                            </div>
+                                        
                                     </td>
 
-                                    <!-- Column 4: Moderation Actions -->
+                                    <!-- Column 4: Role Reassign (Developer Only) -->
+                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+                                        
+                                            <form action="/developer/change_role/4" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <option value="reader" >Reader</option>
+                                                    <option value="author" >Author</option>
+                                                    <option value="official" selected>Official</option>
+                                                </select>
+                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                            </form>
+                                        
+                                    </td>
+
+                                    <!-- Column 5: Actions -->
                                     <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
                                         
-                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('4', 'rohit_moderator')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('4', 'rohit_moderator')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
                                             </button>
+
+                                            <!-- Developer Only Security Controls -->
+                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                <!-- Unlock Button -->
+                                                
+
+                                                <!-- Warn User Form -->
+                                                <form action="/warn_user/4" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+                                                </form>
+
+                                                <!-- Permanent Force Delete Form -->
+                                                <form action="/admin_delete_user/4" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+                                                </form>
+                                            </span>
                                         </div>
                                         
                                     </td>
@@ -3865,253 +4026,20 @@
             </div>
         </div>
 
-        <div id="devOnlyArchiveUserMgmt" class="grid-2">
-            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
-            <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
-                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
-                
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
-                </div>
-
-                
-                    <p>No books in Archives.</p>
-                
+        <!-- DEDICATED ARCHIVE MANAGEMENT PANEL (Developer Only) -->
+        <div id="devOnlyArchiveBooks" class="developer-only panel" style="border-left: 5px solid #2b6cb0; margin-top: 30px;">
+            <h2 style="color: #2b6cb0; display: flex; align-items: center; gap: 8px;">
+                <span>📚</span> Manage Archive Books
+            </h2>
+            <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
             </div>
 
-            <!-- DEVELOPER USER MANAGEMENT (Security, Unlock & Role Reassignment) -->
-            <div id="devOnlyUserManagementPanel" class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
-                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" >All Roles</option>
-                        <option value="reader" >Readers Only</option>
-                        <option value="author" >Authors Only</option>
-                        <option value="official" >Officials Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
-
-                <div id="devUserTableContainer">
-                
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>User</th>
-                                <th>Role & Status</th>
-                                <th>Role Reassign</th>
-                                <th>Actions</th>
-                            </tr>
-                            
-                            <tr>
-                                <td>
-                                    <div style="font-weight: 600;">abhinavgiri45</div>
-                                    <small style="color: #64748b;">abhinavgiri370@gmail.com</small><br>
-                                    <small style="color: #94a3b8;">Active: Active now</small>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 700; text-transform: capitalize; color: #2563eb;">developer</span>
-                                    
-                                    
-                                </td>
-                                <td>
-                                    <!-- Power: Instant Role Switcher -->
-                                    <form action="/developer/change_role/1" method="POST" style="display: flex; gap: 4px; align-items: center;">
-                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
-                                            <option value="reader" >Reader</option>
-                                            <option value="author" >Author</option>
-                                            <option value="official" >Official</option>
-                                        </select>
-                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                                        <!-- Power: Unlock Locked Accounts -->
-                                        
-
-                                        <!-- Power: Send Username Notice -->
-                                        <form action="/official/notify_username/1" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
-                                        </form>
-
-                                        <!-- Warn User -->
-                                        <form action="/warn_user/1" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                        </form>
-
-                                        <!-- Permanent Force Delete -->
-                                        <form action="/admin_delete_user/1" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <tr>
-                                <td>
-                                    <div style="font-weight: 600;">aarav_sharma</div>
-                                    <small style="color: #64748b;">aarav.author@pustakverse.com</small><br>
-                                    <small style="color: #94a3b8;">Active: 10 mins ago</small>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 700; text-transform: capitalize; color: #d97706;">author</span>
-                                    
-                                    
-                                </td>
-                                <td>
-                                    <!-- Power: Instant Role Switcher -->
-                                    <form action="/developer/change_role/2" method="POST" style="display: flex; gap: 4px; align-items: center;">
-                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
-                                            <option value="reader" >Reader</option>
-                                            <option value="author" selected>Author</option>
-                                            <option value="official" >Official</option>
-                                        </select>
-                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                                        <!-- Power: Unlock Locked Accounts -->
-                                        
-
-                                        <!-- Power: Send Username Notice -->
-                                        <form action="/official/notify_username/2" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
-                                        </form>
-
-                                        <!-- Warn User -->
-                                        <form action="/warn_user/2" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                        </form>
-
-                                        <!-- Permanent Force Delete -->
-                                        <form action="/admin_delete_user/2" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <tr>
-                                <td>
-                                    <div style="font-weight: 600;">priya_verma</div>
-                                    <small style="color: #64748b;">priya.reader@gmail.com</small><br>
-                                    <small style="color: #94a3b8;">Active: Today</small>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 700; text-transform: capitalize; color: #2563eb;">reader</span>
-                                    
-                                    
-                                </td>
-                                <td>
-                                    <!-- Power: Instant Role Switcher -->
-                                    <form action="/developer/change_role/3" method="POST" style="display: flex; gap: 4px; align-items: center;">
-                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
-                                            <option value="reader" selected>Reader</option>
-                                            <option value="author" >Author</option>
-                                            <option value="official" >Official</option>
-                                        </select>
-                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                                        <!-- Power: Unlock Locked Accounts -->
-                                        
-
-                                        <!-- Power: Send Username Notice -->
-                                        <form action="/official/notify_username/3" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
-                                        </form>
-
-                                        <!-- Warn User -->
-                                        <form action="/warn_user/3" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                        </form>
-
-                                        <!-- Permanent Force Delete -->
-                                        <form action="/admin_delete_user/3" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <tr>
-                                <td>
-                                    <div style="font-weight: 600;">rohit_moderator</div>
-                                    <small style="color: #64748b;">rohit.official@pustakverse.com</small><br>
-                                    <small style="color: #94a3b8;">Active: 1 hour ago</small>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 700; text-transform: capitalize; color: #16a34a;">official</span>
-                                    
-                                    
-                                        <div style="margin-top: 5px;">
-                                            <form action="/developer/toggle_official_publishing/4" method="POST" style="margin: 0; display: inline-block;">
-                                                
-                                                    <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
-                                                        <span>🚀</span> Can Publish (Revoke)
-                                                    </button>
-                                                
-                                            </form>
-                                        </div>
-                                    
-                                </td>
-                                <td>
-                                    <!-- Power: Instant Role Switcher -->
-                                    <form action="/developer/change_role/4" method="POST" style="display: flex; gap: 4px; align-items: center;">
-                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
-                                            <option value="reader" >Reader</option>
-                                            <option value="author" >Author</option>
-                                            <option value="official" selected>Official</option>
-                                        </select>
-                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                                        <!-- Power: Unlock Locked Accounts -->
-                                        
-
-                                        <!-- Power: Send Username Notice -->
-                                        <form action="/official/notify_username/4" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
-                                        </form>
-
-                                        <!-- Warn User -->
-                                        <form action="/warn_user/4" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                        </form>
-
-                                        <!-- Permanent Force Delete -->
-                                        <form action="/admin_delete_user/4" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                        </table>
-                    </div>
-                
-                </div>
-            </div>
+            
+                <p>No books in Archives.</p>
+            
         </div>
 
         <!-- DEVELOPER AUDIT TRAIL: Official Activities Log -->

@@ -3398,11 +3398,12 @@
                     <div class="table-scroll-container">
                         <table id="platformUsersTable" style="width: 100%; border-collapse: separate; border-spacing: 0;">
                             <thead>
-                                <tr style="background: rgba(15, 23, 42, 0.5);">
+                                <tr>
                                     <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">User Profile</th>
                                     <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Email Address</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role</th>
-                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Moderation Actions</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Platform Role & Status</th>
+                                    <th class="developer-only" style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Role Reassign</th>
+                                    <th style="padding: 14px 18px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="platformUsersTableBody">
@@ -3415,13 +3416,13 @@
                                                 {{ user.username[:2] }}
                                             </div>
                                             <div>
-                                                <div style="font-weight: 600; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                                <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark, inherit); display: flex; align-items: center; gap: 6px;">
                                                     <span>{{ user.username }}</span>
                                                     {% if user.role == 'developer' %}
                                                     <span title="Verified Platform Developer" style="font-size: 0.8rem;">👑</span>
                                                     {% endif %}
                                                 </div>
-                                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                                                <div style="font-size: 0.78rem; color: var(--text-light, #94a3b8); margin-top: 2px;">
                                                     Member ID: #{{ user.id }}
                                                 </div>
                                             </div>
@@ -3435,7 +3436,7 @@
                                         </a>
                                     </td>
 
-                                    <!-- Column 3: Role Badge -->
+                                    <!-- Column 3: Role Badge & Status -->
                                     <td style="padding: 14px 18px; vertical-align: middle;">
                                         {% if user.role == 'developer' %}
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);">
@@ -3454,19 +3455,78 @@
                                             📖 Reader
                                         </span>
                                         {% endif %}
+
+                                        {% if user.locked_until or (user.failed_attempts and user.failed_attempts >= 5) %}
+                                            <br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">🔒 Locked</span>
+                                        {% endif %}
+
+                                        {% if user.role == 'official' %}
+                                            <div class="developer-only" style="margin-top: 6px;">
+                                                <form action="/developer/toggle_official_publishing/{{ user.id }}" method="POST" style="margin: 0; display: inline-block;">
+                                                    {% if user.can_publish %}
+                                                        <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
+                                                            <span>🚀</span> Can Publish (Revoke)
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="submit" class="btn-sm" style="background: #64748b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official cannot publish books. Click to grant publishing authority.">
+                                                            <span>🔒</span> No Publish (Grant)
+                                                        </button>
+                                                    {% endif %}
+                                                </form>
+                                            </div>
+                                        {% endif %}
                                     </td>
 
-                                    <!-- Column 4: Moderation Actions -->
+                                    <!-- Column 4: Role Reassign (Developer Only) -->
+                                    <td class="developer-only" style="padding: 14px 18px; vertical-align: middle;">
+                                        {% if user.role == 'developer' and session.get('user_id') != user.id %}
+                                            <span style="font-size: 0.78rem; color: #94a3b8;">Protected</span>
+                                        {% else %}
+                                            <form action="{{ url_for('developer_change_role', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                                <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.4); background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <option value="reader" {% if user.role == 'reader' %}selected{% endif %}>Reader</option>
+                                                    <option value="author" {% if user.role == 'author' %}selected{% endif %}>Author</option>
+                                                    <option value="official" {% if user.role == 'official' %}selected{% endif %}>Official</option>
+                                                </select>
+                                                <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Column 5: Actions -->
                                     <td style="padding: 14px 18px; vertical-align: middle; text-align: right;">
-                                        {% if user.role == 'developer' %}
+                                        {% if user.role == 'developer' and session.get('user_id') != user.id %}
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">
                                             🛡️ Protected Admin
                                         </span>
                                         {% else %}
-                                        <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('{{ user.id }}', '{{ user.username }}')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
+                                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                            <!-- Official Notice Modal Trigger (Official + Developer) -->
+                                            <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('{{ user.id }}', '{{ user.username }}')" style="padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
                                             </button>
+
+                                            <!-- Developer Only Security Controls -->
+                                            <span class="developer-only" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                <!-- Unlock Button -->
+                                                {% if user.locked_until or (user.failed_attempts and user.failed_attempts > 0) %}
+                                                <form action="{{ url_for('developer_unlock_user', user_id=user.id) }}" method="POST" style="margin: 0;">
+                                                    <button type="submit" class="btn-sm btn-green" style="padding: 5px 8px; font-size: 0.75rem;" title="Reset failed attempts and unlock">🔓 Unlock</button>
+                                                </form>
+                                                {% endif %}
+
+                                                <!-- Warn User Form -->
+                                                <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="warning_message" placeholder="Warn..." required style="padding: 4px 6px; font-size: 0.75rem; width: 75px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-warn" style="padding: 5px 8px; font-size: 0.75rem;">Warn</button>
+                                                </form>
+
+                                                <!-- Permanent Force Delete Form -->
+                                                <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: inline-flex; gap: 4px; margin: 0;">
+                                                    <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px 6px; font-size: 0.75rem; width: 85px; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 4px; background: var(--card-bg, #ffffff); color: var(--text-dark, inherit);">
+                                                    <button type="submit" class="btn-sm btn-red" style="padding: 5px 8px; font-size: 0.75rem;">Delete</button>
+                                                </form>
+                                            </span>
                                         </div>
                                         {% endif %}
                                     </td>
@@ -3820,159 +3880,58 @@
             </div>
         </div>
 
-        <div id="devOnlyArchiveUserMgmt" class="grid-2">
-            <!-- DEDICATED ARCHIVE MANAGEMENT PANEL -->
-            <div class="panel" style="border-left: 5px solid #2b6cb0; margin-bottom: 0;">
-                <h2 style="color: #2b6cb0;">Manage Archive Books</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
-                
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
-                </div>
-
-                {% if archive_books %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>Cover</th>
-                                <th>Title</th>
-                                <th>Action</th>
-                            </tr>
-                            {% for book in archive_books %}
-                            <tr class="archive-row">
-                                <td>
-                                    <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
-                                </td>
-                                <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
-                                <td>
-                                    <div style="display: flex; gap: 5px;">
-                                        <button type="button" class="btn-sm btn-dark edit-btn" 
-                                                data-id="{{ book.id }}" 
-                                                data-title="{{ book.title | escape }}" 
-                                                data-catalog="{{ book.catalog }}" 
-                                                data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
-                                                data-price="{{ book.price_paise }}" 
-                                                data-keyid="{{ book.rp_key_id or '' }}" 
-                                                data-keysecret="{{ book.rp_key_secret or '' }}"
-                                                data-desc="{{ book.description | escape }}"
-                                                data-allowdonations="{{ '1' if book.allow_author_donations else '0' }}"
-                                                onclick="openEditModal(this)">Edit</button>
-                                        
-                                        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
-                                            <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No books in Archives.</p>
-                {% endif %}
+        <!-- DEDICATED ARCHIVE MANAGEMENT PANEL (Developer Only) -->
+        <div id="devOnlyArchiveBooks" class="developer-only panel" style="border-left: 5px solid #2b6cb0; margin-top: 30px;">
+            <h2 style="color: #2b6cb0; display: flex; align-items: center; gap: 8px;">
+                <span>📚</span> Manage Archive Books
+            </h2>
+            <p style="color: #718096; margin-bottom: 20px;">Full control over the free Archives catalog.</p>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="archiveSearch" placeholder="Search archives by title..." onkeyup="filterArchives()" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; background: #f8fafc;" autocomplete="off">
             </div>
 
-            <!-- DEVELOPER USER MANAGEMENT (Security, Unlock & Role Reassignment) -->
-            <div id="devOnlyUserManagementPanel" class="panel" style="border-left: 5px solid #d97706; margin-bottom: 0;">
-                <h2 style="color: #d97706;">Developer Security: Manage Users</h2>
-                <form action="/dashboard" method="GET" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" name="search" placeholder="Search users by name or email..." value="{{ request.args.get('search', '') }}" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-                    <select name="role_filter" style="padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-weight: 500;">
-                        <option value="all" {% if request.args.get('role_filter') == 'all' %}selected{% endif %}>All Roles</option>
-                        <option value="reader" {% if request.args.get('role_filter') == 'reader' %}selected{% endif %}>Readers Only</option>
-                        <option value="author" {% if request.args.get('role_filter') == 'author' %}selected{% endif %}>Authors Only</option>
-                        <option value="official" {% if request.args.get('role_filter') == 'official' %}selected{% endif %}>Officials Only</option>
-                    </select>
-                    <button type="submit" class="btn-sm btn-dark" style="padding: 0 25px;">Search / Filter</button>
-                </form>
-
-                <div id="devUserTableContainer">
-                {% if searched_users or all_users %}
-                    <div class="table-scroll-container">
-                        <table>
-                            <tr>
-                                <th>User</th>
-                                <th>Role & Status</th>
-                                <th>Role Reassign</th>
-                                <th>Actions</th>
-                            </tr>
-                            {% for user in (searched_users or all_users) %}
-                            <tr>
-                                <td>
-                                    <div style="font-weight: 600;">{{ user.username }}</div>
-                                    <small style="color: #64748b;">{{ user.email }}</small><br>
-                                    <small style="color: #94a3b8;">Active: {{ user.last_activity | to_ist }}</small>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 700; text-transform: capitalize; {% if user.role == 'official' %}color: #16a34a;{% elif user.role == 'author' %}color: #d97706;{% else %}color: #2563eb;{% endif %}">{{ user.role }}</span>
-                                    {% if user.locked_until or (user.failed_attempts and user.failed_attempts >= 5) %}
-                                        <br><span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">🔒 Locked</span>
-                                    {% endif %}
-                                    {% if user.role == 'official' %}
-                                        <div style="margin-top: 5px;">
-                                            <form action="/developer/toggle_official_publishing/{{ user.id }}" method="POST" style="margin: 0; display: inline-block;">
-                                                {% if user.can_publish %}
-                                                    <button type="submit" class="btn-sm" style="background: #16a34a; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official can publish books in any category & Archives. Click to revoke.">
-                                                        <span>🚀</span> Can Publish (Revoke)
-                                                    </button>
-                                                {% else %}
-                                                    <button type="submit" class="btn-sm" style="background: #64748b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Official cannot publish books. Click to grant publishing authority.">
-                                                        <span>🔒</span> No Publish (Grant)
-                                                    </button>
-                                                {% endif %}
-                                            </form>
-                                        </div>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <!-- Power: Instant Role Switcher -->
-                                    <form action="{{ url_for('developer_change_role', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px; align-items: center;">
-                                        <select name="new_role" style="padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff;">
-                                            <option value="reader" {% if user.role == 'reader' %}selected{% endif %}>Reader</option>
-                                            <option value="author" {% if user.role == 'author' %}selected{% endif %}>Author</option>
-                                            <option value="official" {% if user.role == 'official' %}selected{% endif %}>Official</option>
-                                        </select>
-                                        <button type="submit" class="btn-sm btn-dark" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+            {% if archive_books %}
+                <div class="table-scroll-container">
+                    <table>
+                        <tr>
+                            <th>Cover</th>
+                            <th>Title</th>
+                            <th>Action</th>
+                        </tr>
+                        {% for book in archive_books %}
+                        <tr class="archive-row">
+                            <td>
+                                <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' + book.cover_image) }}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px;">
+                            </td>
+                            <td style="font-weight: 500;" class="archive-title-cell">{{ book.title }}</td>
+                            <td>
+                                <div style="display: flex; gap: 5px;">
+                                    <button type="button" class="btn-sm btn-dark edit-btn" 
+                                            data-id="{{ book.id }}" 
+                                            data-title="{{ book.title | escape }}" 
+                                            data-catalog="{{ book.catalog }}" 
+                                            data-ispaid="{{ 'true' if book.is_paid else 'false' }}" 
+                                            data-price="{{ book.price_paise }}" 
+                                            data-keyid="{{ book.rp_key_id or '' }}" 
+                                            data-keysecret="{{ book.rp_key_secret or '' }}"
+                                            data-desc="{{ book.description | escape }}"
+                                            data-allowdonations="{{ '1' if book.allow_author_donations else '0' }}"
+                                            onclick="openEditModal(this)">Edit</button>
+                                    
+                                    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" style="display:flex; flex-direction:column; gap:5px;" onsubmit="return confirm('Force Delete this Archive book permanently?');">
+                                        <input type="text" name="reason" placeholder="Reason (Optional)" value="Developer Override: Removed from Archives." required style="display: none;">
+                                        <button type="submit" class="btn-sm btn-red">Delete</button>
                                     </form>
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-                                        <!-- Power: Unlock Locked Accounts -->
-                                        {% if user.locked_until or (user.failed_attempts and user.failed_attempts > 0) %}
-                                            <form action="{{ url_for('developer_unlock_user', user_id=user.id) }}" method="POST">
-                                                <button type="submit" class="btn-sm btn-green" title="Reset failed attempts and unlock">🔓 Unlock</button>
-                                            </form>
-                                        {% endif %}
-
-                                        <!-- Power: Send Username Notice -->
-                                        <form action="{{ url_for('official_notify_username', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Username policy reason..." required style="padding: 4px; font-size: 0.75rem; width: 120px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-dark" title="Send username policy notice email">Notice</button>
-                                        </form>
-
-                                        <!-- Warn User -->
-                                        <form action="{{ url_for('warn_user', user_id=user.id) }}" method="POST" style="display: flex; gap: 4px;">
-                                            <input type="text" name="warning_message" placeholder="Warning text..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-warn">Warn</button>
-                                        </form>
-
-                                        <!-- Permanent Force Delete -->
-                                        <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: Completely delete this user and all their books permanently?');" style="display: flex; gap: 4px;">
-                                            <input type="text" name="reason" placeholder="Delete reason..." required style="padding: 4px; font-size: 0.75rem; width: 110px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                                            <button type="submit" class="btn-sm btn-red">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No users found matching that filter.</p>
-                {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
                 </div>
-            </div>
+            {% else %}
+                <p>No books in Archives.</p>
+            {% endif %}
         </div>
 
         <!-- DEVELOPER AUDIT TRAIL: Official Activities Log -->
