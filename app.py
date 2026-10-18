@@ -5195,12 +5195,12 @@ def register():
     data = request.json if request.is_json else request.form
     action = data.get('action', 'send_otp')
 
-    if action == 'send_otp':
+    if action in ['send_otp', 'register']:
         username = data.get('username', '').strip()
         email = data.get('email', '').strip()
         password = data.get('password', '')
         role = data.get('role', 'reader')
-        sec_question = data.get('security_question', '')
+        sec_question = data.get('security_question', '') or "What is your favorite book?"
         sec_answer = data.get('security_answer', '').lower().strip()
         verification_reason = data.get('verification_reason', '')
         
@@ -5217,7 +5217,39 @@ def register():
             cursor.execute("SELECT id FROM users WHERE username = %s OR email = %s", (username, email))
             if cursor.fetchone():
                 return jsonify({'success': False, 'message': 'Username or Email is already registered.'})
-        except Exception:
+
+            # Direct registration mode (from fast modal or direct register)
+            if action == 'register':
+                is_verified = (role == 'reader')
+                pw_hash = generate_password_hash(password)
+                cursor.execute("INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
+                               (username, email, pw_hash, role, is_verified, sec_question, sec_answer, verification_reason))
+                db.commit()
+                new_user_id = cursor.lastrowid
+
+                if role == 'reader': 
+                    send_email_async(send_welcome_reader, email, username)
+                elif role == 'author': 
+                    send_email_async(send_pending_author, email, username)
+
+                session['user_id'] = new_user_id
+                session['username'] = username
+                session['role'] = role
+                session['is_verified'] = is_verified
+                session['pustakverse_intro_seen'] = True
+                session['show_telegram_popup'] = False
+
+                flash(f"Welcome to PustakVerse, {username}! Explore the Global Library below.", "success")
+                return jsonify({
+                    'success': True,
+                    'message': f"Account created! Welcome to PustakVerse, {username}.",
+                    'redirect': url_for('index')
+                })
+
+        except D1IntegrityError:
+            return jsonify({'success': False, 'message': 'Username or Email is already registered.'})
+        except Exception as e:
+            logging.exception(f"Registration DB error: {e}")
             return jsonify({'success': False, 'message': 'Database connection error.'})
         finally:
             if db:
