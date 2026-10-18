@@ -10,8 +10,23 @@ import json
 import logging
 import datetime
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger("cloudflare_d1")
+
+_d1_session = None
+
+def get_d1_session():
+    global _d1_session
+    if _d1_session is None:
+        s = requests.Session()
+        retries = Retry(total=2, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504], raise_on_status=False)
+        adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20, max_retries=retries)
+        s.mount("https://", adapter)
+        s.mount("http://", adapter)
+        _d1_session = s
+    return _d1_session
 
 class D1Error(Exception):
     pass
@@ -209,7 +224,7 @@ class D1Cursor:
         }
 
         try:
-            res = requests.post(url, json=payload, headers=headers, timeout=self.connection.timeout)
+            res = get_d1_session().post(url, json=payload, headers=headers, timeout=self.connection.timeout)
             data = res.json()
 
             if not data.get("success"):

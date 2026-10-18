@@ -1717,19 +1717,63 @@ function generateEdgePasswordChangedEmail(username, clientIp = "") {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
 
-    // 1. Static asset fast path via Cloudflare Pages asset engine
-    if (env.ASSETS && (url.pathname.startsWith("/static/") || url.pathname.endsWith(".png") || url.pathname.endsWith(".css") || url.pathname.endsWith(".js") || url.pathname.endsWith(".jpg"))) {
-      try {
-        const assetResponse = await env.ASSETS.fetch(request.clone());
-        if (assetResponse && assetResponse.status < 400) {
-          return assetResponse;
+      // Background task executor (non-blocking)
+      const bgTask = (p) => {
+        if (ctx && typeof ctx.waitUntil === 'function') {
+          ctx.waitUntil(p);
+        } else if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
         }
-      } catch (_) {}
-    }
+      };
+
+      // 1. Static asset fast path via Cloudflare Pages asset engine (covers all image, css, js, font, and document formats)
+      const isStaticExt = /\.(css|js|mjs|png|jpe?g|webp|svg|ico|gif|woff2?|ttf|eot|otf|json|map|pdf|xml|txt)$/i.test(url.pathname);
+      if (env.ASSETS && (url.pathname.startsWith("/static/") || isStaticExt)) {
+        try {
+          const assetResponse = await env.ASSETS.fetch(request.clone());
+          if (assetResponse && assetResponse.status < 400) {
+            const respHeaders = new Headers(assetResponse.headers);
+            if (!respHeaders.has("Cache-Control")) {
+              respHeaders.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+            }
+            return new Response(assetResponse.body, {
+              status: assetResponse.status,
+              statusText: assetResponse.statusText,
+              headers: respHeaders
+            });
+          }
+        } catch (_) {}
+      }
+
+      // 1B. Fast-path pure static HTML pages via Cloudflare Pages assets (< 5ms local edge delivery)
+      if (env.ASSETS && (request.method === "GET" || request.method === "HEAD") && !url.pathname.startsWith("/api/")) {
+        const cleanPath = url.pathname.replace(/\/+$/, "") || "/";
+        const staticHtmlFile = HTML_ROUTE_MAP[cleanPath] || HTML_ROUTE_MAP[url.pathname];
+        const isDynamicRoute = cleanPath === "/dashboard" || cleanPath === "/my-library" || cleanPath === "/my_library";
+        if (staticHtmlFile && !isDynamicRoute) {
+          try {
+            let pageResp = await env.ASSETS.fetch(request.clone());
+            if (!pageResp || pageResp.status >= 400) {
+              pageResp = await env.ASSETS.fetch(new Request(`${url.origin}/${staticHtmlFile}`, request));
+            }
+            if (pageResp && pageResp.status < 400) {
+              const respHeaders = new Headers(pageResp.headers);
+              respHeaders.set("Content-Type", "text/html; charset=utf-8");
+              if (!respHeaders.has("Cache-Control")) {
+                respHeaders.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+              }
+              return new Response(pageResp.body, {
+                status: pageResp.status,
+                headers: respHeaders
+              });
+            }
+          } catch (_) {}
+        }
+      }
 
     // 2. Google Search Console ownership verification file
     if (url.pathname === "/google8a9af3f8fe8a3567.html") {
@@ -4515,71 +4559,93 @@ Format with these exact markdown sections:
         let myBooks = [];
         let leadershipTeam = [];
         if (env.DB) {
-          try {
-            const catRes = await env.DB.prepare(
-              "SELECT c.id, c.name, COUNT(b.id) AS book_count FROM catalogs c LEFT JOIN books b ON c.name = b.catalog GROUP BY c.id, c.name ORDER BY c.name ASC"
-            ).all();
-            liveCatalogs = catRes.results || [];
-          } catch (_) {}
+          const isPrivileged = user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user);
+          const bookQuery = isPrivileged
+            ? `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.id DESC LIMIT 200`
+            : `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.author_id = ? ORDER BY b.id DESC LIMIT 200`;
+          const bookStmt = isPrivileged ? env.DB.prepare(bookQuery) : env.DB.prepare(bookQuery).bind(user.id);
 
           try {
             await ensureBooksTable(env);
-            const isPrivileged = user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user);
-            let bRes = null;
-            try {
-              const bookQuery = isPrivileged
-                ? `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.id DESC LIMIT 200`
-                : `SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.author_id = ? ORDER BY b.id DESC LIMIT 200`;
-              const stmt = isPrivileged ? env.DB.prepare(bookQuery) : env.DB.prepare(bookQuery).bind(user.id);
-              bRes = await stmt.all();
-            } catch (errInner) {
-              const fbQuery = isPrivileged
-                ? `SELECT * FROM books ORDER BY id DESC LIMIT 200`
-                : `SELECT * FROM books WHERE author_id = ? ORDER BY id DESC LIMIT 200`;
-              const fbStmt = isPrivileged ? env.DB.prepare(fbQuery) : env.DB.prepare(fbQuery).bind(user.id);
-              bRes = await fbStmt.all();
-            }
+            const [catRes, bRes, leadRes] = await Promise.all([
+              env.DB.prepare(
+                "SELECT c.id, c.name, COUNT(b.id) AS book_count FROM catalogs c LEFT JOIN books b ON c.name = b.catalog GROUP BY c.id, c.name ORDER BY c.name ASC"
+              ).all().catch(() => ({ results: [] })),
+              bookStmt.all().catch(() => ({ results: [] })),
+              getUnifiedLeadershipRoster(env).catch(() => [])
+            ]);
+            liveCatalogs = catRes?.results || [];
             myBooks = bRes?.results || [];
+            leadershipTeam = leadRes || [];
           } catch (e) {
-            console.warn("Could not load dashboard books:", e.message);
-          }
-
-          try {
-            leadershipTeam = await getUnifiedLeadershipRoster(env);
-          } catch (e) {
-            console.warn("Could not load leadership_team:", e.message);
+            console.warn("Could not load dashboard core data:", e.message);
           }
         }
 
-        // Hydrate Developer & Official System Metrics for Edge SSR
+        // Hydrate Developer & Official System Metrics & Moderation Lists in parallel
         let systemMetrics = null;
         let fps = null;
+        let allUsers = [];
+        let bookDelRequests = [];
+        let usernameRequests = [];
+        let pendingArchiveBooks = [];
+
         if (env.DB && (user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user))) {
           try {
-            const uTotal = await env.DB.prepare("SELECT count(*) as cnt FROM users").first();
-            const uReaders = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'reader'").first();
-            const uAuthors = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'author'").first();
-            const uOfficials = await env.DB.prepare("SELECT count(*) as cnt FROM users WHERE role = 'official'").first();
-            const bTotal = await env.DB.prepare("SELECT count(*) as cnt FROM books").first();
-            const bPaid = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_paid = 1 OR price_paise > 0").first();
-            const bQuar = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_quarantined = 1").first();
-            let salesVol = 0;
-            try {
-              await ensurePurchasesTable(env);
-              const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount_paise), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
-              salesVol = sRes?.total || 0;
-            } catch (_) {}
-            fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
+            await ensureModerationTables(env);
+            await ensurePurchasesTable(env);
+            const [uStats, bStats, sRes, fpsRes, uRes, bReqRes, unReqRes, pArchRes] = await Promise.all([
+              env.DB.prepare(
+                `SELECT COUNT(*) as cnt,
+                        SUM(CASE WHEN role = 'reader' THEN 1 ELSE 0 END) as readers,
+                        SUM(CASE WHEN role = 'author' THEN 1 ELSE 0 END) as authors,
+                        SUM(CASE WHEN role = 'official' THEN 1 ELSE 0 END) as officials
+                 FROM users`
+              ).first().catch(() => null),
+              env.DB.prepare(
+                `SELECT COUNT(*) as cnt,
+                        SUM(CASE WHEN is_paid = 1 OR price_paise > 0 THEN 1 ELSE 0 END) as paid,
+                        SUM(CASE WHEN is_quarantined = 1 THEN 1 ELSE 0 END) as quarantined
+                 FROM books`
+              ).first().catch(() => null),
+              env.DB.prepare(
+                "SELECT COALESCE(SUM(amount_paise), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'"
+              ).first().catch(() => ({ total: 0 })),
+              env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first().catch(() => null),
+              env.DB.prepare(
+                "SELECT id, username, email, role, last_activity, failed_attempts, locked_until, COALESCE(can_publish, 0) as can_publish FROM users ORDER BY id ASC LIMIT 100"
+              ).all().catch(() => ({ results: [] })),
+              env.DB.prepare(
+                "SELECT r.id, r.book_id, r.reason, b.title as book_title, COALESCE(u.username, 'Author') as author_name, COALESCE(uo.username, 'Official') as official_name FROM book_deletion_requests r JOIN books b ON r.book_id = b.id LEFT JOIN users u ON b.author_id = u.id LEFT JOIN users uo ON r.requested_by = uo.id WHERE r.status = 'pending' ORDER BY r.id DESC LIMIT 50"
+              ).all().catch(() => ({ results: [] })),
+              env.DB.prepare(
+                "SELECT r.id, r.user_id, r.new_username, r.reason, u.username as current_username, u.email, u.role FROM username_requests r JOIN users u ON r.user_id = u.id WHERE r.status = 'pending' ORDER BY r.id DESC LIMIT 50"
+              ).all().catch(() => ({ results: [] })),
+              env.DB.prepare(
+                `SELECT b.id, b.title, b.author_id, b.catalog, b.pdf_file, b.cover_image, b.description, b.created_at,
+                        COALESCE(u.username, 'Author') as author_name, COALESCE(u.email, '') as author_email
+                 FROM books b
+                 LEFT JOIN users u ON b.author_id = u.id
+                 WHERE LOWER(b.catalog) = 'archives' AND (b.archive_status = 'pending' OR b.is_quarantined = 1)
+                 ORDER BY b.id DESC LIMIT 50`
+              ).all().catch(() => ({ results: [] }))
+            ]);
+
+            fps = fpsRes;
+            allUsers = uRes?.results || [];
+            bookDelRequests = bReqRes?.results || [];
+            usernameRequests = unReqRes?.results || [];
+            pendingArchiveBooks = pArchRes?.results || [];
 
             systemMetrics = {
-              total_users: uTotal?.cnt || 0,
-              readers: uReaders?.cnt || 0,
-              authors: uAuthors?.cnt || 0,
-              officials: uOfficials?.cnt || 0,
-              total_books: bTotal?.cnt || 0,
-              paid_books: bPaid?.cnt || 0,
-              quarantined_books: bQuar?.cnt || 0,
-              sales_volume: salesVol,
+              total_users: uStats?.cnt || 0,
+              readers: uStats?.readers || 0,
+              authors: uStats?.authors || 0,
+              officials: uStats?.officials || 0,
+              total_books: bStats?.cnt || 0,
+              paid_books: bStats?.paid || 0,
+              quarantined_books: bStats?.quarantined || 0,
+              sales_volume: sRes?.total || 0,
               maintenance_mode: Boolean(fps?.maintenance_mode),
               maintenance_start: fps?.maintenance_start || "",
               maintenance_end: fps?.maintenance_end || "",
@@ -4589,41 +4655,6 @@ Format with these exact markdown sections:
           } catch (mErr) {
             console.warn("Error loading systemMetrics for edge SSR:", mErr.message);
           }
-        }
-
-        let allUsers = [];
-        let bookDelRequests = [];
-        let usernameRequests = [];
-        let pendingArchiveBooks = [];
-        if ((user.role === "developer" || user.role === "official") && env.DB) {
-          try {
-            await ensureModerationTables(env);
-            const uRes = await env.DB.prepare("SELECT id, username, email, role, last_activity, failed_attempts, locked_until, COALESCE(can_publish, 0) as can_publish FROM users ORDER BY id ASC LIMIT 100").all();
-            allUsers = uRes?.results || [];
-          } catch (_) {}
-          try {
-            const bReqRes = await env.DB.prepare(
-              "SELECT r.id, r.book_id, r.reason, b.title as book_title, COALESCE(u.username, 'Author') as author_name, COALESCE(uo.username, 'Official') as official_name FROM book_deletion_requests r JOIN books b ON r.book_id = b.id LEFT JOIN users u ON b.author_id = u.id LEFT JOIN users uo ON r.requested_by = uo.id WHERE r.status = 'pending' ORDER BY r.id DESC LIMIT 50"
-            ).all();
-            bookDelRequests = bReqRes?.results || [];
-          } catch (_) {}
-          try {
-            const unReqRes = await env.DB.prepare(
-              "SELECT r.id, r.user_id, r.new_username, r.reason, u.username as current_username, u.email, u.role FROM username_requests r JOIN users u ON r.user_id = u.id WHERE r.status = 'pending' ORDER BY r.id DESC LIMIT 50"
-            ).all();
-            usernameRequests = unReqRes?.results || [];
-          } catch (_) {}
-          try {
-            const pArchRes = await env.DB.prepare(
-              `SELECT b.id, b.title, b.author_id, b.catalog, b.pdf_file, b.cover_image, b.description, b.created_at,
-                      COALESCE(u.username, 'Author') as author_name, COALESCE(u.email, '') as author_email
-               FROM books b
-               LEFT JOIN users u ON b.author_id = u.id
-               WHERE LOWER(b.catalog) = 'archives' AND (b.archive_status = 'pending' OR b.is_quarantined = 1)
-               ORDER BY b.id DESC LIMIT 50`
-            ).all();
-            pendingArchiveBooks = pArchRes?.results || [];
-          } catch (_) {}
         }
 
         try {
@@ -6258,52 +6289,57 @@ Format with these exact markdown sections:
         const whereClause = includeQuarantined ? "" : "WHERE (b.is_quarantined = 0 OR b.is_quarantined IS NULL) ";
         const fallbackWhere = includeQuarantined ? "" : "WHERE (is_quarantined = 0 OR is_quarantined IS NULL) ";
 
-        let results = [];
-        try {
-          const res = await env.DB.prepare(
-            `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description, b.is_featured, b.is_quarantined
-             FROM books b
-             LEFT JOIN users u ON b.author_id = u.id
-             ${whereClause}
-             ORDER BY b.is_featured DESC, b.id DESC LIMIT 100`
-          ).all();
-          results = res.results || [];
-        } catch (_) {
-          const fallbackRes = await env.DB.prepare(
-            `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined FROM books ${fallbackWhere} ORDER BY is_featured DESC, id DESC LIMIT 100`
-          ).all();
-          results = fallbackRes.results || [];
-        }
+        let purchasedBookIds = new Set();
+        let libraryBookIds = new Set();
 
-        // Attach custom badges & sanitize pdf_file so unauthorized users never receive PDF URLs
-        try {
-          const allBadgesRes = await env.DB.prepare(
-            `SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC`
-          ).all();
-          const badgesByBook = {};
-          (allBadgesRes?.results || []).forEach(bg => {
-            if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
-            badgesByBook[bg.book_id].push(bg);
-          });
-
-          let purchasedBookIds = new Set();
-          let libraryBookIds = new Set();
-          if (sessionUser && sessionUser.id) {
-            try {
-              await ensurePurchasesTable(env);
-              const pRes = await env.DB.prepare(
-                "SELECT book_id FROM purchases WHERE user_id = ? AND status IN ('paid', 'completed', 'verified')"
-              ).bind(sessionUser.id).all();
-              (pRes?.results || []).forEach(p => purchasedBookIds.add(Number(p.book_id)));
-            } catch (_) {}
-            try {
-              await ensurePersonalLibraryTable(env);
-              const lRes = await env.DB.prepare(
-                "SELECT book_id FROM personal_library WHERE user_id = ?"
-              ).bind(sessionUser.id).all();
-              (lRes?.results || []).forEach(l => libraryBookIds.add(Number(l.book_id)));
-            } catch (_) {}
+        const booksPromise = (async () => {
+          try {
+            const res = await env.DB.prepare(
+              `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description, b.is_featured, b.is_quarantined
+               FROM books b
+               LEFT JOIN users u ON b.author_id = u.id
+               ${whereClause}
+               ORDER BY b.is_featured DESC, b.id DESC LIMIT 100`
+            ).all();
+            return res.results || [];
+          } catch (_) {
+            const fallbackRes = await env.DB.prepare(
+              `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined FROM books ${fallbackWhere} ORDER BY is_featured DESC, id DESC LIMIT 100`
+            ).all();
+            return fallbackRes.results || [];
           }
+        })();
+
+        const badgesPromise = env.DB.prepare(
+          `SELECT id, book_id, badge_label, badge_color FROM book_custom_badges ORDER BY id ASC`
+        ).all().catch(() => ({ results: [] }));
+
+        const purchasesPromise = (sessionUser && sessionUser.id)
+          ? env.DB.prepare("SELECT book_id FROM purchases WHERE user_id = ? AND status IN ('paid', 'completed', 'verified')").bind(sessionUser.id).all().catch(() => ({ results: [] }))
+          : Promise.resolve({ results: [] });
+
+        const libraryPromise = (sessionUser && sessionUser.id)
+          ? env.DB.prepare("SELECT book_id FROM personal_library WHERE user_id = ?").bind(sessionUser.id).all().catch(() => ({ results: [] }))
+          : Promise.resolve({ results: [] });
+
+        const [rawBooks, allBadgesRes, pRes, lRes] = await Promise.all([
+          booksPromise,
+          badgesPromise,
+          purchasesPromise,
+          libraryPromise
+        ]);
+
+        let results = rawBooks;
+        const badgesByBook = {};
+        (allBadgesRes?.results || []).forEach(bg => {
+          if (!badgesByBook[bg.book_id]) badgesByBook[bg.book_id] = [];
+          badgesByBook[bg.book_id].push(bg);
+        });
+
+        (pRes?.results || []).forEach(p => purchasedBookIds.add(Number(p.book_id)));
+        (lRes?.results || []).forEach(l => libraryBookIds.add(Number(l.book_id)));
+
+        try {
 
           const sanitizeBookForApi = (b) => {
             const bid = Number(b.id);
@@ -6385,8 +6421,9 @@ Format with these exact markdown sections:
           });
         }
 
+        const cacheHeader = sessionUser ? "private, no-cache" : "public, max-age=15, stale-while-revalidate=60";
         return new Response(JSON.stringify(results), {
-          headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache, no-store, must-revalidate" }
+          headers: { "Content-Type": "application/json", "Cache-Control": cacheHeader }
         });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message, results: [] }), {
@@ -7807,44 +7844,47 @@ Format with these exact markdown sections:
           ).all();
           books = res.results || [];
         } else {
-          // Normal reader: get books in personal_library plus any paid purchases
-          const res = await env.DB.prepare(
-            `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
-                    u.username as author_name,
-                    p.razorpay_order_id as order_id,
-                    CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END as is_purchased
-             FROM personal_library pl
-             JOIN books b ON pl.book_id = b.id
-             LEFT JOIN users u ON b.author_id = u.id
-             LEFT JOIN purchases p ON p.book_id = b.id AND p.user_id = pl.user_id AND p.status IN ('paid', 'completed', 'verified')
-             WHERE pl.user_id = ?
-             ORDER BY pl.added_at DESC`
-          ).bind(sessionUser.id).all();
+          // Normal reader: get books in personal_library plus any paid purchases in parallel
+          const [res, unaddedPurchases] = await Promise.all([
+            env.DB.prepare(
+              `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
+                      u.username as author_name,
+                      p.razorpay_order_id as order_id,
+                      CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END as is_purchased
+               FROM personal_library pl
+               JOIN books b ON pl.book_id = b.id
+               LEFT JOIN users u ON b.author_id = u.id
+               LEFT JOIN purchases p ON p.book_id = b.id AND p.user_id = pl.user_id AND p.status IN ('paid', 'completed', 'verified')
+               WHERE pl.user_id = ?
+               ORDER BY pl.added_at DESC`
+            ).bind(sessionUser.id).all().catch(() => ({ results: [] })),
+            env.DB.prepare(
+              `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
+                      u.username as author_name,
+                      p.razorpay_order_id as order_id,
+                      1 as is_purchased
+               FROM purchases p
+               JOIN books b ON p.book_id = b.id
+               LEFT JOIN users u ON b.author_id = u.id
+               WHERE p.user_id = ? AND p.status IN ('paid', 'completed', 'verified')
+                 AND b.id NOT IN (SELECT book_id FROM personal_library WHERE user_id = ?)`
+            ).bind(sessionUser.id, sessionUser.id).all().catch(() => ({ results: [] }))
+          ]);
           books = res.results || [];
-
-          // Also check for any paid purchases that may not yet be in personal_library
-          const unaddedPurchases = await env.DB.prepare(
-            `SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.is_paid, b.price_paise, b.description,
-                    u.username as author_name,
-                    p.razorpay_order_id as order_id,
-                    1 as is_purchased
-             FROM purchases p
-             JOIN books b ON p.book_id = b.id
-             LEFT JOIN users u ON b.author_id = u.id
-             WHERE p.user_id = ? AND p.status IN ('paid', 'completed', 'verified')
-               AND b.id NOT IN (SELECT book_id FROM personal_library WHERE user_id = ?)`
-          ).bind(sessionUser.id, sessionUser.id).all();
 
           if (unaddedPurchases.results && unaddedPurchases.results.length > 0) {
             for (const pb of unaddedPurchases.results) {
               books.unshift(pb);
-              // Auto-sync into personal_library
-              try {
-                await env.DB.prepare(
-                  "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
-                ).bind(sessionUser.id, pb.id).run();
-              } catch (_) {}
             }
+            bgTask((async () => {
+              for (const pb of unaddedPurchases.results) {
+                try {
+                  await env.DB.prepare(
+                    "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+                  ).bind(sessionUser.id, pb.id).run();
+                } catch (_) {}
+              }
+            })());
           }
         }
 
@@ -9840,8 +9880,11 @@ function renderTwoFactorHtml(email) {
 </html>`;
 }
 
+const _ensuredTables = new Set();
+
 async function ensureBooksTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("books")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS books (
@@ -10008,11 +10051,21 @@ async function ensureBooksTable(env) {
     }
   } catch (_) {}
 
+  try {
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_books_author ON books(author_id)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_books_catalog ON books(catalog)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_books_feat_quar ON books(is_quarantined, is_featured, id)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_books_sbin ON books(sbin_no)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)").run();
+  } catch (_) {}
+
   await ensureAuthorCouponsTable(env);
+  _ensuredTables.add("books");
 }
 
 async function ensureBadgesTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("badges")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS book_custom_badges (
@@ -10024,11 +10077,14 @@ async function ensureBadgesTable(env) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_badges_book_id ON book_custom_badges(book_id)").run();
   } catch (_) {}
+  _ensuredTables.add("badges");
 }
 
 async function ensureLeadershipTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("leadership")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS leadership_team (
@@ -10151,6 +10207,7 @@ async function getUnifiedLeadershipRoster(env) {
 
 async function ensureAnnouncementsTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("announcements")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS global_announcements (
@@ -10162,10 +10219,12 @@ async function ensureAnnouncementsTable(env) {
       )
     `).run();
   } catch (_) {}
+  _ensuredTables.add("announcements");
 }
 
 async function ensureInteractionsTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("interactions")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS interactions (
@@ -10177,11 +10236,14 @@ async function ensureInteractionsTable(env) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_interactions_book ON interactions(book_id)").run();
   } catch (_) {}
+  _ensuredTables.add("interactions");
 }
 
 async function ensureAuthorCouponsTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("coupons")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS author_coupons (
@@ -10197,10 +10259,12 @@ async function ensureAuthorCouponsTable(env) {
       )
     `).run();
   } catch (_) {}
+  _ensuredTables.add("coupons");
 }
 
 async function ensurePurchasesTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("purchases")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS purchases (
@@ -10243,10 +10307,12 @@ async function ensurePurchasesTable(env) {
   try {
     await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_purchases_order ON purchases(razorpay_order_id)").run();
   } catch (_) {}
+  _ensuredTables.add("purchases");
 }
 
 async function ensurePersonalLibraryTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("library")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS personal_library (
@@ -10261,10 +10327,12 @@ async function ensurePersonalLibraryTable(env) {
   try {
     await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_personal_library_user ON personal_library(user_id, book_id)").run();
   } catch (_) {}
+  _ensuredTables.add("library");
 }
 
 async function ensureFrontPageSettingsTable(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("fps")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS front_page_settings (
@@ -10336,10 +10404,12 @@ async function ensureFrontPageSettingsTable(env) {
   } catch (err) {
     console.warn("ensureFrontPageSettingsTable warning:", err.message);
   }
+  _ensuredTables.add("fps");
 }
 
 async function ensureModerationTables(env) {
   if (!env || !env.DB) return;
+  if (_ensuredTables.has("moderation")) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS username_requests (
@@ -10374,6 +10444,7 @@ async function ensureModerationTables(env) {
   } catch (err) {
     console.warn("ensureModerationTables warning:", err.message);
   }
+  _ensuredTables.add("moderation");
 }
 
 function renderContactLeadershipCards(leaders) {

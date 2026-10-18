@@ -1158,6 +1158,15 @@
     </div>
 
     <script>
+        function getEdgeUserPromise() {
+            if (!window.__pvUserPromise) {
+                window.__pvUserPromise = fetch('/api/user/me')
+                    .then(r => r.ok ? r.json() : null)
+                    .catch(() => null);
+            }
+            return window.__pvUserPromise;
+        }
+
         // CLIENT-SIDE DYNAMIC BOOK HYDRATION FROM CLOUDFLARE D1
         async function hydrateBooksFromD1() {
             try {
@@ -1176,21 +1185,17 @@
                     })
                     .catch(() => {});
 
-                // Pre-sync edge user library state before generating cards
-                if (!window.userPurchasedIds && !window.userLibraryIds) {
-                    try {
-                        const meRes = await fetch('/api/user/me');
-                        if (meRes.ok) {
-                            const meUser = await meRes.json();
-                            if (meUser && meUser.logged_in) {
-                                window.userPurchasedIds = new Set((meUser.purchased_book_ids || []).map(Number));
-                                window.userLibraryIds = new Set((meUser.library_book_ids || []).map(Number));
-                            }
+                // Fetch books and user session concurrently in parallel
+                const userSyncPromise = (!window.userPurchasedIds && !window.userLibraryIds)
+                    ? getEdgeUserPromise().then(meUser => {
+                        if (meUser && meUser.logged_in) {
+                            window.userPurchasedIds = new Set((meUser.purchased_book_ids || []).map(Number));
+                            window.userLibraryIds = new Set((meUser.library_book_ids || []).map(Number));
                         }
-                    } catch (_) {}
-                }
+                    })
+                    : Promise.resolve();
 
-                const res = await fetch('/api/d1/books');
+                const [_, res] = await Promise.all([userSyncPromise, fetch('/api/d1/books')]);
                 const placeholder = document.getElementById('noBooksPlaceholder');
                 if (!res.ok) {
                     if (placeholder) placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">Explore library collections above.</p>';
@@ -1520,9 +1525,8 @@
                 return;
             }
             try {
-                const res = await fetch('/api/user/me');
-                if (!res.ok) return;
-                const data = await res.json();
+                const data = await getEdgeUserPromise();
+                if (!data) return;
                 if (data.logged_in && data.user) {
                     if (data.purchased_book_ids || data.library_book_ids) {
                         syncGlobalLibraryWithMyLibrary(data.purchased_book_ids, data.library_book_ids);
@@ -1702,16 +1706,29 @@
             if(loadMore) loadMore.style.display = input ? 'none' : 'inline-block';
         }
 
+        let searchDebounceTimer = null;
+        function debouncedFilterBooks() {
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(filterBooks, 100);
+        }
+
         const searchInput = document.getElementById('searchInput');
         const searchForm = document.getElementById('searchForm');
         const micBtn = document.getElementById('micBtn');
 
         if (searchInput) {
-            searchInput.addEventListener('keyup', filterBooks);
+            searchInput.addEventListener('input', debouncedFilterBooks);
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+                    filterBooks();
+                }
+            });
         }
 
         if (searchForm) {
             searchForm.addEventListener('submit', (e) => {
+                if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
                 filterBooks();
                 searchInput.blur();
             });
