@@ -636,12 +636,18 @@
 
                 <div class="form-group">
                     <label>Price in INR (₹) — Set 0 for Free</label>
-                    <input type="number" id="editPrice" name="price_inr" min="0" step="1" value="0">
+                    <input type="number" id="editPrice" name="price_inr" min="0" step="1" value="0" oninput="toggleEditPriceFields()">
                 </div>
 
-                <div class="form-group">
-                    <label>Free Preview Pages (For Paid Books, 1 to 10)</label>
-                    <input type="number" id="editPreview" name="preview_pages" min="1" max="10" value="5">
+                <div class="form-group" id="editPreviewGroup">
+                    <label>Free Preview Pages (For Free Books, 1 to 10)</label>
+                    <input type="number" id="editPreview" name="preview_pages" min="0" max="10" value="5">
+                </div>
+
+                <div class="form-group" id="editScreenshotsGroup">
+                    <label>📸 Sample Preview Screenshots (Links - One per line or comma-separated)</label>
+                    <textarea id="editScreenshots" name="preview_screenshots" rows="3" placeholder="https://drive.google.com/file/d/... or direct image links" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+                    <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">For paid books, these screenshots show in the interactive Look Inside carousel gallery like Amazon.</div>
                 </div>
 
                 <div class="form-group">
@@ -820,6 +826,22 @@
         }
 
         // Quick Edit Modal
+        function toggleEditPriceFields() {
+            const priceVal = parseInt(document.getElementById('editPrice').value || '0', 10);
+            const prevGroup = document.getElementById('editPreviewGroup');
+            if (prevGroup) {
+                if (priceVal > 0) {
+                    prevGroup.style.display = 'none';
+                    document.getElementById('editPreview').value = '0';
+                } else {
+                    prevGroup.style.display = 'block';
+                    if (parseInt(document.getElementById('editPreview').value || '0', 10) <= 0) {
+                        document.getElementById('editPreview').value = '5';
+                    }
+                }
+            }
+        }
+
         function openEditModal(btn) {
             const id = btn.dataset.id;
             const title = btn.dataset.title;
@@ -828,13 +850,17 @@
             const pricePaise = parseInt(btn.dataset.price || '0', 10);
             const preview = btn.dataset.preview || '5';
             const desc = btn.dataset.desc;
+            const screenshots = btn.dataset.screenshots || '';
 
             document.getElementById('editBookId').value = id;
             document.getElementById('editTitle').value = title;
             document.getElementById('editCatalog').value = catalog;
             document.getElementById('editPrice').value = ispaid ? Math.round(pricePaise / 100) : 0;
             document.getElementById('editPreview').value = preview;
+            document.getElementById('editScreenshots').value = screenshots;
             document.getElementById('editDesc').value = desc || '';
+
+            toggleEditPriceFields();
 
             document.getElementById('editModalBackdrop').style.display = 'flex';
         }
@@ -857,6 +883,7 @@
                 catalog: document.getElementById('editCatalog').value,
                 price_inr: document.getElementById('editPrice').value,
                 preview_pages: document.getElementById('editPreview').value,
+                preview_screenshots: document.getElementById('editScreenshots').value.trim(),
                 description: document.getElementById('editDesc').value.trim()
             };
 
@@ -876,6 +903,17 @@
                         row.dataset.title = payload.title.toLowerCase();
                         row.dataset.catalog = payload.catalog.toLowerCase();
                         row.dataset.desc = payload.description.toLowerCase();
+                        const editBtn = row.querySelector('.btn-act-edit');
+                        if (editBtn) {
+                            editBtn.dataset.title = payload.title;
+                            editBtn.dataset.catalog = payload.catalog;
+                            editBtn.dataset.desc = payload.description;
+                            editBtn.dataset.preview = payload.preview_pages;
+                            editBtn.dataset.screenshots = payload.preview_screenshots;
+                            const priceVal = parseInt(payload.price_inr || '0', 10);
+                            editBtn.dataset.ispaid = priceVal > 0 ? 'true' : 'false';
+                            editBtn.dataset.price = (priceVal * 100).toString();
+                        }
                         const titleLink = row.querySelector('.book-title-text');
                         if (titleLink) titleLink.textContent = payload.title;
                     }
@@ -1226,6 +1264,7 @@
                                                 data-price="${b.price_paise || 0}"
                                                 data-preview="${b.preview_pages || 5}"
                                                 data-desc="${(b.description || '').replace(/"/g, '&quot;')}"
+                                                data-screenshots="${(b.preview_screenshots || '').replace(/"/g, '&quot;')}"
                                                 onclick="openEditModal(this)">
                                             ✏️ Edit
                                         </button>

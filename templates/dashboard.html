@@ -954,15 +954,21 @@
 
                                 <div style="margin-bottom: 14px;">
                                     <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-                                        📄 Google Drive PDF Book Link <span style="color: #dc2626;">*</span>
+                                        📄 Book Document Link (Any Cloud / Database / Storage: Drive, Dropbox, OneDrive, R2, S3, Supabase, or Direct URL) <span style="color: #dc2626;">*</span>
                                     </label>
-                                    <input type="url" name="pdf_link" id="publish_pdf_link" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'pdf_drive_status')" autocomplete="off">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                        <input type="url" name="pdf_link" id="publish_pdf_link" placeholder="https://drive.google.com/file/d/.../view?usp=sharing, Dropbox, OneDrive, S3, or direct URL" style="flex: 1; min-width: 260px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'pdf_drive_status')" autocomplete="off">
+                                        <button type="button" onclick="testBookFileIntegrity('publish_pdf_link', 'pdf_integrity_status')" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 800; font-size: 0.84rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);">
+                                            <span>⚡</span> Test File Integrity &amp; Anti-Corruption
+                                        </button>
+                                    </div>
+                                    <div id="pdf_integrity_status" style="display: none; margin-top: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;"></div>
                                     <div id="pdf_drive_status" style="font-size: 0.78rem; margin-top: 4px; display: none;"></div>
                                 </div>
 
                                 <div style="margin-bottom: 10px;">
                                     <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-                                        🖼️ Google Drive Book Cover Link (or Image URL) <span style="color: #dc2626;">*</span>
+                                        🖼️ Book Cover Link (Google Drive, Cloud Storage, or Direct Image URL) <span style="color: #dc2626;">*</span>
                                     </label>
                                     <input type="url" name="cover_link" id="publish_cover_link" placeholder="https://drive.google.com/file/d/.../view or direct image URL" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.9rem;" oninput="validateDriveInput(this, 'cover_drive_status'); handleLiveCoverPreview(this.value);" autocomplete="off">
                                     <div id="cover_drive_status" style="font-size: 0.78rem; margin-top: 4px; display: none;"></div>
@@ -973,6 +979,15 @@
                                             <div style="font-size: 0.75rem; color: #64748b;">This cover will be displayed on the library showcase & book reader.</div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+                                        📸 Book Preview Screenshots / Sample Pages (Google Drive links or Image URLs)
+                                    </label>
+                                    <textarea name="preview_screenshots" id="publish_preview_screenshots" rows="2" placeholder="Paste sample page links or Google Drive links (one per line or comma-separated) for readers to view in the Look Inside gallery..." style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 0.88rem; font-family: inherit;" oninput="handleScreenshotsLivePreview(this.value)"></textarea>
+                                    <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 4px;">For paid books, readers browse these sample pages like on an e-commerce website before purchasing.</small>
+                                    <div id="publish_screenshots_preview_strip" style="display: none; gap: 8px; margin-top: 8px; overflow-x: auto; padding: 6px 0;"></div>
                                 </div>
 
                                 <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
@@ -995,8 +1010,8 @@
                                 </div>
                             </div>
 
-                            <!-- FREE SAMPLE / PREVIEW ACCESS CONTROL -->
-                            <div class="form-group" style="background: #eff6ff; padding: 15px; border-radius: 8px; border: 1.5px solid #bfdbfe; margin-bottom: 20px;">
+                            <!-- FREE SAMPLE / PREVIEW ACCESS CONTROL (FOR FREE BOOKS) -->
+                            <div class="form-group" id="publish_preview_pages_group" style="background: #eff6ff; padding: 15px; border-radius: 8px; border: 1.5px solid #bfdbfe; margin-bottom: 20px;">
                                 <label style="font-size: 0.88rem; font-weight: 800; color: #1e3a8a; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                                     <span>📖</span> Free Sample / Preview Pages for Readers
                                 </label>
@@ -1008,7 +1023,7 @@
                                     <option value="20">20 Pages Free Sample (Extended Preview)</option>
                                     <option value="0">Full Book Preview (Open Access)</option>
                                 </select>
-                                <small style="color: #1d4ed8; font-size: 0.78rem; display: block; margin-top: 4px;">Readers can sample these initial pages in the reader before buying.</small>
+                                <small style="color: #1d4ed8; font-size: 0.78rem; display: block; margin-top: 4px;">Readers can sample these initial pages in the reader before downloading.</small>
                             </div>
                             
                             <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
@@ -4331,18 +4346,87 @@
         
         if(paidCheckbox) { 
             paidCheckbox.addEventListener('change', function() { 
+                const previewGroup = document.getElementById('publish_preview_pages_group');
                 if(this.checked) { 
                     paidSettings.style.display = 'block'; 
                     priceInput.required = true; 
                     rpKeyIdInput.required = true;
                     rpKeySecretInput.required = true;
+                    if (previewGroup) previewGroup.style.display = 'none';
                 } else { 
                     paidSettings.style.display = 'none'; 
                     priceInput.required = false; 
                     rpKeyIdInput.required = false;
                     rpKeySecretInput.required = false;
+                    if (previewGroup) previewGroup.style.display = 'block';
                 }
             }); 
+        }
+
+        async function testBookFileIntegrity(inputId, statusId) {
+            const input = document.getElementById(inputId);
+            const statusDiv = document.getElementById(statusId);
+            if (!input || !statusDiv) return;
+            const urlVal = input.value.trim();
+            if (!urlVal) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#fef2f2';
+                statusDiv.style.border = '1px solid #fecaca';
+                statusDiv.style.color = '#dc2626';
+                statusDiv.innerHTML = '⚠️ Please enter a document URL to test file integrity.';
+                return;
+            }
+
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#f0fdf4';
+            statusDiv.style.border = '1px solid #bbf7d0';
+            statusDiv.style.color = '#166534';
+            statusDiv.innerHTML = '⏳ <strong>Running Anti-Corruption & Reachability Check...</strong> Inspecting magic bytes and cloud permissions...';
+
+            try {
+                const res = await fetch('/api/verify-book-integrity?url=' + encodeURIComponent(urlVal) + '&expected_type=pdf');
+                const data = await res.json();
+                if (data.valid) {
+                    statusDiv.style.background = '#ecfdf5';
+                    statusDiv.style.border = '1.5px solid #6ee7b7';
+                    statusDiv.style.color = '#065f46';
+                    statusDiv.innerHTML = '✓ <strong>Corruption-Free &amp; Verified:</strong> ' + (data.message || 'File is healthy and ready for publication.') +
+                        ' <span style="font-size: 0.76rem; background: #d1fae5; padding: 2px 8px; border-radius: 10px; margin-left: 6px;">Provider: ' + (data.storage_provider || 'cloud') + '</span>';
+                } else {
+                    statusDiv.style.background = '#fef2f2';
+                    statusDiv.style.border = '1.5px solid #fca5a5';
+                    statusDiv.style.color = '#991b1b';
+                    statusDiv.innerHTML = '❌ <strong>File Integrity Check Failed:</strong> ' + (data.message || 'Document appears corrupted or access is restricted.') +
+                        (data.error_code === 'RESTRICTED_GOOGLE_SIGNIN_PAGE' ? '<br><small style="color: #b91c1c; font-weight: normal;">Fix: Set Google Drive link General Access to <strong>"Anyone with the link"</strong>.</small>' : '');
+                }
+            } catch (err) {
+                statusDiv.style.background = '#fffbeb';
+                statusDiv.style.border = '1.5px solid #fde68a';
+                statusDiv.style.color = '#92400e';
+                statusDiv.innerHTML = '⚠️ Verification request timed out or network error. Please confirm your URL is publicly accessible.';
+            }
+        }
+
+        function handleScreenshotsLivePreview(textVal) {
+            const strip = document.getElementById('publish_screenshots_preview_strip');
+            if (!strip) return;
+            const lines = (textVal || '').split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
+            if (lines.length === 0) {
+                strip.style.display = 'none';
+                strip.innerHTML = '';
+                return;
+            }
+
+            const thumbs = lines.map(function(item) {
+                let imgUrl = item;
+                const m = item.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)|lh3\.googleusercontent\.com\/d\/)([a-zA-Z0-9_-]+)/i);
+                if (m) imgUrl = 'https://lh3.googleusercontent.com/d/' + m[1];
+                else if (item.includes('dropbox.com')) imgUrl = item.replace('dl=0', 'raw=1').replace('dl=1', 'raw=1');
+                return '<div style="width: 48px; height: 68px; border-radius: 6px; overflow: hidden; border: 1.5px solid #cbd5e1; flex-shrink: 0; background: #f1f5f9;"><img src="' + imgUrl + '" style="width:100%; height:100%; object-fit:cover;" onerror="this.src=\'/static/PustakVerse.png\'"></div>';
+            });
+
+            strip.style.display = 'flex';
+            strip.innerHTML = thumbs.join('') + '<div style="font-size: 0.78rem; color: #166534; font-weight: 700; display: flex; align-items: center; margin-left: 6px;">✓ ' + lines.length + ' sample page(s) ready</div>';
         }
 
         // Toggle Drive Public Access Guide

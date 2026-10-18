@@ -428,7 +428,7 @@
                                     <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
                                 </div>
                                 <div style="display: flex; gap: 8px;">
-                                    <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Preview</a>
+                                    <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">🔍 Look Inside</a>
                                     <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1.4; display: flex; margin: 0;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-premium" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800;">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>

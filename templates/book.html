@@ -762,12 +762,38 @@
         <div class="book-header">
             <!-- LEFT COLUMN: COVER & QUICK BUY BOX -->
             <div style="display: flex; flex-direction: column; align-items: center; width: 300px; max-width: 100%;">
-                <div style="position: relative; width: 100%; text-align: center;">
+                <div style="position: relative; width: 100%; text-align: center; cursor: {{ 'pointer' if book_screenshots and book_screenshots|length > 0 else 'default' }};" {% if book_screenshots and book_screenshots|length > 0 %}onclick="openScreenshotsGallery(0)" title="Click to Look Inside sample pages"{% endif %}>
                     <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' ~ book.cover_image) }}" class="book-cover" alt="{{ book.title }} Cover" style="width: 100%; max-width: 280px; height: auto; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.18);">
+                    {% if book_screenshots and book_screenshots|length > 0 %}
+                    <div style="position: absolute; top: 12px; left: 12px; background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                        <span>🔍</span> Look Inside
+                    </div>
+                    {% endif %}
                     <div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 0.76rem; font-weight: 700; backdrop-filter: blur(4px); white-space: nowrap;">
                         📖 Digital eBook Edition
                     </div>
                 </div>
+
+                {% if book_screenshots and book_screenshots|length > 0 %}
+                <div class="gallery-thumbs-row" style="display: flex; gap: 8px; margin-top: 14px; overflow-x: auto; width: 100%; max-width: 280px; padding-bottom: 6px; justify-content: center;">
+                    <div onclick="openScreenshotsGallery(0)" title="Cover" style="cursor: pointer; width: 44px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid #ea580c; flex-shrink: 0;">
+                        <img src="{{ book.cover_image | drive_img if book.cover_image.startswith('http') else url_for('static', filename='uploads/covers/' ~ book.cover_image) }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+                    </div>
+                    {% for shot in book_screenshots[:4] %}
+                    <div onclick="openScreenshotsGallery({{ loop.index - 1 }})" title="Sample Page {{ loop.index }}" style="cursor: pointer; width: 44px; height: 60px; border-radius: 6px; overflow: hidden; border: 1.5px solid var(--border-subtle); flex-shrink: 0; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='var(--border-subtle)'">
+                        <img src="{{ shot }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+                    </div>
+                    {% endfor %}
+                    {% if book_screenshots|length > 4 %}
+                    <div onclick="openScreenshotsGallery(4)" style="cursor: pointer; width: 44px; height: 60px; border-radius: 6px; background: rgba(15, 23, 42, 0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: var(--text-muted); flex-shrink: 0;">
+                        +{{ book_screenshots|length - 4 }}
+                    </div>
+                    {% endif %}
+                </div>
+                <button type="button" onclick="openScreenshotsGallery(0)" style="margin-top: 8px; width: 100%; max-width: 280px; background: #f8fafc; border: 1.5px solid #fed7aa; color: #ea580c; font-weight: 800; font-size: 0.84rem; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.1);">
+                    <span>🔍</span> Look Inside ({{ book_screenshots|length }} Sample Pages)
+                </button>
+                {% endif %}
 
                 <div style="display: flex; gap: 8px; margin-top: 18px; width: 100%; max-width: 280px;">
                     <button type="button" id="ttsPlayBtn" onclick="toggleBookTTS()" class="btn-sm" style="flex: 1; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 7px 10px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
@@ -932,9 +958,13 @@
                             </div>
                             <div id="couponResultMsg" style="display: none; font-size: 0.84rem; margin-bottom: 10px; padding: 6px 10px; border-radius: 6px;"></div>
                             
-                            <div style="display: flex; gap: 10px;">
-                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; color: white;">Free Preview</a>
-                                <form id="buyBookForm" action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2; margin: 0;">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                {% if book_screenshots and book_screenshots|length > 0 %}
+                                    <button type="button" onclick="openScreenshotsGallery(0)" class="btn" style="flex: 1; min-width: 140px; text-align: center; background: #eff6ff; border: 1.5px solid #3b82f6; color: #1d4ed8; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                        <span>🔍</span> Look Inside ({{ book_screenshots|length }} Samples)
+                                    </button>
+                                {% endif %}
+                                <form id="buyBookForm" action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: {{ '1.5' if book_screenshots and book_screenshots|length > 0 else '1' }}; min-width: 180px; margin: 0;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="coupon" id="buyFormCoupon" value="">
                                     <button type="submit" id="buyNowSubmitBtn" class="btn btn-green" style="width: 100%; padding: 12px; border-radius: 8px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>
@@ -1720,6 +1750,111 @@
             })
             .catch(function() {});
     });
+
+    const PV_SCREENSHOTS = {{ (book_screenshots or []) | tojson }};
+    let currentGalleryIdx = 0;
+
+    function openScreenshotsGallery(idx) {
+        if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+        const modal = document.getElementById('pvScreenshotsModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            selectGalleryIndex(idx || 0);
+        }
+    }
+
+    function closeScreenshotsGallery() {
+        const modal = document.getElementById('pvScreenshotsModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    function selectGalleryIndex(idx) {
+        if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+        if (idx < 0) idx = 0;
+        if (idx >= PV_SCREENSHOTS.length) idx = PV_SCREENSHOTS.length - 1;
+        currentGalleryIdx = idx;
+        const imgEl = document.getElementById('pvGalleryActiveImage');
+        if (imgEl) imgEl.src = PV_SCREENSHOTS[currentGalleryIdx];
+        const counterEl = document.getElementById('pvGalleryCounter');
+        if (counterEl) counterEl.textContent = 'Sample ' + (currentGalleryIdx + 1) + ' of ' + PV_SCREENSHOTS.length;
+        document.querySelectorAll('.pv-modal-thumb').forEach((th, tIdx) => {
+            if (tIdx === currentGalleryIdx) {
+                th.style.borderColor = '#ea580c';
+                th.style.opacity = '1';
+                th.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            } else {
+                th.style.borderColor = 'rgba(255,255,255,0.2)';
+                th.style.opacity = '0.6';
+            }
+        });
+    }
+
+    function prevGalleryImage() {
+        if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+        selectGalleryIndex((currentGalleryIdx - 1 + PV_SCREENSHOTS.length) % PV_SCREENSHOTS.length);
+    }
+
+    function nextGalleryImage() {
+        if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+        selectGalleryIndex((currentGalleryIdx + 1) % PV_SCREENSHOTS.length);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('pvScreenshotsModal');
+        if (modal && modal.style.display === 'flex') {
+            if (e.key === 'Escape') closeScreenshotsGallery();
+            if (e.key === 'ArrowLeft') prevGalleryImage();
+            if (e.key === 'ArrowRight') nextGalleryImage();
+        }
+    });
     </script>
+
+    <!-- E-COMMERCE LOOK INSIDE SCREENSHOT GALLERY MODAL -->
+    <div id="pvScreenshotsModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 99999; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255,255,255,0.12); color: white;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 1.3rem;">📖</span>
+          <div>
+            <div style="font-weight: 800; font-size: 1.05rem;">Look Inside: {{ book.title }}</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">
+              <span id="pvGalleryCounter">Sample 1 of {{ (book_screenshots or [])|length }}</span>
+              {% if book.is_paid %}
+              <span style="margin-left: 8px; color: #10b981; font-weight: 700;">· Premium Edition (₹{{ "%.2f"|format(book.price_paise/100) }})</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          {% if book.is_paid and not is_purchased %}
+          <a href="{{ url_for('buy_book', book_id=book.id) }}" style="background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);">
+            ⚡ Buy Full Book (₹{{ "%.2f"|format(book.price_paise/100) }})
+          </a>
+          {% endif %}
+          <button type="button" onclick="closeScreenshotsGallery()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
+        </div>
+      </div>
+      
+      <div style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: hidden;">
+        <button type="button" onclick="prevGalleryImage()" style="position: absolute; left: 24px; z-index: 10; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.2); color: white; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(234, 88, 12, 0.85)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.7)'">&#8249;</button>
+        
+        <div style="max-width: 900px; max-height: 80vh; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+          <img id="pvGalleryActiveImage" src="" alt="Sample Page" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+        </div>
+
+        <button type="button" onclick="nextGalleryImage()" style="position: absolute; right: 24px; z-index: 10; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.2); color: white; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(234, 88, 12, 0.85)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.7)'">&#8250;</button>
+      </div>
+
+      <div style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.12); padding: 12px 20px; display: flex; gap: 10px; overflow-x: auto; justify-content: center; align-items: center;">
+        {% for shot in book_screenshots or [] %}
+        <div onclick="selectGalleryIndex({{ loop.index - 1 }})" id="pvThumb_{{ loop.index - 1 }}" class="pv-modal-thumb" style="cursor: pointer; width: 48px; height: 68px; border-radius: 6px; overflow: hidden; border: 2px solid {{ '#ea580c' if loop.first else 'rgba(255,255,255,0.2)' }}; flex-shrink: 0; opacity: {{ '1' if loop.first else '0.6' }}; transition: all 0.2s;">
+          <img src="{{ shot }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+        </div>
+        {% endfor %}
+      </div>
+    </div>
 </body>
 </html>

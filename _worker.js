@@ -911,14 +911,46 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
 // DRIVE LINK NORMALIZATION & SBIN GENERATION ENGINE
 // ============================================================================
 
-function normalizeDriveLink(url) {
+function normalizeBookStorageUrl(url) {
   if (!url || typeof url !== "string") return url || "";
   const trimmed = url.trim();
-  const match = trimmed.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
-  if (match) {
-    return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+  // 1. Google Drive
+  const driveMatch = trimmed.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
   }
+
+  // 2. Dropbox (transform dl=0 into raw=1 for embedded reading/streaming)
+  if (trimmed.includes("dropbox.com")) {
+    if (trimmed.includes("dl=0")) return trimmed.replace("dl=0", "raw=1");
+    if (!trimmed.includes("raw=1") && !trimmed.includes("dl=1")) {
+      return trimmed + (trimmed.includes("?") ? "&" : "?") + "raw=1";
+    }
+    return trimmed;
+  }
+
+  // 3. Microsoft OneDrive / 1drv.ms
+  if (trimmed.includes("1drv.ms") || trimmed.includes("onedrive.live.com")) {
+    if (!trimmed.includes("download=1") && trimmed.includes("authkey=")) {
+      let u = trimmed.replace("view.aspx", "download.aspx");
+      if (!u.includes("download=1")) u += (u.includes("?") ? "&" : "?") + "download=1";
+      return u;
+    }
+    return trimmed;
+  }
+
+  // 4. Internet Archive
+  const archiveMatch = trimmed.match(/archive\.org\/details\/([a-zA-Z0-9_\-\.]+)/);
+  if (archiveMatch) {
+    return `https://archive.org/embed/${archiveMatch[1]}`;
+  }
+
   return trimmed;
+}
+
+function normalizeDriveLink(url) {
+  return normalizeBookStorageUrl(url);
 }
 
 function normalizeDriveImageLink(url) {
@@ -928,7 +960,213 @@ function normalizeDriveImageLink(url) {
   if (match) {
     return `https://lh3.googleusercontent.com/d/${match[1]}`;
   }
+  if (trimmed.includes("dropbox.com")) {
+    if (trimmed.includes("dl=0")) return trimmed.replace("dl=0", "raw=1");
+    if (!trimmed.includes("raw=1") && !trimmed.includes("dl=1")) return trimmed + (trimmed.includes("?") ? "&" : "?") + "raw=1";
+  }
   return trimmed;
+}
+
+function normalizeScreenshotUrls(input) {
+  if (!input) return [];
+  let rawItems = [];
+  if (Array.isArray(input)) {
+    rawItems = input;
+  } else if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      rawItems = Array.isArray(parsed) ? parsed : [input];
+    } catch (_) {
+      rawItems = input.split(/[\n,\r]+/);
+    }
+  }
+  const cleanList = [];
+  for (const item of rawItems) {
+    if (!item || typeof item !== "string") continue;
+    const s = item.trim();
+    if (!s || !s.startsWith("http")) continue;
+    cleanList.push(normalizeDriveImageLink(s));
+  }
+  return cleanList;
+}
+
+async function verifyBookIntegrityEdge(urlStr, expectedType = "document") {
+  if (!urlStr || typeof urlStr !== "string") {
+    return { valid: false, anti_corrupt_status: "EMPTY_URL", message: "Document link is required." };
+  }
+  const u = urlStr.trim();
+  if (!u.startsWith("http://") && !u.startsWith("https://")) {
+    return { valid: false, anti_corrupt_status: "INVALID_PROTOCOL", message: "Link must start with http:// or https://" };
+  }
+
+  const isDrive = u.includes("drive.google.com") || u.includes("googleusercontent.com");
+  const isDropbox = u.includes("dropbox.com");
+  const isOneDrive = u.includes("1drv.ms") || u.includes("onedrive.live.com");
+  const isArchive = u.includes("archive.org");
+  const source = isDrive ? "google_drive" : (isDropbox ? "dropbox" : (isOneDrive ? "onedrive" : (isArchive ? "internet_archive" : "cloud_storage_direct")));
+
+  let testUrl = u;
+  const driveM = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+  if (driveM) {
+    const fileId = driveM[1];
+    testUrl = expectedType === "document"
+      ? `https://drive.google.com/uc?id=${fileId}&export=download`
+      : `https://lh3.googleusercontent.com/d/${fileId}`;
+  } else if (isDropbox) {
+    if (testUrl.includes("dl=0")) testUrl = testUrl.replace("dl=0", "raw=1");
+    else if (!testUrl.includes("raw=1") && !testUrl.includes("dl=1")) testUrl += (testUrl.includes("?") ? "&" : "?") + "raw=1";
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const resp = await fetch(testUrl, {
+      headers: {
+        "Range": "bytes=0-2047",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 PustakVerse-AntiCorruption/2.0"
+      },
+      signal: controller.signal,
+      redirect: "follow"
+    });
+    clearTimeout(timeoutId);
+
+    const status = resp.status;
+    if (status === 401 || status === 403) {
+      return {
+        valid: false,
+        source,
+        anti_corrupt_status: "ACCESS_DENIED",
+        message: "Access Denied (HTTP 401/403). The storage file is private or restricted.",
+        solution: "In Google Drive / cloud storage, set sharing permission to 'Anyone with the link' (Viewer)."
+      };
+    }
+    if (status === 404) {
+      return {
+        valid: false,
+        source,
+        anti_corrupt_status: "NOT_FOUND",
+        message: "File not found (HTTP 404). Link is broken or the file was deleted.",
+        solution: "Please verify the link and ensure the file is still present in your storage."
+      };
+    }
+    if (status >= 500) {
+      return {
+        valid: false,
+        source,
+        anti_corrupt_status: "SERVER_ERROR",
+        message: `Storage server returned HTTP error ${status}.`,
+        solution: "Check your storage server status or try again in a few moments."
+      };
+    }
+
+    const arrayBuf = await resp.arrayBuffer();
+    if (!arrayBuf || arrayBuf.byteLength === 0) {
+      return {
+        valid: false,
+        source,
+        anti_corrupt_status: "ZERO_BYTE_CORRUPTED",
+        message: "The file is completely empty (0 bytes). Corrupted document.",
+        solution: "Upload a non-empty document."
+      };
+    }
+
+    const uint8 = new Uint8Array(arrayBuf.slice(0, 2048));
+    let textSample = "";
+    try {
+      textSample = new TextDecoder("utf-8", { fatal: false }).decode(uint8).toLowerCase();
+    } catch (_) {}
+
+    if ((textSample.includes("<!doctype html") || textSample.includes("<html")) &&
+        (textSample.includes("accounts.google.com") || textSample.includes("sign in") || textSample.includes("servicelogin") || textSample.includes("denied"))) {
+      return {
+        valid: false,
+        source,
+        anti_corrupt_status: "RESTRICTED_GOOGLE_SIGNIN_PAGE",
+        message: "Corrupted access: This Google Drive link requires Google Account Sign-In! It returns an HTML login page instead of the book document.",
+        solution: "Open Google Drive -> Right Click File -> Share -> General Access -> Change from 'Restricted' to 'Anyone with the link' (Viewer)."
+      };
+    }
+
+    // Magic bytes
+    let detectedType = "Unknown Binary";
+    let isMagicValid = false;
+
+    if (uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46 && uint8[4] === 0x2D) {
+      detectedType = "PDF Document";
+      isMagicValid = true;
+    } else if (uint8[0] === 0x50 && uint8[1] === 0x4B && uint8[2] === 0x03 && uint8[3] === 0x04) {
+      detectedType = "EPUB / ZIP Document";
+      isMagicValid = true;
+    } else if (uint8[0] === 0xFF && uint8[1] === 0xD8 && uint8[2] === 0xFF) {
+      detectedType = "JPEG Image";
+      isMagicValid = true;
+    } else if (uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47) {
+      detectedType = "PNG Image";
+      isMagicValid = true;
+    } else if (textSample.includes("webp")) {
+      detectedType = "WebP Image";
+      isMagicValid = true;
+    } else if (textSample.includes("gif8")) {
+      detectedType = "GIF Image";
+      isMagicValid = true;
+    } else if (textSample.includes("<svg")) {
+      detectedType = "SVG Graphic";
+      isMagicValid = true;
+    }
+
+    if (expectedType === "document") {
+      if (isMagicValid && (detectedType === "PDF Document" || detectedType === "EPUB / ZIP Document")) {
+        return {
+          valid: true,
+          source,
+          file_type: detectedType,
+          anti_corrupt_status: "PASSED_VERIFIED",
+          message: `Integrity Verified: Authentic ${detectedType} confirmed. File is intact, readable, and publicly accessible!`
+        };
+      }
+      if (isDrive && (status === 200 || status === 206) && !textSample.includes("accounts.google.com")) {
+        return {
+          valid: true,
+          source,
+          file_type: "Google Drive Document",
+          anti_corrupt_status: "PASSED_VERIFIED",
+          message: "Integrity Verified: Google Drive public file confirmed accessible and ready for readers!"
+        };
+      }
+      if (textSample.includes("<html") && !isMagicValid) {
+        return {
+          valid: false,
+          source,
+          anti_corrupt_status: "CORRUPTED_HTML_PAGE",
+          message: "File is corrupted: The link points to an HTML webpage or error page instead of a document file.",
+          solution: "Ensure your link points directly to a PDF/EPUB file or public Google Drive/Dropbox share link."
+        };
+      }
+      return {
+        valid: true,
+        source,
+        file_type: detectedType,
+        anti_corrupt_status: "PASSED_STREAM",
+        message: `File stream verified (${detectedType}). Document is accessible.`
+      };
+    } else {
+      return {
+        valid: true,
+        source,
+        file_type: detectedType,
+        anti_corrupt_status: "PASSED_VERIFIED",
+        message: `Image verified (${detectedType}).`
+      };
+    }
+  } catch (err) {
+    return {
+      valid: false,
+      source,
+      anti_corrupt_status: "CONNECTION_FAILED",
+      message: `Failed to connect to storage: ${String(err?.message || err).slice(0, 150)}`,
+      solution: "Verify the URL spelling, internet connection, and ensure the hosting server is online."
+    };
+  }
 }
 
 function resolveEffectiveBookCover(book, origin = "") {
@@ -2386,6 +2624,32 @@ export default {
         timestamp: new Date().toISOString()
       }), {
         headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4A-1. Live Book Anti-Corruption & Storage Integrity Verification: /api/verify-book-integrity
+    if (url.pathname === "/api/verify-book-integrity") {
+      let targetUrl = url.searchParams.get("url") || "";
+      let expectedType = url.searchParams.get("type") || "document";
+
+      if (request.method === "POST") {
+        try {
+          const contentType = request.headers.get("Content-Type") || "";
+          if (contentType.includes("application/json")) {
+            const body = await request.json().catch(() => ({}));
+            targetUrl = body.url || targetUrl;
+            expectedType = body.type || expectedType;
+          } else {
+            const fd = await request.formData().catch(() => new FormData());
+            targetUrl = (fd.get("url") || "").trim() || targetUrl;
+            expectedType = (fd.get("type") || "").trim() || expectedType;
+          }
+        } catch (_) {}
+      }
+
+      const report = await verifyBookIntegrityEdge(targetUrl, expectedType);
+      return new Response(JSON.stringify({ success: true, ...report }), {
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
       });
     }
 
@@ -4370,12 +4634,24 @@ Format with these exact markdown sections:
 
             if (!pdfLink) {
               if (acceptsJson) {
-                return new Response(JSON.stringify({ success: false, message: "Please provide a PDF link or upload a PDF document." }), { status: 400, headers: { "Content-Type": "application/json" } });
+                return new Response(JSON.stringify({ success: false, message: "Please provide a book document link or upload a document." }), { status: 400, headers: { "Content-Type": "application/json" } });
               }
-              return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Please provide a Google Drive PDF Book Link.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
+              return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Please provide a Book Document Link.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
             }
 
-            const normPdf = normalizeDriveLink(pdfLink);
+            // Anti-Corruption Integrity Verification for online links
+            if (pdfLink && pdfLink.startsWith("http")) {
+              const testReport = await verifyBookIntegrityEdge(pdfLink, "document");
+              if (!testReport.valid) {
+                const errMsg = `Anti-Corruption Verification Failed: ${testReport.message} ${testReport.solution || ''}`.trim();
+                if (acceptsJson) {
+                  return new Response(JSON.stringify({ success: false, message: errMsg, integrity: testReport }), { status: 400, headers: { "Content-Type": "application/json" } });
+                }
+                return new Response(`<html><head><meta http-equiv="refresh" content="6;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3 style="color:#ef4444;">${escapeHtml(errMsg)}</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
+              }
+            }
+
+            const normPdf = normalizeBookStorageUrl(pdfLink);
             let normCover = "";
             if (coverLink && coverLink.trim()) {
               normCover = normalizeDriveImageLink(coverLink.trim());
@@ -4393,10 +4669,14 @@ Format with these exact markdown sections:
               pricePaise = Math.round((isNaN(rawInr) ? 0 : rawInr) * 100);
             }
 
+            // For paid books, free preview reading is removed (0 pages)
+            const effectivePreviewPages = isPaid ? 0 : Math.max(0, parseInt(formData.get("preview_pages") || "5", 10) || 5);
+            const rawScreenshots = (formData.get("preview_screenshots") || "").trim();
+            const normScreenshots = JSON.stringify(normalizeScreenshotUrls(rawScreenshots));
+
             let isQuarantined = 0;
             let archiveStatus = "approved";
             if (isArchive && user.role === "author") {
-              // Normal authors require editorial approval before archive publication goes live
               isQuarantined = 1;
               archiveStatus = "pending";
             }
@@ -4412,7 +4692,7 @@ Format with these exact markdown sections:
               sbinNo = await generateValidSbin(env.DB);
             }
 
-            // Ensure books table and columns (including isbn) exist
+            // Ensure books table and columns exist
             await ensureBooksTable(env);
 
             // Insert book into Cloudflare D1 books table with fail-safe resilience
@@ -4421,47 +4701,43 @@ Format with these exact markdown sections:
                 `INSERT INTO books (
                    title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
                    preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                   is_quarantined, archive_status, allow_author_donations, created_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                   is_quarantined, archive_status, allow_author_donations, preview_screenshots, created_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
               ).bind(
                 title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                previewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
-                isQuarantined, archiveStatus, allowAuthorDonations
+                effectivePreviewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
+                isQuarantined, archiveStatus, allowAuthorDonations, normScreenshots
               ).run();
             } catch (insertErr) {
-              const errMsg = String(insertErr?.message || insertErr);
-              if (errMsg.includes("no column named archive_status") || errMsg.includes("no column named isbn") || errMsg.includes("no column named allow_author_donations")) {
-                try {
-                  await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run().catch(() => {});
-                  await env.DB.prepare("ALTER TABLE books ADD COLUMN archive_status TEXT DEFAULT 'approved'").run().catch(() => {});
-                  await env.DB.prepare("ALTER TABLE books ADD COLUMN is_quarantined INTEGER DEFAULT 0").run().catch(() => {});
-                  await env.DB.prepare("ALTER TABLE books ADD COLUMN allow_author_donations INTEGER DEFAULT 0").run().catch(() => {});
-                  await env.DB.prepare(
-                    `INSERT INTO books (
-                       title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
-                       preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                       is_quarantined, archive_status, allow_author_donations, created_at
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-                  ).bind(
-                    title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                    previewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
-                    isQuarantined, archiveStatus, allowAuthorDonations
-                  ).run();
-                } catch (retryErr) {
-                  // Fallback without new columns
-                  await env.DB.prepare(
-                    `INSERT INTO books (
-                       title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
-                       preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no,
-                       created_at
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-                  ).bind(
-                    title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                    previewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo
-                  ).run();
-                }
-              } else {
-                throw insertErr;
+              try {
+                await env.DB.prepare("ALTER TABLE books ADD COLUMN preview_screenshots TEXT DEFAULT NULL").run().catch(() => {});
+                await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run().catch(() => {});
+                await env.DB.prepare("ALTER TABLE books ADD COLUMN archive_status TEXT DEFAULT 'approved'").run().catch(() => {});
+                await env.DB.prepare("ALTER TABLE books ADD COLUMN is_quarantined INTEGER DEFAULT 0").run().catch(() => {});
+                await env.DB.prepare("ALTER TABLE books ADD COLUMN allow_author_donations INTEGER DEFAULT 0").run().catch(() => {});
+                await env.DB.prepare(
+                  `INSERT INTO books (
+                     title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
+                     preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
+                     is_quarantined, archive_status, allow_author_donations, preview_screenshots, created_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                ).bind(
+                  title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
+                  effectivePreviewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
+                  isQuarantined, archiveStatus, allowAuthorDonations, normScreenshots
+                ).run();
+              } catch (retryErr) {
+                // Fallback
+                await env.DB.prepare(
+                  `INSERT INTO books (
+                     title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
+                     preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no,
+                     created_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                ).bind(
+                  title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
+                  effectivePreviewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo
+                ).run();
               }
             }
 
@@ -4712,7 +4988,7 @@ Format with these exact markdown sections:
       }
       if (pdfLink) {
         sql += ", pdf_file = ?";
-        binds.push(normalizeDriveLink(pdfLink));
+        binds.push(normalizeBookStorageUrl(pdfLink));
       }
       if (coverLink && coverLink.trim()) {
         sql += ", cover_image = ?";
@@ -4724,6 +5000,12 @@ Format with these exact markdown sections:
           binds.push(driveCover);
         }
       }
+      if (formData.has("preview_screenshots")) {
+        const rawScreenshots = (formData.get("preview_screenshots") || "").trim();
+        const normScreenshots = JSON.stringify(normalizeScreenshotUrls(rawScreenshots));
+        sql += ", preview_screenshots = ?";
+        binds.push(normScreenshots);
+      }
       if (formData.has("allow_author_donations")) {
         const allowDon = (formData.get("allow_author_donations") === "1" || formData.get("allow_author_donations") === "on") ? 1 : 0;
         sql += ", allow_author_donations = ?";
@@ -4732,8 +5014,9 @@ Format with these exact markdown sections:
       if (formData.has("is_paid")) {
         const isPaid = formData.get("is_paid") === "on" || formData.get("is_paid") === "true";
         const pricePaise = isPaid ? Math.round(parseFloat(formData.get("price_inr") || "0") * 100) : 0;
-        sql += ", is_paid = ?, price_paise = ?";
-        binds.push(isPaid ? 1 : 0, pricePaise);
+        const prevPages = isPaid ? 0 : Math.max(0, parseInt(formData.get("preview_pages") || "5", 10) || 5);
+        sql += ", is_paid = ?, price_paise = ?, preview_pages = ?";
+        binds.push(isPaid ? 1 : 0, pricePaise, prevPages);
       }
       const rpKeyId = (formData.get("rp_key_id") || "").trim();
       const rpKeySecret = (formData.get("rp_key_secret") || "").trim();
@@ -6165,7 +6448,7 @@ Format with these exact markdown sections:
 
         await ensureBooksTable(env);
         const bookId = parseInt(quickUpdateMatch[1], 10);
-        let title = "", catalog = "", description = "", price_inr = null, preview_pages = null;
+        let title = "", catalog = "", description = "", price_inr = null, preview_pages = null, preview_screenshots_raw = "";
 
         const contentType = request.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
@@ -6175,6 +6458,7 @@ Format with these exact markdown sections:
           description = (body.description || "").trim();
           price_inr = body.price_inr;
           preview_pages = body.preview_pages;
+          preview_screenshots_raw = (body.preview_screenshots || "").toString().trim();
         } else {
           const formData = await request.formData().catch(() => new FormData());
           title = (formData.get("title") || "").toString().trim();
@@ -6182,6 +6466,7 @@ Format with these exact markdown sections:
           description = (formData.get("description") || "").toString().trim();
           price_inr = formData.get("price_inr");
           preview_pages = formData.get("preview_pages");
+          preview_screenshots_raw = (formData.get("preview_screenshots") || "").toString().trim();
         }
 
         if (!title) {
@@ -6199,14 +6484,24 @@ Format with these exact markdown sections:
           }
         }
         let prevPages = 5;
-        if (preview_pages !== null && preview_pages !== undefined) {
+        if (is_paid === 1) {
+          prevPages = 0;
+        } else if (preview_pages !== null && preview_pages !== undefined) {
           const p = parseInt(preview_pages, 10);
           if (!isNaN(p) && p >= 1) prevPages = Math.min(10, p);
         }
 
-        await env.DB.prepare(
-          `UPDATE books SET title = ?, catalog = ?, description = ?, price_paise = ?, is_paid = ?, preview_pages = ? WHERE id = ?`
-        ).bind(title, catalog, description, price_paise, is_paid, prevPages, bookId).run();
+        const screenshotsJson = preview_screenshots_raw ? normalizeScreenshotUrls(preview_screenshots_raw) : null;
+
+        if (screenshotsJson !== null) {
+          await env.DB.prepare(
+            `UPDATE books SET title = ?, catalog = ?, description = ?, price_paise = ?, is_paid = ?, preview_pages = ?, preview_screenshots = ? WHERE id = ?`
+          ).bind(title, catalog, description, price_paise, is_paid, prevPages, screenshotsJson, bookId).run();
+        } else {
+          await env.DB.prepare(
+            `UPDATE books SET title = ?, catalog = ?, description = ?, price_paise = ?, is_paid = ?, preview_pages = ? WHERE id = ?`
+          ).bind(title, catalog, description, price_paise, is_paid, prevPages, bookId).run();
+        }
 
         return new Response(JSON.stringify({ success: true, message: "Book updated successfully." }), {
           headers: { "Content-Type": "application/json" }
@@ -6295,7 +6590,7 @@ Format with these exact markdown sections:
         const booksPromise = (async () => {
           try {
             const res = await env.DB.prepare(
-              `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description, b.is_featured, b.is_quarantined
+              `SELECT b.id, b.title, u.username as author_name, b.catalog, b.price_paise, b.cover_image, b.pdf_file, b.is_paid, b.description, b.is_featured, b.is_quarantined, b.preview_screenshots
                FROM books b
                LEFT JOIN users u ON b.author_id = u.id
                ${whereClause}
@@ -6304,7 +6599,7 @@ Format with these exact markdown sections:
             return res.results || [];
           } catch (_) {
             const fallbackRes = await env.DB.prepare(
-              `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined FROM books ${fallbackWhere} ORDER BY is_featured DESC, id DESC LIMIT 100`
+              `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined, preview_screenshots FROM books ${fallbackWhere} ORDER BY is_featured DESC, id DESC LIMIT 100`
             ).all();
             return fallbackRes.results || [];
           }
@@ -9933,7 +10228,8 @@ async function ensureBooksTable(env) {
     ["isbn", "TEXT DEFAULT NULL"],
     ["author_name", "TEXT DEFAULT NULL"],
     ["allow_author_donations", "INTEGER DEFAULT 0"],
-    ["archive_status", "TEXT DEFAULT 'approved'"]
+    ["archive_status", "TEXT DEFAULT 'approved'"],
+    ["preview_screenshots", "TEXT DEFAULT NULL"]
   ];
   for (const [col, colType] of bookCols) {
     try {
@@ -14354,6 +14650,31 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
   const mrpPaise = Math.round(pricePaise * 1.4);
   const mrpFormatted = (mrpPaise / 100).toFixed(2);
 
+  let previewScreenshots = [];
+  try {
+    if (Array.isArray(book.preview_screenshots)) {
+      previewScreenshots = book.preview_screenshots;
+    } else if (typeof book.preview_screenshots === "string" && book.preview_screenshots.trim()) {
+      const raw = book.preview_screenshots.trim();
+      if (raw.startsWith("[")) {
+        previewScreenshots = JSON.parse(raw);
+      } else {
+        previewScreenshots = raw.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
+      }
+    }
+  } catch (_) {
+    previewScreenshots = [];
+  }
+  if (!Array.isArray(previewScreenshots)) previewScreenshots = [];
+  previewScreenshots = previewScreenshots.map(u => {
+    if (!u || typeof u !== "string") return "";
+    let s = u.trim();
+    const driveMatch = s.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)|lh3\.googleusercontent\.com\/d\/)([a-zA-Z0-9_-]+)/i);
+    if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+    if (s.includes("dropbox.com")) return s.replace("dl=0", "raw=1").replace("dl=1", "raw=1");
+    return s;
+  }).filter(Boolean);
+
   let badgesHtml = "";
   if (Array.isArray(badges) && badges.length > 0) {
     badgesHtml = `<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">` +
@@ -14435,9 +14756,13 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
           <div style="color: var(--text-muted); text-decoration: line-through; font-size: 1.05rem;">MRP ₹${mrpFormatted}</div>
           <span style="background: #fee2e2; color: #dc2626; font-size: 0.8rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">30% OFF</span>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 1; text-align: center; background: #475569; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; color: white;">Free Preview</a>
-          <a href="/buy_book/${book.id}" class="btn btn-green" style="flex: 2; text-align: center; background: linear-gradient(135deg, #10b981, #059669); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹${priceFormatted})</a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          ${previewScreenshots.length > 0 ? `
+            <button type="button" onclick="openScreenshotsGallery(0)" class="btn" style="flex: 1; min-width: 140px; text-align: center; background: #eff6ff; border: 1.5px solid #3b82f6; color: #1d4ed8; padding: 12px; border-radius: 8px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>🔍</span> Look Inside (${previewScreenshots.length} Samples)
+            </button>
+          ` : ''}
+          <a href="/buy_book/${book.id}" class="btn btn-green" style="flex: ${previewScreenshots.length > 0 ? '1.5' : '1'}; min-width: 180px; text-align: center; background: linear-gradient(135deg, #10b981, #059669); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹${priceFormatted})</a>
         </div>
         ${donateBtnHtml}
       `;
@@ -14705,12 +15030,38 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
         <div class="book-header">
             <!-- LEFT COLUMN: COVER & QUICK BUY BOX -->
             <div style="display: flex; flex-direction: column; align-items: center; width: 280px; max-width: 100%;">
-                <div style="position: relative; width: 100%; text-align: center;">
-                    <img src="${coverSrc}" class="book-cover" alt="${escapeHtml(book.title)}" onerror="if(this.src!=='/static/PustakVerse.png'){this.src='/static/PustakVerse.png';}">
+                <div style="position: relative; width: 100%; text-align: center; cursor: ${previewScreenshots.length > 0 ? 'pointer' : 'default'};" ${previewScreenshots.length > 0 ? 'onclick="openScreenshotsGallery(0)" title="Click to Look Inside sample pages"' : ''}>
+                    <img id="mainGalleryCoverImg" src="${coverSrc}" class="book-cover" alt="${escapeHtml(book.title)}" onerror="if(this.src!=='/static/PustakVerse.png'){this.src='/static/PustakVerse.png';}">
+                    ${previewScreenshots.length > 0 ? `
+                    <div style="position: absolute; top: 12px; left: 12px; background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                        <span>🔍</span> Look Inside
+                    </div>
+                    ` : ''}
                     <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 0.74rem; font-weight: 700; white-space: nowrap;">
                         📖 Digital eBook Edition
                     </div>
                 </div>
+
+                ${previewScreenshots.length > 0 ? `
+                <div class="gallery-thumbs-row" style="display: flex; gap: 8px; margin-top: 14px; overflow-x: auto; width: 100%; padding-bottom: 6px; justify-content: center;">
+                    <div onclick="openScreenshotsGallery(0)" title="Cover" style="cursor: pointer; width: 44px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid #ea580c; flex-shrink: 0;">
+                        <img src="${coverSrc}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+                    </div>
+                    ${previewScreenshots.slice(0, 4).map((shot, sIdx) => `
+                    <div onclick="openScreenshotsGallery(${sIdx})" title="Sample Page ${sIdx + 1}" style="cursor: pointer; width: 44px; height: 60px; border-radius: 6px; overflow: hidden; border: 1.5px solid var(--border-subtle); flex-shrink: 0; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='var(--border-subtle)'">
+                        <img src="${escapeHtml(shot)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+                    </div>
+                    `).join('')}
+                    ${previewScreenshots.length > 4 ? `
+                    <div onclick="openScreenshotsGallery(4)" style="cursor: pointer; width: 44px; height: 60px; border-radius: 6px; background: rgba(15, 23, 42, 0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: var(--text-muted); flex-shrink: 0;">
+                        +${previewScreenshots.length - 4}
+                    </div>
+                    ` : ''}
+                </div>
+                <button type="button" onclick="openScreenshotsGallery(0)" style="margin-top: 8px; width: 100%; background: #f8fafc; border: 1.5px solid #fed7aa; color: #ea580c; font-weight: 800; font-size: 0.84rem; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.1);">
+                    <span>🔍</span> Look Inside (${previewScreenshots.length} Sample Pages)
+                </button>
+                ` : ''}
 
                 <div class="trust-strip" style="width: 100%; box-sizing: border-box;">
                     <div class="trust-item"><span>⚡</span> Instant Delivery</div>
@@ -15078,6 +15429,67 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
                 if (btn) { btn.disabled = false; btn.textContent = '❤️ Donate ₹' + amountInr + ' via Razorpay'; }
             }
         }
+
+        const PV_SCREENSHOTS = ${JSON.stringify(previewScreenshots)};
+        let currentGalleryIdx = 0;
+
+        function openScreenshotsGallery(idx = 0) {
+            if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+            const modal = document.getElementById('pvScreenshotsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                selectGalleryIndex(idx);
+            }
+        }
+
+        function closeScreenshotsGallery() {
+            const modal = document.getElementById('pvScreenshotsModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        function selectGalleryIndex(idx) {
+            if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+            if (idx < 0) idx = 0;
+            if (idx >= PV_SCREENSHOTS.length) idx = PV_SCREENSHOTS.length - 1;
+            currentGalleryIdx = idx;
+            const imgEl = document.getElementById('pvGalleryActiveImage');
+            if (imgEl) imgEl.src = PV_SCREENSHOTS[currentGalleryIdx];
+            const counterEl = document.getElementById('pvGalleryCounter');
+            if (counterEl) counterEl.textContent = 'Sample ' + (currentGalleryIdx + 1) + ' of ' + PV_SCREENSHOTS.length;
+            document.querySelectorAll('.pv-modal-thumb').forEach((th, tIdx) => {
+                if (tIdx === currentGalleryIdx) {
+                    th.style.borderColor = '#ea580c';
+                    th.style.opacity = '1';
+                    th.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                } else {
+                    th.style.borderColor = 'rgba(255,255,255,0.2)';
+                    th.style.opacity = '0.6';
+                }
+            });
+        }
+
+        function prevGalleryImage() {
+            if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+            selectGalleryIndex((currentGalleryIdx - 1 + PV_SCREENSHOTS.length) % PV_SCREENSHOTS.length);
+        }
+
+        function nextGalleryImage() {
+            if (!PV_SCREENSHOTS || PV_SCREENSHOTS.length === 0) return;
+            selectGalleryIndex((currentGalleryIdx + 1) % PV_SCREENSHOTS.length);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('pvScreenshotsModal');
+            if (modal && modal.style.display === 'flex') {
+                if (e.key === 'Escape') closeScreenshotsGallery();
+                if (e.key === 'ArrowLeft') prevGalleryImage();
+                if (e.key === 'ArrowRight') nextGalleryImage();
+            }
+        });
     </script>
 
     <!-- AUTHOR DONATION MODAL -->
@@ -15121,6 +15533,45 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
             ❤️ Donate ₹100 via Razorpay
           </button>
         </div>
+    <!-- E-COMMERCE LOOK INSIDE SCREENSHOT GALLERY MODAL -->
+    <div id="pvScreenshotsModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 99999; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255,255,255,0.12); color: white;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 1.3rem;">📖</span>
+          <div>
+            <div style="font-weight: 800; font-size: 1.05rem;">Look Inside: ${escapeHtml(book.title)}</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">
+              <span id="pvGalleryCounter">Sample 1 of ${previewScreenshots.length}</span>
+              ${isPaid ? `<span style="margin-left: 8px; color: #10b981; font-weight: 700;">· Premium Edition (₹${priceFormatted})</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          ${isPaid && !isPurchased ? `
+          <a href="/buy_book/${book.id}" style="background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);">
+            ⚡ Buy Full Book (₹${priceFormatted})
+          </a>
+          ` : ''}
+          <button type="button" onclick="closeScreenshotsGallery()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
+        </div>
+      </div>
+      
+      <div style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: hidden;">
+        <button type="button" onclick="prevGalleryImage()" style="position: absolute; left: 24px; z-index: 10; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.2); color: white; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(234, 88, 12, 0.85)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.7)'">&#8249;</button>
+        
+        <div style="max-width: 900px; max-height: 80vh; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+          <img id="pvGalleryActiveImage" src="" alt="Sample Page" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+        </div>
+
+        <button type="button" onclick="nextGalleryImage()" style="position: absolute; right: 24px; z-index: 10; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.2); color: white; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(234, 88, 12, 0.85)'" onmouseout="this.style.background='rgba(15, 23, 42, 0.7)'">&#8250;</button>
+      </div>
+
+      <div style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.12); padding: 12px 20px; display: flex; gap: 10px; overflow-x: auto; justify-content: center; align-items: center;">
+        ${previewScreenshots.map((shot, idx) => `
+        <div onclick="selectGalleryIndex(${idx})" id="pvThumb_${idx}" class="pv-modal-thumb" style="cursor: pointer; width: 48px; height: 68px; border-radius: 6px; overflow: hidden; border: 2px solid ${idx === 0 ? '#ea580c' : 'rgba(255,255,255,0.2)'}; flex-shrink: 0; opacity: ${idx === 0 ? '1' : '0.6'}; transition: all 0.2s;">
+          <img src="${escapeHtml(shot)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/PustakVerse.png'">
+        </div>
+        `).join('')}
       </div>
     </div>
 </body>

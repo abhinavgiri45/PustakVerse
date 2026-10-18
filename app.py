@@ -3268,16 +3268,254 @@ def drive_img(url):
             return f"https://lh3.googleusercontent.com/d/{match.group(1)}=w400-rw"
     return url
 
-def normalize_drive_link(url):
-    """Normalizes any Google Drive link format into a clean, embeddable and streamable preview URL."""
+def normalize_book_storage_url(url):
+    """
+    Normalizes book storage URLs across all major cloud providers and database storage:
+    Google Drive, Dropbox, OneDrive, Internet Archive, Cloudflare R2, AWS S3, Supabase Storage, and direct HTTPS.
+    """
     if not url or not isinstance(url, str):
-        return url
-    url = url.strip()
-    match = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)', url)
-    if match:
-        file_id = match.group(1)
+        return url or ""
+    s = url.strip()
+    if not s:
+        return ""
+
+    # 1. Google Drive Links: convert view/sharing to embeddable preview
+    drive_match = re.search(r'drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)', s, re.I)
+    if drive_match:
+        file_id = drive_match.group(1)
         return f"https://drive.google.com/file/d/{file_id}/preview"
-    return url
+
+    # 2. Dropbox Links: convert dl=0/dl=1 to raw=1 for direct streaming
+    if 'dropbox.com' in s:
+        if 'dl=0' in s:
+            return s.replace('dl=0', 'raw=1')
+        if 'dl=1' in s:
+            return s.replace('dl=1', 'raw=1')
+        if 'raw=1' not in s:
+            sep = '&' if '?' in s else '?'
+            return f"{s}{sep}raw=1"
+
+    # 3. Microsoft OneDrive Links: convert view link to direct download stream
+    if '1drv.ms' in s or 'onedrive.live.com' in s:
+        if 'download=1' not in s:
+            sep = '&' if '?' in s else '?'
+            return f"{s}{sep}download=1"
+
+    # 4. Internet Archive Links: convert details page to embed
+    if 'archive.org/details/' in s:
+        return s.replace('archive.org/details/', 'archive.org/embed/')
+
+    return s
+
+def normalize_screenshot_urls(input_data):
+    """
+    Takes a list, JSON array string, or comma/newline-separated strings of screenshot/page preview links,
+    normalizes Google Drive/Dropbox links to direct image endpoints, and returns a JSON string.
+    """
+    if not input_data:
+        return "[]"
+    raw_list = []
+    if isinstance(input_data, list):
+        raw_list = input_data
+    elif isinstance(input_data, str):
+        trimmed = input_data.strip()
+        if trimmed.startswith('['):
+            try:
+                raw_list = json.loads(trimmed)
+            except Exception:
+                raw_list = [s.strip() for s in re.split(r'[\r\n,]+', trimmed) if s.strip()]
+        else:
+            raw_list = [s.strip() for s in re.split(r'[\r\n,]+', trimmed) if s.strip()]
+
+    normalized = []
+    for item in raw_list:
+        if not item or not isinstance(item, str):
+            continue
+        s = item.strip()
+        if not s:
+            continue
+        drive_m = re.search(r'(?:drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)|lh3\.googleusercontent\.com/d/)([a-zA-Z0-9_-]+)', s, re.I)
+        if drive_m:
+            normalized.append(f"https://lh3.googleusercontent.com/d/{drive_m.group(1)}")
+        elif 'dropbox.com' in s:
+            clean = s.replace('dl=0', 'raw=1').replace('dl=1', 'raw=1')
+            normalized.append(clean)
+        else:
+            normalized.append(s)
+
+    return json.dumps(normalized)
+
+def verify_book_integrity(url_str, expected_type='pdf'):
+    """
+    Anti-corruption and reachability verification system for uploaded books.
+    - Resolves cloud storage provider.
+    - Inspects initial byte chunk (magic bytes, headers).
+    - Detects Google Drive sign-in / restricted HTML error pages disguised as PDFs.
+    - Verifies HTTP 200/206 status codes and flags 401/403/404/500 errors.
+    """
+    if not url_str or not isinstance(url_str, str) or not url_str.strip():
+        return {"valid": False, "error_code": "EMPTY_URL", "message": "Storage link cannot be empty."}
+
+    norm_url = normalize_book_storage_url(url_str)
+
+    provider = "direct_http"
+    if 'drive.google.com' in norm_url or 'googleusercontent.com' in norm_url:
+        provider = "google_drive"
+    elif 'dropbox.com' in norm_url:
+        provider = "dropbox"
+    elif 'onedrive.live.com' in norm_url or '1drv.ms' in norm_url:
+        provider = "onedrive"
+    elif 'supabase.co' in norm_url:
+        provider = "supabase"
+    elif 'r2.cloudflarestorage.com' in norm_url or 'r2.dev' in norm_url:
+        provider = "cloudflare_r2"
+    elif 's3.amazonaws.com' in norm_url or 'amazonaws.com' in norm_url:
+        provider = "aws_s3"
+    elif 'archive.org' in norm_url:
+        provider = "internet_archive"
+
+    if not norm_url.startswith('http://') and not norm_url.startswith('https://'):
+        return {
+            "valid": True,
+            "storage_provider": "local_storage",
+            "message": "Local server storage document verified."
+        }
+
+    try:
+        req = urllib.request.Request(
+            norm_url,
+            headers={
+                "User-Agent": "PustakVerse-AntiCorruption-Verifier/3.0 (+https://pustakverse.pages.dev)",
+                "Range": "bytes=0-2047",
+                "Accept": "*/*"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=8) as response:
+            status = response.getcode()
+            if status >= 400:
+                return {
+                    "valid": False,
+                    "error_code": f"HTTP_ERROR_{status}",
+                    "storage_provider": provider,
+                    "message": f"Storage server returned HTTP error status {status}."
+                }
+
+            chunk = response.read(2048)
+            if not chunk or len(chunk) == 0:
+                return {
+                    "valid": False,
+                    "error_code": "EMPTY_FILE",
+                    "storage_provider": provider,
+                    "message": "The file is completely empty (0 bytes received)."
+                }
+
+            lower_chunk = chunk.lower()
+            if b'<!doctype html' in lower_chunk or b'<html' in lower_chunk:
+                if b'accounts.google.com' in lower_chunk or b'sign in' in lower_chunk or b'servicelogin' in lower_chunk:
+                    return {
+                        "valid": False,
+                        "error_code": "RESTRICTED_GOOGLE_SIGNIN_PAGE",
+                        "storage_provider": provider,
+                        "message": "Google Drive link requires sign-in. Please ensure access is set to 'Anyone with the link can view'."
+                    }
+                if b'access denied' in lower_chunk or b'403 forbidden' in lower_chunk or b'unauthorized' in lower_chunk:
+                    return {
+                        "valid": False,
+                        "error_code": "STORAGE_ACCESS_DENIED",
+                        "storage_provider": provider,
+                        "message": "Storage document access is restricted or private."
+                    }
+                if expected_type in ('pdf', 'epub'):
+                    return {
+                        "valid": False,
+                        "error_code": "HTML_PAGE_RETURNED_INSTEAD_OF_DOCUMENT",
+                        "storage_provider": provider,
+                        "message": "The provided link returned an HTML webpage instead of a raw document."
+                    }
+
+            if expected_type == 'pdf':
+                if chunk.startswith(b'%PDF-') or b'%PDF-' in chunk[:1024]:
+                    return {
+                        "valid": True,
+                        "storage_provider": provider,
+                        "detected_format": "pdf",
+                        "status_code": status,
+                        "normalized_url": norm_url,
+                        "message": "Document integrity verified! Valid PDF header detected."
+                    }
+                elif chunk.startswith(b'PK\x03\x04'):
+                    return {
+                        "valid": True,
+                        "storage_provider": provider,
+                        "detected_format": "epub_or_zip",
+                        "status_code": status,
+                        "normalized_url": norm_url,
+                        "message": "Document integrity verified! Valid EPUB/ZIP container detected."
+                    }
+                elif provider in ("google_drive", "internet_archive"):
+                    return {
+                        "valid": True,
+                        "storage_provider": provider,
+                        "detected_format": "cloud_viewer",
+                        "status_code": status,
+                        "normalized_url": norm_url,
+                        "message": "Cloud viewer link verified and reachable."
+                    }
+                else:
+                    return {
+                        "valid": False,
+                        "error_code": "INVALID_PDF_MAGIC_BYTES",
+                        "storage_provider": provider,
+                        "message": "File does not start with a valid PDF signature (%PDF-)."
+                    }
+
+            return {
+                "valid": True,
+                "storage_provider": provider,
+                "status_code": status,
+                "normalized_url": norm_url,
+                "message": "File verified and reachable."
+            }
+
+    except urllib.error.HTTPError as he:
+        if he.code in (401, 403):
+            return {
+                "valid": False,
+                "error_code": "HTTP_FORBIDDEN",
+                "storage_provider": provider,
+                "message": f"Storage server rejected access (HTTP {he.code}). Ensure file is public."
+            }
+        elif he.code == 404:
+            return {
+                "valid": False,
+                "error_code": "HTTP_NOT_FOUND",
+                "storage_provider": provider,
+                "message": "File not found (HTTP 404). Please check the URL."
+            }
+        return {
+            "valid": False,
+            "error_code": f"HTTP_ERROR_{he.code}",
+            "storage_provider": provider,
+            "message": f"Storage server error HTTP {he.code}."
+        }
+    except urllib.error.URLError as ue:
+        return {
+            "valid": False,
+            "error_code": "NETWORK_OR_DNS_ERROR",
+            "storage_provider": provider,
+            "message": f"Could not connect to storage host: {ue.reason}"
+        }
+    except Exception as e:
+        return {
+            "valid": False,
+            "error_code": "VERIFICATION_FAILED",
+            "storage_provider": provider,
+            "message": f"Integrity check failed: {str(e)}"
+        }
+
+def normalize_drive_link(url):
+    """Normalizes any cloud storage or Google Drive link format into a clean, embeddable preview URL."""
+    return normalize_book_storage_url(url)
 
 def normalize_drive_image_link(url):
     """Normalizes Google Drive image links to high-speed CDN URLs."""
@@ -4004,6 +4242,12 @@ def ensure_payment_schema():
             cursor.execute("SHOW COLUMNS FROM books LIKE 'preview_pages'")
             if not cursor.fetchone(): 
                 cursor.execute("ALTER TABLE books ADD COLUMN preview_pages INT NOT NULL DEFAULT 5")
+        except Exception: pass
+
+        try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'preview_screenshots'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN preview_screenshots TEXT DEFAULT NULL")
         except Exception: pass
 
         try:
@@ -5163,9 +5407,40 @@ def view_book(book_id):
                     bestseller_badge = get_dynamic_bestseller_badge(book, book_index=top_two.index(str(book_id)))
             except Exception:
                 pass
-        book['bestseller_badge'] = bestseller_badge
+        # Dynamic Preview Screenshots Showcase
+        book_screenshots = []
+        raw_shots = book.get('preview_screenshots') or ''
+        if isinstance(raw_shots, list):
+            book_screenshots = raw_shots
+        elif isinstance(raw_shots, str) and raw_shots.strip():
+            try:
+                if raw_shots.strip().startswith('['):
+                    book_screenshots = json.loads(raw_shots)
+                else:
+                    book_screenshots = [s.strip() for s in re.split(r'[\r\n,]+', raw_shots) if s.strip()]
+            except Exception:
+                book_screenshots = [s.strip() for s in re.split(r'[\r\n,]+', raw_shots) if s.strip()]
+        if not isinstance(book_screenshots, list):
+            book_screenshots = []
+
+        norm_shots = []
+        for s in book_screenshots:
+            if not isinstance(s, str):
+                continue
+            s = s.strip()
+            if not s:
+                continue
+            m = re.search(r'(?:drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)|lh3\.googleusercontent\.com/d/)([a-zA-Z0-9_-]+)', s, re.I)
+            if m:
+                norm_shots.append(f"https://lh3.googleusercontent.com/d/{m.group(1)}")
+            elif 'dropbox.com' in s:
+                norm_shots.append(s.replace('dl=0', 'raw=1').replace('dl=1', 'raw=1'))
+            else:
+                norm_shots.append(s)
+        book_screenshots = norm_shots
+        book['preview_screenshots_list'] = book_screenshots
                 
-        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, is_purchased=is_purchased, in_library=in_library, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge, allow_donations=allow_donations)
+        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, is_purchased=is_purchased, in_library=in_library, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge, allow_donations=allow_donations, book_screenshots=book_screenshots)
     except Exception as e:
         import logging
         logging.exception(f"Error loading book details for book {book_id}: {e}")
@@ -8366,7 +8641,10 @@ def dashboard():
                 price_paise = -1
 
             raw_preview = int(request.form.get('preview_pages', 5) or 5)
-            preview_pages = min(max(1, raw_preview), 10)
+            preview_pages = 0 if is_paid else min(max(1, raw_preview), 10)
+
+            preview_shots_raw = request.form.get('preview_screenshots', '').strip()
+            preview_screenshots_json = normalize_screenshot_urls(preview_shots_raw) if preview_shots_raw else None
 
             if is_paid and price_paise <= 0:
                 flash('Paid books need a valid price.', 'error')
@@ -8400,6 +8678,13 @@ def dashboard():
                     flash("Invalid cover image format. Please upload a valid photo file (JPG, PNG, WebP, GIF, BMP, SVG, TIFF, AVIF, HEIC, etc.).", "error")
                     return redirect(url_for('dashboard'))
                 f_cov = compress_cover_image(c_file, app.config['UPLOAD_FOLDER'])
+
+            if p_link:
+                p_link = normalize_book_storage_url(p_link)
+                integrity = verify_book_integrity(p_link, expected_type='pdf')
+                if not integrity.get('valid'):
+                    flash(f"Anti-Corruption Integrity Check Failed: {integrity.get('message', 'File could not be verified or is corrupted.')}", "error")
+                    return redirect(url_for('dashboard'))
 
             f_pdf = p_link if p_link else (secure_filename(p_file.filename) if p_file and p_file.filename else "")
             if p_file and not p_link:
@@ -8442,12 +8727,12 @@ def dashboard():
                 allow_author_donations = 1 if request.form.get('allow_author_donations') in ('1', 'true', 'on', True) else 0
 
                 cursor.execute(
-                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn, is_quarantined, archive_status, allow_author_donations) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn, is_quarantined, archive_status, allow_author_donations, preview_screenshots) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid,
                      price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret,
                      rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description, user_sbin, user_sbin,
-                     is_quarantined, archive_status, allow_author_donations)
+                     is_quarantined, archive_status, allow_author_donations, preview_screenshots_json)
                 )
                 new_book_id = cursor.lastrowid
                 db.commit()
@@ -8717,6 +9002,30 @@ def dashboard():
             try: db.close()
             except: pass
 
+@app.route('/api/verify-book-integrity', methods=['GET', 'POST'])
+def api_verify_book_integrity():
+    """
+    Live anti-corruption test route for author publishing.
+    Tests file reachability, magic bytes, zero-byte status, and flags Google login / HTML error pages.
+    """
+    url_val = ""
+    expected_type = "pdf"
+    if request.method == 'POST':
+        if request.is_json:
+            data = request.get_json() or {}
+            url_val = data.get('url', '')
+            expected_type = data.get('expected_type', 'pdf')
+        else:
+            url_val = request.form.get('url', '')
+            expected_type = request.form.get('expected_type', 'pdf')
+    else:
+        url_val = request.args.get('url', '')
+        expected_type = request.args.get('expected_type', 'pdf')
+
+    res = verify_book_integrity(url_val, expected_type=expected_type)
+    status_code = 200 if res.get('valid') else 422
+    return jsonify(res), status_code
+
 @app.route('/api/dashboard/books', methods=['GET'])
 def api_dashboard_books():
     if 'user_id' not in session:
@@ -8735,7 +9044,7 @@ def api_dashboard_books():
                 SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file,
                        books.is_paid, books.price_paise, books.private_pdf, books.description,
                        books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret,
-                       books.rp_verified, books.rp_verify_message, books.sbin_no,
+                       books.rp_verified, books.rp_verify_message, books.sbin_no, books.preview_screenshots,
                        users.username as author_name, users.id as author_id
                 FROM books
                 LEFT JOIN users ON books.author_id = users.id
@@ -8746,7 +9055,7 @@ def api_dashboard_books():
                 SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file,
                        books.is_paid, books.price_paise, books.private_pdf, books.description,
                        books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret,
-                       books.rp_verified, books.rp_verify_message, books.sbin_no,
+                       books.rp_verified, books.rp_verify_message, books.sbin_no, books.preview_screenshots,
                        users.username as author_name, users.id as author_id
                 FROM books
                 LEFT JOIN users ON books.author_id = users.id
@@ -8856,10 +9165,16 @@ def edit_book(book_id):
             is_paid = False
             
         raw_preview = int(request.form.get('preview_pages', book.get('preview_pages', 5)) or 5)
-        preview_pages = min(max(1, raw_preview), 10)
+        preview_pages = 0 if is_paid else min(max(1, raw_preview), 10)
+
+        preview_shots_raw = request.form.get('preview_screenshots', '').strip()
+        if preview_shots_raw:
+            preview_screenshots_json = normalize_screenshot_urls(preview_shots_raw)
+        else:
+            preview_screenshots_json = book.get('preview_screenshots')
         
         c_link = normalize_drive_image_link(request.form.get('cover_link', '').strip())
-        p_link = normalize_drive_link(request.form.get('pdf_link', '').strip())
+        p_link = normalize_book_storage_url(request.form.get('pdf_link', '').strip())
         c_file = request.files.get('cover_image')
         p_file = request.files.get('pdf_file')
         
@@ -8907,6 +9222,10 @@ def edit_book(book_id):
             
         f_pdf = book['pdf_file']
         if p_link: 
+            integrity = verify_book_integrity(p_link, expected_type='pdf')
+            if not integrity.get('valid'):
+                flash(f"Anti-Corruption Integrity Check Failed: {integrity.get('message', 'File could not be verified or is corrupted.')}", "error")
+                return redirect(url_for('dashboard'))
             f_pdf = p_link
         elif p_file and p_file.filename:
             p_file.seek(0, os.SEEK_END)
@@ -8927,13 +9246,13 @@ def edit_book(book_id):
         update_sql = (
             "UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, "
             "private_pdf=%s, preview_pages=%s, rp_key_id=%s, rp_key_secret=%s, rp_verified=%s, rp_verify_message=%s"
-            + rp_verified_at_sql + ", description=%s, allow_author_donations=%s WHERE id=%s"
+            + rp_verified_at_sql + ", description=%s, allow_author_donations=%s, preview_screenshots=%s WHERE id=%s"
         )
         params = [title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages,
                   book_key_id, book_key_secret, rp_verified, rp_verify_message]
         if rp_verified_at_sql.strip().startswith(", rp_verified_at=%s"):
             params.append(rp_verified_at_param)
-        params.extend([description, allow_author_donations, book_id])
+        params.extend([description, allow_author_donations, preview_screenshots_json, book_id])
 
         cursor.execute(update_sql, tuple(params))
         db.commit()
