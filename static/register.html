@@ -385,7 +385,7 @@
             </p>
             <div id="twoFactorAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
             <form action="/login" method="POST" id="twoFactorForm" onsubmit="handleTwoFactorSubmit(event)">
-                <input type="hidden" name="csrf_token" value="509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed">
+                <input type="hidden" name="csrf_token" value="352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54">
                 <input type="hidden" name="action" value="verify_2fa">
                 <div class="form-group">
                     <label>Verification Code</label>
@@ -411,7 +411,7 @@
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
-                    <input type="hidden" name="csrf_token" value="509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed">
+                    <input type="hidden" name="csrf_token" value="352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -447,7 +447,7 @@
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
-                    <input type="hidden" name="csrf_token" value="509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed">
+                    <input type="hidden" name="csrf_token" value="352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -670,7 +670,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -734,7 +734,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -769,7 +769,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -799,7 +799,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '509618c4a24d3856ffe5db8ee868f09ed6577b6d0be9741b231538cdfd10c7ed' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '352a453e16f82a4371f6d1dc41acc2061e0887d6d73c26f3f21303985cc31d54' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();

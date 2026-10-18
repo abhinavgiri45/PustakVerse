@@ -315,6 +315,14 @@
             </div>
         </div>
 
+        <!-- RETENTION POLICY NOTICE -->
+        <div style="background: rgba(234, 88, 12, 0.08); border: 1.5px solid rgba(234, 88, 12, 0.25); border-radius: 12px; padding: 14px 18px; margin-bottom: 22px; display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 1.6rem; flex-shrink: 0;">🛡️</div>
+            <div style="font-size: 0.84rem; color: var(--text-dark); line-height: 1.5;">
+                <strong>Official Receipt Policy:</strong> Detailed printable tax receipts are available on PustakVerse systems for <strong>30 days</strong> from the transaction date. Please download and store your receipts locally for tax/accounting purposes. Your complete payment history records and book access remain preserved for <strong>lifetime</strong>.
+            </div>
+        </div>
+
         <!-- STATS OVERVIEW CARDS -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -402,9 +410,15 @@
                             </td>
                             <td style="text-align: right;">
                                 {% if payment.status == 'paid' %}
-                                <a href="/invoice/{{ payment.razorpay_order_id }}" target="_blank" class="btn-invoice">
-                                    <span>📄</span> Invoice
-                                </a>
+                                <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                                    <a href="/api/receipt/download/{{ payment.razorpay_order_id }}" class="btn-invoice" style="background: #15803d;" title="Instantly download official receipt">
+                                        <span>📥</span> Download
+                                    </a>
+                                    <a href="/invoice/{{ payment.razorpay_order_id }}" target="_blank" class="btn-invoice" title="View Printable Invoice">
+                                        <span>📄</span> Invoice
+                                    </a>
+                                </div>
+                                <div style="font-size: 0.72rem; color: #16a34a; margin-top: 3px; font-weight: 600;">✓ Active (30d server window)</div>
                                 {% else %}
                                 <span style="color: #94a3b8; font-size: 0.78rem;">Pending</span>
                                 {% endif %}
@@ -603,9 +617,36 @@
                         const displayAmount = `₹${((p.amount_paise || 0) / 100).toFixed(2)}`;
                         const donationNotice = p.donation_paise > 0 ? `<div style="font-size: 0.72rem; color: #d97706; margin-top: 2px;">(incl. ₹${(p.donation_paise / 100).toFixed(2)} donation)</div>` : '';
 
-                        const invoiceBtn = p.status === 'paid' 
-                            ? `<a href="/invoice/${encodeURIComponent(p.razorpay_order_id)}" target="_blank" class="btn-invoice"><span>📄</span> Invoice</a>`
-                            : `<span style="color: #94a3b8; font-size: 0.78rem;">Pending</span>`;
+                        const purchaseDate = new Date(p.paid_at || p.created_at || Date.now());
+                        const isExpired = p.receipt_expired !== undefined ? p.receipt_expired : (!isNaN(purchaseDate.getTime()) && ((Date.now() - purchaseDate.getTime()) > (30 * 24 * 60 * 60 * 1000)));
+
+                        let invoiceBtn = '';
+                        if (p.status === 'paid') {
+                            if (!isExpired) {
+                                invoiceBtn = `
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                                        <a href="/api/receipt/download/${encodeURIComponent(p.razorpay_order_id)}" class="btn-invoice" style="background: #15803d;" title="Instantly download official receipt">
+                                            <span>📥</span> Download
+                                        </a>
+                                        <a href="/invoice/${encodeURIComponent(p.razorpay_order_id)}" target="_blank" class="btn-invoice" title="View Printable Invoice">
+                                            <span>📄</span> Invoice
+                                        </a>
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: #16a34a; margin-top: 3px; font-weight: 600;">✓ Active (30d server window)</div>
+                                `;
+                            } else {
+                                invoiceBtn = `
+                                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                                        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; background: rgba(100, 116, 139, 0.12); color: #64748b; font-size: 0.74rem; font-weight: 700;" title="Detailed receipt files are hosted on server for 30 days. Lifetime transaction record is preserved.">
+                                            📜 Expired (30d policy)
+                                        </span>
+                                        <div style="font-size: 0.7rem; color: #94a3b8;">Lifetime Record Saved</div>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            invoiceBtn = `<span style="color: #94a3b8; font-size: 0.78rem;">Pending</span>`;
+                        }
 
                         tr.innerHTML = `
                             <td style="color: #64748b; font-size: 0.82rem; white-space: nowrap;">

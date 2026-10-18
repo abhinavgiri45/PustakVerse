@@ -248,6 +248,13 @@
             </div>
         </div>
 
+        <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 1.5rem;">🕒</div>
+            <div style="font-size: 0.82rem; color: #1e40af; line-height: 1.5;">
+                <strong>30-Day Receipt Policy:</strong> This official printable receipt is hosted on PustakVerse systems for <strong>30 days</strong> from the transaction date. Please download or print an offline copy for your permanent records. Your lifetime transaction history is saved in your Payment History.
+            </div>
+        </div>
+
         <table>
             <thead>
                 <tr>
@@ -310,9 +317,14 @@
 
         <div class="actions-bar">
             <a href="/payment_history" class="back-link">← Return to Payment History</a>
-            <button onclick="window.print()" class="btn-print">
-                <span>🖨️</span> Download / Print Tax Invoice
-            </button>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <a href="/api/receipt/download/{{ purchase.razorpay_order_id }}" class="btn-print" style="background: #16a34a; text-decoration: none;">
+                    <span>📥</span> Download Receipt (.html)
+                </a>
+                <button onclick="window.print()" class="btn-print">
+                    <span>🖨️</span> Print Tax Invoice
+                </button>
+            </div>
         </div>
     </div>
 

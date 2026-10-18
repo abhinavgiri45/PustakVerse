@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt Expired (30-Day Policy) · PustakVerse</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='PustakVerse.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            padding: 40px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .expired-card {
+            max-width: 620px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            padding: 40px 32px;
+            text-align: center;
+        }
+        .icon-badge {
+            width: 72px;
+            height: 72px;
+            background: #fff7ed;
+            border: 2px solid #fdba74;
+            color: #ea580c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            margin: 0 auto 20px;
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        p {
+            font-size: 0.92rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .record-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            text-align: left;
+            margin-bottom: 28px;
+        }
+        .record-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px 0;
+            font-size: 0.88rem;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .record-row:last-child { border-bottom: none; }
+        .record-label { color: #64748b; font-weight: 600; }
+        .record-val { color: #0f172a; font-weight: 700; font-family: monospace; }
+        .lifetime-badge {
+            background: #dcfce7;
+            color: #166534;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #ea580c; color: white; }
+        .btn-primary:hover { background: #c2410c; }
+        .btn-secondary { background: #f1f5f9; color: #334155; }
+        .btn-secondary:hover { background: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="expired-card">
+        <div class="icon-badge">🕒</div>
+        <h1>Detailed Receipt Window Expired</h1>
+        <p>
+            In accordance with PustakVerse security &amp; storage retention policy, detailed server-side invoice documents are hosted on our cloud systems for <strong>30 days</strong> from purchase. 
+            However, your purchase record and book access remain preserved for <strong>lifetime</strong>.
+        </p>
+
+        <div class="record-box">
+            <div class="record-row">
+                <span class="record-label">Book Title:</span>
+                <span class="record-val" style="font-family: inherit;">{{ book.title if book else 'Purchased eBook' }}</span>
+            </div>
+            <div class="record-row">
+                <span class="record-label">Order Reference:</span>
+                <span class="record-val">{{ purchase.razorpay_order_id }}</span>
+            </div>
+            <div class="record-row">
+                <span class="record-label">Payment ID:</span>
+                <span class="record-val">{{ purchase.razorpay_payment_id or 'PAID' }}</span>
+            </div>
+            <div class="record-row">
+                <span class="record-label">Date of Purchase:</span>
+                <span class="record-val">{{ (purchase.paid_at.strftime('%d %B %Y') if purchase.paid_at and purchase.paid_at.strftime is defined else purchase.paid_at) if purchase.paid_at else 'N/A' }}</span>
+            </div>
+            <div class="record-row">
+                <span class="record-label">Amount Paid:</span>
+                <span class="record-val" style="color: #166534;">₹{{ "%.2f"|format((purchase.amount_paise or 0)/100) }}</span>
+            </div>
+            <div class="record-row">
+                <span class="record-label">Account Status:</span>
+                <span class="lifetime-badge">✓ Lifetime Verified Ownership</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/payment_history" class="btn-action btn-primary">📜 View Payment History</a>
+            <a href="/my-library" class="btn-action btn-secondary">📚 Open My Library</a>
+        </div>
+    </div>
+</body>
+</html>
