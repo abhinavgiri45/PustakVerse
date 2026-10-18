@@ -934,6 +934,139 @@
             }
         }
 
+        /* AUTHOR SEARCH RESULTS & LIKE SYSTEM */
+        .btn-author-like {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(234, 88, 12, 0.08);
+            color: #ea580c;
+            border: 1.5px solid rgba(234, 88, 12, 0.25);
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+        }
+        .btn-author-like:hover {
+            background: rgba(234, 88, 12, 0.16);
+            border-color: #ea580c;
+            transform: scale(1.04);
+        }
+        .btn-author-like:active {
+            transform: scale(0.96);
+        }
+        .btn-author-like.liked {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff;
+            border-color: #dc2626;
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+        }
+        .btn-author-like.liked .like-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+        .btn-author-like .like-badge {
+            background: rgba(234, 88, 12, 0.15);
+            color: #ea580c;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            min-width: 18px;
+            text-align: center;
+        }
+        .pv-author-card {
+            background: var(--pv-surface, #ffffff);
+            border: 1px solid var(--pv-border, #e2e8f0);
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+        .pv-author-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            border-color: rgba(234, 88, 12, 0.4);
+        }
+        .pv-author-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ea580c, #f97316);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(234, 88, 12, 0.25);
+        }
+        .pv-author-name {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--pv-text, #0f172a);
+            text-decoration: none;
+        }
+        .pv-author-name:hover {
+            color: #ea580c;
+        }
+        .pv-author-role-sub {
+            font-size: 0.8rem;
+            color: var(--pv-text-muted, #64748b);
+            margin-top: 2px;
+        }
+        .pv-verified-badge {
+            font-size: 0.72rem;
+            background: #dcfce7;
+            color: #166534;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+        .pv-author-tag {
+            font-size: 0.72rem;
+            background: rgba(234, 88, 12, 0.1);
+            color: #ea580c;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+        .pv-author-bio-snippet {
+            font-size: 0.86rem;
+            color: var(--pv-text-muted, #64748b);
+            line-height: 1.45;
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .pv-author-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid var(--pv-border, #f1f5f9);
+        }
+        .pv-author-view-link {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #ea580c;
+            text-decoration: none;
+        }
+        .pv-author-view-link:hover {
+            text-decoration: underline;
+        }
+
 </style>
 </head>
 <body>
@@ -1168,6 +1301,17 @@
                         🔄 Next Reset: Monday 00:00
                     </span>
                 </div>
+            </div>
+        <!-- AUTHOR SEARCH RESULTS SHOWCASE (Appears dynamically when an author is searched) -->
+        <div id="authorSearchResultContainer" style="display: none; margin-bottom: 28px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px;">
+                <span style="font-size: 0.88rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #ea580c; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>✍️</span> Author Search Result
+                </span>
+                <span id="authorSearchCount" style="font-size: 0.82rem; color: var(--pv-text-muted, #94a3b8);">Matching Authors</span>
+            </div>
+            <div id="authorCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+                <!-- Injected dynamically via JavaScript -->
             </div>
         </div>
 
@@ -1899,12 +2043,204 @@
             }
         });
 
+        function escapeHtml(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        let authorSearchDebounceTimer = null;
+        let lastAuthorSearchQuery = '';
+
+        function searchMatchingAuthors(query) {
+            const container = document.getElementById('authorSearchResultContainer');
+            const grid = document.getElementById('authorCardsGrid');
+            const countLabel = document.getElementById('authorSearchCount');
+            if (!container || !grid) return;
+
+            const q = (query || '').trim();
+            if (!q || q.length < 2) {
+                container.style.display = 'none';
+                grid.innerHTML = '';
+                lastAuthorSearchQuery = '';
+                return;
+            }
+
+            if (q === lastAuthorSearchQuery) return;
+            lastAuthorSearchQuery = q;
+
+            // Fast-path: Check loaded book cards in library DOM
+            const qLower = q.toLowerCase();
+            const matchedAuthorsMap = new Map();
+            const cards = document.querySelectorAll('.book-card');
+            cards.forEach(card => {
+                const author = (card.getAttribute('data-author') || '').trim();
+                if (author && author.toLowerCase().includes(qLower) && !matchedAuthorsMap.has(author.toLowerCase())) {
+                    matchedAuthorsMap.set(author.toLowerCase(), {
+                        username: author,
+                        role: 'author',
+                        book_count: 1,
+                        like_count: 0,
+                        is_verified: false,
+                        user_has_liked: false
+                    });
+                } else if (author && matchedAuthorsMap.has(author.toLowerCase())) {
+                    matchedAuthorsMap.get(author.toLowerCase()).book_count++;
+                }
+            });
+
+            if (matchedAuthorsMap.size > 0 && grid.children.length === 0) {
+                renderAuthorCards(Array.from(matchedAuthorsMap.values()));
+            }
+
+            // Authoritative server search
+            if (authorSearchDebounceTimer) clearTimeout(authorSearchDebounceTimer);
+            authorSearchDebounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/authors/search?q=${encodeURIComponent(q)}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data && data.success && Array.isArray(data.authors) && data.authors.length > 0) {
+                        renderAuthorCards(data.authors);
+                    } else if (matchedAuthorsMap.size > 0) {
+                        renderAuthorCards(Array.from(matchedAuthorsMap.values()));
+                    } else {
+                        container.style.display = 'none';
+                        grid.innerHTML = '';
+                    }
+                } catch (err) {
+                    console.error('Error fetching authors:', err);
+                }
+            }, 120);
+        }
+
+        function renderAuthorCards(authors) {
+            const container = document.getElementById('authorSearchResultContainer');
+            const grid = document.getElementById('authorCardsGrid');
+            const countLabel = document.getElementById('authorSearchCount');
+            if (!container || !grid) return;
+
+            if (!authors || authors.length === 0) {
+                container.style.display = 'none';
+                grid.innerHTML = '';
+                return;
+            }
+
+            if (countLabel) {
+                countLabel.textContent = `${authors.length} Author${authors.length === 1 ? '' : 's'} Found`;
+            }
+
+            grid.innerHTML = authors.map(a => {
+                const authorName = a.username || 'Author';
+                const initial = authorName.charAt(0).toUpperCase();
+                const isVerified = !!a.is_verified || a.role === 'developer' || a.role === 'official';
+                const bookCount = a.book_count || 1;
+                const likeCount = a.like_count || 0;
+                const userHasLiked = !!a.user_has_liked;
+                const bio = a.author_bio || '';
+                const authorId = a.id || 0;
+
+                return `
+                    <div class="pv-author-card">
+                        <div style="display: flex; gap: 14px; align-items: center;">
+                            <div class="pv-author-avatar">${escapeHtml(initial)}</div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <a href="/author/${encodeURIComponent(authorName)}" class="pv-author-name">${escapeHtml(authorName)}</a>
+                                    ${isVerified ? '<span class="pv-verified-badge" title="Verified Creator">✓ Verified</span>' : ''}
+                                    <span class="pv-author-tag">${escapeHtml(a.role || 'author')}</span>
+                                </div>
+                                <div class="pv-author-role-sub">📚 <strong>${bookCount}</strong> Published Title${bookCount === 1 ? '' : 's'}</div>
+                            </div>
+                        </div>
+                        ${bio ? `<p class="pv-author-bio-snippet">${escapeHtml(bio)}</p>` : ''}
+                        <div class="pv-author-card-footer">
+                            <a href="/author/${encodeURIComponent(authorName)}" class="pv-author-view-link">View Author Showcase →</a>
+                            <button type="button" class="btn-author-like ${userHasLiked ? 'liked' : ''}" onclick="handleAuthorLike(event, ${authorId}, this)" data-author-id="${authorId}" title="${userHasLiked ? 'You like this author' : 'Give a like to this author'}">
+                                <span class="heart-icon">${userHasLiked ? '❤️' : '🤍'}</span>
+                                <span class="like-label">${userHasLiked ? 'Liked' : 'Like'}</span>
+                                <span class="like-badge">${likeCount}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.style.display = 'block';
+        }
+
+        async function handleAuthorLike(event, authorId, btn) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            if (!btn) return;
+            if (!authorId || authorId <= 0) {
+                if (typeof openFrontScreenLogin === 'function') {
+                    openFrontScreenLogin('reader');
+                } else {
+                    window.location.href = '/login';
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/api/author/${authorId}/like`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (res.status === 401) {
+                    btn.disabled = false;
+                    if (typeof openFrontScreenLogin === 'function') {
+                        openFrontScreenLogin('reader');
+                    } else {
+                        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                    }
+                    if (typeof showToast === 'function') {
+                        showToast('Please sign in to like this author ❤️', 'warning');
+                    } else {
+                        alert('Please sign in to PustakVerse to give a like to this author ❤️');
+                    }
+                    return;
+                }
+
+                const data = await res.json();
+                btn.disabled = false;
+                if (data && data.success) {
+                    const btns = document.querySelectorAll(`[data-author-id="${authorId}"]`);
+                    btns.forEach(b => {
+                        const icon = b.querySelector('.heart-icon');
+                        const lbl = b.querySelector('.like-label');
+                        const badge = b.querySelector('.like-badge');
+                        if (data.liked) {
+                            b.classList.add('liked');
+                            if (icon) icon.textContent = '❤️';
+                            if (lbl) lbl.textContent = 'Liked';
+                        } else {
+                            b.classList.remove('liked');
+                            if (icon) icon.textContent = '🤍';
+                            if (lbl) lbl.textContent = 'Like';
+                        }
+                        if (badge) badge.textContent = data.like_count;
+                    });
+                }
+            } catch (err) {
+                btn.disabled = false;
+                console.error('Error toggling author like:', err);
+            }
+        }
+
         function filterBooks() {
             let input = document.getElementById('searchInput').value.toLowerCase().trim();
             if (!input && window.currentActiveFilter && window.currentActiveFilter !== 'all') {
                 applyQuickFilter(window.currentActiveFilter);
+                searchMatchingAuthors('');
                 return;
             }
+
+            // Search matching authors in Global Library
+            searchMatchingAuthors(input);
+
             let cards = document.querySelectorAll('.book-card');
             let visibleCount = 0;
             
@@ -2204,6 +2540,7 @@
 
             const searchInput = document.getElementById('searchInput');
             if (searchInput) searchInput.value = '';
+            if (typeof searchMatchingAuthors === 'function') searchMatchingAuthors('');
 
             const loadMoreBtn = document.getElementById('loadMoreBtn');
             if (loadMoreBtn) {

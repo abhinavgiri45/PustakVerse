@@ -2861,6 +2861,157 @@ export default {
       });
     }
 
+    // 4D-SEARCH. Author Search in Global Library: GET /api/authors/search?q=...
+    if (url.pathname === "/api/authors/search" && request.method === "GET") {
+      const q = (url.searchParams.get("q") || "").trim();
+      if (!q || !env.DB) {
+        return new Response(JSON.stringify({ success: true, authors: [] }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      await ensureAuthorLikesTable(env);
+      const sessionUser = getSessionUser(request);
+      const currentUserId = sessionUser?.id ? Number(sessionUser.id) : 0;
+      const likePattern = `%${q}%`;
+
+      try {
+        const query = `
+          SELECT u.id, u.username, u.role, u.is_verified, u.author_bio,
+                 COUNT(DISTINCT b.id) as book_count,
+                 (SELECT COUNT(*) FROM author_likes WHERE author_id = u.id) as like_count,
+                 (SELECT COUNT(*) FROM author_likes WHERE author_id = u.id AND user_id = ?) as user_has_liked
+          FROM users u
+          LEFT JOIN books b ON b.author_id = u.id AND (b.is_quarantined = 0 OR b.is_quarantined IS NULL)
+          WHERE (LOWER(u.username) LIKE LOWER(?) OR LOWER(COALESCE(u.author_bio, '')) LIKE LOWER(?))
+            AND (u.role IN ('author', 'developer', 'official') OR EXISTS (SELECT 1 FROM books WHERE author_id = u.id))
+          GROUP BY u.id
+          ORDER BY (LOWER(u.username) = LOWER(?)) DESC, like_count DESC, book_count DESC
+          LIMIT 8
+        `;
+        const res = await env.DB.prepare(query).bind(currentUserId, likePattern, likePattern, q).all();
+        const authors = (res.results || []).map(a => ({
+          ...a,
+          is_verified: Boolean(a.is_verified || a.role === 'developer' || a.role === 'official'),
+          user_has_liked: Boolean(a.user_has_liked)
+        }));
+
+        return new Response(JSON.stringify({ success: true, authors }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        console.error("Author search error:", err);
+        return new Response(JSON.stringify({ success: false, authors: [], error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 4D-LIKE-GET. Query Author Like Status: GET /api/author/:id/like
+    const authorLikeGetMatch = url.pathname.match(/^\/api\/author(?:s)?\/(\d+)\/like\/?$/);
+    if (authorLikeGetMatch && request.method === "GET") {
+      const authorId = parseInt(authorLikeGetMatch[1], 10);
+      if (!env.DB || !authorId) {
+        return new Response(JSON.stringify({ success: true, like_count: 0, user_has_liked: false }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      await ensureAuthorLikesTable(env);
+      const sessionUser = getSessionUser(request);
+      const userId = sessionUser?.id ? Number(sessionUser.id) : 0;
+      const countRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM author_likes WHERE author_id = ?").bind(authorId).first();
+      const userLikedRow = userId ? await env.DB.prepare("SELECT 1 FROM author_likes WHERE author_id = ? AND user_id = ? LIMIT 1").bind(authorId, userId).first() : null;
+      return new Response(JSON.stringify({
+        success: true,
+        like_count: countRow ? Number(countRow.cnt) : 0,
+        user_has_liked: Boolean(userLikedRow)
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4D-LIKE-POST. Toggle Author Like: POST /api/author/:id/like or POST /api/author/like
+    const authorLikePostMatch = url.pathname.match(/^\/api\/author(?:s)?\/(\d+)\/like\/?$/);
+    if ((authorLikePostMatch || url.pathname === "/api/author/like") && request.method === "POST") {
+      const sessionUser = getSessionUser(request);
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({
+          success: false,
+          authenticated: false,
+          message: "Please log in to like this author."
+        }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      let authorId = 0;
+      if (authorLikePostMatch) {
+        authorId = parseInt(authorLikePostMatch[1], 10);
+      } else {
+        try {
+          const body = await request.clone().json();
+          authorId = parseInt(body.author_id, 10);
+        } catch (_) {
+          const fd = await request.formData().catch(() => new FormData());
+          authorId = parseInt(fd.get("author_id"), 10);
+        }
+      }
+
+      if (!authorId || isNaN(authorId)) {
+        return new Response(JSON.stringify({ success: false, message: "Invalid author ID." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, message: "Database unavailable." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      await ensureAuthorLikesTable(env);
+      const userId = Number(sessionUser.id);
+
+      // Check if user already liked this author
+      const existing = await env.DB.prepare(
+        "SELECT id FROM author_likes WHERE author_id = ? AND user_id = ? LIMIT 1"
+      ).bind(authorId, userId).first();
+
+      let liked = false;
+      if (existing) {
+        await env.DB.prepare(
+          "DELETE FROM author_likes WHERE author_id = ? AND user_id = ?"
+        ).bind(authorId, userId).run();
+        liked = false;
+      } else {
+        await env.DB.prepare(
+          "INSERT OR IGNORE INTO author_likes (author_id, user_id) VALUES (?, ?)"
+        ).bind(authorId, userId).run();
+        liked = true;
+      }
+
+      const countRow = await env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM author_likes WHERE author_id = ?"
+      ).bind(authorId).first();
+      const likeCount = countRow ? Number(countRow.cnt) : 0;
+
+      return new Response(JSON.stringify({
+        success: true,
+        authenticated: true,
+        liked,
+        like_count: likeCount
+      }), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "private, no-cache, no-store, must-revalidate"
+        }
+      });
+    }
+
     // 4D-0. Real Author Reader Analytics & Telemetry: GET /api/author/analytics
     if (url.pathname === "/api/author/analytics" && request.method === "GET") {
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -9393,7 +9544,21 @@ Format with these exact markdown sections:
         currentUser = await verifySession(cookies.pv_session, env);
       } catch (_) {}
 
-      return new Response(renderEdgeAuthorHtml(author, authorBooks, currentUser), {
+      let likeCount = 0;
+      let userHasLiked = false;
+      if (env.DB && author && author.id) {
+        try {
+          await ensureAuthorLikesTable(env);
+          const cRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM author_likes WHERE author_id = ?").bind(author.id).first();
+          likeCount = cRow ? Number(cRow.cnt) : 0;
+          if (currentUser?.id) {
+            const hasRow = await env.DB.prepare("SELECT 1 FROM author_likes WHERE author_id = ? AND user_id = ? LIMIT 1").bind(author.id, currentUser.id).first();
+            userHasLiked = Boolean(hasRow);
+          }
+        } catch (_) {}
+      }
+
+      return new Response(renderEdgeAuthorHtml(author, authorBooks, currentUser, likeCount, userHasLiked), {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" }
       });
@@ -11055,6 +11220,25 @@ async function ensureModerationTables(env) {
     console.warn("ensureModerationTables warning:", err.message);
   }
   _ensuredTables.add("moderation");
+}
+
+async function ensureAuthorLikesTable(env) {
+  if (!env || !env.DB) return;
+  if (_ensuredTables.has("author_likes")) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS author_likes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(author_id, user_id)
+      )
+    `).run();
+  } catch (err) {
+    console.warn("ensureAuthorLikesTable warning:", err.message);
+  }
+  _ensuredTables.add("author_likes");
 }
 
 function renderContactLeadershipCards(leaders) {
@@ -16184,7 +16368,7 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
 </html>`;
 }
 
-function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
+function renderEdgeAuthorHtml(author, books = [], currentUser = null, likeCount = 0, userHasLiked = false) {
   const authorName = author.username || "Author";
   const authorRole = author.role || "author";
   const isVerified = !!author.is_verified || authorRole === "developer" || authorRole === "official";
@@ -16440,6 +16624,49 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
       color: var(--primary-orange);
       border-color: var(--primary-orange);
     }
+    .btn-author-like {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(234, 88, 12, 0.08);
+      color: #ea580c;
+      border: 1.5px solid rgba(234, 88, 12, 0.25);
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+    .btn-author-like:hover {
+      background: rgba(234, 88, 12, 0.16);
+      border-color: #ea580c;
+      transform: scale(1.04);
+    }
+    .btn-author-like:active {
+      transform: scale(0.96);
+    }
+    .btn-author-like.liked {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #ffffff;
+      border-color: #dc2626;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+    }
+    .btn-author-like.liked .like-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+    .btn-author-like .like-badge {
+      background: rgba(234, 88, 12, 0.15);
+      color: #ea580c;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      min-width: 18px;
+      text-align: center;
+    }
     .author-actions-top {
       display: flex;
       gap: 10px;
@@ -16637,6 +16864,11 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
         </p>
 
         <div class="social-links">
+          <button type="button" class="btn-author-like ${userHasLiked ? 'liked' : ''}" id="authorLikeBtn" onclick="toggleAuthorLikePage(${author.id || 0})" data-liked="${userHasLiked ? '1' : '0'}" title="${userHasLiked ? 'You like this author' : 'Give a like to this author'}">
+            <span class="heart-icon">${userHasLiked ? '❤️' : '🤍'}</span>
+            <span class="like-label">${userHasLiked ? 'Liked' : 'Like Author'}</span>
+            <span class="like-badge" id="authorLikeCount">${likeCount}</span>
+          </button>
           ${socials.website ? `<a href="${escapeHtml(socials.website)}" target="_blank" rel="noopener" class="social-chip">🌐 Website</a>` : ''}
           ${socials.github ? `<a href="${escapeHtml(socials.github)}" target="_blank" rel="noopener" class="social-chip">💻 GitHub</a>` : ''}
           ${socials.twitter || socials.x ? `<a href="${escapeHtml(socials.twitter || socials.x)}" target="_blank" rel="noopener" class="social-chip">🐦 X / Twitter</a>` : ''}
@@ -16684,6 +16916,44 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
   </footer>
 
   <script>
+    async function toggleAuthorLikePage(authorId) {
+      var btn = document.getElementById('authorLikeBtn');
+      var countEl = document.getElementById('authorLikeCount');
+      if (!btn || !authorId) return;
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/author/' + authorId + '/like', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.status === 401) {
+          btn.disabled = false;
+          alert('Please sign in to PustakVerse to like this author ❤️');
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        var data = await res.json();
+        btn.disabled = false;
+        if (data.success) {
+          var icon = btn.querySelector('.heart-icon');
+          var lbl = btn.querySelector('.like-label');
+          if (data.liked) {
+            btn.classList.add('liked');
+            if (icon) icon.textContent = '❤️';
+            if (lbl) lbl.textContent = 'Liked';
+          } else {
+            btn.classList.remove('liked');
+            if (icon) icon.textContent = '🤍';
+            if (lbl) lbl.textContent = 'Like Author';
+          }
+          if (countEl) countEl.textContent = data.like_count;
+        }
+      } catch (err) {
+        btn.disabled = false;
+        console.error('Like author failed:', err);
+      }
+    }
+
     function copyAuthorShareLink() {
       if (navigator.clipboard && window.location.href) {
         navigator.clipboard.writeText(window.location.href).then(function() {

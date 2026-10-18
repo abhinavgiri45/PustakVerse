@@ -153,6 +153,50 @@
         }
         .social-chip:hover { background: rgba(234, 88, 12, 0.1); color: var(--primary-orange); }
 
+        .btn-author-like {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(234, 88, 12, 0.08);
+            color: #ea580c;
+            border: 1.5px solid rgba(234, 88, 12, 0.25);
+            border-radius: 999px;
+            padding: 7px 16px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+        }
+        .btn-author-like:hover {
+            background: rgba(234, 88, 12, 0.16);
+            border-color: #ea580c;
+            transform: scale(1.04);
+        }
+        .btn-author-like:active {
+            transform: scale(0.96);
+        }
+        .btn-author-like.liked {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff;
+            border-color: #dc2626;
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+        }
+        .btn-author-like.liked .like-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+        .btn-author-like .like-badge {
+            background: rgba(234, 88, 12, 0.15);
+            color: #ea580c;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            min-width: 18px;
+            text-align: center;
+        }
+
         .section-title {
             font-size: 1.4rem;
             font-weight: 800;
@@ -261,6 +305,11 @@
                 </p>
 
                 <div class="social-links">
+                    <button type="button" class="btn-author-like {% if user_has_liked %}liked{% endif %}" id="authorLikeBtn" onclick="toggleAuthorLikePage({{ author.id }})" data-liked="{% if user_has_liked %}1{% else %}0{% endif %}" title="{% if user_has_liked %}You like this author{% else %}Give a like to this author{% endif %}">
+                        <span class="heart-icon">{% if user_has_liked %}❤️{% else %}🤍{% endif %}</span>
+                        <span class="like-label">{% if user_has_liked %}Liked{% else %}Like Author{% endif %}</span>
+                        <span class="like-badge" id="authorLikeCount">{{ like_count|default(0) }}</span>
+                    </button>
                     {% if social_links.website %}
                         <a href="{{ social_links.website }}" target="_blank" class="social-chip">🌐 Website</a>
                     {% endif %}
@@ -311,6 +360,45 @@
 
     </div>
 
+    <script>
+        async function toggleAuthorLikePage(authorId) {
+            var btn = document.getElementById('authorLikeBtn');
+            var countEl = document.getElementById('authorLikeCount');
+            if (!btn || !authorId) return;
+            btn.disabled = true;
+            try {
+                var res = await fetch('/api/author/' + authorId + '/like', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.status === 401) {
+                    btn.disabled = false;
+                    alert('Please sign in to PustakVerse to like this author ❤️');
+                    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                var data = await res.json();
+                btn.disabled = false;
+                if (data.success) {
+                    var icon = btn.querySelector('.heart-icon');
+                    var lbl = btn.querySelector('.like-label');
+                    if (data.liked) {
+                        btn.classList.add('liked');
+                        if (icon) icon.textContent = '❤️';
+                        if (lbl) lbl.textContent = 'Liked';
+                    } else {
+                        btn.classList.remove('liked');
+                        if (icon) icon.textContent = '🤍';
+                        if (lbl) lbl.textContent = 'Like Author';
+                    }
+                    if (countEl) countEl.textContent = data.like_count;
+                }
+            } catch (err) {
+                btn.disabled = false;
+                console.error('Like author failed:', err);
+            }
+        }
+    </script>
 </body>
 </html>
 

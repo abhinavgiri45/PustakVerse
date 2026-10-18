@@ -4808,6 +4808,18 @@ def ensure_payment_schema():
                     cursor.execute(f"ALTER TABLE front_page_settings ADD COLUMN {col_def[0]} {col_def[1]}")
             except Exception: pass
         
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS author_likes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                author_id INT NOT NULL,
+                user_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_author_user_like (author_id, user_id),
+                FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
         db.commit()
         return True
     except Exception as error:
@@ -11592,7 +11604,16 @@ def public_author_profile(username):
         """, (author['id'],))
         books = clean_book_data(cursor.fetchall())
         
-        return render_template('author_profile.html', author=author, social_links=social_links, books=books)
+        cursor.execute("SELECT COUNT(*) as cnt FROM author_likes WHERE author_id = %s", (author['id'],))
+        like_row = cursor.fetchone()
+        like_count = like_row.get('cnt', 0) if like_row else 0
+        
+        user_has_liked = False
+        if session.get('user_id'):
+            cursor.execute("SELECT id FROM author_likes WHERE author_id = %s AND user_id = %s", (author['id'], session['user_id']))
+            user_has_liked = bool(cursor.fetchone())
+
+        return render_template('author_profile.html', author=author, social_links=social_links, books=books, like_count=like_count, user_has_liked=user_has_liked)
     except Exception as e:
         logging.error(f"Error loading public author profile: {e}")
         return redirect(url_for('index'))
@@ -11600,6 +11621,110 @@ def public_author_profile(username):
         if db:
             try: db.close()
             except: pass
+
+
+@app.route('/api/author/<int:author_id>/like', methods=['GET', 'POST'])
+@app.route('/api/authors/<int:author_id>/like', methods=['GET', 'POST'])
+def api_author_like(author_id):
+    user_id = session.get('user_id')
+    if request.method == 'POST' and not user_id:
+        return jsonify({
+            'success': False,
+            'authenticated': False,
+            'message': 'Please log in to like this author.'
+        }), 401
+
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+
+        if request.method == 'GET':
+            cursor.execute("SELECT COUNT(*) as cnt FROM author_likes WHERE author_id = %s", (author_id,))
+            c_row = cursor.fetchone()
+            like_count = c_row.get('cnt', 0) if c_row else 0
+            user_has_liked = False
+            if user_id:
+                cursor.execute("SELECT 1 FROM author_likes WHERE author_id = %s AND user_id = %s", (author_id, user_id))
+                user_has_liked = bool(cursor.fetchone())
+            return jsonify({'success': True, 'like_count': like_count, 'user_has_liked': user_has_liked})
+
+        cursor.execute("SELECT id FROM author_likes WHERE author_id = %s AND user_id = %s", (author_id, user_id))
+        existing = cursor.fetchone()
+        if existing:
+            cursor.execute("DELETE FROM author_likes WHERE author_id = %s AND user_id = %s", (author_id, user_id))
+            db.commit()
+            liked = False
+        else:
+            cursor.execute("INSERT IGNORE INTO author_likes (author_id, user_id) VALUES (%s, %s)", (author_id, user_id))
+            db.commit()
+            liked = True
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM author_likes WHERE author_id = %s", (author_id,))
+        c_row = cursor.fetchone()
+        like_count = c_row.get('cnt', 0) if c_row else 0
+        return jsonify({
+            'success': True,
+            'authenticated': True,
+            'liked': liked,
+            'like_count': like_count
+        })
+    except Exception as e:
+        logging.error(f"Error toggling author like: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
+
+@app.route('/api/authors/search', methods=['GET'])
+def api_authors_search():
+    q = (request.args.get('q') or '').strip()
+    if not q:
+        return jsonify({'success': True, 'authors': []})
+
+    current_user_id = session.get('user_id', 0)
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        like_param = f"%{q}%"
+        cursor.execute("""
+            SELECT u.id, u.username, u.role, u.is_verified, u.author_bio,
+                   COUNT(DISTINCT b.id) as book_count,
+                   (SELECT COUNT(*) FROM author_likes WHERE author_id = u.id) as like_count,
+                   (SELECT COUNT(*) FROM author_likes WHERE author_id = u.id AND user_id = %s) as user_has_liked
+            FROM users u
+            LEFT JOIN books b ON b.author_id = u.id AND (b.is_quarantined IS NULL OR b.is_quarantined = FALSE OR b.is_quarantined = 0)
+            WHERE (LOWER(u.username) LIKE LOWER(%s) OR LOWER(COALESCE(u.author_bio, '')) LIKE LOWER(%s))
+              AND (u.role IN ('author', 'developer', 'official') OR EXISTS (SELECT 1 FROM books WHERE author_id = u.id))
+            GROUP BY u.id
+            ORDER BY (LOWER(u.username) = LOWER(%s)) DESC, like_count DESC, book_count DESC
+            LIMIT 8
+        """, (current_user_id, like_param, like_param, q))
+        rows = cursor.fetchall() or []
+        authors = []
+        for r in rows:
+            authors.append({
+                'id': r['id'],
+                'username': r['username'],
+                'role': r.get('role', 'author'),
+                'is_verified': bool(r.get('is_verified')),
+                'author_bio': r.get('author_bio') or '',
+                'book_count': r.get('book_count', 0),
+                'like_count': r.get('like_count', 0),
+                'user_has_liked': bool(r.get('user_has_liked'))
+            })
+        return jsonify({'success': True, 'authors': authors})
+    except Exception as e:
+        logging.error(f"Error in api_authors_search: {e}")
+        return jsonify({'success': False, 'authors': []})
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 
 
 # ======================================================================
