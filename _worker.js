@@ -3722,6 +3722,7 @@ Format with these exact markdown sections:
         let allUsers = [];
         let bookDelRequests = [];
         let usernameRequests = [];
+        let pendingArchiveBooks = [];
         if ((user.role === "developer" || user.role === "official") && env.DB) {
           try {
             await ensureModerationTables(env);
@@ -3753,14 +3754,22 @@ Format with these exact markdown sections:
           } catch (_) {}
         }
 
-        const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests, pendingArchiveBooks);
-        return new Response(personalized, {
-          status: 200,
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "private, no-cache, no-store, must-revalidate"
-          }
-        });
+        try {
+          const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests, pendingArchiveBooks);
+          return new Response(personalized, {
+            status: 200,
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "private, no-cache, no-store, must-revalidate"
+            }
+          });
+        } catch (renderErr) {
+          console.error("renderFullEdgeDashboardHtml error:", renderErr);
+          return new Response(renderEdgeDashboardHtml(user), {
+            status: 200,
+            headers: { "Content-Type": "text/html; charset=utf-8" }
+          });
+        }
       }
 
       return new Response(renderEdgeDashboardHtml(user), {
