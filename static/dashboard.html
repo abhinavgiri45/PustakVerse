@@ -526,6 +526,182 @@
                 font-size: 0.78rem !important;
             }
         }
+
+        /* ==========================================================================
+           CHECKOUT ROUTING HIERARCHY & SETTLEMENT CARDS
+           ========================================================================== */
+        .routing-hierarchy-subtitle {
+            color: #334155;
+        }
+        .dark-theme .routing-hierarchy-subtitle,
+        html.dark-theme .routing-hierarchy-subtitle {
+            color: #cbd5e1 !important;
+        }
+
+        .settlement-card {
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            transition: all 0.2s ease;
+        }
+
+        .settlement-card code {
+            font-size: 0.8rem;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        /* Light Mode Settlement Cards */
+        .settlement-card.author-card {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-left: 5px solid #16a34a;
+            color: #14532d;
+        }
+        .settlement-card.author-card strong {
+            color: #166534;
+        }
+        .settlement-card.author-card code {
+            background: #dcfce7;
+            color: #14532d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .settlement-card.platform-card {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-left: 5px solid #ea580c;
+            color: #7c2d12;
+        }
+        .settlement-card.platform-card strong {
+            color: #c2410c;
+        }
+        .settlement-card.platform-card code {
+            background: #ffedd5;
+            color: #7c2d12;
+            border: 1px solid #fed7aa;
+        }
+
+        .settlement-card.donation-card {
+            background: #faf5ff;
+            border: 1px solid #e9d5ff;
+            border-left: 5px solid #8b5cf6;
+            color: #4c1d95;
+        }
+        .settlement-card.donation-card strong {
+            color: #6d28d9;
+        }
+        .settlement-card.donation-card code {
+            background: #f3e8ff;
+            color: #4c1d95;
+            border: 1px solid #e9d5ff;
+        }
+
+        /* Dark Mode Settlement Cards */
+        .dark-theme .settlement-card.author-card,
+        html.dark-theme .settlement-card.author-card {
+            background: #064e3b !important;
+            border: 1px solid #047857 !important;
+            border-left: 5px solid #10b981 !important;
+            color: #ecfdf5 !important;
+        }
+        .dark-theme .settlement-card.author-card strong,
+        html.dark-theme .settlement-card.author-card strong {
+            color: #a7f3d0 !important;
+        }
+        .dark-theme .settlement-card.author-card code,
+        html.dark-theme .settlement-card.author-card code {
+            background: #022c22 !important;
+            color: #6ee7b7 !important;
+            border-color: #065f46 !important;
+        }
+
+        .dark-theme .settlement-card.platform-card,
+        html.dark-theme .settlement-card.platform-card {
+            background: #431407 !important;
+            border: 1px solid #7c2d12 !important;
+            border-left: 5px solid #f97316 !important;
+            color: #fff7ed !important;
+        }
+        .dark-theme .settlement-card.platform-card strong,
+        html.dark-theme .settlement-card.platform-card strong {
+            color: #fdba74 !important;
+        }
+        .dark-theme .settlement-card.platform-card code,
+        html.dark-theme .settlement-card.platform-card code {
+            background: #2a0b03 !important;
+            color: #fed7aa !important;
+            border-color: #7c2d12 !important;
+        }
+
+        .dark-theme .settlement-card.donation-card,
+        html.dark-theme .settlement-card.donation-card {
+            background: #2e1065 !important;
+            border: 1px solid #581c87 !important;
+            border-left: 5px solid #a855f7 !important;
+            color: #faf5ff !important;
+        }
+        .dark-theme .settlement-card.donation-card strong,
+        html.dark-theme .settlement-card.donation-card strong {
+            color: #d8b4fe !important;
+        }
+        .dark-theme .settlement-card.donation-card code,
+        html.dark-theme .settlement-card.donation-card code {
+            background: #17072e !important;
+            color: #e9d5ff !important;
+            border-color: #581c87 !important;
+        }
+
+        /* ==========================================================================
+           USER ACTIVITY MONITOR LAUNCH CARD
+           ========================================================================== */
+        .activity-monitor-launch-card {
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            border-left: 5px solid #6366f1;
+            background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+            border-top: 1px solid #e0e7ff;
+            border-right: 1px solid #e0e7ff;
+            border-bottom: 1px solid #e0e7ff;
+            transition: all 0.2s ease;
+        }
+
+        .activity-monitor-launch-card h2 {
+            color: #4338ca !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 6px 0;
+        }
+
+        .activity-monitor-launch-card p {
+            color: #475569 !important;
+            font-size: 0.88rem;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Dark Theme */
+        .dark-theme .activity-monitor-launch-card,
+        html.dark-theme .activity-monitor-launch-card {
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%) !important;
+            border-top: 1px solid #3730a3 !important;
+            border-right: 1px solid #3730a3 !important;
+            border-bottom: 1px solid #3730a3 !important;
+            border-left: 5px solid #818cf8 !important;
+        }
+
+        .dark-theme .activity-monitor-launch-card h2,
+        html.dark-theme .activity-monitor-launch-card h2 {
+            color: #c7d2fe !important;
+        }
+
+        .dark-theme .activity-monitor-launch-card p,
+        html.dark-theme .activity-monitor-launch-card p {
+            color: #cbd5e1 !important;
+        }
     </style>
 </head>
 <body>
@@ -1827,7 +2003,7 @@
                         </span>
                     </div>
 
-                    <p style="color: #334155; font-size: 0.92rem; font-weight: 600; margin-bottom: 14px;">
+                    <p class="routing-hierarchy-subtitle" style="font-size: 0.92rem; font-weight: 600; margin-bottom: 14px;">
                         Here is the exact routing hierarchy executed by PustakVerse during checkout:
                     </p>
 
@@ -1836,16 +2012,16 @@
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px;">
-                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px; font-size: 0.88rem;">
-                            <strong style="color: #166534; display: block; margin-bottom: 5px; font-size: 0.92rem;">1. Author's Royalties (Direct Account Deposit):</strong>
+                        <div class="settlement-card author-card">
+                            <strong style="display: block; margin-bottom: 5px; font-size: 0.92rem;">1. Author's Royalties (Direct Account Deposit):</strong>
                             When an author publishes a paid book and enters their own Razorpay Key ID and Secret in their profile or book settings (<code>books.rp_key_id</code>, <code>books.rp_key_secret</code>), the payment modal opens with the <strong>Author's direct gateway</strong>. 100% of the book price deposits directly into the <strong>Author's bank account</strong> linked to their Razorpay account (minus Razorpay's standard 2.36% gateway processing fee).
                         </div>
-                        <div style="background: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #ea580c; border-radius: 8px; padding: 14px; font-size: 0.88rem;">
-                            <strong style="color: #c2410c; display: block; margin-bottom: 5px; font-size: 0.92rem;">2. Platform & Fallback Books:</strong>
-                            If the author has <strong>not</strong> added their own Razorpay keys (or if the book is published by the platform), the checkout gateway falls back to the <strong>Developer Razorpay Key ID & Secret</strong> configured in the Developer Dashboard under <em>Website Settings & Payments</em> (<code>front_page_settings.rp_key_id</code>). In this case, 100% of the payment deposits into the platform developer account.
+                        <div class="settlement-card platform-card">
+                            <strong style="display: block; margin-bottom: 5px; font-size: 0.92rem;">2. Platform &amp; Fallback Books:</strong>
+                            If the author has <strong>not</strong> added their own Razorpay keys (or if the book is published by the platform), the checkout gateway falls back to the <strong>Developer Razorpay Key ID &amp; Secret</strong> configured in the Developer Dashboard under <em>Website Settings &amp; Payments</em> (<code>front_page_settings.rp_key_id</code>). In this case, 100% of the payment deposits into the platform developer account.
                         </div>
-                        <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-left: 4px solid #8b5cf6; border-radius: 8px; padding: 14px; font-size: 0.88rem;">
-                            <strong style="color: #6d28d9; display: block; margin-bottom: 5px; font-size: 0.92rem;">3. Voluntary Team Support Donations:</strong>
+                        <div class="settlement-card donation-card">
+                            <strong style="display: block; margin-bottom: 5px; font-size: 0.92rem;">3. Voluntary Team Support Donations:</strong>
                             <strong>When DISABLED:</strong> The donation box and breakdown are completely removed from the checkout page. The reader pays strictly the book price.<br>
                             <strong>When ENABLED:</strong> Voluntary reader donations (default ₹10) are collected and recorded in the database under <code>purchases.donation_paise</code> for Developer infrastructure and Girionix AI compute costs.
                         </div>
@@ -1937,13 +2113,13 @@
             </div>
 
             <!-- USER ACTIVITY MONITOR LAUNCH CARD -->
-            <div class="panel" style="border-left: 5px solid #6366f1; background: linear-gradient(to right, #f5f3ff, #ffffff); margin-top: 25px;">
+            <div class="panel activity-monitor-launch-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <h2 style="color: #4f46e5; display: flex; align-items: center; gap: 8px; margin: 0 0 6px 0;">
+                        <h2>
                             <span>📊</span> Real-Time User Activity Monitor
                         </h2>
-                        <p style="color: #64748b; font-size: 0.88rem; margin: 0;">
+                        <p>
                             Live monitoring suite for officials &amp; developers. Inspect active sessions, online readers, search actions, registration audit trails, and official activity logs. Protected by 8-Digit PIN.
                         </p>
                     </div>

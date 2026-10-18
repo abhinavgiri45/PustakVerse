@@ -1476,4 +1476,180 @@ body.dark-theme .btn-save-library:hover {
     box-shadow: 0 6px 22px rgba(59, 130, 246, 0.6) !important;
 }
 
+/* ==========================================================================
+   CHECKOUT ROUTING HIERARCHY & SETTLEMENT CARDS
+   ========================================================================== */
+.routing-hierarchy-subtitle {
+    color: #334155;
+}
+.dark-theme .routing-hierarchy-subtitle,
+html.dark-theme .routing-hierarchy-subtitle {
+    color: #cbd5e1 !important;
+}
+
+.settlement-card {
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    transition: all 0.2s ease;
+}
+
+.settlement-card code {
+    font-size: 0.8rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+/* Light Mode Settlement Cards */
+.settlement-card.author-card {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 5px solid #16a34a;
+    color: #14532d;
+}
+.settlement-card.author-card strong {
+    color: #166534;
+}
+.settlement-card.author-card code {
+    background: #dcfce7;
+    color: #14532d;
+    border: 1px solid #bbf7d0;
+}
+
+.settlement-card.platform-card {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-left: 5px solid #ea580c;
+    color: #7c2d12;
+}
+.settlement-card.platform-card strong {
+    color: #c2410c;
+}
+.settlement-card.platform-card code {
+    background: #ffedd5;
+    color: #7c2d12;
+    border: 1px solid #fed7aa;
+}
+
+.settlement-card.donation-card {
+    background: #faf5ff;
+    border: 1px solid #e9d5ff;
+    border-left: 5px solid #8b5cf6;
+    color: #4c1d95;
+}
+.settlement-card.donation-card strong {
+    color: #6d28d9;
+}
+.settlement-card.donation-card code {
+    background: #f3e8ff;
+    color: #4c1d95;
+    border: 1px solid #e9d5ff;
+}
+
+/* Dark Mode Settlement Cards */
+.dark-theme .settlement-card.author-card,
+html.dark-theme .settlement-card.author-card {
+    background: #064e3b !important;
+    border: 1px solid #047857 !important;
+    border-left: 5px solid #10b981 !important;
+    color: #ecfdf5 !important;
+}
+.dark-theme .settlement-card.author-card strong,
+html.dark-theme .settlement-card.author-card strong {
+    color: #a7f3d0 !important;
+}
+.dark-theme .settlement-card.author-card code,
+html.dark-theme .settlement-card.author-card code {
+    background: #022c22 !important;
+    color: #6ee7b7 !important;
+    border-color: #065f46 !important;
+}
+
+.dark-theme .settlement-card.platform-card,
+html.dark-theme .settlement-card.platform-card {
+    background: #431407 !important;
+    border: 1px solid #7c2d12 !important;
+    border-left: 5px solid #f97316 !important;
+    color: #fff7ed !important;
+}
+.dark-theme .settlement-card.platform-card strong,
+html.dark-theme .settlement-card.platform-card strong {
+    color: #fdba74 !important;
+}
+.dark-theme .settlement-card.platform-card code,
+html.dark-theme .settlement-card.platform-card code {
+    background: #2a0b03 !important;
+    color: #fed7aa !important;
+    border-color: #7c2d12 !important;
+}
+
+.dark-theme .settlement-card.donation-card,
+html.dark-theme .settlement-card.donation-card {
+    background: #2e1065 !important;
+    border: 1px solid #581c87 !important;
+    border-left: 5px solid #a855f7 !important;
+    color: #faf5ff !important;
+}
+.dark-theme .settlement-card.donation-card strong,
+html.dark-theme .settlement-card.donation-card strong {
+    color: #d8b4fe !important;
+}
+.dark-theme .settlement-card.donation-card code,
+html.dark-theme .settlement-card.donation-card code {
+    background: #17072e !important;
+    color: #e9d5ff !important;
+    border-color: #581c87 !important;
+}
+
+/* ==========================================================================
+   USER ACTIVITY MONITOR LAUNCH CARD
+   ========================================================================== */
+.activity-monitor-launch-card {
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 25px;
+    border-left: 5px solid #6366f1;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+    border-top: 1px solid #e0e7ff;
+    border-right: 1px solid #e0e7ff;
+    border-bottom: 1px solid #e0e7ff;
+    transition: all 0.2s ease;
+}
+
+.activity-monitor-launch-card h2 {
+    color: #4338ca !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 6px 0;
+}
+
+.activity-monitor-launch-card p {
+    color: #475569 !important;
+    font-size: 0.88rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Dark Theme */
+.dark-theme .activity-monitor-launch-card,
+html.dark-theme .activity-monitor-launch-card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%) !important;
+    border-top: 1px solid #3730a3 !important;
+    border-right: 1px solid #3730a3 !important;
+    border-bottom: 1px solid #3730a3 !important;
+    border-left: 5px solid #818cf8 !important;
+}
+
+.dark-theme .activity-monitor-launch-card h2,
+html.dark-theme .activity-monitor-launch-card h2 {
+    color: #c7d2fe !important;
+}
+
+.dark-theme .activity-monitor-launch-card p,
+html.dark-theme .activity-monitor-launch-card p {
+    color: #cbd5e1 !important;
+}
+
 
