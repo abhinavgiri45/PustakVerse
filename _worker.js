@@ -2305,7 +2305,7 @@ Format with these exact markdown sections:
 
       try {
         const coupon = await env.DB.prepare(
-          "SELECT * FROM author_coupons WHERE book_id = ? AND code = ? AND is_active = 1 LIMIT 1"
+          "SELECT * FROM author_coupons WHERE (book_id = ? OR book_id IS NULL) AND code = ? AND is_active = 1 LIMIT 1"
         ).bind(bookId, code).first();
 
         if (!coupon) {
@@ -5788,10 +5788,27 @@ Format with these exact markdown sections:
         </div>
         ` : ""}
 
+        <!-- PROMOTIONAL / AUTHOR COUPON CODE SECTION -->
+        <div class="coupon-box" style="background: #f8fafc; border: 1.5px dashed #94a3b8; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px;">
+            <div style="font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <span>🏷️ Have an Author / Promo Coupon?</span>
+                <span id="couponStatusBadge" style="font-size: 0.75rem; font-weight: 800; display: none;"></span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="couponCodeInput" placeholder="Enter coupon code (e.g. AUTHOR50)" style="flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem; font-weight: 700; text-transform: uppercase;" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
+                <button type="button" id="applyCouponBtn" onclick="applyCoupon()" style="background: #0f172a; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap;">Apply</button>
+            </div>
+            <div id="couponMessage" style="font-size: 0.78rem; margin-top: 6px; font-weight: 600; display: none;"></div>
+        </div>
+
         <div class="breakdown">
             <div class="price-row">
                 <span>Book Price (Author Royalty)</span>
-                <span id="basePriceDisplay" style="font-weight: 700;">₹${(book.price_paise / 100).toFixed(2)}</span>
+                <span id="basePriceDisplay" style="font-weight: 700;">₹${((book.price_paise || 0) / 100).toFixed(2)}</span>
+            </div>
+            <div class="price-row" id="couponDiscountRow" style="display: none; color: #16a34a;">
+                <span>Coupon Discount (<span id="couponDiscountPct">0</span>%)</span>
+                <span id="couponDiscountDisplay" style="font-weight: 700;">-₹0.00</span>
             </div>
             ${checkoutDonationActive ? `
             <div class="price-row" id="donationSummaryRow">
@@ -5801,12 +5818,12 @@ Format with these exact markdown sections:
             ` : ""}
             <div class="total-row">
                 <span>Total to Pay (One-Time)</span>
-                <span id="totalDisplay" style="color: var(--primary-orange);">₹${((book.price_paise + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span>
+                <span id="totalDisplay" style="color: var(--primary-orange);">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span>
             </div>
         </div>
 
         <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
-            <span>🔒 Pay <span id="payBtnAmount">₹${((book.price_paise + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
+            <span>🔒 Pay <span id="payBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
         </button>
 
         <button type="button" id="sandboxPayBtn" class="btn-pay" onclick="initiateSandboxTestPayment()" style="background: #0f172a; border: 1.5px dashed #38bdf8; color: #38bdf8; margin-top: 10px; box-shadow: none;">
@@ -5830,14 +5847,19 @@ Format with these exact markdown sections:
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
-        const BASE_PRICE_PAISE = ${book.price_paise};
+        const BASE_PRICE_PAISE = ${book.price_paise || 0};
         const DONATION_ENABLED = ${checkoutDonationActive ? "true" : "false"};
         const BOOK_ID = ${book.id};
+
+        let appliedCouponCode = "";
+        let appliedDiscountPct = 0;
 
         function handleDonationToggle() {
             const cb = document.getElementById('donationCheckbox');
             const wrap = document.getElementById('donationInputWrap');
-            if (cb && wrap) wrap.style.display = cb.checked ? 'flex' : 'none';
+            if (wrap) {
+                wrap.style.display = (cb && cb.checked) ? 'flex' : 'none';
+            }
             calculateTotal();
         }
 
@@ -5846,18 +5868,132 @@ Format with these exact markdown sections:
             const cb = document.getElementById('donationCheckbox');
             const input = document.getElementById('donationAmountInput');
             if (DONATION_ENABLED && cb && cb.checked && input) {
-                donationInr = Math.max(0, parseInt(input.value) || 0);
+                donationInr = Math.max(0, parseInt(input.value, 10) || 0);
             }
-            const totalPaise = BASE_PRICE_PAISE + (donationInr * 100);
+
+            let effectivePricePaise = BASE_PRICE_PAISE;
+            if (appliedDiscountPct > 0) {
+                const discountPaise = Math.floor(BASE_PRICE_PAISE * (appliedDiscountPct / 100));
+                effectivePricePaise = Math.max(0, BASE_PRICE_PAISE - discountPaise);
+                const discountRow = document.getElementById('couponDiscountRow');
+                if (discountRow) {
+                    discountRow.style.display = 'flex';
+                    const pctEl = document.getElementById('couponDiscountPct');
+                    if (pctEl) pctEl.textContent = appliedDiscountPct;
+                    const dispEl = document.getElementById('couponDiscountDisplay');
+                    if (dispEl) dispEl.textContent = '-₹' + (discountPaise / 100).toFixed(2);
+                }
+            } else {
+                const discountRow = document.getElementById('couponDiscountRow');
+                if (discountRow) discountRow.style.display = 'none';
+            }
+
+            const totalPaise = effectivePricePaise + (donationInr * 100);
             const formattedTotal = '₹' + (totalPaise / 100).toFixed(2);
-            document.getElementById('totalDisplay').textContent = formattedTotal;
-            document.getElementById('payBtnAmount').textContent = formattedTotal;
+
+            const totalDisplay = document.getElementById('totalDisplay');
+            if (totalDisplay) totalDisplay.textContent = formattedTotal;
+
+            const payBtnAmount = document.getElementById('payBtnAmount');
+            if (payBtnAmount) payBtnAmount.textContent = formattedTotal;
+
             const donRow = document.getElementById('donationSummaryRow');
             if (donRow) {
                 donRow.style.display = (cb && cb.checked && donationInr > 0) ? 'flex' : 'none';
-                document.getElementById('donationDisplay').textContent = '₹' + donationInr.toFixed(2);
+                const donDisp = document.getElementById('donationDisplay');
+                if (donDisp) donDisp.textContent = '₹' + donationInr.toFixed(2);
             }
-            return { donationInr, totalPaise };
+
+            return { donationInr, totalPaise, appliedCouponCode };
+        }
+
+        async function applyCoupon() {
+            const input = document.getElementById('couponCodeInput');
+            const msg = document.getElementById('couponMessage');
+            const badge = document.getElementById('couponStatusBadge');
+            const btn = document.getElementById('applyCouponBtn');
+            if (!input) return;
+            const code = (input.value || '').trim().toUpperCase();
+            if (!code) {
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.style.color = '#dc2626';
+                    msg.textContent = 'Please enter a coupon code.';
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch('/api/apply_coupon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ book_id: BOOK_ID, code: code })
+                });
+                const data = await res.json();
+                if (data.valid) {
+                    appliedCouponCode = data.code;
+                    appliedDiscountPct = data.discount_percent || 0;
+                    if (msg) {
+                        msg.style.display = 'block';
+                        msg.style.color = '#16a34a';
+                        msg.textContent = data.message || ('Code "' + data.code + '" applied! ' + appliedDiscountPct + '% off.');
+                    }
+                    if (badge) {
+                        badge.style.display = 'inline-block';
+                        badge.style.color = '#16a34a';
+                        badge.textContent = '✓ ' + appliedDiscountPct + '% OFF';
+                    }
+                    input.disabled = true;
+                    btn.textContent = 'Remove';
+                    btn.onclick = removeCoupon;
+                    btn.disabled = false;
+                    btn.style.background = '#dc2626';
+                    calculateTotal();
+                } else {
+                    appliedCouponCode = '';
+                    appliedDiscountPct = 0;
+                    if (msg) {
+                        msg.style.display = 'block';
+                        msg.style.color = '#dc2626';
+                        msg.textContent = data.message || 'Invalid or expired coupon code.';
+                    }
+                    btn.disabled = false;
+                    btn.textContent = 'Apply';
+                    calculateTotal();
+                }
+            } catch (err) {
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.style.color = '#dc2626';
+                    msg.textContent = 'Failed to verify coupon: ' + err.message;
+                }
+                btn.disabled = false;
+                btn.textContent = 'Apply';
+            }
+        }
+
+        function removeCoupon() {
+            appliedCouponCode = '';
+            appliedDiscountPct = 0;
+            const input = document.getElementById('couponCodeInput');
+            const msg = document.getElementById('couponMessage');
+            const badge = document.getElementById('couponStatusBadge');
+            const btn = document.getElementById('applyCouponBtn');
+            if (input) {
+                input.value = '';
+                input.disabled = false;
+            }
+            if (msg) msg.style.display = 'none';
+            if (badge) badge.style.display = 'none';
+            if (btn) {
+                btn.textContent = 'Apply';
+                btn.style.background = '#0f172a';
+                btn.onclick = applyCoupon;
+            }
+            calculateTotal();
         }
 
         async function initiateSinglePayment() {
@@ -5869,7 +6005,10 @@ Format with these exact markdown sections:
             try {
                 const formData = new FormData();
                 formData.append('donation_inr', donationInr);
-                const res = await fetch(\`/api/checkout/create_order/\${BOOK_ID}\`, {
+                if (appliedCouponCode) {
+                    formData.append('coupon_code', appliedCouponCode);
+                }
+                const res = await fetch('/api/checkout/create_order/' + BOOK_ID, {
                     method: 'POST',
                     body: formData
                 });
@@ -5886,7 +6025,7 @@ Format with these exact markdown sections:
                     amount: data.amount_paise,
                     currency: "INR",
                     name: "PustakVerse",
-                    description: \`Unlock "\${data.book_title}"\`,
+                    description: 'Unlock "' + (data.book_title || 'Book') + '"',
                     image: "/static/PustakVerse.png",
                     order_id: data.order_id,
                     handler: function (response) {
@@ -5908,7 +6047,7 @@ Format with these exact markdown sections:
                 const rzp = new Razorpay(options);
                 rzp.open();
             } catch (err) {
-                alert('Network error initializing payment gateway: ' + err.message + '\n\nTip: You can use the Sandbox Test Mode button below for instant 1-click verification.');
+                alert('Network error initializing payment gateway: ' + err.message + '\\n\\nTip: You can use the Sandbox Test Mode button below for instant 1-click verification.');
                 btn.disabled = false;
                 calculateTotal();
             }
@@ -5923,6 +6062,9 @@ Format with these exact markdown sections:
             try {
                 const formData = new FormData();
                 formData.append('donation_inr', donationInr);
+                if (appliedCouponCode) {
+                    formData.append('coupon_code', appliedCouponCode);
+                }
                 const res = await fetch('/api/checkout/create_order/' + BOOK_ID, {
                     method: 'POST',
                     body: formData
@@ -5946,6 +6088,25 @@ Format with these exact markdown sections:
                 btn.innerHTML = '<span>🧪 Sandbox Test Simulation (Instant 1-Click Verification)</span>';
             }
         }
+
+        // Attach listeners and sync on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const cb = document.getElementById('donationCheckbox');
+            if (cb) cb.addEventListener('change', handleDonationToggle);
+            const amt = document.getElementById('donationAmountInput');
+            if (amt) {
+                amt.addEventListener('input', calculateTotal);
+                amt.addEventListener('change', calculateTotal);
+            }
+            handleDonationToggle();
+            calculateTotal();
+        });
+
+        // Immediate initial calculation
+        try {
+            handleDonationToggle();
+            calculateTotal();
+        } catch (_) {}
     </script>
 </body>
 </html>`;
@@ -6014,7 +6175,7 @@ Format with these exact markdown sections:
           await ensureAuthorCouponsTable(env);
           try {
             const couponRow = await env.DB.prepare(
-              "SELECT id, discount_percent, max_uses, times_used FROM author_coupons WHERE book_id = ? AND code = ? AND is_active = 1 LIMIT 1"
+              "SELECT id, discount_percent, max_uses, times_used FROM author_coupons WHERE (book_id = ? OR book_id IS NULL) AND code = ? AND is_active = 1 LIMIT 1"
             ).bind(targetBookId, couponCode).first();
 
             if (couponRow && (couponRow.times_used || 0) < (couponRow.max_uses || 100)) {
