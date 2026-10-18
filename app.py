@@ -7591,7 +7591,11 @@ def buy_book(book_id):
 @app.route('/api/create_order/<int:book_id>', methods=['POST'])
 def api_checkout_create_order(book_id):
     if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Authentication required.'}), 401
+        return jsonify({
+            'success': False,
+            'error': 'Authentication required.',
+            'redirect': url_for('login', next=url_for('buy_book', book_id=book_id))
+        }), 401
 
     is_author_donation = request.form.get('is_author_donation') in ('1', 'true', True)
     try:
@@ -7700,7 +7704,9 @@ def api_checkout_create_order(book_id):
             'is_real_razorpay_order': is_real_razorpay_order,
             'amount_paise': total_paise,
             'razorpay_key': gateway_key_id or 'rzp_test_pustakverse',
-            'book_title': book['title']
+            'book_title': book['title'],
+            'user_name': session.get('username') or 'Reader',
+            'user_email': session.get('email') or ''
         })
     except Exception as e:
         logging.error(f"Error creating unified checkout order: {e}")
