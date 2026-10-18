@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -217,7 +218,7 @@
 </head>
 <body>
 
-    <div class="invoice-card">
+    <div class="invoice-card" id="taxInvoiceCard">
         <div class="watermark">PAID & VERIFIED</div>
 
         <div class="invoice-header">
@@ -318,9 +319,9 @@
         <div class="actions-bar">
             <a href="/payment_history" class="back-link">← Return to Payment History</a>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <a href="/api/receipt/download/{{ purchase.razorpay_order_id }}" class="btn-print" style="background: #16a34a; text-decoration: none;">
-                    <span>📥</span> Download Receipt (.html)
-                </a>
+                <button type="button" id="btnDownloadPdf" onclick="downloadInvoicePdf()" class="btn-print" style="background: #16a34a; border: none; cursor: pointer;">
+                    <span>📥</span> Download Tax Invoice (.pdf)
+                </button>
                 <button onclick="window.print()" class="btn-print">
                     <span>🖨️</span> Print Tax Invoice
                 </button>
@@ -328,5 +329,60 @@
         </div>
     </div>
 
+    <script>
+        const ORDER_ID = "{{ purchase.razorpay_order_id }}";
+        function downloadInvoicePdf() {
+            const btn = document.getElementById('btnDownloadPdf');
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳</span> Generating Official PDF…';
+            }
+
+            const element = document.getElementById('taxInvoiceCard');
+            const actionsBar = document.querySelector('.actions-bar');
+            if (actionsBar) actionsBar.style.display = 'none';
+
+            const opt = {
+                margin: [8, 8, 8, 8],
+                filename: 'PustakVerse_Tax_Invoice_' + (ORDER_ID || 'Receipt') + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            if (typeof html2pdf !== 'undefined') {
+                html2pdf().set(opt).from(element).save().then(() => {
+                    if (actionsBar) actionsBar.style.display = 'flex';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                }).catch(err => {
+                    console.error('PDF generation error:', err);
+                    if (actionsBar) actionsBar.style.display = 'flex';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                    window.print();
+                });
+            } else {
+                if (actionsBar) actionsBar.style.display = 'flex';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+                window.print();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('download') === 'pdf' || params.get('download') === '1') {
+                setTimeout(downloadInvoicePdf, 600);
+            }
+        });
+    </script>
 </body>
 </html>

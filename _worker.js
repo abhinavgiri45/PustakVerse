@@ -7480,83 +7480,6 @@ Format with these exact markdown sections:
         <input type="hidden" name="book_id" value="${book.id}">
     </form>
 
-    <!-- Interactive Gateway Simulation Modal (Zero intrusive alerts / Infallible fallback) -->
-    <div id="pvGatewayModal" class="pv-modal-backdrop" style="display: none;">
-        <div class="pv-modal-card">
-            <div class="pv-modal-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.4rem;">🔒</span>
-                    <div>
-                        <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">PustakVerse Secure Gateway</h3>
-                        <p style="font-size: 0.76rem; color: #64748b; margin: 2px 0 0 0;">256-Bit SSL Encrypted · Instant Library Delivery</p>
-                    </div>
-                </div>
-                <button type="button" class="pv-modal-close" onclick="closeGatewayModal()">✕</button>
-            </div>
-
-            <div class="pv-modal-body">
-                <div class="pv-order-summary">
-                    <div>
-                        <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b;">Title to Unlock</div>
-                        <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a;" id="pvModalBookTitle">${escapeHtml(book.title)}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b;">Total Amount</div>
-                        <div style="font-size: 1.25rem; font-weight: 900; color: #ea580c;" id="pvModalAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</div>
-                    </div>
-                </div>
-
-                <div style="margin: 14px 0 8px 0; font-size: 0.82rem; font-weight: 800; color: #334155;">
-                    Select Payment Mode:
-                </div>
-
-                <div class="pv-pay-methods">
-                    <label class="pv-pay-option active" onclick="selectPayMethod(this)">
-                        <input type="radio" name="pv_pay_method" value="upi" checked style="accent-color: #ea580c;">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <span style="font-size: 1.3rem;">📱</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">UPI / Instant QR</div>
-                                <div style="font-size: 0.74rem; color: #64748b;">Google Pay, PhonePe, Paytm, BHIM</div>
-                            </div>
-                            <span class="pv-badge-instant">⚡ Instant</span>
-                        </div>
-                    </label>
-
-                    <label class="pv-pay-option" onclick="selectPayMethod(this)">
-                        <input type="radio" name="pv_pay_method" value="card" style="accent-color: #ea580c;">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <span style="font-size: 1.3rem;">💳</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">Debit / Credit Card</div>
-                                <div style="font-size: 0.74rem; color: #64748b;">Visa, MasterCard, RuPay</div>
-                            </div>
-                        </div>
-                    </label>
-
-                    <label class="pv-pay-option" onclick="selectPayMethod(this)">
-                        <input type="radio" name="pv_pay_method" value="netbanking" style="accent-color: #ea580c;">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <span style="font-size: 1.3rem;">🏛️</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">NetBanking & Wallets</div>
-                                <div style="font-size: 0.74rem; color: #64748b;">All Indian Banks & Wallets</div>
-                            </div>
-                        </div>
-                    </label>
-                </div>
-
-                <div id="pvModalStatus" style="display: none; padding: 12px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.85rem; font-weight: 700; text-align: center; margin-top: 14px;">
-                    ⏳ Authorizing transaction with payment network…
-                </div>
-
-                <button type="button" id="pvModalSubmitBtn" class="btn-pay" style="margin-top: 16px;" onclick="executeModalPayment()">
-                    <span>⚡ Complete Payment & Unlock Book</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         const BASE_PRICE_PAISE = ${book.price_paise || 0};
@@ -7750,67 +7673,29 @@ Format with these exact markdown sections:
             btn.innerHTML = '<span>🔒 Pay <span id="payBtnAmount">' + formattedTotal + '</span> with Razorpay</span>';
         }
 
-        function selectPayMethod(labelEl) {
-            document.querySelectorAll('.pv-pay-option').forEach(el => el.classList.remove('active'));
-            if (labelEl) {
-                labelEl.classList.add('active');
-                const radio = labelEl.querySelector('input[type="radio"]');
-                if (radio) radio.checked = true;
-            }
-        }
-
-        function openGatewayModal(title, paise, orderId) {
-            const modal = document.getElementById('pvGatewayModal');
-            if (!modal) return;
-            activeOrderId = orderId || activeOrderId;
-            const amtFormatted = '₹' + (paise / 100).toFixed(2);
-            const titleEl = document.getElementById('pvModalBookTitle');
-            if (titleEl && title) titleEl.textContent = title;
-            const amtEl = document.getElementById('pvModalAmount');
-            if (amtEl) amtEl.textContent = amtFormatted;
-            const submitBtn = document.getElementById('pvModalSubmitBtn');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>⚡ Complete Payment (' + amtFormatted + ') & Unlock Book</span>';
-            }
-            const statusEl = document.getElementById('pvModalStatus');
-            if (statusEl) statusEl.style.display = 'none';
-            modal.style.display = 'flex';
-        }
-
-        function closeGatewayModal() {
-            const modal = document.getElementById('pvGatewayModal');
-            if (modal) modal.style.display = 'none';
-            resetPayButton();
-        }
-
-        async function executeModalPayment() {
-            const btn = document.getElementById('pvModalSubmitBtn');
-            const statusEl = document.getElementById('pvModalStatus');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span><svg style="animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg> Authorizing Transaction…</span>';
-            }
-            if (statusEl) {
-                statusEl.style.display = 'block';
-                statusEl.style.background = '#eff6ff';
-                statusEl.style.borderColor = '#bfdbfe';
-                statusEl.style.color = '#1e40af';
-                statusEl.innerHTML = '<span>⏳ Authorizing transaction with banking network…</span>';
-            }
-
-            await new Promise(r => setTimeout(r, 650));
-
-            if (statusEl) {
-                statusEl.style.background = '#f0fdf4';
-                statusEl.style.borderColor = '#86efac';
-                statusEl.style.color = '#15803d';
-                statusEl.innerHTML = '<span>✓ Transaction Authorized! Unlocking book & generating invoice…</span>';
-            }
-
-            await new Promise(r => setTimeout(r, 450));
-
-            proceedInstantUnlock(activeOrderId);
+        function loadRazorpaySdk() {
+            return new Promise((resolve, reject) => {
+                if (typeof window.Razorpay === 'function') {
+                    return resolve(window.Razorpay);
+                }
+                const existingScript = document.querySelector('script[src*="checkout.razorpay.com/v1/checkout.js"]');
+                if (existingScript) {
+                    if (typeof window.Razorpay === 'function') return resolve(window.Razorpay);
+                    existingScript.addEventListener('load', () => resolve(window.Razorpay));
+                    existingScript.addEventListener('error', () => reject(new Error('Failed to load Razorpay checkout SDK. Check internet connection or ad-blocker.')));
+                    setTimeout(() => {
+                        if (typeof window.Razorpay === 'function') resolve(window.Razorpay);
+                        else reject(new Error('Razorpay SDK load timed out. Please refresh the page.'));
+                    }, 8000);
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.async = true;
+                script.onload = () => resolve(window.Razorpay);
+                script.onerror = () => reject(new Error('Failed to load Razorpay checkout SDK. Please verify internet connection.'));
+                document.head.appendChild(script);
+            });
         }
 
         async function initiateSinglePayment() {
@@ -7860,87 +7745,85 @@ Format with these exact markdown sections:
 
                 activeOrderId = data.order_id || ('pv-ord-' + Math.random().toString(36).substring(2, 9));
 
-                // 1. If valid Razorpay key is configured and SDK is available, launch Razorpay Standard Checkout
-                const isRealRzpKey = data.razorpay_key && 
-                                     (data.razorpay_key.startsWith('rzp_test_') || data.razorpay_key.startsWith('rzp_live_')) && 
-                                     data.razorpay_key !== 'rzp_test_pustakverse';
-
-                if (isRealRzpKey && typeof Razorpay !== 'undefined') {
-                    const options = {
-                        key: data.razorpay_key,
-                        amount: data.amount_paise || totalPaise,
-                        currency: "INR",
-                        name: "PustakVerse",
-                        description: 'Unlock "' + (data.book_title || 'Book') + '"',
-                        image: "/static/PustakVerse.png",
-                        prefill: {
-                            name: data.user_name || "",
-                            email: data.user_email || ""
-                        },
-                        notes: {
-                            book_id: BOOK_ID,
-                            receipt: activeOrderId
-                        },
-                        theme: { color: "#ea580c" },
-                        handler: function (response) {
-                            btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
-                            document.getElementById('order_id').value = response.razorpay_order_id || activeOrderId;
-                            document.getElementById('payment_id').value = response.razorpay_payment_id;
-                            document.getElementById('signature').value = response.razorpay_signature || '';
-                            document.getElementById('verifyForm').submit();
-                        },
-                        modal: {
-                            ondismiss: function() {
-                                resetPayButton();
-                            },
-                            escape: true,
-                            animation: true
-                        }
-                    };
-
-                    // Only pass order_id if genuinely generated by Razorpay Orders API
-                    if (data.is_real_razorpay_order && data.order_id && String(data.order_id).startsWith("order_")) {
-                        options.order_id = data.order_id;
-                    }
-
-                    try {
-                        const rzp = new Razorpay(options);
-                        rzp.on('payment.failed', function(resp) {
-                            resetPayButton();
-                            const reason = resp.error?.description || resp.error?.reason || "Gateway declined payment";
-                            showPaymentToast("Payment failed: " + reason, false);
-                        });
-                        rzp.open();
-                        btn.innerHTML = '<span>🔒 Waiting for Razorpay Payment…</span>';
-                        return;
-                    } catch (rzpErr) {
-                        console.warn("Razorpay open error, launching in-page gateway:", rzpErr);
-                    }
+                if (!data.razorpay_key) {
+                    resetPayButton();
+                    showPaymentToast('Razorpay payment gateway credentials are not configured.', false);
+                    return;
                 }
 
-                // 2. Fallback to interactive in-page gateway modal (for sandbox, demo, or blocked SDK)
-                openGatewayModal(data.book_title || 'Book', totalPaise, activeOrderId);
-                resetPayButton();
+                // Ensure Razorpay SDK is fully loaded
+                try {
+                    await loadRazorpaySdk();
+                } catch (sdkErr) {
+                    resetPayButton();
+                    showPaymentToast(sdkErr.message || 'Razorpay checkout script could not be loaded.', false);
+                    return;
+                }
+
+                if (typeof Razorpay === 'undefined') {
+                    resetPayButton();
+                    showPaymentToast('Razorpay checkout module is unavailable. Please check your browser or connection.', false);
+                    return;
+                }
+
+                const options = {
+                    key: data.razorpay_key,
+                    amount: data.amount_paise || totalPaise,
+                    currency: "INR",
+                    name: "PustakVerse",
+                    description: 'Unlock "' + (data.book_title || 'Book') + '"',
+                    image: "/static/PustakVerse.png",
+                    prefill: {
+                        name: data.user_name || "",
+                        email: data.user_email || ""
+                    },
+                    notes: {
+                        book_id: BOOK_ID,
+                        receipt: activeOrderId
+                    },
+                    theme: { color: "#ea580c" },
+                    handler: function (response) {
+                        btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
+                        document.getElementById('order_id').value = response.razorpay_order_id || activeOrderId;
+                        document.getElementById('payment_id').value = response.razorpay_payment_id;
+                        document.getElementById('signature').value = response.razorpay_signature || '';
+                        document.getElementById('verifyForm').submit();
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            resetPayButton();
+                        },
+                        escape: true,
+                        animation: true
+                    }
+                };
+
+                // Only pass order_id if genuinely generated by Razorpay Orders API
+                if (data.is_real_razorpay_order && data.order_id && String(data.order_id).startsWith("order_")) {
+                    options.order_id = data.order_id;
+                }
+
+                try {
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function(resp) {
+                        resetPayButton();
+                        const reason = resp.error?.description || resp.error?.reason || "Gateway declined payment";
+                        showPaymentToast("Payment failed: " + reason, false);
+                    });
+                    rzp.open();
+                    btn.innerHTML = '<span>🔒 Waiting for Razorpay Payment…</span>';
+                } catch (rzpErr) {
+                    console.error("Razorpay open error:", rzpErr);
+                    resetPayButton();
+                    showPaymentToast("Could not open Razorpay checkout: " + rzpErr.message, false);
+                }
 
             } catch (err) {
                 clearTimeout(watchdog);
                 resetPayButton();
                 console.error("Payment initialization error:", err);
-                // Open in-page gateway as safe guaranteed fallback
-                openGatewayModal(document.querySelector('.book-info h3')?.textContent || 'Book', totalPaise, 'pv-fallback-' + Date.now());
+                showPaymentToast("Payment initialization failed: " + err.message, false);
             }
-        }
-
-        function proceedInstantUnlock(orderId) {
-            const btn = document.getElementById('payButton');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span>✓ Unlocking & Downloading Receipt…</span>';
-            }
-            document.getElementById('order_id').value = orderId || ('order_' + Math.random().toString(36).substring(2, 10));
-            document.getElementById('payment_id').value = 'pay_instant_' + Math.random().toString(36).substring(2, 10);
-            document.getElementById('signature').value = 'sig_sandbox_test_verified';
-            document.getElementById('verifyForm').submit();
         }
 
         // Attach listeners and sync on load
@@ -8088,6 +7971,16 @@ Format with these exact markdown sections:
         const gatewayKeyId = String(rawKeyId).trim();
         const gatewayKeySecret = String(rawKeySecret).trim();
 
+        if (!gatewayKeyId || !gatewayKeySecret || gatewayKeyId.includes("test_pustakverse")) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: "Razorpay payment gateway is not configured. The platform administrator or author must configure their Razorpay Key ID & Key Secret in Settings before payments can be processed."
+          }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
         const totalPaise = effectiveBookPricePaise + (activeDonation * 100);
         const orderReceipt = isAuthorDonation
           ? `don-${sessionUser.id}-${targetBookId}-${Math.floor(Date.now() / 1000)}`
@@ -8096,35 +7989,48 @@ Format with these exact markdown sections:
         let razorpayOrderId = orderReceipt;
         let isRealRazorpayOrder = false;
 
-        // If real Razorpay keys are configured, call Razorpay Orders API directly via fetch
-        if (gatewayKeyId && gatewayKeySecret && !gatewayKeyId.includes("test_pustakverse")) {
-          try {
-            const basicAuth = btoa(`${gatewayKeyId}:${gatewayKeySecret}`);
-            const rpRes = await fetch("https://api.razorpay.com/v1/orders", {
-              method: "POST",
-              headers: {
-                "Authorization": `Basic ${basicAuth}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                amount: totalPaise,
-                currency: "INR",
-                receipt: orderReceipt
-              })
-            });
-            if (rpRes.ok) {
-              const rpOrder = await rpRes.json();
-              if (rpOrder && rpOrder.id) {
-                razorpayOrderId = rpOrder.id;
-                isRealRazorpayOrder = true;
-              }
-            } else {
-              const errText = await rpRes.text().catch(() => "");
-              console.warn(`[Razorpay Orders API error HTTP ${rpRes.status}]: ${errText}`);
+        // Call Razorpay Orders API directly via fetch
+        try {
+          const basicAuth = btoa(`${gatewayKeyId}:${gatewayKeySecret}`);
+          const rpRes = await fetch("https://api.razorpay.com/v1/orders", {
+            method: "POST",
+            headers: {
+              "Authorization": `Basic ${basicAuth}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              amount: totalPaise,
+              currency: "INR",
+              receipt: orderReceipt
+            })
+          });
+          if (rpRes.ok) {
+            const rpOrder = await rpRes.json();
+            if (rpOrder && rpOrder.id) {
+              razorpayOrderId = rpOrder.id;
+              isRealRazorpayOrder = true;
             }
-          } catch (rpErr) {
-            console.warn("[Razorpay fetch exception]:", rpErr);
+          } else {
+            const errData = await rpRes.json().catch(() => ({}));
+            const errDesc = errData.error?.description || (await rpRes.text().catch(() => "")) || `HTTP ${rpRes.status}`;
+            console.warn(`[Razorpay Orders API error]: ${errDesc}`);
+            return new Response(JSON.stringify({
+              success: false,
+              error: `Razorpay rejected order initialization: ${errDesc}. Please verify your Key ID & Secret.`
+            }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
           }
+        } catch (rpErr) {
+          console.warn("[Razorpay fetch exception]:", rpErr);
+          return new Response(JSON.stringify({
+            success: false,
+            error: `Razorpay connection failed: ${rpErr.message}. Please check gateway network connectivity.`
+          }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" }
+          });
         }
 
         if (appliedCouponId) {
@@ -8148,7 +8054,7 @@ Format with these exact markdown sections:
           order_id: razorpayOrderId,
           is_real_razorpay_order: isRealRazorpayOrder,
           amount_paise: totalPaise,
-          razorpay_key: gatewayKeyId || "rzp_test_pustakverse",
+          razorpay_key: gatewayKeyId,
           book_title: book.title,
           author_name: book.author_name || "Author",
           user_name: sessionUser.username || "Reader",
@@ -8742,14 +8648,7 @@ Format with these exact markdown sections:
           });
         }
 
-        const receiptHtml = renderEdgeInvoiceHtml(purchase);
-        return new Response(receiptHtml, {
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Content-Disposition": `attachment; filename="PustakVerse_Receipt_${orderId}.html"`,
-            "Cache-Control": "private, no-cache"
-          }
-        });
+        return Response.redirect(`${url.origin}/invoice/${encodeURIComponent(orderId)}?download=pdf`, 302);
       } catch (err) {
         return new Response("Error generating receipt download: " + err.message, { status: 500, headers: { "Content-Type": "text/plain" } });
       }
@@ -12353,6 +12252,7 @@ function renderEdgeInvoiceHtml(p) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -12554,7 +12454,7 @@ function renderEdgeInvoiceHtml(p) {
     </style>
 </head>
 <body>
-    <div class="invoice-card">
+    <div class="invoice-card" id="taxInvoiceCard">
         <div class="watermark">PAID & VERIFIED</div>
         <div class="invoice-header">
             <div class="brand-block">
@@ -12633,15 +12533,70 @@ function renderEdgeInvoiceHtml(p) {
         <div class="actions-bar">
             <a href="/payment_history" class="back-link">← Return to Payment History</a>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <a href="/api/receipt/download/${orderId}" class="btn-print" style="background: #16a34a; text-decoration: none;">
-                    <span>📥</span> Download Receipt (.html)
-                </a>
+                <button type="button" id="btnDownloadPdf" onclick="downloadInvoicePdf()" class="btn-print" style="background: #16a34a; border: none; cursor: pointer;">
+                    <span>📥</span> Download Tax Invoice (.pdf)
+                </button>
                 <button onclick="window.print()" class="btn-print">
                     <span>🖨️</span> Print Tax Invoice
                 </button>
             </div>
         </div>
     </div>
+    <script>
+        const ORDER_ID = "${orderId}";
+        function downloadInvoicePdf() {
+            const btn = document.getElementById('btnDownloadPdf');
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳</span> Generating Official PDF…';
+            }
+
+            const element = document.getElementById('taxInvoiceCard');
+            const actionsBar = document.querySelector('.actions-bar');
+            if (actionsBar) actionsBar.style.display = 'none';
+
+            const opt = {
+                margin: [8, 8, 8, 8],
+                filename: 'PustakVerse_Tax_Invoice_' + (ORDER_ID || 'Receipt') + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            if (typeof html2pdf !== 'undefined') {
+                html2pdf().set(opt).from(element).save().then(() => {
+                    if (actionsBar) actionsBar.style.display = 'flex';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                }).catch(err => {
+                    console.error('PDF generation error:', err);
+                    if (actionsBar) actionsBar.style.display = 'flex';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                    window.print();
+                });
+            } else {
+                if (actionsBar) actionsBar.style.display = 'flex';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+                window.print();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('download') === 'pdf' || params.get('download') === '1') {
+                setTimeout(downloadInvoicePdf, 600);
+            }
+        });
+    </script>
 </body>
 </html>`;
 }

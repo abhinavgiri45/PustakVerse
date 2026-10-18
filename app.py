@@ -344,9 +344,9 @@ def apply_security_and_performance(response):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com data:; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' https://api.razorpay.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://lumberjack-cx.razorpay.com; "
+            "connect-src 'self' https://api.razorpay.com https://*.razorpay.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
             "worker-src 'self' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
-            "frame-src 'self' https://api.razorpay.com https://drive.google.com https://docs.google.com https://*.google.com https://*.googleusercontent.com blob: data:; "
+            "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com https://drive.google.com https://docs.google.com https://*.google.com https://*.googleusercontent.com blob: data:; "
             "object-src 'self' blob: data: https:; "
             "embed-src 'self' blob: data: https:; "
             "base-uri 'self';"
@@ -7678,7 +7678,13 @@ def api_checkout_create_order(book_id):
         order_id = order_receipt
         is_real_razorpay_order = False
 
-        if gateway_key_id and gateway_key_secret and razorpay and not 'test_pustakverse' in str(gateway_key_id):
+        if not gateway_key_id or not gateway_key_secret:
+            return jsonify({
+                'success': False,
+                'error': 'Razorpay payment gateway is not configured. The platform administrator or author must configure their Razorpay Key ID & Key Secret in Settings before payments can be processed.'
+            }), 400
+
+        if gateway_key_id and gateway_key_secret and razorpay:
             try:
                 client = razorpay.Client(auth=(gateway_key_id, gateway_key_secret))
                 order_data = {
@@ -7691,7 +7697,11 @@ def api_checkout_create_order(book_id):
                     order_id = order['id']
                     is_real_razorpay_order = True
             except Exception as rp_err:
-                logging.warning(f"Razorpay order create notice: {rp_err}")
+                logging.error(f"Razorpay order creation failed: {rp_err}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Razorpay rejected order initialization: {str(rp_err)}. Please verify your Key ID & Secret.'
+                }), 400
 
         cursor.execute("""
             INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, author_earning_paise, status) 
@@ -7704,7 +7714,7 @@ def api_checkout_create_order(book_id):
             'order_id': order_id,
             'is_real_razorpay_order': is_real_razorpay_order,
             'amount_paise': total_paise,
-            'razorpay_key': gateway_key_id or 'rzp_test_pustakverse',
+            'razorpay_key': gateway_key_id,
             'book_title': book['title'],
             'user_name': session.get('username') or 'Reader',
             'user_email': session.get('email') or ''
@@ -11781,15 +11791,8 @@ def api_receipt_download(order_id):
                 if age_days > 30:
                     return render_template('invoice_expired.html', purchase=purchase, book=book), 410
 
-        rendered = render_template('invoice.html', purchase=purchase, buyer=buyer, book=book)
-        return Response(
-            rendered,
-            mimetype="text/html",
-            headers={
-                "Content-Disposition": f'attachment; filename="PustakVerse_Receipt_{order_id}.html"',
-                "Cache-Control": "private, no-cache"
-            }
-        )
+        # Redirect to the dedicated invoice view with auto-PDF download trigger
+        return redirect(url_for('view_invoice', order_id=order_id, download='pdf'))
     except Exception as e:
         logging.error(f"Error downloading receipt for {order_id}: {e}")
         flash("Could not generate receipt download.", "error")

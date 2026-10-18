@@ -493,83 +493,6 @@
         <input type="hidden" name="book_id" value="{{ book.id }}">
     </form>
 
-    <!-- Interactive Gateway Simulation Modal (Zero intrusive alerts / Infallible fallback) -->
-    <div id="pvGatewayModal" class="pv-modal-backdrop" style="display: none;">
-        <div class="pv-modal-card">
-            <div class="pv-modal-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.4rem;">🔒</span>
-                    <div>
-                        <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">PustakVerse Secure Gateway</h3>
-                        <p style="font-size: 0.76rem; color: #64748b; margin: 2px 0 0 0;">256-Bit SSL Encrypted · Instant Library Delivery</p>
-                    </div>
-                </div>
-                <button type="button" class="pv-modal-close" onclick="closeGatewayModal()">✕</button>
-            </div>
-
-            <div class="pv-modal-body">
-                <div class="pv-order-summary">
-                    <div>
-                        <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b;">Title to Unlock</div>
-                        <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a;" id="pvModalBookTitle">{{ book.title }}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b;">Total Amount</div>
-                        <div style="font-size: 1.25rem; font-weight: 900; color: #ea580c;" id="pvModalAmount">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</div>
-                    </div>
-                </div>
-
-                <div style="margin: 14px 0 8px 0; font-size: 0.82rem; font-weight: 800; color: #334155;">
-                    Select Payment Mode:
-                </div>
-
-                <div class="pv-pay-methods">
-                    <label class="pv-pay-option active" onclick="selectPayMethod(this)">
-                        <input type="radio" name="pv_pay_method" value="upi" checked style="accent-color: #ea580c;">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <span style="font-size: 1.3rem;">📱</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">UPI / Instant QR</div>
-                                <div style="font-size: 0.74rem; color: #64748b;">Google Pay, PhonePe, Paytm, BHIM</div>
-                            </div>
-                            <span class="pv-badge-instant">⚡ Instant</span>
-                        </div>
-                    </label>
-
-                    <label class="pv-pay-option" onclick="selectPayMethod(this)">
-                        <input type="radio" name="pv_pay_method" value="card" style="accent-color: #ea580c;">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <span style="font-size: 1.3rem;">💳</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">Debit / Credit Card</div>
-                                <div style="font-size: 0.74rem; color: #64748b;">Visa, MasterCard, RuPay</div>
-                            </div>
-                        </div>
-                    </label>
-
-                    <label class="pv-pay-option" onclick="selectPayMethod(this)">
-                        <input type="radio" name="pv_pay_method" value="netbanking" style="accent-color: #ea580c;">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <span style="font-size: 1.3rem;">🏛️</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">NetBanking & Wallets</div>
-                                <div style="font-size: 0.74rem; color: #64748b;">All Indian Banks & Wallets</div>
-                            </div>
-                        </div>
-                    </label>
-                </div>
-
-                <div id="pvModalStatus" style="display: none; padding: 12px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.85rem; font-weight: 700; text-align: center; margin-top: 14px;">
-                    ⏳ Authorizing transaction with payment network…
-                </div>
-
-                <button type="button" id="pvModalSubmitBtn" class="btn-pay" style="margin-top: 16px;" onclick="executeModalPayment()">
-                    <span>⚡ Complete Payment & Unlock Book</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         const BASE_PRICE_PAISE = {{ base_price }};
@@ -765,67 +688,29 @@
             }, 3500);
         }
 
-        function selectPayMethod(labelEl) {
-            document.querySelectorAll('.pv-pay-option').forEach(el => el.classList.remove('active'));
-            if (labelEl) {
-                labelEl.classList.add('active');
-                const radio = labelEl.querySelector('input[type="radio"]');
-                if (radio) radio.checked = true;
-            }
-        }
-
-        function openGatewayModal(title, paise, orderId) {
-            const modal = document.getElementById('pvGatewayModal');
-            if (!modal) return;
-            activeOrderId = orderId || activeOrderId;
-            const amtFormatted = '₹' + (paise / 100).toFixed(2);
-            const titleEl = document.getElementById('pvModalBookTitle');
-            if (titleEl && title) titleEl.textContent = title;
-            const amtEl = document.getElementById('pvModalAmount');
-            if (amtEl) amtEl.textContent = amtFormatted;
-            const submitBtn = document.getElementById('pvModalSubmitBtn');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>⚡ Complete Payment (' + amtFormatted + ') & Unlock Book</span>';
-            }
-            const statusEl = document.getElementById('pvModalStatus');
-            if (statusEl) statusEl.style.display = 'none';
-            modal.style.display = 'flex';
-        }
-
-        function closeGatewayModal() {
-            const modal = document.getElementById('pvGatewayModal');
-            if (modal) modal.style.display = 'none';
-            resetPayButton();
-        }
-
-        async function executeModalPayment() {
-            const btn = document.getElementById('pvModalSubmitBtn');
-            const statusEl = document.getElementById('pvModalStatus');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span><svg style="animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg> Authorizing Transaction…</span>';
-            }
-            if (statusEl) {
-                statusEl.style.display = 'block';
-                statusEl.style.background = '#eff6ff';
-                statusEl.style.borderColor = '#bfdbfe';
-                statusEl.style.color = '#1e40af';
-                statusEl.innerHTML = '<span>⏳ Authorizing transaction with banking network…</span>';
-            }
-
-            await new Promise(r => setTimeout(r, 650));
-
-            if (statusEl) {
-                statusEl.style.background = '#f0fdf4';
-                statusEl.style.borderColor = '#86efac';
-                statusEl.style.color = '#15803d';
-                statusEl.innerHTML = '<span>✓ Transaction Authorized! Unlocking book & generating invoice…</span>';
-            }
-
-            await new Promise(r => setTimeout(r, 450));
-
-            proceedInstantUnlock(activeOrderId);
+        function loadRazorpaySdk() {
+            return new Promise((resolve, reject) => {
+                if (typeof window.Razorpay === 'function') {
+                    return resolve(window.Razorpay);
+                }
+                const existingScript = document.querySelector('script[src*="checkout.razorpay.com/v1/checkout.js"]');
+                if (existingScript) {
+                    if (typeof window.Razorpay === 'function') return resolve(window.Razorpay);
+                    existingScript.addEventListener('load', () => resolve(window.Razorpay));
+                    existingScript.addEventListener('error', () => reject(new Error('Failed to load Razorpay checkout SDK. Check internet connection or ad-blocker.')));
+                    setTimeout(() => {
+                        if (typeof window.Razorpay === 'function') resolve(window.Razorpay);
+                        else reject(new Error('Razorpay SDK load timed out. Please refresh the page.'));
+                    }, 8000);
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.async = true;
+                script.onload = () => resolve(window.Razorpay);
+                script.onerror = () => reject(new Error('Failed to load Razorpay checkout SDK. Please verify internet connection.'));
+                document.head.appendChild(script);
+            });
         }
 
         async function initiateSinglePayment() {
@@ -835,11 +720,11 @@
             const { donationInr, totalPaise } = calculateTotal();
             activeTotalPaise = totalPaise;
 
-            // Safety Watchdog: auto-restore button if modal or network hangs
+            // Safety Watchdog: auto-restore button if network hangs
             const watchdog = setTimeout(() => {
                 const currentBtn = document.getElementById('payButton');
                 if (currentBtn && currentBtn.disabled && currentBtn.innerHTML.includes('Initializing')) {
-                    console.warn("Payment modal watchdog triggered: resetting pay button");
+                    console.warn("Payment watchdog triggered: resetting pay button");
                     resetPayButton();
                 }
             }, 9000);
@@ -878,89 +763,87 @@
 
                 activeOrderId = data.order_id || ('pv-ord-' + Math.random().toString(36).substring(2, 9));
 
-                // 1. If real Razorpay key is configured and SDK is available, launch Razorpay Standard Checkout
-                const isRealRzpKey = data.razorpay_key && 
-                                     (data.razorpay_key.startsWith('rzp_test_') || data.razorpay_key.startsWith('rzp_live_')) && 
-                                     data.razorpay_key !== 'rzp_test_pustakverse';
-
-                if (isRealRzpKey && typeof Razorpay !== 'undefined') {
-                    const options = {
-                        key: data.razorpay_key,
-                        amount: data.amount_paise || totalPaise,
-                        currency: "INR",
-                        name: "PustakVerse",
-                        description: `Unlock "${data.book_title}"`,
-                        image: "{{ url_for('static', filename='PustakVerse.png') }}",
-                        prefill: {
-                            name: data.user_name || "",
-                            email: data.user_email || ""
-                        },
-                        notes: {
-                            book_id: BOOK_ID,
-                            receipt: activeOrderId
-                        },
-                        theme: {
-                            color: "#ea580c"
-                        },
-                        handler: function (response) {
-                            btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
-                            document.getElementById('order_id').value = response.razorpay_order_id || activeOrderId;
-                            document.getElementById('payment_id').value = response.razorpay_payment_id;
-                            document.getElementById('signature').value = response.razorpay_signature || '';
-                            document.getElementById('verifyForm').submit();
-                        },
-                        modal: {
-                            ondismiss: function() {
-                                resetPayButton();
-                            },
-                            escape: true,
-                            animation: true
-                        }
-                    };
-
-                    // Only pass order_id if genuinely generated by Razorpay Orders API
-                    if (data.is_real_razorpay_order && data.order_id && String(data.order_id).startsWith("order_")) {
-                        options.order_id = data.order_id;
-                    }
-
-                    try {
-                        const rzp = new Razorpay(options);
-                        rzp.on('payment.failed', function(resp) {
-                            resetPayButton();
-                            const reason = resp.error?.description || resp.error?.reason || "Gateway declined payment";
-                            showPaymentToast("Payment failed: " + reason, false);
-                        });
-                        rzp.open();
-                        btn.innerHTML = '<span>🔒 Waiting for Razorpay Payment…</span>';
-                        return;
-                    } catch (rzpErr) {
-                        console.warn("Razorpay open error, launching in-page gateway:", rzpErr);
-                    }
+                if (!data.razorpay_key) {
+                    resetPayButton();
+                    showPaymentToast('Razorpay payment gateway credentials are not configured.', false);
+                    return;
                 }
 
-                // 2. Fallback to interactive in-page gateway modal (for sandbox, demo, or blocked SDK)
-                openGatewayModal(data.book_title || 'Book', totalPaise, activeOrderId);
-                resetPayButton();
+                // Ensure Razorpay SDK is fully loaded
+                try {
+                    await loadRazorpaySdk();
+                } catch (sdkErr) {
+                    resetPayButton();
+                    showPaymentToast(sdkErr.message || 'Razorpay checkout script could not be loaded.', false);
+                    return;
+                }
+
+                if (typeof Razorpay === 'undefined') {
+                    resetPayButton();
+                    showPaymentToast('Razorpay checkout module is unavailable. Please check your browser or connection.', false);
+                    return;
+                }
+
+                const options = {
+                    key: data.razorpay_key,
+                    amount: data.amount_paise || totalPaise,
+                    currency: "INR",
+                    name: "PustakVerse",
+                    description: `Unlock "${data.book_title}"`,
+                    image: "{{ url_for('static', filename='PustakVerse.png') }}",
+                    prefill: {
+                        name: data.user_name || "",
+                        email: data.user_email || ""
+                    },
+                    notes: {
+                        book_id: BOOK_ID,
+                        receipt: activeOrderId
+                    },
+                    theme: {
+                        color: "#ea580c"
+                    },
+                    handler: function (response) {
+                        btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
+                        document.getElementById('order_id').value = response.razorpay_order_id || activeOrderId;
+                        document.getElementById('payment_id').value = response.razorpay_payment_id;
+                        document.getElementById('signature').value = response.razorpay_signature || '';
+                        document.getElementById('verifyForm').submit();
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            resetPayButton();
+                        },
+                        escape: true,
+                        animation: true
+                    }
+                };
+
+                // Only pass order_id if genuinely generated by Razorpay Orders API
+                if (data.is_real_razorpay_order && data.order_id && String(data.order_id).startsWith("order_")) {
+                    options.order_id = data.order_id;
+                }
+
+                try {
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function(resp) {
+                        resetPayButton();
+                        const reason = resp.error?.description || resp.error?.reason || "Gateway declined payment";
+                        showPaymentToast("Payment failed: " + reason, false);
+                    });
+                    rzp.open();
+                    btn.innerHTML = '<span>🔒 Waiting for Razorpay Payment…</span>';
+                } catch (rzpErr) {
+                    console.error("Razorpay open error:", rzpErr);
+                    resetPayButton();
+                    showPaymentToast("Could not open Razorpay checkout: " + rzpErr.message, false);
+                }
 
             } catch (err) {
                 clearTimeout(watchdog);
                 resetPayButton();
                 console.error("Payment initialization error:", err);
-                // Open in-page gateway as safe guaranteed fallback
-                openGatewayModal(document.querySelector('.book-info h3')?.textContent || 'Book', totalPaise, 'pv-fallback-' + Date.now());
+                showPaymentToast("Payment initialization failed: " + err.message, false);
             }
-        }
-
-        function proceedInstantUnlock(orderId) {
-            const btn = document.getElementById('payButton');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span>✓ Unlocking & Downloading Receipt…</span>';
-            }
-            document.getElementById('order_id').value = orderId || ('order_' + Math.random().toString(36).substring(2, 10));
-            document.getElementById('payment_id').value = 'pay_instant_' + Math.random().toString(36).substring(2, 10);
-            document.getElementById('signature').value = 'sig_sandbox_test_verified';
-            document.getElementById('verifyForm').submit();
         }
 
         document.addEventListener('DOMContentLoaded', function() {

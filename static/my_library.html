@@ -871,16 +871,11 @@
                 
                 let receiptNotice = '';
                 if (downloadReceipt) {
-                    receiptNotice = `<br><span style="font-size: 0.88rem; font-weight: 600; color: #15803d;">📥 Your official payment receipt (Ref: <code>${escapeHtml(downloadReceipt)}</code>) is downloading automatically.<br><small style="color: #64748b;">(Available on PustakVerse servers for 30 days; your lifetime purchase record is saved in <a href="/payment_history" style="color: #ea580c; text-decoration: underline; font-weight: 700;">Payment History</a>)</small></span>`;
+                    receiptNotice = `<br><span style="font-size: 0.88rem; font-weight: 600; color: #15803d;">📥 Your official tax invoice (Ref: <code>${escapeHtml(downloadReceipt)}</code>) is ready for download.<br><a href="/invoice/${encodeURIComponent(downloadReceipt)}?download=pdf" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 7px 16px; background: #15803d; color: #ffffff; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(21,128,61,0.3);"><span>📥</span> Download Tax Invoice (.pdf)</a><br><small style="color: #64748b;">(Hosted on PustakVerse servers for 30 days; your lifetime purchase record is saved in <a href="/payment_history" style="color: #ea580c; text-decoration: underline; font-weight: 700;">Payment History</a>)</small></span>`;
                     
-                    // Trigger instant receipt download
+                    // Trigger instant invoice PDF download in new tab
                     try {
-                        const dl = document.createElement('a');
-                        dl.href = `/api/receipt/download/${encodeURIComponent(downloadReceipt)}`;
-                        dl.download = `PustakVerse_Receipt_${downloadReceipt}.html`;
-                        document.body.appendChild(dl);
-                        dl.click();
-                        setTimeout(() => dl.remove(), 1000);
+                        window.open(`/invoice/${encodeURIComponent(downloadReceipt)}?download=pdf`, '_blank');
                     } catch (e) {
                         console.warn("Instant download trigger:", e);
                     }

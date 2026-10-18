@@ -411,8 +411,8 @@
                             <td style="text-align: right;">
                                 {% if payment.status == 'paid' %}
                                 <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
-                                    <a href="/api/receipt/download/{{ payment.razorpay_order_id }}" class="btn-invoice" style="background: #15803d;" title="Instantly download official receipt">
-                                        <span>📥</span> Download
+                                    <a href="/invoice/{{ payment.razorpay_order_id }}?download=pdf" target="_blank" class="btn-invoice" style="background: #15803d;" title="Download Official Tax Invoice (.pdf)">
+                                        <span>📥</span> PDF
                                     </a>
                                     <a href="/invoice/{{ payment.razorpay_order_id }}" target="_blank" class="btn-invoice" title="View Printable Invoice">
                                         <span>📄</span> Invoice
@@ -625,8 +625,8 @@
                             if (!isExpired) {
                                 invoiceBtn = `
                                     <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
-                                        <a href="/api/receipt/download/${encodeURIComponent(p.razorpay_order_id)}" class="btn-invoice" style="background: #15803d;" title="Instantly download official receipt">
-                                            <span>📥</span> Download
+                                        <a href="/invoice/${encodeURIComponent(p.razorpay_order_id)}?download=pdf" target="_blank" class="btn-invoice" style="background: #15803d;" title="Download Official Tax Invoice (.pdf)">
+                                            <span>📥</span> PDF
                                         </a>
                                         <a href="/invoice/${encodeURIComponent(p.razorpay_order_id)}" target="_blank" class="btn-invoice" title="View Printable Invoice">
                                             <span>📄</span> Invoice
