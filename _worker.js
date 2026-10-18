@@ -4811,8 +4811,7 @@ Format with these exact markdown sections:
       <p style="color: #e0e7ff; margin: 8px 0 0; font-size: 0.88rem; font-weight: 600;">Dispatched to: ${escapeHtmlText(roleLabel)}</p>
     </div>
     <div style="padding: 28px 24px; font-size: 0.95rem; line-height: 1.65; color: #e2e8f0;">
-      <p style="margin-top: 0; font-size: 1rem; color: #f8fafc;">Hello <strong>${recipientName}</strong>,</p>
-      <div style="background: rgba(15, 23, 42, 0.5); border-left: 4px solid #8b5cf6; padding: 16px 18px; border-radius: 8px; margin: 18px 0; color: #f1f5f9; font-size: 0.93rem;">
+      <div style="background: rgba(15, 23, 42, 0.5); border-left: 4px solid #8b5cf6; padding: 16px 18px; border-radius: 8px; margin: 0 0 18px; color: #f1f5f9; font-size: 0.93rem;">
         ${formattedBody}
       </div>
       <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0;">This is an official administrative broadcast sent by the PustakVerse executive leadership team. Replies to this email are monitored by our administrative staff.</p>
@@ -4829,7 +4828,7 @@ Format with these exact markdown sections:
               to: u.email,
               subject: `[PustakVerse] ${subject}`,
               html: htmlContent,
-              text: `Hello ${recipientName},\n\n${messageBody}\n\n--\nPustakVerse Administration\nhttps://pustakverse.com`
+              text: `${messageBody}\n\n--\nPustakVerse Administration\nhttps://pustakverse.com`
             });
             dispatchedCount++;
           } catch (e) {
