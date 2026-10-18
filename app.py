@@ -3855,6 +3855,116 @@ def send_quarantine_notice_email(to_email, username, book_title, reason):
     )
     return send_email_wrapper(to_email, f'Notice: Book Visibility Status - {book_title}', generate_html_email("Book Status Update", content))
 
+def send_purchase_receipt_email(to_email, username, book_title, author_name, order_id, payment_id, amount_inr, invoice_url, library_url):
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>Thank you for purchasing <strong>'{book_title}'</strong> on PustakVerse! Your transaction has been verified and the book is now permanently available in your personal library with unlimited reading access.</p>"
+        f"<div style='background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;'>"
+        f"<div style='display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Book Title:</span> <strong style='color: #0f172a;'>{book_title}</strong></div>"
+        f"<div style='display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Author:</span> <strong style='color: #0f172a;'>{author_name}</strong></div>"
+        f"<div style='display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Order Reference:</span> <span style='font-family: monospace; color: #6366f1; font-weight: 700;'>{order_id}</span></div>"
+        f"<div style='display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Payment ID:</span> <span style='font-family: monospace; color: #10b981; font-weight: 700;'>{payment_id}</span></div>"
+        f"<div style='display: flex; justify-content: space-between; font-size: 15px; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;'><span style='color: #1e293b; font-weight: 700;'>Total Amount Paid:</span> <strong style='color: #ea580c; font-size: 18px;'>₹{amount_inr:.2f}</strong></div>"
+        f"</div>"
+        f"<div style='text-align: center; margin: 25px 0;'>"
+        f"<a href='{library_url}' style='background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; margin-right: 10px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);'>📖 Open in My Library</a>"
+        f"<a href='{invoice_url}' style='background: #f1f5f9; color: #334155; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block; border: 1px solid #cbd5e1;'>🧾 View Invoice</a>"
+        f"</div>"
+        f"<p style='font-size: 13px; color: #94a3b8; text-align: center;'>Keep this email as your official digital tax invoice and proof of purchase.</p>"
+    )
+    return send_email_wrapper(to_email, f'Receipt & Access Confirmed: {book_title} (Order #{order_id})', generate_html_email("Purchase Receipt", content))
+
+def send_author_sale_email(to_email, username, book_title, order_id, total_amount_inr, author_earning_inr):
+    dash_link = "https://pustakverse.com/dashboard"
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>🎉 Exciting news! A reader just purchased your book <strong>'{book_title}'</strong> on PustakVerse.</p>"
+        f"<div style='background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 20px; margin: 20px 0;'>"
+        f"<div style='font-size: 14px; color: #166534; margin-bottom: 8px;'>Book Title: <strong>{book_title}</strong></div>"
+        f"<div style='font-size: 14px; color: #166534; margin-bottom: 8px;'>Order Reference: <span style='font-family: monospace;'>{order_id}</span></div>"
+        f"<div style='font-size: 14px; color: #166534; margin-bottom: 8px;'>Gross Price: ₹{total_amount_inr:.2f}</div>"
+        f"<div style='font-size: 16px; color: #15803d; border-top: 1px dashed #86efac; padding-top: 10px; margin-top: 10px;'>Net Creator Payout: <strong style='font-size: 20px;'>₹{author_earning_inr:.2f}</strong></div>"
+        f"</div>"
+        f"<div style='text-align: center; margin: 25px 0;'>"
+        f"<a href='{dash_link}' style='background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);'>📊 View Author Dashboard & Sales</a>"
+        f"</div>"
+    )
+    return send_email_wrapper(to_email, f'🎉 New Book Sale: "{book_title}" on PustakVerse!', generate_html_email("Book Sale Notification", content))
+
+def send_book_saved_email(to_email, username, book_title, author_name, catalog, book_id=None):
+    library_link = "https://pustakverse.com/my-library"
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>Great choice! <strong>'{book_title}'</strong> has been successfully added to your personal library on PustakVerse.</p>"
+        f"<div style='background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 16px; margin: 20px 0;'>"
+        f"<div style='font-weight: 700; font-size: 16px; color: #0f172a; margin-bottom: 4px;'>{book_title}</div>"
+        f"<div style='color: #64748b; font-size: 14px;'>By {author_name or 'Verified Curator'} &bull; Category: <span style='color: #3b82f6; font-weight: 600;'>{catalog or 'General'}</span></div>"
+        f"</div>"
+        f"<div style='background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #166534; line-height: 1.5;'>"
+        f"💡 <strong>Personal Library Perks:</strong> Your saved books stay synced across all your devices with GranthMind AI study assistance, custom font scaling, and night reading modes."
+        f"</div>"
+        f"<div style='text-align: center; margin: 25px 0;'>"
+        f"<a href='{library_link}' style='background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);'>📖 Open in My Library</a>"
+        f"</div>"
+    )
+    return send_email_wrapper(to_email, f'📚 Saved to Your Library: {book_title}', generate_html_email("Library Collection Updated", content))
+
+def send_book_published_email(to_email, username, book_title, catalog, sbin_no, is_paid=False, price_inr=0.0):
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>Congratulations! Your book <strong>'{book_title}'</strong> is officially registered and live on PustakVerse.</p>"
+        f"<div style='background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;'>"
+        f"<div style='margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Title:</span> <strong style='color: #0f172a;'>{book_title}</strong></div>"
+        f"<div style='margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Catalog:</span> <strong style='color: #0f172a;'>{catalog}</strong></div>"
+        f"<div style='margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Standard Book Identifier (SBIN):</span> <span style='font-family: monospace; color: #ea580c; font-weight: 700;'>{sbin_no}</span></div>"
+        f"<div style='font-size: 14px;'><span style='color: #64748b;'>Access Model:</span> <strong style='color: {'#10b981' if not is_paid else '#ea580c'};'>{'Free & Open-Access' if not is_paid else f'Premium (₹{price_inr:.2f})'}</strong></div>"
+        f"</div>"
+        f"<div style='text-align: center; margin: 25px 0;'>"
+        f"<a href='https://pustakverse.com/' style='background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block;'>🚀 View in Global Library</a>"
+        f"</div>"
+    )
+    return send_email_wrapper(to_email, f'🎉 Your Book "{book_title}" is Live on PustakVerse!', generate_html_email("Book Published Successfully", content))
+
+def send_book_request_confirmation_email(to_email, username, book_title, author, notes=""):
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>We've received your Book Acquisition & Wishlist request for <strong>'{book_title}'</strong>.</p>"
+        f"<div style='background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 8px; padding: 16px; margin: 20px 0;'>"
+        f"<div style='font-size: 15px; font-weight: 700; color: #9a3412;'>{book_title}</div>"
+        f"<div style='font-size: 14px; color: #c2410c;'>Author / Publisher: {author}</div>"
+        f"{f'<div style=\"font-size: 13px; color: #7c2d12; margin-top: 6px;\">Details: {notes}</div>' if notes else ''}"
+        f"</div>"
+        f"<p style='color: #475569; font-size: 14px;'>Our community of verified authors, curators, and administrators will inspect acquisition options. We will notify you once this title is added to the catalog!</p>"
+    )
+    return send_email_wrapper(to_email, f'📚 Acquisition Request Logged: {book_title}', generate_html_email("Wishlist Request Received", content))
+
+def send_password_changed_security_email(to_email, username, client_ip=''):
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>This is an official security confirmation that the password for your PustakVerse account was recently changed.</p>"
+        f"<div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 18px 0; font-size: 13px; color: #475569;'>"
+        f"📅 <strong>Timestamp:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC<br>"
+        f"{f'🌐 <strong>Initiating IP:</strong> {client_ip}<br>' if client_ip else ''}"
+        f"🔒 <strong>Status:</strong> Password Successfully Updated"
+        f"</div>"
+        f"<p style='color: #b91c1c; font-size: 14px; font-weight: 600;'>If you did NOT perform this change, please reset your password immediately and contact support@pustakverse.org.</p>"
+    )
+    return send_email_wrapper(to_email, '🔒 Security Alert: Your PustakVerse Password Was Changed', generate_html_email("Security Alert", content))
+
+def send_2fa_status_email(to_email, username, enabled):
+    status_str = "ENABLED" if enabled else "DISABLED"
+    color = "#10b981" if enabled else "#f59e0b"
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>Two-Factor Authentication (2FA) for your PustakVerse account has been <strong>{status_str}</strong>.</p>"
+        f"<div style='background: #f8fafc; border-left: 4px solid {color}; border-radius: 8px; padding: 16px; margin: 20px 0;'>"
+        f"<div style='font-size: 15px; font-weight: 700; color: #0f172a;'>Two-Step Verification: <span style='color: {color};'>{status_str}</span></div>"
+        f"<div style='font-size: 13px; color: #64748b; margin-top: 4px;'>{'A one-time verification code will now be required whenever you sign in.' if enabled else 'Login codes are currently disabled. We strongly recommend keeping 2FA enabled for maximum security.'}</div>"
+        f"</div>"
+        f"<p style='font-size: 13px; color: #94a3b8;'>If you did not make this change, please check your account security settings on your Dashboard immediately.</p>"
+    )
+    return send_email_wrapper(to_email, f'🛡️ Security Update: Two-Factor Authentication {status_str.capitalize()}', generate_html_email("Security Notification", content))
+
 # ==========================================
 # CLOUDFLARE D1 DATABASE CONNECTION
 # ==========================================
@@ -6944,6 +7054,22 @@ def change_password():
         hashed_pw = generate_password_hash(new_password)
         cursor.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed_pw, session['user_id']))
         db.commit()
+
+        # Automatic Security Email Dispatch: Password Changed Alert
+        try:
+            cursor.execute("SELECT email, username FROM users WHERE id = %s", (session['user_id'],))
+            pw_user = cursor.fetchone() or {}
+            if pw_user.get('email'):
+                c_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+                send_email_async(
+                    send_password_changed_security_email,
+                    pw_user['email'],
+                    pw_user.get('username') or session.get('username') or 'Member',
+                    c_ip
+                )
+        except Exception as mail_err:
+            logging.warning(f"Password changed security email notification notice: {mail_err}")
+
         flash("Your password has been securely updated!", "success")
     except Exception: 
         flash("Database connection error. Please try again.", "error")
@@ -7369,6 +7495,50 @@ def verify_payment():
             cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
             cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
             db.commit()
+
+            # Automatic Transactional Email Dispatch: Buyer Receipt & Author Sale Alert
+            try:
+                cursor.execute("SELECT email, username FROM users WHERE id = %s", (session['user_id'],))
+                buyer_rec = cursor.fetchone() or {}
+                cursor.execute("""
+                    SELECT b.title, b.catalog, b.author_id, u.email as author_email, u.username as author_username 
+                    FROM books b 
+                    LEFT JOIN users u ON b.author_id = u.id 
+                    WHERE b.id = %s
+                """, (purchase['book_id'],))
+                book_rec = cursor.fetchone() or {}
+
+                amt_inr = round(float(purchase.get('amount_paise') or (purchase.get('amount', 0) * 100) or 0) / 100.0, 2)
+                earn_inr = round(float(purchase.get('author_earning_paise') or purchase.get('amount_paise') or 0) / 100.0, 2)
+                invoice_link = url_for('download_invoice', order_id=order_id, _external=True)
+                lib_link = url_for('my_library', _external=True)
+
+                if buyer_rec.get('email'):
+                    send_email_async(
+                        send_purchase_receipt_email,
+                        buyer_rec['email'],
+                        buyer_rec.get('username') or session.get('username') or 'Reader',
+                        book_rec.get('title') or 'Purchased Book',
+                        book_rec.get('author_username') or 'Verified Author',
+                        order_id,
+                        payment_id,
+                        amt_inr,
+                        invoice_link,
+                        lib_link
+                    )
+
+                if book_rec.get('author_email') and book_rec.get('author_id') != session['user_id']:
+                    send_email_async(
+                        send_author_sale_email,
+                        book_rec['author_email'],
+                        book_rec.get('author_username') or 'Author',
+                        book_rec.get('title') or 'Book',
+                        order_id,
+                        amt_inr,
+                        earn_inr
+                    )
+            except Exception as mail_err:
+                logging.warning(f"Purchase transactional email dispatch error: {mail_err}")
             
             if is_ajax:
                 return jsonify({
@@ -7982,6 +8152,30 @@ def save_book(book_id):
 
         cursor.execute("INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)", (session['user_id'], book_id))
         db.commit()
+
+        # Automatic Transactional Email Dispatch: Book Saved to Personal Library
+        try:
+            cursor.execute("SELECT email, username FROM users WHERE id = %s", (session['user_id'],))
+            saver_user = cursor.fetchone() or {}
+            cursor.execute("""
+                SELECT b.title, b.catalog, u.username as author_name 
+                FROM books b 
+                LEFT JOIN users u ON b.author_id = u.id 
+                WHERE b.id = %s
+            """, (book_id,))
+            b_meta = cursor.fetchone() or {}
+            if saver_user.get('email') and b_meta.get('title'):
+                send_email_async(
+                    send_book_saved_email,
+                    saver_user['email'],
+                    saver_user.get('username') or session.get('username') or 'Reader',
+                    b_meta['title'],
+                    b_meta.get('author_name') or 'Verified Curator',
+                    b_meta.get('catalog') or 'General',
+                    book_id
+                )
+        except Exception as mail_err:
+            logging.warning(f"Book saved email notification notice: {mail_err}")
         if request.is_json or request.headers.get('Accept', '').find('application/json') != -1 or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': True, 'saved': True, 'book_id': book_id})
         flash("Book saved to My Library!", "success")
@@ -8112,6 +8306,21 @@ def dashboard():
             cursor.execute("UPDATE users SET two_factor_enabled = %s WHERE id = %s", (new_status, session['user_id']))
             db.commit()
             status_text = "enabled" if new_status else "disabled"
+
+            # Automatic Transactional Email Dispatch: 2FA Status Change
+            try:
+                cursor.execute("SELECT email, username FROM users WHERE id = %s", (session['user_id'],))
+                sec_user = cursor.fetchone() or {}
+                if sec_user.get('email'):
+                    send_email_async(
+                        send_2fa_status_email,
+                        sec_user['email'],
+                        sec_user.get('username') or session.get('username') or 'Member',
+                        new_status
+                    )
+            except Exception as mail_err:
+                logging.warning(f"2FA status change email notification notice: {mail_err}")
+
             flash(f"Two-Step Verification has been {status_text}.", "success")
             return redirect(url_for('dashboard'))
 
@@ -8238,6 +8447,26 @@ def dashboard():
                 )
                 new_book_id = cursor.lastrowid
                 db.commit()
+
+                # Automatic Transactional Email Dispatch: Book Publication Confirmation
+                try:
+                    pub_email = user_profile.get('email') or session.get('email')
+                    pub_name = user_profile.get('username') or session.get('username') or 'Author'
+                    if pub_email:
+                        price_num = round(float(price_paise or 0) / 100.0, 2)
+                        send_email_async(
+                            send_book_published_email,
+                            pub_email,
+                            pub_name,
+                            request.form['title'],
+                            request.form['catalog'],
+                            user_sbin,
+                            bool(is_paid),
+                            price_num
+                        )
+                except Exception as pub_mail_err:
+                    logging.warning(f"Book published email notification notice: {pub_mail_err}")
+
                 try:
                     threading.Thread(target=train_ai_on_book, args=(new_book_id, request.form['title'], description, request.form['catalog'], ''), daemon=True).start()
                 except Exception: pass
@@ -9817,6 +10046,23 @@ def api_book_requests():
                 
             cursor.execute("INSERT INTO book_requests (user_id, title, author, catalog, notes) VALUES (%s, %s, %s, %s, %s)", (session['user_id'], title, author, catalog, notes))
             db.commit()
+
+            # Automatic Transactional Email Dispatch: Wishlist Request Received
+            try:
+                cursor.execute("SELECT email, username FROM users WHERE id = %s", (session['user_id'],))
+                req_user = cursor.fetchone() or {}
+                if req_user.get('email'):
+                    send_email_async(
+                        send_book_request_confirmation_email,
+                        req_user['email'],
+                        req_user.get('username') or session.get('username') or 'Reader',
+                        title,
+                        author,
+                        notes
+                    )
+            except Exception as mail_err:
+                logging.warning(f"Wishlist request confirmation email notice: {mail_err}")
+
             return jsonify({'success': True, 'message': 'Book acquisition request submitted to curators!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

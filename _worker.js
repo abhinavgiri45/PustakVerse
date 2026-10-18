@@ -1434,6 +1434,288 @@ function generateEdgeOtpEmail(title, otpCode, contextDescription, expiryMinutes 
 </html>`;
 }
 
+function generateEdgePurchaseReceiptEmail(username, bookTitle, authorName, orderId, paymentId, amountInr, libraryUrl, invoiceUrl) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Purchase Receipt - PustakVerse</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 40px 15px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px 25px; text-align: center; border-bottom: 3px solid #ea580c;">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">📖 PustakVerse</span>
+        <div style="font-size: 12px; color: #f97316; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">Purchase Receipt & Access Confirmed</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(username)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          Thank you for purchasing <strong>${escapeHtml(bookTitle)}</strong> on PustakVerse! Your transaction has been verified and the book is now permanently available in your personal library with unlimited reading access.
+        </p>
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Book Title:</span> <strong style="color: #0f172a;">${escapeHtml(bookTitle)}</strong></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Author:</span> <strong style="color: #0f172a;">${escapeHtml(authorName)}</strong></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Order Reference:</span> <span style="font-family: monospace; color: #6366f1; font-weight: 700;">${escapeHtml(orderId)}</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Payment ID:</span> <span style="font-family: monospace; color: #10b981; font-weight: 700;">${escapeHtml(paymentId)}</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 15px; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;"><span style="color: #1e293b; font-weight: 700;">Total Amount Paid:</span> <strong style="color: #ea580c; font-size: 18px;">₹${Number(amountInr).toFixed(2)}</strong></div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${libraryUrl}" style="background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; margin-right: 10px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">📖 Open in My Library</a>
+          <a href="${invoiceUrl}" style="background: #f1f5f9; color: #334155; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block; border: 1px solid #cbd5e1;">🧾 View Invoice</a>
+        </div>
+        <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 0;">
+          Keep this email as your official digital tax invoice and proof of purchase.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function generateEdgeAuthorSaleEmail(authorName, bookTitle, orderId, amountInr, authorEarningInr) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>New Book Sale - PustakVerse</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 40px 15px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px 25px; text-align: center; border-bottom: 3px solid #047857;">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">🎉 New Book Sale!</span>
+        <div style="font-size: 12px; color: #d1fae5; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">PustakVerse Creator Royalty Network</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(authorName)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          Great news! A reader just purchased your book <strong>'${escapeHtml(bookTitle)}'</strong> on PustakVerse.
+        </p>
+        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <div style="font-size: 14px; color: #166534; margin-bottom: 8px;">Book Title: <strong>${escapeHtml(bookTitle)}</strong></div>
+          <div style="font-size: 14px; color: #166534; margin-bottom: 8px;">Order Reference: <span style="font-family: monospace;">${escapeHtml(orderId)}</span></div>
+          <div style="font-size: 14px; color: #166534; margin-bottom: 8px;">Gross Price: ₹${Number(amountInr).toFixed(2)}</div>
+          <div style="font-size: 16px; color: #15803d; border-top: 1px dashed #86efac; padding-top: 10px; margin-top: 10px;">Net Creator Payout: <strong style="font-size: 20px;">₹${Number(authorEarningInr).toFixed(2)}</strong></div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://pustakverse.com/dashboard" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">📊 View Creator Dashboard & Sales</a>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function generateEdgeBookSavedEmail(username, bookTitle, authorName, catalog, libraryUrl) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Saved to Library - PustakVerse</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 40px 15px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 30px 25px; text-align: center; border-bottom: 3px solid #0284c7;">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">📚 Saved to Your Library</span>
+        <div style="font-size: 12px; color: #bae6fd; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">PustakVerse Personal Collection</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(username)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          Great choice! <strong>'${escapeHtml(bookTitle)}'</strong> has been successfully added to your personal library on PustakVerse.
+        </p>
+        <div style="background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <div style="font-weight: 700; font-size: 16px; color: #0f172a; margin-bottom: 4px;">${escapeHtml(bookTitle)}</div>
+          <div style="color: #64748b; font-size: 14px;">By ${escapeHtml(authorName || 'Verified Curator')} &bull; Category: <span style="color: #3b82f6; font-weight: 600;">${escapeHtml(catalog || 'General')}</span></div>
+        </div>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #166534; line-height: 1.5;">
+          💡 <strong>Personal Library Perks:</strong> Your saved books stay synced across all your devices with GranthMind AI reading assistance, custom font scaling, and night reading modes.
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${libraryUrl}" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">📖 Open in My Library</a>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function generateEdgeBookPublishedEmail(username, bookTitle, catalog, sbinNo, isPaid, priceInr) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Book Published - PustakVerse</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 40px 15px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px 25px; text-align: center; border-bottom: 3px solid #ea580c;">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">🎉 Book Live on PustakVerse!</span>
+        <div style="font-size: 12px; color: #f97316; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">Author Publication Network</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(username)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          Congratulations! Your book <strong>'${escapeHtml(bookTitle)}'</strong> is officially registered and live on PustakVerse.
+        </p>
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Title:</span> <strong style="color: #0f172a;">${escapeHtml(bookTitle)}</strong></div>
+          <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Catalog:</span> <strong style="color: #0f172a;">${escapeHtml(catalog)}</strong></div>
+          <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b;">Standard Book Identifier (SBIN):</span> <span style="font-family: monospace; color: #ea580c; font-weight: 700;">${escapeHtml(sbinNo)}</span></div>
+          <div style="font-size: 14px;"><span style="color: #64748b;">Access Model:</span> <strong style="color: ${!isPaid ? '#10b981' : '#ea580c'};">${!isPaid ? 'Free & Open-Access' : `Premium (₹${Number(priceInr).toFixed(2)})`}</strong></div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://pustakverse.com/" style="background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block;">🚀 View in Global Library</a>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function generateEdgeBookRequestEmail(username, bookTitle, author, notes) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Wishlist Request Logged - PustakVerse</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 40px 15px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%); padding: 30px 25px; text-align: center; border-bottom: 3px solid #9a3412;">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">📚 Acquisition Request Logged</span>
+        <div style="font-size: 12px; color: #fed7aa; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">PustakVerse Community Wishlist</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(username)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          We've received your Book Acquisition & Wishlist request for <strong>'${escapeHtml(bookTitle)}'</strong>.
+        </p>
+        <div style="background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <div style="font-size: 15px; font-weight: 700; color: #9a3412;">${escapeHtml(bookTitle)}</div>
+          <div style="font-size: 14px; color: #c2410c;">Author / Publisher: ${escapeHtml(author)}</div>
+          ${notes ? `<div style="font-size: 13px; color: #7c2d12; margin-top: 6px;">Details: ${escapeHtml(notes)}</div>` : ''}
+        </div>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6;">
+          Our community of verified authors, curators, and administrators will inspect acquisition options. We will notify you once this title is added to the catalog!
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function generateEdge2FaStatusEmail(username, enabled) {
+  const statusStr = enabled ? "ENABLED" : "DISABLED";
+  const color = enabled ? "#10b981" : "#f59e0b";
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Security Update - PustakVerse</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 40px 15px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px 25px; text-align: center; border-bottom: 3px solid ${color};">
+        <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">🛡️ Security Update</span>
+        <div style="font-size: 12px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">Account Protection System</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(username)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          Two-Factor Authentication (2FA) for your PustakVerse account has been <strong>${statusStr}</strong>.
+        </p>
+        <div style="background: #f8fafc; border-left: 4px solid ${color}; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <div style="font-size: 15px; font-weight: 700; color: #0f172a;">Two-Step Verification: <span style="color: ${color};">${statusStr}</span></div>
+          <div style="font-size: 13px; color: #64748b; margin-top: 4px;">${enabled ? 'A one-time verification code will now be required whenever you sign in.' : 'Login codes are currently disabled. We strongly recommend keeping 2FA enabled for maximum security.'}</div>
+        </div>
+        <p style="font-size: 13px; color: #94a3b8; margin: 0;">
+          If you did not make this change, please check your account security settings on your Dashboard immediately.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function generateEdgePasswordChangedEmail(username, clientIp = "") {
+  const ipText = clientIp ? `<p style="font-size: 13px; color: #64748b; margin: 8px 0 0 0;">Request IP Address: <strong>${escapeHtml(clientIp)}</strong></p>` : "";
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Alert: Password Changed</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <tr>
+      <td style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">PustakVerse Security</h1>
+        <p style="color: #cbd5e1; margin: 5px 0 0 0; font-size: 14px;">Account Security Alert</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 35px 30px;">
+        <p style="font-size: 16px; color: #1e293b; margin: 0 0 12px 0;">Hello <strong>${escapeHtml(username)}</strong>,</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+          The password for your PustakVerse account was recently changed.
+        </p>
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <div style="font-size: 15px; font-weight: 700; color: #991b1b;">Password Successfully Changed</div>
+          <div style="font-size: 13px; color: #7f1d1d; margin-top: 4px;">If you initiated this change, no further action is required.</div>
+          ${ipText}
+        </div>
+        <p style="font-size: 13px; color: #94a3b8; margin: 0;">
+          If you did NOT make this change, please reset your password immediately or contact our security team.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} PustakVerse Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 export default {
   async fetch(request, env) {
     try {
@@ -2098,6 +2380,107 @@ export default {
       }), {
         headers: { "Content-Type": "application/json" }
       });
+    }
+
+    // 4B-2. Book Acquisition & Wishlist Requests: GET /api/book_requests, POST /api/book_requests
+    if (url.pathname === "/api/book_requests") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = await verifySession(cookies.pv_session, env);
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Authentication required." }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, message: "Database not configured." }), {
+          status: 503, headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        await env.DB.prepare(
+          `CREATE TABLE IF NOT EXISTS book_requests (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             user_id INTEGER NOT NULL,
+             title TEXT NOT NULL,
+             author TEXT,
+             catalog TEXT,
+             notes TEXT,
+             status TEXT DEFAULT 'pending',
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+           )`
+        ).run().catch(() => {});
+
+        if (request.method === "GET") {
+          const rows = await env.DB.prepare(
+            `SELECT br.id, br.title, br.author, br.catalog, br.notes, br.status, br.created_at, u.username as requester
+             FROM book_requests br
+             JOIN users u ON br.user_id = u.id
+             ORDER BY br.created_at DESC LIMIT 50`
+          ).all().catch(() => ({ results: [] }));
+          return new Response(JSON.stringify({ success: true, requests: rows.results || [] }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (request.method === "POST") {
+          let title = "";
+          let author = "";
+          let catalog = "General";
+          let notes = "";
+
+          const contentType = request.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            const body = await request.json().catch(() => ({}));
+            title = (body.title || "").trim();
+            author = (body.author || "").trim();
+            catalog = (body.catalog || "General").trim();
+            notes = (body.notes || "").trim();
+          } else {
+            const formData = await request.formData().catch(() => new FormData());
+            title = (formData.get("title") || "").trim();
+            author = (formData.get("author") || "").trim();
+            catalog = (formData.get("catalog") || "General").trim();
+            notes = (formData.get("notes") || "").trim();
+          }
+
+          if (!title) {
+            return new Response(JSON.stringify({ success: false, message: "Book title is required." }), {
+              status: 400, headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          await env.DB.prepare(
+            "INSERT INTO book_requests (user_id, title, author, catalog, notes) VALUES (?, ?, ?, ?, ?)"
+          ).bind(sessionUser.id, title, author, catalog, notes).run();
+
+          // Dispatch confirmation email
+          if (sessionUser.email) {
+            try {
+              const reqHtml = generateEdgeBookRequestEmail(sessionUser.username || "Reader", title, author, notes);
+              await sendEdgeEmail(env, {
+                to: sessionUser.email,
+                subject: `Wishlist Received: "${title}" acquisition request logged`,
+                html: reqHtml,
+                text: `Hello ${sessionUser.username || 'Reader'},\n\nWe have received your book acquisition request for "${title}" by ${author || 'unspecified author'}.\n\nOur curation team will review the request and notify you once it becomes available.`
+              });
+            } catch (_) {}
+          }
+
+          return new Response(JSON.stringify({ success: true, message: "Book acquisition request submitted to curators!" }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        return new Response(JSON.stringify({ success: false, message: "Method not allowed." }), {
+          status: 405, headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, message: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json" }
+        });
+      }
     }
 
     // 4C. Generate Free Digital SBIN / ISBN-13: GET /api/generate_sbin
@@ -3882,6 +4265,17 @@ Format with these exact markdown sections:
             const currentStatus = formData.get("current_status") === "True" || formData.get("current_status") === "true";
             const newStatus = currentStatus ? 0 : 1;
             await env.DB.prepare("UPDATE users SET two_factor_enabled = ? WHERE id = ?").bind(newStatus, user.id).run();
+            if (user.email) {
+              try {
+                const statusHtml = generateEdge2FaStatusEmail(user.username || "Reader", Boolean(newStatus));
+                await sendEdgeEmail(env, {
+                  to: user.email,
+                  subject: `Security Alert: Two-Factor Authentication (2FA) ${newStatus ? 'Enabled' : 'Disabled'}`,
+                  html: statusHtml,
+                  text: `Hello ${user.username || 'Reader'},\n\nTwo-Factor Authentication (2FA) for your PustakVerse account has been ${newStatus ? 'ENABLED' : 'DISABLED'}.\n\nIf you did not make this change, please check your account security settings on your Dashboard immediately.`
+                });
+              } catch (_) {}
+            }
             return Response.redirect(`${url.origin}/dashboard`, 302);
           }
 
@@ -4054,6 +4448,20 @@ Format with these exact markdown sections:
                 return new Response(JSON.stringify({ success: true, message: "Archive book submitted for editorial review!", title, sbin: sbinNo }), { status: 200, headers: { "Content-Type": "application/json" } });
               }
               return Response.redirect(`${url.origin}/dashboard?archive_pending=1`, 302);
+            }
+
+            // Dispatch transactional publication confirmation email
+            if (user.email) {
+              try {
+                const bookPriceStr = isPaid ? `₹${(pricePaise / 100).toFixed(2)}` : "Free / Open-Access";
+                const pubHtml = generateEdgeBookPublishedEmail(user.username || "Author", title, catalog, sbinNo, isPaid, (pricePaise / 100).toFixed(2));
+                await sendEdgeEmail(env, {
+                  to: user.email,
+                  subject: `Book Published: "${title}" is now Live on PustakVerse!`,
+                  html: pubHtml,
+                  text: `Congratulations ${user.username || 'Author'}!\n\nYour book "${title}" has been successfully published on PustakVerse.\n\nSBIN: ${sbinNo}\nGenre: ${catalog}\nAccess: ${bookPriceStr}\n\nReaders across the network can now discover and read your work.`
+                });
+              } catch (_) {}
             }
 
             if (isArchive && (user.role === "developer" || user.role === "official")) {
@@ -5553,6 +5961,17 @@ Format with these exact markdown sections:
       const body = await request.json().catch(() => ({}));
       const newStatus = body.enabled ? 1 : 0;
       await env.DB.prepare("UPDATE users SET two_factor_enabled = ? WHERE id = ?").bind(newStatus, user.id).run();
+      if (user.email) {
+        try {
+          const statusHtml = generateEdge2FaStatusEmail(user.username || "Reader", Boolean(newStatus));
+          await sendEdgeEmail(env, {
+            to: user.email,
+            subject: `Security Alert: Two-Factor Authentication (2FA) ${newStatus ? 'Enabled' : 'Disabled'}`,
+            html: statusHtml,
+            text: `Hello ${user.username || 'Reader'},\n\nTwo-Factor Authentication (2FA) for your PustakVerse account has been ${newStatus ? 'ENABLED' : 'DISABLED'}.\n\nIf you did not make this change, please check your account security settings on your Dashboard immediately.`
+          });
+        } catch (_) {}
+      }
       return new Response(JSON.stringify({ success: true, two_factor_enabled: Boolean(newStatus) }), {
         headers: { "Content-Type": "application/json" }
       });
@@ -7218,6 +7637,70 @@ Format with these exact markdown sections:
           ).bind(sessionUser.id, targetBookId).run().catch(() => {});
         }
 
+        // Edge Transactional Email notifications for Purchase
+        try {
+          let buyer = sessionUser;
+          if (!buyer.email && env.DB) {
+            const bUser = await env.DB.prepare("SELECT username, email FROM users WHERE id = ?").bind(sessionUser.id).first().catch(() => null);
+            if (bUser) buyer = { ...buyer, ...bUser };
+          }
+          
+          let bookInfo = null;
+          if (targetBookId && env.DB) {
+            bookInfo = await env.DB.prepare(
+              `SELECT b.title, b.author_id, u.username as author_username, u.email as author_email
+               FROM books b
+               LEFT JOIN users u ON b.author_id = u.id
+               WHERE b.id = ? LIMIT 1`
+            ).bind(targetBookId).first().catch(() => null);
+          }
+
+          const bookTitle = bookInfo?.title || pur?.book_title || "Official Book";
+          const authorName = bookInfo?.author_username || "PustakVerse Author";
+          const paidPaise = (pur && (pur.amount_paise || pur.amount)) || 0;
+          const amountInr = (paidPaise / 100).toFixed(2);
+          const authorEarningInr = ((pur?.author_earning_paise || (paidPaise * 0.9764)) / 100).toFixed(2);
+          const invoiceUrl = `${url.origin}/api/receipt/download/${encodeURIComponent(orderId)}`;
+          const libraryUrl = `${url.origin}/my-library`;
+
+          if (buyer?.email) {
+            const receiptHtml = generateEdgePurchaseReceiptEmail(
+              buyer.username || "Reader",
+              bookTitle,
+              authorName,
+              orderId,
+              paymentId,
+              amountInr,
+              invoiceUrl,
+              libraryUrl
+            );
+            await sendEdgeEmail(env, {
+              to: buyer.email,
+              subject: `Payment Receipt: Your purchase of "${bookTitle}" is confirmed`,
+              html: receiptHtml,
+              text: `Dear ${buyer.username || 'Reader'},\n\nThank you for your purchase of "${bookTitle}" by ${authorName} on PustakVerse.\n\nOrder ID: ${orderId}\nPayment ID: ${paymentId}\nAmount Paid: ₹${amountInr}\n\nAccess your book in My Library: ${libraryUrl}\nDownload Invoice: ${invoiceUrl}`
+            });
+          }
+
+          if (bookInfo?.author_email && bookInfo.author_id !== sessionUser.id) {
+            const authorHtml = generateEdgeAuthorSaleEmail(
+              bookInfo.author_username || "Author",
+              bookTitle,
+              orderId,
+              amountInr,
+              authorEarningInr
+            );
+            await sendEdgeEmail(env, {
+              to: bookInfo.author_email,
+              subject: `Congratulations! New Book Sale: "${bookTitle}"`,
+              html: authorHtml,
+              text: `Hello ${bookInfo.author_username || 'Author'},\n\nGreat news! A reader just purchased your book "${bookTitle}" on PustakVerse.\n\nOrder ID: ${orderId}\nGross Amount: ₹${amountInr}\nYour Net Earnings: ₹${authorEarningInr}\n\nEarnings will reflect in your author wallet.`
+            });
+          }
+        } catch (eMailErr) {
+          console.warn("[PAYMENT EMAIL DISPATCH ERROR]:", eMailErr);
+        }
+
         const redirectUrl = `/my-library?purchased=1&download_receipt=${encodeURIComponent(orderId)}&book_id=${targetBookId || ''}`;
 
         const isAjax = request.headers.get("Accept")?.includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest";
@@ -7424,6 +7907,35 @@ Format with these exact markdown sections:
         await env.DB.prepare(
           "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
         ).bind(sessionUser.id, bookId).run();
+
+        // Edge Transactional Email for Saving Book
+        try {
+          let userRow = sessionUser;
+          if (!userRow.email) {
+            const u = await env.DB.prepare("SELECT username, email FROM users WHERE id = ?").bind(sessionUser.id).first().catch(() => null);
+            if (u) userRow = { ...userRow, ...u };
+          }
+          if (userRow?.email) {
+            const b = await env.DB.prepare(
+              `SELECT b.title, b.catalog, u.username as author_name 
+               FROM books b 
+               LEFT JOIN users u ON b.author_id = u.id 
+               WHERE b.id = ? LIMIT 1`
+            ).bind(bookId).first().catch(() => null);
+            const bookTitle = b?.title || "Book";
+            const authorName = b?.author_name || "PustakVerse Author";
+            const catalog = b?.catalog || "Open Collection";
+            const savedHtml = generateEdgeBookSavedEmail(userRow.username || "Reader", bookTitle, authorName, catalog, bookId);
+            await sendEdgeEmail(env, {
+              to: userRow.email,
+              subject: `Added to Your Library: "${bookTitle}"`,
+              html: savedHtml,
+              text: `Hello ${userRow.username || 'Reader'},\n\n"${bookTitle}" by ${authorName} has been saved to your Personal Library on PustakVerse.\n\nYou can access and read your collection anytime at ${url.origin}/my-library.`
+            });
+          }
+        } catch (mailErr) {
+          console.warn("[SAVE BOOK EMAIL ERROR]:", mailErr);
+        }
       } catch (_) {}
 
       if (request.headers.get("Accept")?.includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest") {
@@ -8403,6 +8915,18 @@ Format with these exact markdown sections:
         if (curUser && (curUser.password_hash === oldHash || curUser.password_hash?.endsWith(await sha256Hex(oldPassword)))) {
           const newHash = `sha256$${await sha256Hex(newPassword)}`;
           await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(newHash, user.id).run();
+          if (user.email) {
+            try {
+              const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "";
+              const alertHtml = generateEdgePasswordChangedEmail(user.username || "Reader", clientIp);
+              await sendEdgeEmail(env, {
+                to: user.email,
+                subject: "Security Alert: Your PustakVerse password was changed",
+                html: alertHtml,
+                text: `Hello ${user.username || 'Reader'},\n\nThe password for your PustakVerse account was recently changed.\n\nIf you did not make this change, please reset your password immediately.`
+              });
+            } catch (_) {}
+          }
           return Response.redirect(`${url.origin}/dashboard?password_changed=1`, 302);
         }
       }
