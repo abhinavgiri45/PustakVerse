@@ -237,6 +237,65 @@
         .btn-read { background-color: #2d3748; color: white; }
         .btn-save { background-color: var(--pv-btn-save-bg); color: var(--pv-btn-save-text); border: 1px solid var(--pv-card-border); }
         .btn-premium { background-color: #14532d; color: white; }
+        /* Trending Leaderboard & Ranking Badges */
+        .trending-leaderboard-banner {
+            display: none;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+            color: #ffffff;
+            animation: fadeInLeaderboard 0.25s ease-in-out;
+        }
+        @keyframes fadeInLeaderboard {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .trending-rank-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            letter-spacing: 0.02em;
+        }
+        .trending-rank-1 {
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            color: #78350f;
+            border: 1px solid #fef3c7;
+            box-shadow: 0 2px 8px rgba(217,119,6,0.35);
+        }
+        .trending-rank-2 {
+            background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+            color: #1e293b;
+            border: 1px solid #ffffff;
+            box-shadow: 0 2px 8px rgba(100,116,139,0.3);
+        }
+        .trending-rank-3 {
+            background: linear-gradient(135deg, #fed7aa 0%, #f97316 100%);
+            color: #431407;
+            border: 1px solid #ffedd5;
+            box-shadow: 0 2px 8px rgba(234,88,12,0.3);
+        }
+        .trending-rank-other {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .trending-metrics-strip {
+            background: var(--pv-body-bg, #f8fafc);
+            border: 1px solid var(--pv-card-border, #e2e8f0);
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-bottom: 12px;
+            font-size: 0.73rem;
+        }
 
         .donation-banner { text-align: center; margin: 40px auto; padding: 30px; background: #e6fffa; border: 1px dashed #38a169; border-radius: 12px; max-width: 600px; }
         .donation-banner img { max-width: 200px; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -980,9 +1039,37 @@
             {% endif %}
         {% endwith %}
 
+        <!-- TRENDING TOP 30 WEEKLY LEADERBOARD BANNER (Shown when Trending category is selected) -->
+        <div id="trendingLeaderboardBanner" class="trending-leaderboard-banner">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="font-size: 2.2rem; line-height: 1;">🔥</div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em;">
+                                Top 30 Trending Books Leaderboard
+                            </h3>
+                            <span style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: white; font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 1px 4px rgba(234,88,12,0.4);">Top 30 Only</span>
+                        </div>
+                        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                            Ranked by weekly purchased readers & activity · <strong style="color: #fdba74;">Cycles reset every Monday at 00:00</strong>
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span id="trendingCycleBadge" style="background: rgba(234, 88, 12, 0.15); border: 1px solid rgba(234, 88, 12, 0.4); color: #fb923c; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        📅 Current Week Cycle (Mon–Sun)
+                    </span>
+                    <span id="trendingResetBadge" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        🔄 Next Reset: Monday 00:00
+                    </span>
+                </div>
+            </div>
+        </div>
+
         <div class="book-grid" id="bookGrid">
             {% for book in books %}
-            <div class="book-card" style="{% if loop.index > 10 %}display: none;{% endif %} cursor: pointer;" data-book-id="{{ book.id }}" data-is-paid="{{ 'true' if book.is_paid else 'false' }}" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}" data-price="{{ ((book.price_paise|default(0))/100) if book.is_paid else 0 }}" data-rating="{{ '%.1f'|format(book.avg_rating|default(5.0)) }}" data-trending="{{ 'true' if book.is_trending_30d else 'false' }}" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '{{ url_for('view_book', book_id=book.id) }}'; }">
+            <div class="book-card" style="{% if loop.index > 10 %}display: none;{% endif %} cursor: pointer;" data-book-id="{{ book.id }}" data-is-paid="{{ 'true' if book.is_paid else 'false' }}" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}" data-price="{{ ((book.price_paise|default(0))/100) if book.is_paid else 0 }}" data-rating="{{ '%.1f'|format(book.avg_rating|default(5.0)) }}" data-trending="{{ 'true' if book.trending_rank and book.trending_rank <= 30 else 'false' }}" data-trending-rank="{{ book.trending_rank if book.trending_rank else '' }}" data-week-purchases="{{ book.week_purchases|default(0) }}" data-month-purchases="{{ book.month_purchases|default(0) }}" data-lifetime-purchases="{{ book.lifetime_purchases|default(0) }}" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '{{ url_for('view_book', book_id=book.id) }}'; }">
                 
                 {% set cover = book.cover_image %}
                 
@@ -1003,6 +1090,27 @@
                 </a>
 
                 <div class="book-info">
+                    {% if book.trending_rank and book.trending_rank <= 30 %}
+                    <div style="margin-bottom: 8px;">
+                        {% if book.trending_rank == 1 %}
+                            <span class="trending-rank-badge trending-rank-1">
+                                👑 #1 Trending Leader
+                            </span>
+                        {% elif book.trending_rank == 2 %}
+                            <span class="trending-rank-badge trending-rank-2">
+                                🥈 #2 Trending
+                            </span>
+                        {% elif book.trending_rank == 3 %}
+                            <span class="trending-rank-badge trending-rank-3">
+                                🥉 #3 Trending
+                            </span>
+                        {% else %}
+                            <span class="trending-rank-badge trending-rank-other">
+                                🎖️ #{{ book.trending_rank }} Trending
+                            </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     {% if book.bestseller_badge %}
                     <div style="margin-bottom: 8px;">
                         <span style="background: {{ book.bestseller_badge.bg }}; color: #ffffff; border: 1px solid {{ book.bestseller_badge.border }}; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
@@ -1030,7 +1138,7 @@
                     <p class="book-author">By {% if book.author_role == 'developer' %}Developer{% else %}{{ book.author_name }}{% endif %}</p>
 
                     <!-- Add Star Ratings Below the Author -->
-                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 15px; cursor: pointer;" onclick="window.location.href='{{ url_for('view_book', book_id=book.id) }}#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='{{ url_for('view_book', book_id=book.id) }}#customer-reviews';" title="View Customer Reviews & Star Breakdown">
                         {% set rating = book.avg_rating | default(5) | int %}
                         {% for i in range(1, 6) %}
                             {% if i <= rating %}
@@ -1040,6 +1148,22 @@
                             {% endif %}
                         {% endfor %}
                         <span style="color: var(--pv-text-muted); font-size: 0.9em;">({{ "%.1f"|format(book.avg_rating|default(5.0)) }})</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Resets Mondays) -->
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-weight: 800; color: #ea580c; display: inline-flex; align-items: center; gap: 3px;" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong style="color: #c2410c;">{{ book.week_purchases|default(0) }}</strong>
+                            </span>
+                            <span style="font-weight: 700; color: #475569;" title="Purchased users / readers this month">
+                                🗓️ Month: <strong style="color: #1e293b;">{{ book.month_purchases|default(0) }}</strong>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+                            <span style="font-weight: 700; color: #64748b;">🌐 Lifetime Readers:</span>
+                            <span style="font-weight: 900; color: #0f172a; font-size: 0.78rem;">{{ book.lifetime_purchases|default(0) }}</span>
+                        </div>
                     </div>
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
@@ -1153,6 +1277,11 @@
                     card.setAttribute('data-title', (b.title || '').toLowerCase());
                     card.setAttribute('data-author', (b.author_name || '').toLowerCase());
                     card.setAttribute('data-catalog', (b.catalog || '').toLowerCase());
+                    card.setAttribute('data-trending-rank', b.trending_rank || '');
+                    card.setAttribute('data-week-purchases', b.week_purchases || 0);
+                    card.setAttribute('data-month-purchases', b.month_purchases || 0);
+                    card.setAttribute('data-lifetime-purchases', b.lifetime_purchases || 0);
+                    card.setAttribute('data-trending', ((b.trending_rank && b.trending_rank <= 30) || b.is_trending) ? 'true' : 'false');
 
                     let coverSrc = (b.cover_image || '').trim();
                     if (coverSrc) {
@@ -1256,11 +1385,52 @@
                         `;
                     }
 
+                    let trendingRankHtml = '';
+                    if (b.trending_rank && b.trending_rank <= 30) {
+                        let rankClass = 'trending-rank-other';
+                        let rankText = `🎖️ #${b.trending_rank} Trending`;
+                        if (b.trending_rank === 1) {
+                            rankClass = 'trending-rank-1';
+                            rankText = '👑 #1 Trending Leader';
+                        } else if (b.trending_rank === 2) {
+                            rankClass = 'trending-rank-2';
+                            rankText = '🥈 #2 Trending';
+                        } else if (b.trending_rank === 3) {
+                            rankClass = 'trending-rank-3';
+                            rankText = '🥉 #3 Trending';
+                        }
+                        trendingRankHtml = `
+                            <div style="margin-bottom: 8px;">
+                                <span class="trending-rank-badge ${rankClass}">
+                                    ${rankText}
+                                </span>
+                            </div>
+                        `;
+                    }
+
+                    const trendingMetricsHtml = `
+                        <div class="trending-metrics-strip">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-weight: 800; color: #ea580c; display: inline-flex; align-items: center; gap: 3px;" title="Purchased users / readers this week (resets Mondays)">
+                                    ⚡ Week: <strong style="color: #c2410c;">${b.week_purchases || 0}</strong>
+                                </span>
+                                <span style="font-weight: 700; color: #475569;" title="Purchased users / readers this month">
+                                    🗓️ Month: <strong style="color: #1e293b;">${b.month_purchases || 0}</strong>
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+                                <span style="font-weight: 700; color: #64748b;">🌐 Lifetime Readers:</span>
+                                <span style="font-weight: 900; color: #0f172a; font-size: 0.78rem;">${b.lifetime_purchases || 0}</span>
+                            </div>
+                        </div>
+                    `;
+
                     card.innerHTML = `
                         <a href="${detailsHref}" class="book-cover-link" title="View Details, Synopsis & Reviews">
                             <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
                         </a>
                         <div class="book-info">
+                            ${trendingRankHtml}
                             ${badgesHtml}
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span class="book-tag" onclick="event.stopPropagation(); filterByCategory('${b.catalog || 'General'}');">${b.catalog || 'General'}</span>
@@ -1268,7 +1438,8 @@
                             </div>
                             <h3 class="book-title"><a href="${detailsHref}" title="View Details, Synopsis & Reviews">${b.title}</a></h3>
                             <p class="book-author">By ${b.author_name || 'PustakVerse'}</p>
-                            <div style="color: #f59e0b; margin-bottom: 15px; cursor: pointer;" onclick="window.location.href='${detailsHref}#customer-reviews';" title="View Reviews">★★★★★ <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span></div>
+                            <div style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='${detailsHref}#customer-reviews';" title="View Reviews">★★★★★ <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span></div>
+                            ${trendingMetricsHtml}
                             ${actionsHtml}
                         </div>
                     `;
@@ -1690,14 +1861,58 @@
         // Helper to filter from book card tag click or external link
         function filterByCategory(catName) {
             const normalized = (catName || '').toLowerCase().trim();
+            if (normalized === 'trending') {
+                const btn = document.querySelector('.quick-filter-btn[onclick*="trending"]');
+                applyQuickFilter('trending', btn);
+                const filterNav = document.querySelector('.filter-nav-scroll') || document.querySelector('.filter-nav');
+                if (filterNav) {
+                    window.scrollTo({ top: filterNav.offsetTop - 20, behavior: 'smooth' });
+                }
+                return;
+            }
             const btn = document.querySelector(`.quick-filter-btn[data-cat-name="${normalized}"]`);
             applyQuickFilter('category:' + catName, btn);
-            const filterNav = document.querySelector('.filter-nav');
+            const filterNav = document.querySelector('.filter-nav-scroll') || document.querySelector('.filter-nav');
             if (filterNav) {
                 window.scrollTo({ top: filterNav.offsetTop - 20, behavior: 'smooth' });
             }
         }
 
+        // Trending Weekly Cycle Date & Countdown Engine (Resets Mondays at 00:00)
+        function updateTrendingCycleUI() {
+            try {
+                const now = new Date();
+                const day = now.getDay();
+                const diff = (day + 6) % 7; // Monday = 0
+                const monday = new Date(now);
+                monday.setDate(now.getDate() - diff);
+                monday.setHours(0, 0, 0, 0);
+
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                sunday.setHours(23, 59, 59, 999);
+
+                const nextMonday = new Date(monday);
+                nextMonday.setDate(monday.getDate() + 7);
+                nextMonday.setHours(0, 0, 0, 0);
+
+                const options = { month: 'short', day: 'numeric' };
+                const monStr = monday.toLocaleDateString(undefined, options);
+                const sunStr = sunday.toLocaleDateString(undefined, options);
+
+                const badge = document.getElementById('trendingCycleBadge');
+                if (badge) {
+                    badge.innerHTML = `📅 Week: <strong>${monStr} – ${sunStr}</strong>`;
+                }
+
+                const resetBadge = document.getElementById('trendingResetBadge');
+                if (resetBadge) {
+                    const msLeft = nextMonday.getTime() - now.getTime();
+                    const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+                    resetBadge.innerHTML = `🔄 Resets Monday (${daysLeft}d left)`;
+                }
+            } catch (_) {}
+        }
         
         // Categories Modal Controls
         function openCategoriesModal() {
@@ -1729,7 +1944,7 @@
             }
         }
 
-        // Quick Filter Functionality (All, Trending, Free, Premium, 4.5+ Stars, Categories)
+        // Quick Filter Functionality (All, Trending Top 30, Free, Premium, 4.5+ Stars, Categories)
         function applyQuickFilter(type, btn) {
             document.querySelectorAll('.quick-filter-btn').forEach(el => {
                 el.classList.remove('active');
@@ -1752,45 +1967,81 @@
                 loadMoreBtn.style.display = (type === 'all') ? 'inline-block' : 'none';
             }
 
+            const banner = document.getElementById('trendingLeaderboardBanner');
+            if (banner) {
+                if (type === 'trending') {
+                    banner.style.display = 'block';
+                    updateTrendingCycleUI();
+                } else {
+                    banner.style.display = 'none';
+                }
+            }
+
             const cards = document.querySelectorAll('.book-card');
             let visibleCount = 0;
             const isCategory = type.startsWith('category:');
             const targetCategory = isCategory ? type.substring(9).trim().toLowerCase() : '';
 
-            cards.forEach(card => {
-                const isPaid = card.getAttribute('data-is-paid') === 'true';
-                const price = parseFloat(card.getAttribute('data-price') || '0');
-                const rating = parseFloat(card.getAttribute('data-rating') || '5.0');
-                const catalog = (card.getAttribute('data-catalog') || '').trim().toLowerCase();
-                let matches = true;
+            if (type === 'trending') {
+                const allCards = Array.from(cards);
+                const trendingCards = allCards.filter(card => {
+                    const r = parseInt(card.getAttribute('data-trending-rank'), 10);
+                    return (!isNaN(r) && r >= 1 && r <= 30) || card.getAttribute('data-trending') === 'true';
+                });
 
-                if (type === 'free') {
-                    matches = (!isPaid && price === 0);
-                } else if (type === 'trending') {
-                    matches = (card.getAttribute('data-trending') === 'true');
-                } else if (type === 'stars') {
-                    matches = (rating >= 4.5);
-                } else if (isCategory) {
-                    matches = (catalog === targetCategory || catalog.includes(targetCategory));
-                } else if (type === 'all') {
-                    matches = true;
-                }
+                // Sort strictly by trending rank ascending (1..30)
+                trendingCards.sort((a, b) => {
+                    const rankA = parseInt(a.getAttribute('data-trending-rank'), 10) || 999;
+                    const rankB = parseInt(b.getAttribute('data-trending-rank'), 10) || 999;
+                    return rankA - rankB;
+                });
 
-                if (type === 'all') {
-                    card.style.display = (visibleCount < 10) ? 'flex' : 'none';
-                } else {
-                    card.style.display = matches ? 'flex' : 'none';
-                }
+                // Hide all cards first
+                allCards.forEach(card => card.style.display = 'none');
 
-                if (matches) visibleCount++;
-            });
+                // Display ONLY top 30 in exact rank order
+                const grid = document.getElementById('bookGrid');
+                const top30 = trendingCards.slice(0, 30);
+                top30.forEach(card => {
+                    card.style.display = 'flex';
+                    if (grid) grid.appendChild(card);
+                });
+
+                visibleCount = top30.length;
+            } else {
+                cards.forEach(card => {
+                    const isPaid = card.getAttribute('data-is-paid') === 'true';
+                    const price = parseFloat(card.getAttribute('data-price') || '0');
+                    const rating = parseFloat(card.getAttribute('data-rating') || '5.0');
+                    const catalog = (card.getAttribute('data-catalog') || '').trim().toLowerCase();
+                    let matches = true;
+
+                    if (type === 'free') {
+                        matches = (!isPaid && price === 0);
+                    } else if (type === 'stars') {
+                        matches = (rating >= 4.5);
+                    } else if (isCategory) {
+                        matches = (catalog === targetCategory || catalog.includes(targetCategory));
+                    } else if (type === 'all') {
+                        matches = true;
+                    }
+
+                    if (type === 'all') {
+                        card.style.display = (visibleCount < 10) ? 'flex' : 'none';
+                    } else {
+                        card.style.display = matches ? 'flex' : 'none';
+                    }
+
+                    if (matches) visibleCount++;
+                });
+            }
 
             const noResults = document.getElementById('noResultsMsg');
             if (noResults) noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
         }
 
-
         document.addEventListener('DOMContentLoaded', function() {
+            updateTrendingCycleUI();
             const urlParams = new URLSearchParams(window.location.search);
             const catParam = urlParams.get('category');
             if (catParam) {

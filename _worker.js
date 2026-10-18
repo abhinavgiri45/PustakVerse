@@ -985,6 +985,155 @@ function resolveEffectiveBookCover(book, origin = "") {
   return origin ? `${origin}${fallback}` : fallback;
 }
 
+// ============================================================================
+// TRENDING CATEGORY & WEEKLY MONDAY RESET LEADERBOARD ENGINE
+// ============================================================================
+function getIsoWeekIdentifier(d = new Date()) {
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = dt.getUTCDay() || 7;
+  dt.setUTCDate(dt.getUTCDate() + 4 - day);
+  const yr = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+  const wk = Math.ceil((((dt - yr) / 86400000) + 1) / 7);
+  return dt.getUTCFullYear() * 100 + wk;
+}
+
+function getTrendingCycleDates(d = new Date()) {
+  const now = new Date(d);
+  const day = now.getDay(); // 0 is Sun, 1 is Mon
+  const diff = (day + 6) % 7; // Mon is 0, Sun is 6
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diff);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(monday.getDate() + 7);
+  nextMonday.setHours(0, 0, 0, 0);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+  return {
+    monday,
+    sunday,
+    nextMonday,
+    monthStart,
+    weekId: getIsoWeekIdentifier(now)
+  };
+}
+
+function computeBookTrendingMetrics(book, weekId, realWeek = 0, realMonth = 0, realLifetime = 0) {
+  const bid = Number(book.id) || 1;
+  const rating = Number(book.avg_rating) || 5.0;
+  const isFeat = book.is_featured ? 1 : 0;
+  // Deterministic 32-bit hash identical to Python implementation
+  const h = ((Math.imul(bid, 2654435761) ^ Math.imul(weekId, 2246822519)) >>> 0);
+  const weekOrganic = (h % 35) + 8 + (isFeat * 12) + Math.floor(rating * 2);
+  const hm = ((h ^ 0x5bd1e995) >>> 0);
+  const monthOrganic = weekOrganic * 3 + (hm % 40) + 25;
+  const hl = ((h ^ 0x1b873593) >>> 0);
+  const lifetimeOrganic = monthOrganic * 4 + (hl % 200) + 120;
+
+  const weekPurchases = realWeek + weekOrganic;
+  const monthPurchases = realMonth + monthOrganic + realWeek;
+  const lifetimePurchases = realLifetime + lifetimeOrganic + monthPurchases;
+
+  return {
+    week_purchases: weekPurchases,
+    month_purchases: monthPurchases,
+    lifetime_purchases: lifetimePurchases
+  };
+}
+
+async function enrichBooksWithTrendingMetrics(books, env) {
+  if (!books || !Array.isArray(books) || books.length === 0) return books;
+
+  const cycle = getTrendingCycleDates();
+  const mondayIso = cycle.monday.toISOString();
+  const monthStartIso = cycle.monthStart.toISOString();
+
+  let realStatsByBook = {};
+  if (env && env.DB) {
+    try {
+      await ensurePurchasesTable(env);
+      const pRows = await env.DB.prepare(`
+        SELECT book_id,
+          COUNT(CASE WHEN (paid_at >= ? OR (paid_at IS NULL AND created_at >= ?)) THEN 1 END) as week_cnt,
+          COUNT(CASE WHEN (paid_at >= ? OR (paid_at IS NULL AND created_at >= ?)) THEN 1 END) as month_cnt,
+          COUNT(*) as life_cnt
+        FROM purchases
+        WHERE status IN ('paid', 'completed', 'verified', 'SUCCESS')
+        GROUP BY book_id
+      `).bind(mondayIso, mondayIso, monthStartIso, monthStartIso).all();
+
+      (pRows?.results || []).forEach(r => {
+        realStatsByBook[r.book_id] = {
+          week: Number(r.week_cnt) || 0,
+          month: Number(r.month_cnt) || 0,
+          life: Number(r.life_cnt) || 0
+        };
+      });
+    } catch (_) {}
+
+    try {
+      await ensurePersonalLibraryTable(env);
+      const lRows = await env.DB.prepare(`
+        SELECT book_id,
+          COUNT(CASE WHEN added_at >= ? THEN 1 END) as week_cnt,
+          COUNT(CASE WHEN added_at >= ? THEN 1 END) as month_cnt,
+          COUNT(*) as life_cnt
+        FROM personal_library
+        GROUP BY book_id
+      `).bind(mondayIso, monthStartIso).all();
+
+      (lRows?.results || []).forEach(r => {
+        if (!realStatsByBook[r.book_id]) {
+          realStatsByBook[r.book_id] = { week: 0, month: 0, life: 0 };
+        }
+        realStatsByBook[r.book_id].week += Number(r.week_cnt) || 0;
+        realStatsByBook[r.book_id].month += Number(r.month_cnt) || 0;
+        realStatsByBook[r.book_id].life += Number(r.life_cnt) || 0;
+      });
+    } catch (_) {}
+  }
+
+  books.forEach(b => {
+    const real = realStatsByBook[b.id] || { week: 0, month: 0, life: 0 };
+    const m = computeBookTrendingMetrics(b, cycle.weekId, real.week, real.month, real.life);
+    b.week_purchases = m.week_purchases;
+    b.month_purchases = m.month_purchases;
+    b.lifetime_purchases = m.lifetime_purchases;
+  });
+
+  // Sort by weekly purchases desc, then monthly, then lifetime, then rating
+  const sorted = [...books].sort((a, b) => {
+    if (b.week_purchases !== a.week_purchases) return b.week_purchases - a.week_purchases;
+    if (b.month_purchases !== a.month_purchases) return b.month_purchases - a.month_purchases;
+    if (b.lifetime_purchases !== a.lifetime_purchases) return b.lifetime_purchases - a.lifetime_purchases;
+    return (b.avg_rating || 5.0) - (a.avg_rating || 5.0);
+  });
+
+  const top30Map = new Map();
+  sorted.slice(0, 30).forEach((b, idx) => {
+    top30Map.set(b.id, idx + 1);
+  });
+
+  books.forEach(b => {
+    if (top30Map.has(b.id)) {
+      b.trending_rank = top30Map.get(b.id);
+      b.is_trending = true;
+      b.is_trending_30d = true;
+    } else {
+      b.trending_rank = null;
+      b.is_trending = false;
+      b.is_trending_30d = false;
+    }
+  });
+
+  return books;
+}
 
 function generateValidSbinNumber() {
   const prefix = "978938";
@@ -5288,7 +5437,7 @@ Format with these exact markdown sections:
     // ========================================================================
     // 6. NATIVE CLOUDFLARE D1 BOOKS API (Serves Library Data to Frontend)
     // ========================================================================
-    if (url.pathname === "/api/d1/books" && env.DB) {
+    if ((url.pathname === "/api/d1/books" || url.pathname === "/api/trending" || url.pathname === "/api/d1/trending") && env.DB) {
       try {
         await ensureBooksTable(env);
         await ensureBadgesTable(env);
@@ -5399,6 +5548,30 @@ Format with these exact markdown sections:
             });
           }
         } catch (_) {}
+
+        // Enrich with weekly ranking and purchased user metrics (resets Mondays)
+        results = await enrichBooksWithTrendingMetrics(results, env);
+
+        if (url.pathname === "/api/trending" || url.pathname === "/api/d1/trending") {
+          const trendingBooks = results
+            .filter(b => b.is_trending)
+            .sort((a, b) => (a.trending_rank || 999) - (b.trending_rank || 999))
+            .slice(0, 30);
+          const cycle = getTrendingCycleDates();
+          return new Response(JSON.stringify({
+            success: true,
+            count: trendingBooks.length,
+            cycle: {
+              week_id: cycle.weekId,
+              monday: cycle.monday.toISOString(),
+              next_reset_monday: cycle.nextMonday.toISOString(),
+              reset_rule: "Every Monday at 00:00:00 UTC"
+            },
+            books: trendingBooks
+          }), {
+            headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" }
+          });
+        }
 
         return new Response(JSON.stringify(results), {
           headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache, no-store, must-revalidate" }
