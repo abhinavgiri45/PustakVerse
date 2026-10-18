@@ -302,16 +302,18 @@ def inject_security_and_globals():
 def inject_user_purchased_books():
     uid = session.get('user_id')
     if not uid:
-        return {'purchased_book_ids': set()}
+        return {'purchased_book_ids': set(), 'library_book_ids': set()}
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT book_id FROM purchases WHERE user_id = %s AND status IN ('paid', 'completed', 'verified')", (uid,))
         p_ids = {row['book_id'] for row in cursor.fetchall() if row.get('book_id')}
-        return {'purchased_book_ids': p_ids}
+        cursor.execute("SELECT book_id FROM personal_library WHERE user_id = %s", (uid,))
+        l_ids = {row['book_id'] for row in cursor.fetchall() if row.get('book_id')}
+        return {'purchased_book_ids': p_ids, 'library_book_ids': l_ids}
     except Exception:
-        return {'purchased_book_ids': set()}
+        return {'purchased_book_ids': set(), 'library_book_ids': set()}
     finally:
         if db:
             try: db.close()
@@ -4830,12 +4832,24 @@ def view_book(book_id):
                     rating_counts[rating_val] += 1
         
         can_read = False
+        is_purchased = False
+        in_library = False
         if 'user_id' in session:
-            if not book.get('is_paid') or session.get('user_id') == book.get('author_id') or session.get('role') == 'developer':
+            try:
+                cursor.execute("SELECT id FROM personal_library WHERE user_id = %s AND book_id = %s", (session['user_id'], book_id))
+                in_library = bool(cursor.fetchone())
+            except Exception:
+                pass
+            try:
+                cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status IN ('paid', 'completed', 'verified')", (session['user_id'], book_id))
+                is_purchased = bool(cursor.fetchone())
+            except Exception:
+                pass
+            if in_library and book.get('is_paid'):
+                is_purchased = True
+
+            if not book.get('is_paid') or session.get('user_id') == book.get('author_id') or session.get('role') == 'developer' or is_purchased or in_library:
                 can_read = True
-            else:
-                cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
-                can_read = bool(cursor.fetchone())
 
         # BADGE SYSTEM: Query custom conferred badges for this specific book
         cursor.execute("SELECT * FROM book_custom_badges WHERE book_id = %s ORDER BY id DESC", (book_id,))
@@ -4854,7 +4868,7 @@ def view_book(book_id):
                 pass
         book['bestseller_badge'] = bestseller_badge
                 
-        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge, allow_donations=allow_donations)
+        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, is_purchased=is_purchased, in_library=in_library, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge, allow_donations=allow_donations)
     except Exception as e:
         import logging
         logging.exception(f"Error loading book details for book {book_id}: {e}")
@@ -7156,6 +7170,63 @@ def payment_history():
             try: db.close()
             except: pass
     return render_template('payment_history.html', payments=payments)
+
+@app.route('/api/user/me', methods=['GET'])
+def api_user_me():
+    uid = session.get('user_id')
+    if not uid:
+        return jsonify({
+            'logged_in': False,
+            'user': None,
+            'purchased_book_ids': [],
+            'library_book_ids': []
+        })
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, email, role FROM users WHERE id = %s", (uid,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({
+                'logged_in': False,
+                'user': None,
+                'purchased_book_ids': [],
+                'library_book_ids': []
+            })
+        cursor.execute("SELECT book_id FROM purchases WHERE user_id = %s AND status IN ('paid', 'completed', 'verified')", (uid,))
+        purchased_ids = [row['book_id'] for row in cursor.fetchall() if row.get('book_id')]
+        cursor.execute("SELECT book_id FROM personal_library WHERE user_id = %s", (uid,))
+        library_ids = [row['book_id'] for row in cursor.fetchall() if row.get('book_id')]
+        return jsonify({
+            'logged_in': True,
+            'user': {
+                'id': user['id'],
+                'user_id': user['id'],
+                'username': user['username'],
+                'email': user.get('email') or '',
+                'role': user.get('role') or 'reader'
+            },
+            'purchased_book_ids': purchased_ids,
+            'library_book_ids': library_ids
+        })
+    except Exception as e:
+        return jsonify({
+            'logged_in': True,
+            'user': {
+                'id': uid,
+                'user_id': uid,
+                'username': session.get('username', ''),
+                'email': session.get('email', ''),
+                'role': session.get('role', 'reader')
+            },
+            'purchased_book_ids': [],
+            'library_book_ids': []
+        })
+    finally:
+        if db:
+            try: db.close()
+            except: pass
 
 @app.route('/api/user/payment_history', methods=['GET'])
 @app.route('/api/user/payment-history', methods=['GET'])

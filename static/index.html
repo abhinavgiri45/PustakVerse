@@ -998,6 +998,7 @@
                 books.forEach(b => {
                     const card = document.createElement('div');
                     card.className = 'book-card';
+                    card.setAttribute('data-book-id', b.id);
                     card.setAttribute('data-title', (b.title || '').toLowerCase());
                     card.setAttribute('data-author', (b.author_name || '').toLowerCase());
                     card.setAttribute('data-catalog', (b.catalog || '').toLowerCase());
@@ -1021,6 +1022,7 @@
                     }
 
                     const isPaid = !!b.is_paid && (b.price_paise > 0);
+                    card.setAttribute('data-is-paid', isPaid ? 'true' : 'false');
                     const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
                     let detailsHref = b.id ? `/book/${b.id}` : '#';
                     let readHref = b.id ? `/read_book/${b.id}` : (b.pdf_file || '#');
@@ -1038,7 +1040,8 @@
                     };
 
                     let actionsHtml = '';
-                    const isPurchased = !!b.has_purchased;
+                    const isPurchased = !!(b.has_purchased || (window.userPurchasedIds && window.userPurchasedIds.has(Number(b.id))) || (isPaid && window.userLibraryIds && window.userLibraryIds.has(Number(b.id))));
+                    const inLibrary = !!(b.in_library || (window.userLibraryIds && window.userLibraryIds.has(Number(b.id))) || isPurchased);
                     if (isPaid) {
                         if (isPurchased) {
                             actionsHtml = `
@@ -1068,9 +1071,15 @@
                         actionsHtml = `
                             <div class="book-actions" style="display: flex; gap: 8px;">
                                 <a href="${readHref}" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                ${inLibrary ? `
+                                    <div style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
+                                        ✓ In Library
+                                    </div>
+                                ` : `
                                 <form action="/save_book/${b.id}" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
                                     <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                 </form>
+                                `}
                             </div>
                         `;
                     }
@@ -1114,10 +1123,71 @@
                     `;
                     grid.appendChild(card);
                 });
+                if (window.userPurchasedIds || window.userLibraryIds) {
+                    syncGlobalLibraryWithMyLibrary(Array.from(window.userPurchasedIds || []), Array.from(window.userLibraryIds || []));
+                }
             } catch (_) {
                 const placeholder = document.getElementById('noBooksPlaceholder');
                 if (placeholder) placeholder.style.display = 'none';
             }
+        }
+
+        // Global library and user library synchronization
+        function syncGlobalLibraryWithMyLibrary(purchasedIds, libraryIds) {
+            const pSet = new Set((purchasedIds || []).map(Number));
+            const lSet = new Set((libraryIds || []).map(Number));
+            window.userPurchasedIds = pSet;
+            window.userLibraryIds = lSet;
+
+            document.querySelectorAll('.book-card').forEach(card => {
+                let bookId = card.getAttribute('data-book-id');
+                if (!bookId) {
+                    const link = card.querySelector('a[href*="/buy_book/"], form[action*="/buy_book/"], form[action*="/save_book/"], a[href*="/read_book/"], a[href*="/book/"]');
+                    if (link) {
+                        const m = (link.getAttribute('href') || link.getAttribute('action') || '').match(/\/(?:buy_book|save_book|read_book|book)\/(\d+)/);
+                        if (m) bookId = m[1];
+                    }
+                }
+                if (!bookId) return;
+                const bid = Number(bookId);
+
+                const isPaid = card.getAttribute('data-is-paid') === 'true' || !!card.querySelector('form[action*="/buy_book/"], a[href*="/buy_book/"], .btn-premium');
+                const isPurchased = pSet.has(bid) || (isPaid && lSet.has(bid));
+                const inLibrary = lSet.has(bid) || isPurchased;
+
+                const actionsBox = card.querySelector('.book-actions');
+                if (!actionsBox) return;
+
+                if (isPaid) {
+                    if (isPurchased) {
+                        // Hide price display in card
+                        const priceRow = actionsBox.querySelector('div[style*="baseline"]');
+                        if (priceRow) priceRow.style.display = 'none';
+
+                        if (!actionsBox.querySelector('.in-library-badge-active')) {
+                            actionsBox.innerHTML = `
+                                <div class="in-library-badge-active" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
+                                    ✓ Purchased · In Library
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <a href="/read_book/${bid}" class="btn" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; padding: 8px 6px;" onclick="event.stopPropagation();">📖 Read Full Book</a>
+                                </div>
+                            `;
+                        }
+                    }
+                } else {
+                    if (inLibrary) {
+                        const saveForm = actionsBox.querySelector('form[action*="/save_book/"]');
+                        if (saveForm) {
+                            saveForm.outerHTML = `
+                                <div class="in-library-badge-active" style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
+                                    ✓ In Library
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            });
         }
 
         // Check edge session for dynamic user header
@@ -1131,6 +1201,9 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 if (data.logged_in && data.user) {
+                    if (data.purchased_book_ids || data.library_book_ids) {
+                        syncGlobalLibraryWithMyLibrary(data.purchased_book_ids, data.library_book_ids);
+                    }
                     const navLinks = document.querySelector('.nav-links, .navbar-links');
                     if (navLinks) {
                         const loginLink = navLinks.querySelector('a[href*="login"], .nav-btn-highlight');
@@ -1945,6 +2018,9 @@
                 .then(r => r.ok ? r.json() : null)
                 .then(user => {
                     if (user && user.logged_in) {
+                        if (typeof syncGlobalLibraryWithMyLibrary === 'function' && (user.purchased_book_ids || user.library_book_ids)) {
+                            syncGlobalLibraryWithMyLibrary(user.purchased_book_ids, user.library_book_ids);
+                        }
                         const heroBtn = document.getElementById('heroFrontLoginBtn');
                         if (heroBtn) heroBtn.style.display = 'none';
                         const navSignIn = document.getElementById('navSignInLink');

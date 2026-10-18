@@ -906,7 +906,7 @@
                 <!-- BUY / READ / SAVE ACTION BOX -->
                 <div class="action-box">
                     {% if book.is_paid %}
-                        {% if purchased_book_ids and book.id in purchased_book_ids %}
+                        {% if (purchased_book_ids and book.id in purchased_book_ids) or is_purchased or (in_library or (library_book_ids and book.id in library_book_ids)) %}
                             <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <span>✓</span> You own full access to this premium book
                             </div>
@@ -945,12 +945,18 @@
                         <div class="price" style="color: #10b981; font-size: 1.6rem; font-weight: 800; margin-bottom: 12px;">Free to Read (Open Access)</div>
                         <div style="display: flex; gap: 10px;">
                             <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn" style="flex: 1.2; text-align: center; background: linear-gradient(135deg, #f97316, #ea580c); color: white !important; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);">📖 Read Now</a>
-                            <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; margin: 0; display: flex;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-save-library" style="width: 100%; padding: 12px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; text-decoration: none; box-sizing: border-box; font-size: 0.95rem;">
-                                    <span>💾</span> Save to Library
-                                </button>
-                            </form>
+                            {% if in_library or (library_book_ids and book.id in library_book_ids) or (purchased_book_ids and book.id in purchased_book_ids) %}
+                                <div style="flex: 1; text-align: center; padding: 12px 14px; border-radius: 8px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                    <span>✓</span> In Library
+                                </div>
+                            {% else %}
+                                <form action="{{ url_for('save_book', book_id=book.id) }}" method="POST" style="flex: 1; margin: 0; display: flex;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-save-library" style="width: 100%; padding: 12px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; text-decoration: none; box-sizing: border-box; font-size: 0.95rem;">
+                                        <span>💾</span> Save to Library
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     {% endif %}
 
@@ -1684,6 +1690,50 @@
             if (btn) { btn.disabled = false; btn.textContent = '💝 Donate ₹' + amountInr + ' via Razorpay'; }
         }
     }
+
+    // Client-side synchronization with user library & purchases
+    document.addEventListener('DOMContentLoaded', function() {
+        var currentBookId = {{ book.id }};
+        var isBookPaid = {{ 'true' if book.is_paid else 'false' }};
+        fetch('/api/user/me')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) {
+                if (!data || !data.logged_in) return;
+                var pSet = new Set((data.purchased_book_ids || []).map(Number));
+                var lSet = new Set((data.library_book_ids || []).map(Number));
+                var isPurchased = pSet.has(currentBookId) || (isBookPaid && lSet.has(currentBookId));
+                var inLibrary = lSet.has(currentBookId) || isPurchased;
+
+                var actionBox = document.querySelector('.action-box');
+                if (!actionBox) return;
+
+                if (isBookPaid && isPurchased) {
+                    var buyForm = document.getElementById('buyBookForm');
+                    if (buyForm) {
+                        var donateBtn = actionBox.querySelector('.btn-author-donate');
+                        actionBox.innerHTML = `
+                            <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <span>✓</span> You own full access to this premium book
+                            </div>
+                            <div>
+                                <a href="/read_book/${currentBookId}" class="btn btn-dark" style="width: 100%; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: #0f172a; color: white; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>
+                            </div>
+                        `;
+                        if (donateBtn) actionBox.appendChild(donateBtn);
+                    }
+                } else if (!isBookPaid && inLibrary) {
+                    var saveForm = actionBox.querySelector('form[action*="/save_book/"]');
+                    if (saveForm) {
+                        saveForm.outerHTML = `
+                            <div style="flex: 1; text-align: center; padding: 12px 14px; border-radius: 8px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                <span>✓</span> In Library
+                            </div>
+                        `;
+                    }
+                }
+            })
+            .catch(function() {});
+    });
     </script>
 </body>
 </html>

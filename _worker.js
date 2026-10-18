@@ -3189,17 +3189,63 @@ Format with these exact markdown sections:
 
     // 5I. Current User Edge API: /api/user/me
     if (url.pathname === "/api/user/me") {
-      const cookies = parseCookies(request.headers.get("Cookie"));
-      if (cookies.pv_session) {
-        try {
-          const user = JSON.parse(atob(cookies.pv_session));
-          return new Response(JSON.stringify({ logged_in: true, user }), {
-            headers: { "Content-Type": "application/json" }
-          });
-        } catch (_) {}
+      const user = getSessionUser(request);
+      if (user && user.id) {
+        let purchasedBookIds = [];
+        let libraryBookIds = [];
+        if (env.DB) {
+          try {
+            await ensurePurchasesTable(env);
+            const pRes = await env.DB.prepare(
+              "SELECT book_id FROM purchases WHERE user_id = ? AND status IN ('paid', 'completed', 'verified')"
+            ).bind(user.id).all();
+            purchasedBookIds = (pRes?.results || []).map(p => Number(p.book_id)).filter(Boolean);
+          } catch (_) {}
+          try {
+            await ensurePersonalLibraryTable(env);
+            const lRes = await env.DB.prepare(
+              "SELECT book_id FROM personal_library WHERE user_id = ?"
+            ).bind(user.id).all();
+            libraryBookIds = (lRes?.results || []).map(l => Number(l.book_id)).filter(Boolean);
+          } catch (_) {}
+
+          // Auto-sync any verified purchases into personal_library
+          try {
+            if (purchasedBookIds.length > 0) {
+              const libSet = new Set(libraryBookIds);
+              for (const pid of purchasedBookIds) {
+                if (!libSet.has(pid)) {
+                  await env.DB.prepare(
+                    "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
+                  ).bind(user.id, pid).run().catch(() => {});
+                  libraryBookIds.push(pid);
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        return new Response(JSON.stringify({
+          logged_in: true,
+          user,
+          purchased_book_ids: purchasedBookIds,
+          library_book_ids: libraryBookIds
+        }), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "private, no-cache, no-store, must-revalidate"
+          }
+        });
       }
-      return new Response(JSON.stringify({ logged_in: false, user: null }), {
-        headers: { "Content-Type": "application/json" }
+      return new Response(JSON.stringify({
+        logged_in: false,
+        user: null,
+        purchased_book_ids: [],
+        library_book_ids: []
+      }), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "private, no-cache, no-store, must-revalidate"
+        }
       });
     }
 
@@ -5197,11 +5243,7 @@ Format with these exact markdown sections:
       try {
         await ensureBooksTable(env);
         await ensureBadgesTable(env);
-        const cookies = parseCookies(request.headers.get("Cookie"));
-        let sessionUser = null;
-        if (cookies.pv_session) {
-          try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
-        }
+        const sessionUser = getSessionUser(request);
         const isManager = sessionUser && (sessionUser.role === "developer" || sessionUser.role === "official" || isTechnicalLeadershipUser(sessionUser));
         const includeQuarantined = url.searchParams.has("include_quarantined") || isManager;
         const whereClause = includeQuarantined ? "" : "WHERE (b.is_quarantined = 0 OR b.is_quarantined IS NULL) ";
@@ -5236,24 +5278,35 @@ Format with these exact markdown sections:
           });
 
           let purchasedBookIds = new Set();
+          let libraryBookIds = new Set();
           if (sessionUser && sessionUser.id) {
             try {
+              await ensurePurchasesTable(env);
               const pRes = await env.DB.prepare(
                 "SELECT book_id FROM purchases WHERE user_id = ? AND status IN ('paid', 'completed', 'verified')"
               ).bind(sessionUser.id).all();
-              (pRes?.results || []).forEach(p => purchasedBookIds.add(p.book_id));
+              (pRes?.results || []).forEach(p => purchasedBookIds.add(Number(p.book_id)));
+            } catch (_) {}
+            try {
+              await ensurePersonalLibraryTable(env);
+              const lRes = await env.DB.prepare(
+                "SELECT book_id FROM personal_library WHERE user_id = ?"
+              ).bind(sessionUser.id).all();
+              (lRes?.results || []).forEach(l => libraryBookIds.add(Number(l.book_id)));
             } catch (_) {}
           }
 
           const sanitizeBookForApi = (b) => {
             const isPaidBook = !!b.is_paid && ((b.price_paise || 0) > 0);
             const isDevOrAuthor = sessionUser && (sessionUser.role === 'developer' || sessionUser.id === b.author_id);
-            const hasPurchased = sessionUser && purchasedBookIds.has(b.id);
+            const hasPurchased = sessionUser && (purchasedBookIds.has(b.id) || (isPaidBook && libraryBookIds.has(b.id)));
+            const inLibrary = sessionUser && (libraryBookIds.has(b.id) || purchasedBookIds.has(b.id));
             const canRead = sessionUser && (!isPaidBook || isDevOrAuthor || hasPurchased);
             return {
               ...b,
               pdf_file: canRead ? b.pdf_file : null,
               has_purchased: !!hasPurchased,
+              in_library: !!inLibrary,
               can_read: !!canRead,
               cover_image: resolveEffectiveBookCover(b),
               custom_badges: badgesByBook[b.id] || []
@@ -5276,7 +5329,8 @@ Format with these exact markdown sections:
           });
 
           if (!results.find(b => b.id === 9999)) {
-            const canRead9999 = sessionUser && (sessionUser.role === 'developer' || purchasedBookIds.has(9999));
+            const hasPurchased9999 = sessionUser && (purchasedBookIds.has(9999) || libraryBookIds.has(9999));
+            const canRead9999 = sessionUser && (sessionUser.role === 'developer' || hasPurchased9999);
             results.unshift({
               id: 9999,
               title: "PustakVerse Premium Edition: Test Payment Guide",
@@ -5286,6 +5340,9 @@ Format with these exact markdown sections:
               is_paid: 1,
               is_featured: 1,
               is_quarantined: 0,
+              has_purchased: !!hasPurchased9999,
+              in_library: !!hasPurchased9999,
+              can_read: !!canRead9999,
               description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).",
               cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
               pdf_file: canRead9999 ? "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing" : null,
@@ -5295,7 +5352,7 @@ Format with these exact markdown sections:
         } catch (_) {}
 
         return new Response(JSON.stringify(results), {
-          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache, no-store, must-revalidate" }
+          headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache, no-store, must-revalidate" }
         });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message, results: [] }), {
@@ -5616,16 +5673,23 @@ Format with these exact markdown sections:
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
         }
 
-        // Check if already purchased (allow developer or ?force=1 to test checkout anytime)
+        // Check if already purchased or in library (allow developer or ?force=1 to test checkout anytime)
         const isTester = sessionUser.role === "developer" || sessionUser.role === "official" || url.searchParams.has("force") || url.searchParams.has("test");
         let existingPurchase = null;
+        let inLibrary = false;
         try {
           existingPurchase = await env.DB.prepare(
             "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
           ).bind(sessionUser.id, targetBookId).first();
         } catch (_) {}
+        try {
+          const lib = await env.DB.prepare(
+            "SELECT id FROM personal_library WHERE user_id = ? AND book_id = ? LIMIT 1"
+          ).bind(sessionUser.id, targetBookId).first();
+          if (lib) inLibrary = true;
+        } catch (_) {}
 
-        if (existingPurchase && !isTester) {
+        if ((existingPurchase || inLibrary) && !isTester) {
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
         }
 
@@ -7032,18 +7096,30 @@ Format with these exact markdown sections:
         const edgeUser = getSessionUser(request);
 
         let isPurchased = false;
+        let inLibrary = false;
         if (edgeUser && edgeUser.id && env.DB) {
           try {
+            await ensurePurchasesTable(env);
             const purchase = await env.DB.prepare(
               "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
             ).bind(edgeUser.id, bookId).first();
             if (purchase) isPurchased = true;
           } catch (_) {}
+          try {
+            await ensurePersonalLibraryTable(env);
+            const lib = await env.DB.prepare(
+              "SELECT id FROM personal_library WHERE user_id = ? AND book_id = ? LIMIT 1"
+            ).bind(edgeUser.id, bookId).first();
+            if (lib) inLibrary = true;
+          } catch (_) {}
+        }
+        if (inLibrary && book.is_paid) {
+          isPurchased = true;
         }
 
         let canRead = false;
         if (edgeUser) {
-          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer" || isPurchased) {
+          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer" || isPurchased || inLibrary) {
             canRead = true;
           }
         } else {
@@ -7057,7 +7133,7 @@ Format with these exact markdown sections:
           respHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
         }
 
-        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement, url.origin, isPurchased), {
+        return new Response(renderEdgeBookHtml(book, reviews, edgeUser, canRead, badges, announcement, url.origin, isPurchased, inLibrary), {
           headers: respHeaders
         });
       } catch (err) {
@@ -12863,7 +12939,7 @@ ${tags.join(', ')}
 *Engineered by Girionix AI Book Architect. Recommended for readers seeking high-caliber ${cleanCat}. Optimally calibrated for digital distribution, search discoverability, and author platforms worldwide.*`;
 }
 
-function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = false, badges = [], announcement = null, reqOrigin = "https://pustakverse.pages.dev", isPurchased = false) {
+function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = false, badges = [], announcement = null, reqOrigin = "https://pustakverse.pages.dev", isPurchased = false, inLibrary = false) {
   const origin = reqOrigin || "https://pustakverse.pages.dev";
   const canonicalUrl = `${origin}/book/${book.id}`;
   const effectiveCover = resolveEffectiveBookCover(book, origin);
@@ -12984,11 +13060,17 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
       <div class="price" style="font-size: 1.8rem; font-weight: 900; color: #3b82f6; margin-bottom: 12px;">Free to Read (Open Access)</div>
       <div style="display: flex; gap: 10px;">
         <a href="/read_book/${book.id}" class="btn" style="flex: 1.2; text-align: center; background: linear-gradient(135deg, #f97316, #ea580c); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white !important; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);">📖 Read Now</a>
-        <form action="/save_book/${book.id}" method="POST" style="flex: 1; margin: 0; display: flex;">
-          <button type="submit" class="btn btn-save-library" style="width: 100%; padding: 12px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; text-decoration: none; box-sizing: border-box; font-size: 0.95rem;">
-            <span>💾</span> Save to Library
-          </button>
-        </form>
+        ${inLibrary ? `
+          <div style="flex: 1; text-align: center; padding: 12px 14px; border-radius: 8px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>✓</span> In Library
+          </div>
+        ` : `
+          <form action="/save_book/${book.id}" method="POST" style="flex: 1; margin: 0; display: flex;">
+            <button type="submit" class="btn btn-save-library" style="width: 100%; padding: 12px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; text-decoration: none; box-sizing: border-box; font-size: 0.95rem;">
+              <span>💾</span> Save to Library
+            </button>
+          </form>
+        `}
       </div>
       ${donateBtnHtml}
     `;
