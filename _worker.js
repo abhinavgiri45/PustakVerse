@@ -11550,8 +11550,10 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     `).join("");
     out = out.replace(/<tbody id="activeCatalogsTableBody">[\s\S]*?<\/tbody>/i, `<tbody id="activeCatalogsTableBody">${rowsHtml}</tbody>`);
 
-    const selectOptions = liveCatalogs.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("");
-    out = out.replace(/<select name="catalog" required>[\s\S]*?<\/select>/i, `<select name="catalog" required>${selectOptions}${(isDev || isOff) ? '<option value="Archives">Archives (Free Only)</option>' : ''}</select>`);
+    const selectOptions = liveCatalogs.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("") + '<option value="Archives">🏛️ Archives (Public Free Archive)</option>';
+    out = out.replace(/<select name="catalog" id="bookCatalogSelect"[\s\S]*?<\/select>/i, `<select name="catalog" id="bookCatalogSelect" required onchange="handleCatalogSelectionChange(this.value)">${selectOptions}</select>`);
+    out = out.replace(/<select name="catalog" id="edit_catalog"[\s\S]*?<\/select>/i, `<select name="catalog" id="edit_catalog" required onchange="handleEditCatalogChange(this.value)" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid var(--input-border, #cbd5e1); border-radius: 6px; background: var(--input-bg, #ffffff); color: var(--text-dark, #0f172a);">${selectOptions}</select>`);
+    out = out.replace(/<select name="catalog" required>[\s\S]*?<\/select>/i, `<select name="catalog" required>${selectOptions}</select>`);
   }
 
   // 5. Inject Books Table into Platform Library Management / My Published Books

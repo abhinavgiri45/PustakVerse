@@ -4233,11 +4233,16 @@
                     <input type="text" name="title" id="edit_title" required>
                 </div>
                 <div class="form-group">
-                    <select name="catalog" id="edit_catalog" required>
+                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark, #0f172a); margin-bottom: 4px; display: block;">Book Category / Catalog</label>
+                    <select name="catalog" id="edit_catalog" required onchange="handleEditCatalogChange(this.value)" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid var(--input-border, #cbd5e1); border-radius: 6px; background: var(--input-bg, #ffffff); color: var(--text-dark, #0f172a);">
                         {% for cat in site_catalogs %}
                             <option value="{{ cat.name }}">{{ cat.name }}</option>
                         {% endfor %}
+                        <option value="Archives">🏛️ Archives (Public Free Archive)</option>
                     </select>
+                    <div id="editArchiveNotice" style="display: none; margin-top: 8px; padding: 10px 14px; border-radius: 8px; background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; font-size: 0.82rem; line-height: 1.4;">
+                        🏛️ <strong>Archives Catalog:</strong> Books in the public Archives are permanently 100% free and open-access to all readers worldwide.
+                    </div>
                 </div>
                 
                 <!-- Edit Description -->
@@ -4575,11 +4580,51 @@
             }
         }
 
+        function handleEditCatalogChange(val) {
+            const isArchive = val && val.toLowerCase() === 'archives';
+            const notice = document.getElementById('editArchiveNotice');
+            if (notice) notice.style.display = isArchive ? 'block' : 'none';
+            const isPaidCheck = document.getElementById('edit_is_paid');
+            const editPaidSettings = document.getElementById('edit_paid_settings');
+            const pInput = document.getElementById('edit_price_inr');
+            if (isArchive) {
+                if (isPaidCheck) {
+                    isPaidCheck.checked = false;
+                    isPaidCheck.disabled = true;
+                }
+                if (editPaidSettings) editPaidSettings.style.display = 'none';
+                if (pInput) pInput.required = false;
+            } else {
+                if (isPaidCheck) isPaidCheck.disabled = false;
+            }
+        }
+
         // Updated Modal Logic to securely pull from data- attributes
         function openEditModal(btn) {
             document.getElementById('editBookForm').action = "/edit_book/" + btn.dataset.id; 
             document.getElementById('edit_title').value = btn.dataset.title; 
-            document.getElementById('edit_catalog').value = btn.dataset.catalog;
+            
+            // Populate catalog with fail-safe Archives and custom catalog support
+            const catSelect = document.getElementById('edit_catalog');
+            const targetCatalog = (btn.dataset.catalog || '').trim();
+            if (catSelect && targetCatalog) {
+                let matched = false;
+                for (let i = 0; i < catSelect.options.length; i++) {
+                    if (catSelect.options[i].value.toLowerCase() === targetCatalog.toLowerCase()) {
+                        catSelect.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    const newOpt = document.createElement('option');
+                    newOpt.value = targetCatalog;
+                    newOpt.textContent = targetCatalog.toLowerCase() === 'archives' ? '🏛️ Archives (Public Free Archive)' : targetCatalog;
+                    catSelect.appendChild(newOpt);
+                    catSelect.value = targetCatalog;
+                }
+                handleEditCatalogChange(catSelect.value);
+            }
             
             // Populate description
             document.getElementById('edit_description').value = btn.dataset.desc || '';
