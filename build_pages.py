@@ -104,6 +104,8 @@ def build():
             session['official_designation'] = 'Founder & Lead Architect'
             session['is_absolute_power'] = True
             session['post_tier'] = 1
+            session['is_verified'] = 1
+            session['can_publish'] = 1
             
             master_dash_html = render_template('dashboard.html',
                 render_all_roles=True,

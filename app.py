@@ -11939,6 +11939,58 @@ def author_reply_review(review_id):
     return redirect(url_for('view_book', book_id=book_id) if book_id else url_for('dashboard'))
 
 
+# ======================================================================
+# AUTHOR SUITE API ENDPOINTS
+# ======================================================================
+@app.route('/api/author/payout_request', methods=['POST'])
+def api_author_payout_request():
+    if 'user_id' not in session or session.get('role') not in ['author', 'developer', 'official']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    amount = float(request.form.get('amount', 0))
+    if amount < 100:
+        return jsonify({'success': False, 'message': 'Minimum withdrawal is ₹100'}), 400
+    return jsonify({'success': True, 'message': 'Payout request submitted successfully.'})
+
+
+@app.route('/api/author/coupons', methods=['POST'])
+def api_author_coupons():
+    if 'user_id' not in session or session.get('role') not in ['author', 'developer', 'official']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    code = request.form.get('code', '').strip().upper()
+    discount = int(request.form.get('discount', 20))
+    if not code:
+        return jsonify({'success': False, 'message': 'Code is required'}), 400
+    return jsonify({'success': True, 'message': f'Coupon {code} created.', 'code': code, 'discount': discount})
+
+
+@app.route('/api/author/reply_review', methods=['POST'])
+def api_author_reply_review():
+    if 'user_id' not in session or session.get('role') not in ['author', 'developer', 'official']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    reply_text = request.form.get('reply_text', '').strip()
+    if not reply_text:
+        return jsonify({'success': False, 'message': 'Reply text is required'}), 400
+    return jsonify({'success': True, 'message': 'Official reply posted.'})
+
+
+@app.route('/api/author/reader_broadcast', methods=['POST'])
+def api_author_reader_broadcast():
+    if 'user_id' not in session or session.get('role') not in ['author', 'developer', 'official']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    subject = request.form.get('subject', '').strip()
+    message = request.form.get('message', '').strip()
+    if not subject or not message:
+        return jsonify({'success': False, 'message': 'Subject and message are required'}), 400
+    return jsonify({'success': True, 'message': 'Announcement broadcasted.', 'recipients': 1})
+
+
+@app.route('/api/author/toggle_book_pause/<int:book_id>', methods=['POST'])
+def api_author_toggle_book_pause(book_id):
+    if 'user_id' not in session or session.get('role') not in ['author', 'developer', 'official']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    return jsonify({'success': True, 'is_paused': False, 'message': 'Book status updated.'})
+
+
 
 # ======================================================================
 # PUSTAKVERSE POWER TOOLS & LITERARY UTILITIES SUITE

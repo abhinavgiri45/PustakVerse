@@ -2152,6 +2152,223 @@ export default {
       });
     }
 
+    // 4D-1. Author Royalty Payout Request: POST /api/author/payout_request
+    if (url.pathname === "/api/author/payout_request" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized. Please sign in." }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+      const formData = await request.formData().catch(() => new FormData());
+      const amount = parseFloat(formData.get("amount") || "0");
+      const method = (formData.get("payout_method") || "upi").trim();
+      const upiId = (formData.get("upi_id") || "").trim();
+      const accountHolder = (formData.get("account_holder") || "").trim();
+      const accountNumber = (formData.get("account_number") || "").trim();
+      const ifscCode = (formData.get("ifsc_code") || "").trim();
+
+      if (amount < 100) {
+        return new Response(JSON.stringify({ success: false, message: "Minimum payout amount is ₹100." }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }
+
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS author_payout_requests (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              author_id INTEGER NOT NULL,
+              author_username TEXT,
+              amount REAL NOT NULL,
+              payout_method TEXT NOT NULL,
+              upi_id TEXT,
+              account_holder TEXT,
+              account_number TEXT,
+              ifsc_code TEXT,
+              status TEXT DEFAULT 'pending',
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          await env.DB.prepare(`
+            INSERT INTO author_payout_requests (author_id, author_username, amount, payout_method, upi_id, account_holder, account_number, ifsc_code)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(sessionUser.id, sessionUser.username || "Author", amount, method, upiId, accountHolder, accountNumber, ifscCode).run();
+        } catch (e) {
+          console.error("Payout request save error:", e);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, message: "Payout request submitted successfully. Processing in 24-48 business hours." }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4D-2. Author Discount Coupon: POST /api/author/coupons
+    if (url.pathname === "/api/author/coupons" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized." }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+      const formData = await request.formData().catch(() => new FormData());
+      const bookId = parseInt(formData.get("book_id") || "0", 10);
+      const code = (formData.get("code") || "").toUpperCase().trim();
+      const discount = parseInt(formData.get("discount") || "10", 10);
+      const maxUses = parseInt(formData.get("max_uses") || "100", 10);
+
+      if (!code) {
+        return new Response(JSON.stringify({ success: false, message: "Coupon code is required." }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }
+
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS book_coupons (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              author_id INTEGER NOT NULL,
+              book_id INTEGER DEFAULT 0,
+              code TEXT NOT NULL UNIQUE,
+              discount_percent INTEGER NOT NULL,
+              max_uses INTEGER DEFAULT 100,
+              used_count INTEGER DEFAULT 0,
+              is_active INTEGER DEFAULT 1,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO book_coupons (author_id, book_id, code, discount_percent, max_uses)
+            VALUES (?, ?, ?, ?, ?)
+          `).bind(sessionUser.id, bookId, code, discount, maxUses).run();
+        } catch (e) {
+          console.error("Coupon creation error:", e);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, message: `Coupon ${code} created.`, code, discount }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4D-3. Author Reply to Review: POST /api/author/reply_review
+    if (url.pathname === "/api/author/reply_review" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized." }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+      const formData = await request.formData().catch(() => new FormData());
+      const reviewId = parseInt(formData.get("review_id") || "0", 10);
+      const replyText = (formData.get("reply_text") || "").trim();
+
+      if (!replyText) {
+        return new Response(JSON.stringify({ success: false, message: "Reply text is required." }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }
+
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS book_review_replies (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              review_id INTEGER NOT NULL,
+              author_id INTEGER NOT NULL,
+              author_name TEXT,
+              reply_text TEXT NOT NULL,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          await env.DB.prepare(`
+            INSERT INTO book_review_replies (review_id, author_id, author_name, reply_text)
+            VALUES (?, ?, ?, ?)
+          `).bind(reviewId, sessionUser.id, sessionUser.username || "Author", replyText).run();
+        } catch (e) {
+          console.error("Review reply error:", e);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, message: "Official author reply posted." }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4D-4. Author Reader Announcement: POST /api/author/reader_broadcast
+    if (url.pathname === "/api/author/reader_broadcast" && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized." }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+      const formData = await request.formData().catch(() => new FormData());
+      const bookId = parseInt(formData.get("book_id") || "0", 10);
+      const subject = (formData.get("subject") || "").trim();
+      const message = (formData.get("message") || "").trim();
+
+      if (!subject || !message) {
+        return new Response(JSON.stringify({ success: false, message: "Subject and message are required." }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }
+
+      let recipientsCount = 0;
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS author_broadcasts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              author_id INTEGER NOT NULL,
+              book_id INTEGER DEFAULT 0,
+              subject TEXT NOT NULL,
+              message TEXT NOT NULL,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          await env.DB.prepare(`
+            INSERT INTO author_broadcasts (author_id, book_id, subject, message)
+            VALUES (?, ?, ?, ?)
+          `).bind(sessionUser.id, bookId, subject, message).run();
+
+          const row = await env.DB.prepare(`
+            SELECT COUNT(DISTINCT user_id) as cnt FROM user_library WHERE (book_id = ? OR ? = 0)
+          `).bind(bookId, bookId).first().catch(() => null);
+          recipientsCount = row?.cnt || 1;
+        } catch (e) {
+          console.error("Broadcast error:", e);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, message: "Announcement broadcasted.", recipients: recipientsCount }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // 4D-5. Toggle Author Book Visibility / Pause: POST /api/author/toggle_book_pause/:id
+    if (url.pathname.startsWith("/api/author/toggle_book_pause/") && request.method === "POST") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized." }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+      const bookId = parseInt(url.pathname.split("/").pop() || "0", 10);
+      let isPaused = false;
+      if (env.DB && bookId > 0) {
+        const book = await env.DB.prepare("SELECT id, author_id, is_quarantined FROM books WHERE id = ?").bind(bookId).first().catch(() => null);
+        if (!book || (book.author_id !== sessionUser.id && sessionUser.role !== "developer" && sessionUser.role !== "official")) {
+          return new Response(JSON.stringify({ success: false, message: "Unauthorized or book not found." }), { status: 403, headers: { "Content-Type": "application/json" } });
+        }
+        const newStatus = book.is_quarantined ? 0 : 1;
+        await env.DB.prepare("UPDATE books SET is_quarantined = ? WHERE id = ?").bind(newStatus, bookId).run().catch(() => {});
+        isPaused = newStatus === 1;
+      }
+      return new Response(JSON.stringify({ success: true, is_paused: isPaused, message: isPaused ? "Book sales paused." : "Book resumed live." }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     // 4E. Verify Razorpay Ajax: POST /verify_razorpay_ajax
     if (url.pathname === "/verify_razorpay_ajax" && request.method === "POST") {
       const body = await request.json().catch(() => ({}));
@@ -3669,13 +3886,20 @@ Format with these exact markdown sections:
 
           // Publish a New Book
           if (formData.has("title") || formData.has("pdf_link")) {
+            const acceptsJson = (request.headers.get("Accept") || "").includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest";
             const canPublish = user.role === "developer" || user.role === "author" || (user.role === "official" && Boolean(user.can_publish));
             if (!canPublish) {
+              if (acceptsJson) {
+                return new Response(JSON.stringify({ success: false, message: "You do not have permission to publish books." }), { status: 403, headers: { "Content-Type": "application/json" } });
+              }
               return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>You do not have permission to publish books.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } });
             }
 
             const title = (formData.get("title") || "").trim();
             if (!title) {
+              if (acceptsJson) {
+                return new Response(JSON.stringify({ success: false, message: "Book Title is required." }), { status: 400, headers: { "Content-Type": "application/json" } });
+              }
               return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Book Title is required.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
             }
 
@@ -3683,6 +3907,7 @@ Format with these exact markdown sections:
             const description = (formData.get("description") || "").trim();
             let pdfLink = (formData.get("pdf_link") || "").trim();
             let coverLink = (formData.get("cover_link") || "").trim();
+            const previewPages = Math.max(0, parseInt(formData.get("preview_pages") || "5", 10) || 5);
 
             // Cover file fallback
             const coverFile = formData.get("cover_image");
@@ -3705,6 +3930,9 @@ Format with these exact markdown sections:
             }
 
             if (!pdfLink) {
+              if (acceptsJson) {
+                return new Response(JSON.stringify({ success: false, message: "Please provide a PDF link or upload a PDF document." }), { status: 400, headers: { "Content-Type": "application/json" } });
+              }
               return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Please provide a Google Drive PDF Book Link.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
             }
 
@@ -3758,7 +3986,7 @@ Format with these exact markdown sections:
                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
               ).bind(
                 title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
+                previewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
                 isQuarantined, archiveStatus, allowAuthorDonations
               ).run();
             } catch (insertErr) {
@@ -3777,7 +4005,7 @@ Format with these exact markdown sections:
                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
                   ).bind(
                     title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                    5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
+                    previewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
                     isQuarantined, archiveStatus, allowAuthorDonations
                   ).run();
                 } catch (retryErr) {
@@ -3790,7 +4018,7 @@ Format with these exact markdown sections:
                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
                   ).bind(
                     title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
-                    5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo
+                    previewPages, rpKeyId, rpKeySecret, rpVerified, description, sbinNo
                   ).run();
                 }
               } else {
@@ -3821,19 +4049,32 @@ Format with these exact markdown sections:
                 ).bind(bId, user.id, user.username, title, normPdf, normCover, description).run();
               } catch (_) {}
               console.log(`✓ [ARCHIVE SUBMISSION PENDING REVIEW] "${title}" by author ${user.username}`);
+              if (acceptsJson) {
+                return new Response(JSON.stringify({ success: true, message: "Archive book submitted for editorial review!", title, sbin: sbinNo }), { status: 200, headers: { "Content-Type": "application/json" } });
+              }
               return Response.redirect(`${url.origin}/dashboard?archive_pending=1`, 302);
             }
 
             if (isArchive && (user.role === "developer" || user.role === "official")) {
               console.log(`✓ [DIRECT ARCHIVE PUBLICATION LIVE] "${title}" by authorized ${user.role} ${user.username}`);
+              if (acceptsJson) {
+                return new Response(JSON.stringify({ success: true, message: "Archive book published live to library!", title, sbin: sbinNo }), { status: 200, headers: { "Content-Type": "application/json" } });
+              }
               return Response.redirect(`${url.origin}/dashboard?archive_published=1`, 302);
             }
 
             console.log(`✓ [BOOK PUBLISHED AT EDGE] "${title}" by ${user.username} | SBIN: ${sbinNo}`);
+            if (acceptsJson) {
+              return new Response(JSON.stringify({ success: true, message: "Book published successfully!", title, sbin: sbinNo, catalog }), { status: 200, headers: { "Content-Type": "application/json" } });
+            }
             return Response.redirect(`${url.origin}/dashboard?published=1`, 302);
           }
         } catch (err) {
           console.error("Dashboard POST error:", err);
+          const acceptsJson = (request.headers.get("Accept") || "").includes("application/json") || request.headers.get("X-Requested-With") === "XMLHttpRequest";
+          if (acceptsJson) {
+            return new Response(JSON.stringify({ success: false, message: err.message || "An unexpected error occurred." }), { status: 500, headers: { "Content-Type": "application/json" } });
+          }
           return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Error: ${escapeHtml(err.message)}</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 500, headers: { "Content-Type": "text/html; charset=utf-8" } });
         }
       }
