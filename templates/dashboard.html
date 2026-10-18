@@ -1376,49 +1376,49 @@
                 </div>
 
                 <!-- 2. REAL-TIME BOOK SALES & READER ENGAGEMENT ANALYTICS -->
-                <div id="authorAnalyticsHub" class="panel" style="margin-top: 25px; border-left: 5px solid #3b82f6; background: #ffffff;">
+                <div id="authorAnalyticsHub" class="panel" style="margin-top: 25px; border-left: 5px solid #3b82f6; background: var(--panel-bg, #ffffff);">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                         <div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="font-size: 1.5rem;">📊</span>
-                                <h2 style="margin: 0; color: #1e3a8a; font-size: 1.35rem; font-weight: 800;">
+                                <h2 style="margin: 0; color: var(--text-dark, #1e3a8a); font-size: 1.35rem; font-weight: 800;">
                                     Reader Engagement & Library Retention Analytics
                                 </h2>
                             </div>
-                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.88rem;">
-                                Detailed reader interaction metrics across your published book catalog.
+                            <p id="authorAnalyticsSubtitle" style="margin: 4px 0 0 0; color: var(--text-light, #64748b); font-size: 0.88rem;">
+                                {{ 'Detailed reader interaction metrics across the platform book catalog.' if author_analytics is defined and author_analytics.is_platform_wide else 'Detailed reader interaction metrics across your published book catalog.' }}
                             </p>
                         </div>
-                        <span style="font-size: 0.78rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; padding: 4px 12px; border-radius: 20px; border: 1px solid #bfdbfe;">
+                        <span style="font-size: 0.78rem; font-weight: 700; background: rgba(59, 130, 246, 0.12); color: #2563eb; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.3);">
                             ⚡ Real-Time Telemetry
                         </span>
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px;">
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">⚡ Reads This Week</div>
-                            <div id="statWeeklyReads" style="font-size: 1.4rem; font-weight: 900; color: #ea580c; margin-top: 2px;">124</div>
-                            <div style="font-size: 0.72rem; color: #16a34a;">+18% from last cycle</div>
+                        <div style="background: var(--input-bg, #f8fafc); border: 1px solid var(--border-line, #e2e8f0); border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light, #64748b);">⚡ Reads This Week</div>
+                            <div id="statWeeklyReads" style="font-size: 1.4rem; font-weight: 900; color: #ea580c; margin-top: 2px;">{{ author_analytics.weekly_reads|default(0) if author_analytics is defined else 0 }}</div>
+                            <div id="statWeeklyReadsSub" style="font-size: 0.72rem; color: #16a34a;">{{ author_analytics.weekly_change_label|default("0 active sessions this week") if author_analytics is defined else "0 active sessions this week" }}</div>
                         </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">🗓️ Monthly Readers</div>
-                            <div id="statMonthlyReads" style="font-size: 1.4rem; font-weight: 900; color: #0284c7; margin-top: 2px;">542</div>
-                            <div style="font-size: 0.72rem; color: #64748b;">Active page views</div>
+                        <div style="background: var(--input-bg, #f8fafc); border: 1px solid var(--border-line, #e2e8f0); border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light, #64748b);">🗓️ Monthly Readers</div>
+                            <div id="statMonthlyReads" style="font-size: 1.4rem; font-weight: 900; color: #0284c7; margin-top: 2px;">{{ author_analytics.monthly_reads|default(0) if author_analytics is defined else 0 }}</div>
+                            <div id="statMonthlyReadsSub" style="font-size: 0.72rem; color: var(--text-light, #64748b);">{{ author_analytics.monthly_reads_label|default("0 active page views") if author_analytics is defined else "0 active page views" }}</div>
                         </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">📚 Saved to Library</div>
-                            <div id="statLibrarySaves" style="font-size: 1.4rem; font-weight: 900; color: #8b5cf6; margin-top: 2px;">318</div>
-                            <div style="font-size: 0.72rem; color: #64748b;">Personal book shelves</div>
+                        <div style="background: var(--input-bg, #f8fafc); border: 1px solid var(--border-line, #e2e8f0); border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light, #64748b);">📚 Saved to Library</div>
+                            <div id="statLibrarySaves" style="font-size: 1.4rem; font-weight: 900; color: #8b5cf6; margin-top: 2px;">{{ author_analytics.library_saves|default(0) if author_analytics is defined else 0 }}</div>
+                            <div id="statLibrarySavesSub" style="font-size: 0.72rem; color: var(--text-light, #64748b);">{{ author_analytics.library_saves_label|default("0 personal bookshelves") if author_analytics is defined else "0 personal bookshelves" }}</div>
                         </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">⭐ Reader Satisfaction</div>
-                            <div id="statAvgRating" style="font-size: 1.4rem; font-weight: 900; color: #f59e0b; margin-top: 2px;">4.9 / 5.0</div>
-                            <div style="font-size: 0.72rem; color: #f59e0b;">★★★★★ Verified ratings</div>
+                        <div style="background: var(--input-bg, #f8fafc); border: 1px solid var(--border-line, #e2e8f0); border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light, #64748b);">⭐ Reader Satisfaction</div>
+                            <div id="statAvgRating" style="font-size: 1.4rem; font-weight: 900; color: #f59e0b; margin-top: 2px;">{{ (author_analytics.avg_rating|default("0.0")) if author_analytics is defined else "0.0" }} / 5.0</div>
+                            <div id="statAvgRatingSub" style="font-size: 0.72rem; color: #f59e0b;">{{ author_analytics.rating_label|default("No ratings yet (awaiting reviews)") if author_analytics is defined else "No ratings yet (awaiting reviews)" }}</div>
                         </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">🎯 Completion Rate</div>
-                            <div id="statCompletionRate" style="font-size: 1.4rem; font-weight: 900; color: #10b981; margin-top: 2px;">82.4%</div>
-                            <div style="font-size: 0.72rem; color: #166534;">Read through all chapters</div>
+                        <div style="background: var(--input-bg, #f8fafc); border: 1px solid var(--border-line, #e2e8f0); border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light, #64748b);">🎯 Completion Rate</div>
+                            <div id="statCompletionRate" style="font-size: 1.4rem; font-weight: 900; color: #10b981; margin-top: 2px;">{{ (author_analytics.completion_rate|default("0.0")) if author_analytics is defined else "0.0" }}%</div>
+                            <div id="statCompletionRateSub" style="font-size: 0.72rem; color: #166534;">{{ author_analytics.completion_label|default("No completion telemetry recorded yet") if author_analytics is defined else "No completion telemetry recorded yet" }}</div>
                         </div>
                     </div>
                 </div>
@@ -6133,6 +6133,57 @@
         }
 
         document.addEventListener('DOMContentLoaded', calculateAuthorRoyalties);
+
+        async function loadRealAuthorAnalytics() {
+            const hub = document.getElementById('authorAnalyticsHub');
+            if (!hub) return;
+            try {
+                const resp = await fetch('/api/author/analytics');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data || !data.success) return;
+
+                const wReads = document.getElementById('statWeeklyReads');
+                const wReadsSub = document.getElementById('statWeeklyReadsSub');
+                const mReads = document.getElementById('statMonthlyReads');
+                const mReadsSub = document.getElementById('statMonthlyReadsSub');
+                const lSaves = document.getElementById('statLibrarySaves');
+                const lSavesSub = document.getElementById('statLibrarySavesSub');
+                const aRating = document.getElementById('statAvgRating');
+                const aRatingSub = document.getElementById('statAvgRatingSub');
+                const cRate = document.getElementById('statCompletionRate');
+                const cRateSub = document.getElementById('statCompletionRateSub');
+                const subTitle = document.getElementById('authorAnalyticsSubtitle');
+
+                if (wReads) wReads.textContent = data.weekly_reads ?? 0;
+                if (wReadsSub) wReadsSub.textContent = data.weekly_change_label || '0 active sessions this week';
+                if (mReads) mReads.textContent = data.monthly_reads ?? 0;
+                if (mReadsSub) mReadsSub.textContent = data.monthly_reads_label || 'Active page views & readers';
+                if (lSaves) lSaves.textContent = data.library_saves ?? 0;
+                if (lSavesSub) lSavesSub.textContent = data.library_saves_label || 'Personal book shelves';
+                if (aRating) aRating.textContent = (data.avg_rating || '0.0') + ' / 5.0';
+                if (aRatingSub) aRatingSub.textContent = data.rating_label || 'No ratings yet';
+                if (cRate) cRate.textContent = (data.completion_rate || '0.0') + '%';
+                if (cRateSub) cRateSub.textContent = data.completion_label || 'Read through completion';
+                if (subTitle && data.is_platform_wide) {
+                    subTitle.textContent = 'Detailed reader interaction metrics across the platform book catalog.';
+                }
+
+                if (data.sales_metrics) {
+                    const sGross = document.getElementById('statAuthorGrossSales');
+                    const sNet = document.getElementById('statAuthorNetRoyalties');
+                    const sAvail = document.getElementById('statAuthorAvailableBalance');
+                    const sCleared = document.getElementById('statAuthorClearedPayouts');
+                    if (sGross) sGross.textContent = '₹' + Number(data.sales_metrics.total_gross_inr || 0).toFixed(2);
+                    if (sNet) sNet.textContent = '₹' + Number(data.sales_metrics.net_royalties_inr || 0).toFixed(2);
+                    if (sAvail) sAvail.textContent = '₹' + Number(data.sales_metrics.available_balance_inr || 0).toFixed(2);
+                    if (sCleared) sCleared.textContent = '₹' + Number(data.sales_metrics.cleared_payouts_inr || 0).toFixed(2);
+                }
+            } catch (e) {
+                console.warn('Real author analytics fetch notice:', e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadRealAuthorAnalytics);
     
         // Global Broadcast Ticker Preset Helper
         function setTickerPreset(msg, theme) {

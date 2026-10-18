@@ -8882,6 +8882,8 @@ def dashboard():
                     log_official_activity(session['user_id'], f"Rejected & deleted author: {author_name}. Reason: {reason}")
                 flash("Author rejected and removed.", "success")
 
+        author_analytics = get_real_author_analytics(cursor, session['user_id'], role, session.get('username'))
+
         username_requests = []
         if role == 'developer':
             try: 
@@ -8998,7 +9000,7 @@ def dashboard():
             except Exception:
                 am_pin_lockouts = []
 
-            return render_template('dashboard.html', archive_books=archive_books, pending_archive_books=pending_archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team, am_pin_lockouts=am_pin_lockouts)
+            return render_template('dashboard.html', archive_books=archive_books, pending_archive_books=pending_archive_books, searched_users=searched_users, del_requests=del_requests, book_del_requests=book_del_requests, search_query=search_query, pending_authors=pending_authors, official_logs=official_logs, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, system_metrics=system_metrics, all_categories=all_categories, leadership_team=leadership_team, am_pin_lockouts=am_pin_lockouts, author_analytics=author_analytics)
 
         if role == 'official':
             if search_query: 
@@ -9050,7 +9052,7 @@ def dashboard():
             cursor.execute("SELECT oa.action, oa.timestamp, u.username FROM official_activities oa JOIN users u ON oa.official_id = u.id ORDER BY oa.timestamp DESC LIMIT 100")
             official_logs = cursor.fetchall()
             
-            return render_template('dashboard.html', pending_authors=pending_authors, pending_archive_books=pending_archive_books, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, official_designation=exec_info['designation'], is_absolute_power=exec_info['is_absolute'], post_tier=exec_info['post_tier'], leadership_team=leadership_team, all_categories=all_categories, official_logs=official_logs)
+            return render_template('dashboard.html', pending_authors=pending_authors, pending_archive_books=pending_archive_books, all_users=all_users, search_query=search_query, my_books=my_books, username_requests=username_requests, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, official_designation=exec_info['designation'], is_absolute_power=exec_info['is_absolute'], post_tier=exec_info['post_tier'], leadership_team=leadership_team, all_categories=all_categories, official_logs=official_logs, author_analytics=author_analytics)
 
         if role == 'author':
             cursor.execute("SELECT is_verified FROM users WHERE id = %s", (session['user_id'],))
@@ -9060,9 +9062,9 @@ def dashboard():
             cursor.execute("SELECT id, title, catalog, is_paid, price_paise, cover_image, pdf_file, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, description, is_quarantined, is_featured FROM books WHERE author_id = %s", (session['user_id'],))
             my_books = clean_book_data(cursor.fetchall())
             
-            return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
+            return render_template('dashboard.html', my_books=my_books, show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, author_analytics=author_analytics)
 
-        return render_template('dashboard.html', show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str)
+        return render_template('dashboard.html', show_delete_otp_form=show_delete_otp_form, two_factor_enabled=two_factor_enabled, security_score=security_score, user_profile=user_profile, client_ip=client_ip, user_agent_str=user_agent_str, author_analytics=author_analytics)
         
     except Exception as e:
         flash(f"System Notice: Database schema updating. {str(e)}", "error")
@@ -12634,8 +12636,203 @@ def author_reply_review(review_id):
 
 
 # ======================================================================
-# AUTHOR SUITE API ENDPOINTS
+# AUTHOR SUITE API ENDPOINTS & TELEMETRY
 # ======================================================================
+def get_real_author_analytics(cursor, user_id, user_role, username):
+    fallback = {
+        'weekly_reads': 0,
+        'weekly_change_pct': 0,
+        'weekly_change_label': '0 active sessions this week',
+        'monthly_reads': 0,
+        'monthly_reads_label': '0 active page views',
+        'library_saves': 0,
+        'library_saves_label': '0 personal bookshelves',
+        'avg_rating': '0.0',
+        'rating_stars': '☆☆☆☆☆',
+        'ratings_count': 0,
+        'rating_label': 'No ratings yet (awaiting reviews)',
+        'completion_rate': '0.0',
+        'completion_label': 'No completion telemetry recorded yet',
+        'is_platform_wide': False,
+        'book_count': 0,
+        'sales_metrics': {
+            'total_gross_inr': 0.0,
+            'net_royalties_inr': 0.0,
+            'available_balance_inr': 0.0,
+            'cleared_payouts_inr': 0.0
+        }
+    }
+    if not cursor or not user_id:
+        return fallback
+
+    try:
+        is_privileged = user_role in ['developer', 'official']
+        clean_user = (username or '').lower().strip()
+        cursor.execute("SELECT id, title, COALESCE(view_count, 0) as view_count, COALESCE(completion_count, 0) as completion_count, price_paise, is_paid FROM books WHERE author_id = %s OR LOWER(COALESCE(author_name, '')) = %s ORDER BY id DESC LIMIT 200", (user_id, clean_user))
+        books = cursor.fetchall() or []
+        is_platform_wide = False
+        if not books and is_privileged:
+            cursor.execute("SELECT id, title, COALESCE(view_count, 0) as view_count, COALESCE(completion_count, 0) as completion_count, price_paise, is_paid FROM books ORDER BY id DESC LIMIT 200")
+            books = cursor.fetchall() or []
+            is_platform_wide = True
+
+        if not books:
+            fallback['is_platform_wide'] = is_platform_wide
+            return fallback
+
+        book_ids = [b['id'] for b in books if b.get('id')]
+        if not book_ids:
+            fallback['is_platform_wide'] = is_platform_wide
+            return fallback
+
+        placeholders = ', '.join(['%s'] * len(book_ids))
+
+        # 1. Reading progress
+        week_cnt, prev_week_cnt, month_cnt, total_readers, completions = 0, 0, 0, 0, 0
+        try:
+            cursor.execute(f"""
+                SELECT 
+                    COUNT(DISTINCT CASE WHEN last_read_at >= NOW() - INTERVAL 7 DAY THEN user_id END) as week_cnt,
+                    COUNT(DISTINCT CASE WHEN last_read_at >= NOW() - INTERVAL 14 DAY AND last_read_at < NOW() - INTERVAL 7 DAY THEN user_id END) as prev_week_cnt,
+                    COUNT(DISTINCT CASE WHEN last_read_at >= NOW() - INTERVAL 30 DAY THEN user_id END) as month_cnt,
+                    COUNT(DISTINCT user_id) as total_readers,
+                    SUM(CASE WHEN is_completed = 1 OR percent_completed >= 90.0 THEN 1 ELSE 0 END) as completions
+                FROM reading_progress
+                WHERE book_id IN ({placeholders})
+            """, tuple(book_ids))
+            rp_row = cursor.fetchone() or {}
+            week_cnt = int(rp_row.get('week_cnt') or 0)
+            prev_week_cnt = int(rp_row.get('prev_week_cnt') or 0)
+            month_cnt = int(rp_row.get('month_cnt') or 0)
+            total_readers = int(rp_row.get('total_readers') or 0)
+            completions = int(rp_row.get('completions') or 0)
+        except Exception:
+            pass
+
+        # 2. Personal library saves
+        library_saves = 0
+        try:
+            cursor.execute(f"SELECT COUNT(*) as cnt FROM personal_library WHERE book_id IN ({placeholders})", tuple(book_ids))
+            lib_row = cursor.fetchone() or {}
+            library_saves = int(lib_row.get('cnt') or 0)
+        except Exception:
+            pass
+
+        # 3. Interactions ratings
+        avg_rating_val, ratings_count = 0.0, 0
+        try:
+            cursor.execute(f"SELECT AVG(rating) as avg_rating, COUNT(*) as cnt FROM interactions WHERE book_id IN ({placeholders}) AND rating IS NOT NULL AND rating > 0", tuple(book_ids))
+            int_row = cursor.fetchone() or {}
+            avg_rating_val = float(int_row.get('avg_rating') or 0.0)
+            ratings_count = int(int_row.get('cnt') or 0)
+        except Exception:
+            pass
+
+        # 4. Purchases and Sales
+        gross_paise = 0
+        try:
+            cursor.execute(f"SELECT COALESCE(SUM(amount_paise), 0) as gross_paise FROM purchases WHERE book_id IN ({placeholders}) AND status = 'paid'", tuple(book_ids))
+            purch_row = cursor.fetchone() or {}
+            gross_paise = int(purch_row.get('gross_paise') or 0)
+        except Exception:
+            pass
+
+        # 5. Payouts
+        cleared_payouts, pending_payouts = 0.0, 0.0
+        try:
+            cursor.execute("SELECT COALESCE(SUM(CASE WHEN status = 'completed' OR status = 'cleared' THEN amount ELSE 0 END), 0) as cleared, COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending FROM author_payout_requests WHERE author_id = %s", (user_id,))
+            p_row = cursor.fetchone() or {}
+            cleared_payouts = float(p_row.get('cleared') or 0.0)
+            pending_payouts = float(p_row.get('pending') or 0.0)
+        except Exception:
+            pass
+
+        total_views = sum(int(b.get('view_count') or 0) for b in books)
+        total_comps = sum(int(b.get('completion_count') or 0) for b in books)
+
+        weekly_reads = week_cnt
+        weekly_change_label = "0 active sessions this week"
+        if prev_week_cnt > 0:
+            diff = week_cnt - prev_week_cnt
+            pct = round((diff / prev_week_cnt) * 100)
+            weekly_change_label = f"{'+' if pct >= 0 else ''}{pct}% from last cycle"
+        elif week_cnt > 0:
+            weekly_change_label = "+100% new readers"
+
+        monthly_reads = max(month_cnt, total_views)
+        monthly_reads_label = "Active readers & page views" if monthly_reads > 0 else "0 active page views"
+
+        library_saves_label = "1 personal bookshelf" if library_saves == 1 else f"{library_saves} personal bookshelves"
+
+        avg_rating_str = "0.0"
+        rating_stars = "☆☆☆☆☆"
+        rating_label = "No ratings yet (awaiting reviews)"
+        if ratings_count > 0:
+            avg_rating_str = f"{avg_rating_val:.1f}"
+            rounded = round(avg_rating_val)
+            rating_stars = ("★" * max(0, min(5, rounded))) + ("☆" * max(0, 5 - min(5, rounded)))
+            rating_label = f"{rating_stars} ({ratings_count} verified rating{'s' if ratings_count != 1 else ''})"
+
+        completion_rate_str = "0.0"
+        completion_label = "No completion telemetry recorded yet"
+        if total_readers > 0:
+            pct = min(100.0, max(0.0, (completions / total_readers) * 100.0))
+            completion_rate_str = f"{pct:.1f}"
+            completion_label = f"{completions} of {total_readers} reader{'s' if total_readers != 1 else ''} completed"
+        elif total_views > 0 and total_comps > 0:
+            pct = min(100.0, max(0.0, (total_comps / total_views) * 100.0))
+            completion_rate_str = f"{pct:.1f}"
+            completion_label = f"{total_comps} readers completed all chapters"
+
+        gross_inr = gross_paise / 100.0
+        net_royalties_inr = gross_inr
+        available_balance_inr = max(0.0, net_royalties_inr - cleared_payouts - pending_payouts)
+
+        return {
+            'weekly_reads': weekly_reads,
+            'weekly_change_pct': round(((week_cnt - prev_week_cnt) / prev_week_cnt) * 100) if prev_week_cnt > 0 else (100 if week_cnt > 0 else 0),
+            'weekly_change_label': weekly_change_label,
+            'monthly_reads': monthly_reads,
+            'monthly_reads_label': monthly_reads_label,
+            'library_saves': library_saves,
+            'library_saves_label': library_saves_label,
+            'avg_rating': avg_rating_str,
+            'rating_stars': rating_stars,
+            'ratings_count': ratings_count,
+            'rating_label': rating_label,
+            'completion_rate': completion_rate_str,
+            'completion_label': completion_label,
+            'is_platform_wide': is_platform_wide,
+            'book_count': len(books),
+            'sales_metrics': {
+                'total_gross_inr': gross_inr,
+                'net_royalties_inr': net_royalties_inr,
+                'available_balance_inr': available_balance_inr,
+                'cleared_payouts_inr': cleared_payouts
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error calculating real author analytics: {e}")
+        return fallback
+
+@app.route('/api/author/analytics', methods=['GET'])
+def api_author_analytics():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        role = session.get('role', 'reader')
+        analytics = get_real_author_analytics(cursor, session['user_id'], role, session.get('username'))
+        return jsonify({'success': True, **analytics})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 @app.route('/api/author/payout_request', methods=['POST'])
 def api_author_payout_request():
     if 'user_id' not in session or session.get('role') not in ['author', 'developer', 'official']:

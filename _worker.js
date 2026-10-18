@@ -2861,6 +2861,21 @@ export default {
       });
     }
 
+    // 4D-0. Real Author Reader Analytics & Telemetry: GET /api/author/analytics
+    if (url.pathname === "/api/author/analytics" && request.method === "GET") {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      let sessionUser = null;
+      try { if (cookies.pv_session) sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
+      if (!sessionUser || !sessionUser.id) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized. Please sign in." }), { status: 401, headers: { "Content-Type": "application/json" } });
+      }
+
+      const analytics = await getRealAuthorAnalytics(env, sessionUser);
+      return new Response(JSON.stringify({ success: true, ...analytics }), {
+        headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache, no-store, must-revalidate" }
+      });
+    }
+
     // 4D-1. Author Royalty Payout Request: POST /api/author/payout_request
     if (url.pathname === "/api/author/payout_request" && request.method === "POST") {
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -4951,8 +4966,17 @@ Format with these exact markdown sections:
           }
         }
 
+        let authorAnalytics = null;
+        if (env.DB) {
+          try {
+            authorAnalytics = await getRealAuthorAnalytics(env, user);
+          } catch (aErr) {
+            console.warn("Error loading authorAnalytics for edge SSR:", aErr.message);
+          }
+        }
+
         try {
-          const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests, pendingArchiveBooks);
+          const personalized = renderFullEdgeDashboardHtml(dashHtml, user, liveCatalogs, myBooks, leadershipTeam, url, systemMetrics, fps, allUsers, bookDelRequests, usernameRequests, pendingArchiveBooks, authorAnalytics);
           return new Response(personalized, {
             status: 200,
             headers: {
@@ -11154,7 +11178,185 @@ function stripElementById(html, id) {
   return html;
 }
 
-function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null, allUsers = [], bookDelRequests = [], usernameRequests = [], pendingArchiveBooks = []) {
+async function getRealAuthorAnalytics(env, user) {
+  const fallback = {
+    weekly_reads: 0,
+    weekly_change_pct: 0,
+    weekly_change_label: "0 active sessions this week",
+    monthly_reads: 0,
+    monthly_reads_label: "0 active page views",
+    library_saves: 0,
+    library_saves_label: "0 personal bookshelves",
+    avg_rating: "0.0",
+    rating_stars: "☆☆☆☆☆",
+    ratings_count: 0,
+    rating_label: "No ratings yet (awaiting reviews)",
+    completion_rate: "0.0",
+    completion_label: "No completion telemetry recorded yet",
+    is_platform_wide: false,
+    book_count: 0,
+    sales_metrics: {
+      total_gross_inr: 0,
+      net_royalties_inr: 0,
+      available_balance_inr: 0,
+      cleared_payouts_inr: 0
+    }
+  };
+
+  if (!env || !env.DB || !user || !user.id) return fallback;
+
+  try {
+    const isPrivileged = user.role === "developer" || user.role === "official" || isTechnicalLeadershipUser(user);
+    const usernameClean = (user.username || "").toLowerCase().trim();
+    
+    // Find books authored by user
+    let authoredRes = await env.DB.prepare(
+      "SELECT id, title, view_count, completion_count, price_paise, is_paid FROM books WHERE author_id = ? OR LOWER(COALESCE(author_name, '')) = ? ORDER BY id DESC LIMIT 200"
+    ).bind(user.id, usernameClean).all().catch(() => ({ results: [] }));
+    
+    let books = authoredRes?.results || [];
+    let isPlatformWide = false;
+    if (books.length === 0 && isPrivileged) {
+      const allBRes = await env.DB.prepare(
+        "SELECT id, title, view_count, completion_count, price_paise, is_paid FROM books ORDER BY id DESC LIMIT 200"
+      ).all().catch(() => ({ results: [] }));
+      books = allBRes?.results || [];
+      isPlatformWide = true;
+    }
+
+    if (books.length === 0) {
+      return { ...fallback, is_platform_wide: isPlatformWide };
+    }
+
+    const bookIds = books.map(b => b.id).filter(Boolean);
+    const placeholders = bookIds.map(() => "?").join(",");
+
+    const [rpRes, libRes, intRes, salesRes, payoutRes] = await Promise.all([
+      env.DB.prepare(`
+        SELECT 
+          COUNT(DISTINCT CASE WHEN datetime(last_read_at) >= datetime('now', '-7 days') THEN user_id END) as week_cnt,
+          COUNT(DISTINCT CASE WHEN datetime(last_read_at) >= datetime('now', '-14 days') AND datetime(last_read_at) < datetime('now', '-7 days') THEN user_id END) as prev_week_cnt,
+          COUNT(DISTINCT CASE WHEN datetime(last_read_at) >= datetime('now', '-30 days') THEN user_id END) as month_cnt,
+          COUNT(DISTINCT user_id) as total_readers,
+          SUM(CASE WHEN is_completed = 1 OR percent_completed >= 90.0 THEN 1 ELSE 0 END) as completions
+        FROM reading_progress
+        WHERE book_id IN (${placeholders})
+      `).bind(...bookIds).first().catch(() => null),
+
+      env.DB.prepare(`
+        SELECT COUNT(*) as library_saves
+        FROM personal_library
+        WHERE book_id IN (${placeholders})
+      `).bind(...bookIds).first().catch(() => null),
+
+      env.DB.prepare(`
+        SELECT 
+          COALESCE(AVG(rating), 0) as avg_rating,
+          COUNT(*) as rating_count
+        FROM interactions
+        WHERE book_id IN (${placeholders}) AND rating IS NOT NULL AND rating > 0
+      `).bind(...bookIds).first().catch(() => null),
+
+      env.DB.prepare(`
+        SELECT COALESCE(SUM(amount_paise), 0) as gross_paise
+        FROM purchases
+        WHERE book_id IN (${placeholders}) AND (status = 'paid' OR status = 'SUCCESS')
+      `).bind(...bookIds).first().catch(() => ({ gross_paise: 0 })),
+
+      env.DB.prepare(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN status = 'completed' OR status = 'cleared' THEN amount ELSE 0 END), 0) as cleared,
+          COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending
+        FROM author_payout_requests
+        WHERE author_id = ?
+      `).bind(user.id).first().catch(() => ({ cleared: 0, pending: 0 }))
+    ]);
+
+    const totalViews = books.reduce((acc, b) => acc + (Number(b.view_count) || 0), 0);
+    const totalComps = books.reduce((acc, b) => acc + (Number(b.completion_count) || 0), 0);
+
+    const weekCnt = Number(rpRes?.week_cnt) || 0;
+    const prevWeekCnt = Number(rpRes?.prev_week_cnt) || 0;
+    const monthCnt = Number(rpRes?.month_cnt) || 0;
+    const totalReaders = Number(rpRes?.total_readers) || 0;
+    const completions = Number(rpRes?.completions) || 0;
+
+    let weeklyReads = weekCnt;
+    let weeklyChangeLabel = "0 active sessions this week";
+    if (prevWeekCnt > 0) {
+      const diff = weekCnt - prevWeekCnt;
+      const pct = Math.round((diff / prevWeekCnt) * 100);
+      weeklyChangeLabel = (pct >= 0 ? "+" : "") + pct + "% from last cycle";
+    } else if (weekCnt > 0) {
+      weeklyChangeLabel = "+100% new readers";
+    }
+
+    let monthlyReads = Math.max(monthCnt, totalViews);
+    let monthlyReadsLabel = monthlyReads > 0 ? "Active readers & page views" : "0 active page views";
+
+    const librarySaves = Number(libRes?.library_saves) || 0;
+    const librarySavesLabel = librarySaves === 1 ? "1 personal bookshelf" : `${librarySaves} personal bookshelves`;
+
+    const ratingsCount = Number(intRes?.rating_count) || 0;
+    let avgRatingStr = "0.0";
+    let ratingStars = "☆☆☆☆☆";
+    let ratingLabel = "No ratings yet (awaiting reviews)";
+    if (ratingsCount > 0) {
+      const rawAvg = Number(intRes.avg_rating) || 0;
+      avgRatingStr = rawAvg.toFixed(1);
+      const rounded = Math.round(rawAvg);
+      ratingStars = "★".repeat(Math.max(0, Math.min(5, rounded))) + "☆".repeat(Math.max(0, 5 - Math.min(5, rounded)));
+      ratingLabel = `${ratingStars} (${ratingsCount} verified rating${ratingsCount === 1 ? "" : "s"})`;
+    }
+
+    let completionRateStr = "0.0";
+    let completionLabel = "No completion telemetry recorded yet";
+    if (totalReaders > 0) {
+      const pct = Math.min(100, Math.max(0, (completions / totalReaders) * 100));
+      completionRateStr = pct.toFixed(1);
+      completionLabel = `${completions} of ${totalReaders} reader${totalReaders === 1 ? "" : "s"} completed`;
+    } else if (totalViews > 0 && totalComps > 0) {
+      const pct = Math.min(100, Math.max(0, (totalComps / totalViews) * 100));
+      completionRateStr = pct.toFixed(1);
+      completionLabel = `${totalComps} readers completed all chapters`;
+    }
+
+    const grossInr = (Number(salesRes?.gross_paise) || 0) / 100.0;
+    const clearedInr = Number(payoutRes?.cleared) || 0;
+    const pendingInr = Number(payoutRes?.pending) || 0;
+    const netRoyaltiesInr = grossInr;
+    const availableBalanceInr = Math.max(0, netRoyaltiesInr - clearedInr - pendingInr);
+
+    return {
+      weekly_reads: weeklyReads,
+      weekly_change_pct: prevWeekCnt > 0 ? Math.round(((weekCnt - prevWeekCnt) / prevWeekCnt) * 100) : (weekCnt > 0 ? 100 : 0),
+      weekly_change_label: weeklyChangeLabel,
+      monthly_reads: monthlyReads,
+      monthly_reads_label: monthlyReadsLabel,
+      library_saves: librarySaves,
+      library_saves_label: librarySavesLabel,
+      avg_rating: avgRatingStr,
+      rating_stars: ratingStars,
+      ratings_count: ratingsCount,
+      rating_label: ratingLabel,
+      completion_rate: completionRateStr,
+      completion_label: completionLabel,
+      is_platform_wide: isPlatformWide,
+      book_count: books.length,
+      sales_metrics: {
+        total_gross_inr: grossInr,
+        net_royalties_inr: netRoyaltiesInr,
+        available_balance_inr: availableBalanceInr,
+        cleared_payouts_inr: clearedInr
+      }
+    };
+  } catch (err) {
+    console.error("getRealAuthorAnalytics error:", err);
+    return fallback;
+  }
+}
+
+function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = [], leadershipTeam = [], url = null, systemMetrics = null, fps = null, allUsers = [], bookDelRequests = [], usernameRequests = [], pendingArchiveBooks = [], authorAnalytics = null) {
   const username = user.username || "Reader";
   const role = (user.role || "reader").toLowerCase();
   const email = user.email || "";
@@ -12145,6 +12347,30 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
         /<tbody id="archiveApprovalsTableBody">[\s\S]*?<\/tbody>/i,
         `<tbody id="archiveApprovalsTableBody">\n<tr id="noArchivePendingRow"><td colspan="5" style="text-align: center; padding: 30px; color: #64748b; font-size: 0.9rem;"><span style="font-size: 1.6rem; display: block; margin-bottom: 6px;">✨</span>No books currently awaiting Archive approval. The public archive is up to date.</td></tr>\n</tbody>`
       );
+    }
+  }
+
+  // 5H. Hydrate Real Author Analytics Telemetry
+  if (authorAnalytics) {
+    out = out.replace(/id="statWeeklyReads">[^<]*<\/div>/i, `id="statWeeklyReads">${authorAnalytics.weekly_reads ?? 0}</div>`);
+    out = out.replace(/id="statWeeklyReadsSub">[^<]*<\/div>/i, `id="statWeeklyReadsSub">${escapeHtml(authorAnalytics.weekly_change_label || '0 active sessions this week')}</div>`);
+    out = out.replace(/id="statMonthlyReads">[^<]*<\/div>/i, `id="statMonthlyReads">${authorAnalytics.monthly_reads ?? 0}</div>`);
+    out = out.replace(/id="statMonthlyReadsSub">[^<]*<\/div>/i, `id="statMonthlyReadsSub">${escapeHtml(authorAnalytics.monthly_reads_label || '0 active page views')}</div>`);
+    out = out.replace(/id="statLibrarySaves">[^<]*<\/div>/i, `id="statLibrarySaves">${authorAnalytics.library_saves ?? 0}</div>`);
+    out = out.replace(/id="statLibrarySavesSub">[^<]*<\/div>/i, `id="statLibrarySavesSub">${escapeHtml(authorAnalytics.library_saves_label || '0 personal bookshelves')}</div>`);
+    out = out.replace(/id="statAvgRating">[^<]*<\/div>/i, `id="statAvgRating">${authorAnalytics.avg_rating || '0.0'} / 5.0</div>`);
+    out = out.replace(/id="statAvgRatingSub">[^<]*<\/div>/i, `id="statAvgRatingSub">${escapeHtml(authorAnalytics.rating_label || 'No ratings yet')}</div>`);
+    out = out.replace(/id="statCompletionRate">[^<]*<\/div>/i, `id="statCompletionRate">${authorAnalytics.completion_rate || '0.0'}%</div>`);
+    out = out.replace(/id="statCompletionRateSub">[^<]*<\/div>/i, `id="statCompletionRateSub">${escapeHtml(authorAnalytics.completion_label || 'No completion telemetry recorded yet')}</div>`);
+    if (authorAnalytics.is_platform_wide) {
+      out = out.replace(/id="authorAnalyticsSubtitle">[^<]*<\/p>/i, `<p id="authorAnalyticsSubtitle" style="margin: 4px 0 0 0; color: var(--text-light, #64748b); font-size: 0.88rem;">Detailed reader interaction metrics across the platform book catalog.</p>`);
+    }
+
+    if (authorAnalytics.sales_metrics) {
+      out = out.replace(/id="statAuthorGrossSales">[^<]*<\/div>/i, `id="statAuthorGrossSales">₹${Number(authorAnalytics.sales_metrics.total_gross_inr || 0).toFixed(2)}</div>`);
+      out = out.replace(/id="statAuthorNetRoyalties">[^<]*<\/div>/i, `id="statAuthorNetRoyalties">₹${Number(authorAnalytics.sales_metrics.net_royalties_inr || 0).toFixed(2)}</div>`);
+      out = out.replace(/id="statAuthorAvailableBalance">[^<]*<\/div>/i, `id="statAuthorAvailableBalance">₹${Number(authorAnalytics.sales_metrics.available_balance_inr || 0).toFixed(2)}</div>`);
+      out = out.replace(/id="statAuthorClearedPayouts">[^<]*<\/div>/i, `id="statAuthorClearedPayouts">₹${Number(authorAnalytics.sales_metrics.cleared_payouts_inr || 0).toFixed(2)}</div>`);
     }
   }
 
