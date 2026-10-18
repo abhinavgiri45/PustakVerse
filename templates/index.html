@@ -1170,7 +1170,7 @@
 
         <div class="book-grid" id="bookGrid">
             {% for book in books %}
-            <div class="book-card" style="{% if loop.index > 10 %}display: none;{% endif %} cursor: pointer;" data-book-id="{{ book.id }}" data-is-paid="{{ 'true' if book.is_paid else 'false' }}" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}" data-price="{{ ((book.price_paise|default(0))/100) if book.is_paid else 0 }}" data-rating="{{ '%.1f'|format(book.avg_rating|default(5.0)) }}" data-trending="{{ 'true' if book.trending_rank and book.trending_rank <= 30 else 'false' }}" data-trending-rank="{{ book.trending_rank if book.trending_rank else '' }}" data-week-purchases="{{ book.week_purchases|default(0) }}" data-month-purchases="{{ book.month_purchases|default(0) }}" data-lifetime-purchases="{{ book.lifetime_purchases|default(0) }}" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '{{ url_for('view_book', book_id=book.id) }}'; }">
+            <div class="book-card" style="{% if loop.index > 10 %}display: none;{% endif %} cursor: pointer;" data-original-index="{{ loop.index0 }}" data-book-id="{{ book.id }}" data-is-paid="{{ 'true' if book.is_paid else 'false' }}" data-title="{{ book.title | escape | lower }}" data-author="{{ book.author_name | escape | lower }}" data-catalog="{{ book.catalog | escape | lower }}" data-price="{{ ((book.price_paise|default(0))/100) if book.is_paid else 0 }}" data-rating="{{ '%.1f'|format(book.avg_rating|default(5.0)) }}" data-trending="{{ 'true' if book.trending_rank and book.trending_rank <= 30 else 'false' }}" data-trending-rank="{{ book.trending_rank if book.trending_rank else '' }}" data-week-purchases="{{ book.week_purchases|default(0) }}" data-month-purchases="{{ book.month_purchases|default(0) }}" data-lifetime-purchases="{{ book.lifetime_purchases|default(0) }}" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '{{ url_for('view_book', book_id=book.id) }}'; }">
                 
                 {% set cover = book.cover_image %}
                 
@@ -1398,6 +1398,7 @@
             books.forEach((b, index) => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
+                card.setAttribute('data-original-index', index);
                 card.setAttribute('data-book-id', b.id);
                 card.setAttribute('data-title', (b.title || '').toLowerCase());
                 card.setAttribute('data-author', (b.author_name || '').toLowerCase());
@@ -1544,10 +1545,9 @@
                 }
 
                 let trendingMetricsHtml = '';
-                const isTrendingViewActive = (typeof currentActiveFilter !== 'undefined' && currentActiveFilter === 'trending') || (document.getElementById('bookGrid') && document.getElementById('bookGrid').classList.contains('trending-mode-active'));
-                if (isTrendingViewActive && (b.trending_rank && b.trending_rank <= 30)) {
+                if (b.trending_rank && b.trending_rank <= 30) {
                     trendingMetricsHtml = `
-                        <div class="trending-metrics-strip" style="display: block !important;">
+                        <div class="trending-metrics-strip">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                 <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
                                     ⚡ Week: <strong>${b.week_purchases || 0}</strong>
@@ -1599,6 +1599,15 @@
 
             if (window.userPurchasedIds || window.userLibraryIds) {
                 syncGlobalLibraryWithMyLibrary(Array.from(window.userPurchasedIds || []), Array.from(window.userLibraryIds || []));
+            }
+
+            // Re-apply active filter (e.g. trending or category) if active
+            const currentFilter = window.currentActiveFilter || 
+                                  (new URLSearchParams(window.location.search).get('category') ? (new URLSearchParams(window.location.search).get('category').toLowerCase() === 'trending' ? 'trending' : 'category:' + new URLSearchParams(window.location.search).get('category')) : 'all');
+            if (currentFilter && currentFilter !== 'all') {
+                const btn = document.querySelector(`.quick-filter-btn[onclick*="${currentFilter}"]`) ||
+                            document.querySelector('.quick-filter-btn.active');
+                applyQuickFilter(currentFilter, btn);
             }
         }
 
@@ -1948,14 +1957,18 @@
         });
 
         function filterBooks() {
-            let input = document.getElementById('searchInput').value.toLowerCase();
+            let input = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (!input && window.currentActiveFilter && window.currentActiveFilter !== 'all') {
+                applyQuickFilter(window.currentActiveFilter);
+                return;
+            }
             let cards = document.querySelectorAll('.book-card');
             let visibleCount = 0;
             
             cards.forEach(card => {
-                let title = card.getAttribute('data-title'); 
-                let author = card.getAttribute('data-author'); 
-                let catalog = card.getAttribute('data-catalog');
+                let title = (card.getAttribute('data-title') || '').toLowerCase(); 
+                let author = (card.getAttribute('data-author') || '').toLowerCase(); 
+                let catalog = (card.getAttribute('data-catalog') || '').toLowerCase();
                 
                 if (title.includes(input) || author.includes(input) || catalog.includes(input)) { 
                     card.style.display = 'flex'; 
@@ -2232,6 +2245,7 @@
 
         // Quick Filter Functionality (All, Trending Top 30, Free, Premium, 4.5+ Stars, Categories)
         function applyQuickFilter(type, btn) {
+            window.currentActiveFilter = type;
             document.querySelectorAll('.quick-filter-btn').forEach(el => {
                 el.classList.remove('active');
                 el.style.background = '#f8fafc';
@@ -2277,17 +2291,33 @@
                     return (!isNaN(r) && r >= 1 && r <= 30) || card.getAttribute('data-trending') === 'true';
                 });
 
-                // Sort strictly by trending rank ascending (1..30)
+                // Sort strictly by trending rank ascending (1..30) with tie-breakers
                 trendingCards.sort((a, b) => {
-                    const rankA = parseInt(a.getAttribute('data-trending-rank'), 10) || 999;
-                    const rankB = parseInt(b.getAttribute('data-trending-rank'), 10) || 999;
-                    return rankA - rankB;
+                    const rA = parseInt(a.getAttribute('data-trending-rank'), 10);
+                    const rB = parseInt(b.getAttribute('data-trending-rank'), 10);
+                    const validA = !isNaN(rA) && rA > 0;
+                    const validB = !isNaN(rB) && rB > 0;
+                    if (validA && validB) {
+                        if (rA !== rB) return rA - rB;
+                    } else if (validA) {
+                        return -1;
+                    } else if (validB) {
+                        return 1;
+                    }
+                    const wA = parseInt(a.getAttribute('data-week-purchases'), 10) || 0;
+                    const wB = parseInt(b.getAttribute('data-week-purchases'), 10) || 0;
+                    if (wB !== wA) return wB - wA;
+                    const mA = parseInt(a.getAttribute('data-month-purchases'), 10) || 0;
+                    const mB = parseInt(b.getAttribute('data-month-purchases'), 10) || 0;
+                    if (mB !== mA) return mB - mA;
+                    return (parseInt(b.getAttribute('data-lifetime-purchases'), 10) || 0) -
+                           (parseInt(a.getAttribute('data-lifetime-purchases'), 10) || 0);
                 });
 
                 // Hide all cards first
                 allCards.forEach(card => card.style.display = 'none');
 
-                // Display ONLY top 30 in exact rank order
+                // Display ONLY top 30 in exact rank order (1..30)
                 const top30 = trendingCards.slice(0, 30);
                 top30.forEach(card => {
                     card.style.display = 'flex';
@@ -2296,7 +2326,17 @@
 
                 visibleCount = top30.length;
             } else {
-                if (grid) grid.classList.remove('trending-mode-active');
+                if (grid) {
+                    grid.classList.remove('trending-mode-active');
+                    // Restore original catalog order
+                    const allCards = Array.from(cards);
+                    allCards.sort((a, b) => {
+                        const idxA = parseInt(a.getAttribute('data-original-index'), 10) || 0;
+                        const idxB = parseInt(b.getAttribute('data-original-index'), 10) || 0;
+                        return idxA - idxB;
+                    });
+                    allCards.forEach(card => grid.appendChild(card));
+                }
                 cards.forEach(card => {
                     const isPaid = card.getAttribute('data-is-paid') === 'true';
                     const price = parseFloat(card.getAttribute('data-price') || '0');
@@ -2334,6 +2374,8 @@
             const catParam = urlParams.get('category');
             if (catParam) {
                 filterByCategory(catParam);
+            } else if ({{ 'true' if selected_category == 'Trending' else 'false' }}) {
+                applyQuickFilter('trending', document.querySelector('.quick-filter-btn[onclick*="trending"]'));
             }
             if ((catParam && catParam.toLowerCase() === 'trending') || {{ 'true' if selected_category == 'Trending' else 'false' }}) {
                 const g = document.getElementById('bookGrid');
