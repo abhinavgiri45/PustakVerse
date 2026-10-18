@@ -34,6 +34,7 @@
     <meta name="twitter:title" content="{{ book.title }} — by {{ book.author_name }}">
     <meta name="twitter:description" content="{{ (book.description or 'Read ' ~ book.title ~ ' on PustakVerse.') | striptags | truncate(200) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
@@ -879,9 +880,8 @@
                             <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <span>✓</span> You own full access to this premium book
                             </div>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 2; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: #0f172a; color: white;">📖 Read Full Book Now</a>
-                                <a href="{{ url_for('buy_book', book_id=book.id) }}?force=1" class="btn btn-green" style="flex: 1; min-width: 160px; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: white; display: inline-flex; align-items: center; justify-content: center;" title="Test checkout or buy another license">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</a>
+                            <div>
+                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="width: 100%; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; background: #0f172a; color: white; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>
                             </div>
                         {% else %}
                             <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
@@ -913,6 +913,12 @@
                             </form>
                         </div>
                     {% endif %}
+
+                    {% if allow_donations %}
+                        <button type="button" onclick="openAuthorDonationModal()" class="btn-author-donate" style="width: 100%; margin-top: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.94rem; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3); transition: transform 0.2s, box-shadow 0.2s;">
+                            <span>💝</span> Donate to Author ({{ book.author_name }})
+                        </button>
+                    {% endif %}
                     
                     <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <a href="{{ url_for('learn_book', book_id=book.id) }}" class="btn btn-outline" style="flex: 1; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: 700; text-align: center;">💡 AI Study Companion</a>
@@ -920,18 +926,20 @@
                     </div>
 
                     <!-- AUTHOR TIPPING & SUPPORT CARD -->
+                    {% if allow_donations %}
                     <div style="margin-top: 16px; padding: 14px 18px; background: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 1.6rem;">☕</span>
+                            <span style="font-size: 1.6rem;">💝</span>
                             <div>
                                 <div style="font-weight: 800; font-size: 0.92rem; color: #92400e;">Love {{ book.author_name }}'s writing?</div>
                                 <div style="font-size: 0.8rem; color: #b45309;">Support the creator directly with a voluntary token of appreciation.</div>
                             </div>
                         </div>
-                        <a href="{{ url_for('buy_book', book_id=book.id) }}" class="btn-sm" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px;">
-                            <span>☕ Tip Creator</span>
-                        </a>
+                        <button type="button" onclick="openAuthorDonationModal()" class="btn-sm" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer;">
+                            <span>💝 Donate to Author</span>
+                        </button>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -1472,5 +1480,152 @@
     </script>
     {% endif %}
 
+    <!-- AUTHOR DONATION MODAL -->
+    <div id="authorDonationModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px);">
+      <div style="background: var(--surface-card, #ffffff); border-radius: 16px; border: 1px solid var(--border-subtle, #e2e8f0); max-width: 440px; width: 100%; padding: 26px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); text-align: left; position: relative; color: var(--text-primary, #0f172a);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #d97706;">
+              <span>💝</span> Donate to Author
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+              Support <strong>{{ book.author_name }}</strong> for "{{ book.title }}".
+            </p>
+          </div>
+          <button type="button" onclick="closeAuthorDonationModal()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted, #64748b); line-height: 1;">&times;</button>
+        </div>
+
+        <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 0.82rem; color: #92400e; line-height: 1.45;">
+          ✨ <strong>100% Direct Support:</strong> Your donation is routed directly to this author's linked Razorpay account to support their writing &amp; research.
+        </div>
+
+        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary, #334155); display: block; margin-bottom: 8px;">Select Donation Amount (₹ INR):</label>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;">
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(50)" style="padding: 8px 4px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: var(--bg-canvas, #f8fafc); font-weight: 700; cursor: pointer; font-size: 0.88rem; color: inherit;">₹50</button>
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(100)" style="padding: 8px 4px; border: 1.5px solid #f59e0b; border-radius: 8px; background: #fffbeb; font-weight: 800; cursor: pointer; font-size: 0.88rem; color: #b45309;">₹100</button>
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(250)" style="padding: 8px 4px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: var(--bg-canvas, #f8fafc); font-weight: 700; cursor: pointer; font-size: 0.88rem; color: inherit;">₹250</button>
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(500)" style="padding: 8px 4px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: var(--bg-canvas, #f8fafc); font-weight: 700; cursor: pointer; font-size: 0.88rem; color: inherit;">₹500</button>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted, #64748b); display: block; margin-bottom: 4px;">Or enter custom amount (Min ₹10):</label>
+          <div style="display: flex; align-items: center; border: 1.5px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: var(--card-bg, #ffffff);">
+            <span style="padding: 10px 14px; font-weight: 800; color: var(--text-muted, #64748b); background: rgba(0,0,0,0.03); border-right: 1px solid #cbd5e1;">₹</span>
+            <input type="number" id="authorDonationCustomInput" value="100" min="10" max="50000" step="10" style="width: 100%; border: none; padding: 10px 12px; font-size: 1rem; font-weight: 800; outline: none; background: transparent; color: inherit;" oninput="updateAuthorDonationButton(this.value)">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" onclick="closeAuthorDonationModal()" style="flex: 1; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: transparent; font-weight: 700; cursor: pointer; color: var(--text-muted, #64748b);">Cancel</button>
+          <button type="button" id="authorDonationSubmitBtn" onclick="processAuthorDonation({{ book.id }})" style="flex: 2; padding: 11px; border: none; border-radius: 8px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+            💝 Donate ₹100 via Razorpay
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    function openAuthorDonationModal() {
+        var modal = document.getElementById('authorDonationModal');
+        if (modal) modal.style.display = 'flex';
+    }
+    function closeAuthorDonationModal() {
+        var modal = document.getElementById('authorDonationModal');
+        if (modal) modal.style.display = 'none';
+    }
+    function setAuthorDonationAmt(val) {
+        var inp = document.getElementById('authorDonationCustomInput');
+        if (inp) {
+            inp.value = val;
+            updateAuthorDonationButton(val);
+        }
+    }
+    function updateAuthorDonationButton(val) {
+        var btn = document.getElementById('authorDonationSubmitBtn');
+        if (btn) btn.textContent = '💝 Donate ₹' + (val || '0') + ' via Razorpay';
+    }
+    async function processAuthorDonation(bookId) {
+        var amtInput = document.getElementById('authorDonationCustomInput');
+        var amountInr = parseInt(amtInput ? amtInput.value : '100', 10) || 100;
+        if (amountInr < 10) {
+            alert('Minimum donation amount is ₹10.');
+            return;
+        }
+        var btn = document.getElementById('authorDonationSubmitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Preparing Payment...';
+        }
+        try {
+            var formData = new FormData();
+            formData.append('is_author_donation', '1');
+            formData.append('donation_inr', amountInr);
+
+            var res = await fetch('/api/create_order/' + bookId, {
+                method: 'POST',
+                body: formData
+            });
+            var data = await res.json();
+            if (!data.success) {
+                if (res.status === 401 || (data.error && data.error.includes('Authentication'))) {
+                    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                alert('Could not initiate donation: ' + (data.error || 'Unknown error'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '💝 Donate ₹' + amountInr + ' via Razorpay';
+                }
+                return;
+            }
+
+            if (typeof Razorpay !== 'undefined' && data.order_id && (data.is_real_razorpay_order || (data.razorpay_key && !data.razorpay_key.includes('test_pustakverse')))) {
+                var options = {
+                    key: data.razorpay_key,
+                    amount: data.amount_paise,
+                    currency: 'INR',
+                    name: 'PustakVerse · Author Donation',
+                    description: 'Direct Author Support: ' + (data.book_title || 'Book'),
+                    image: '/static/PustakVerse.png',
+                    order_id: data.is_real_razorpay_order ? data.order_id : undefined,
+                    handler: async function (response) {
+                        try {
+                            var vForm = new FormData();
+                            vForm.append('razorpay_payment_id', response.razorpay_payment_id);
+                            vForm.append('razorpay_order_id', response.razorpay_order_id || data.order_id);
+                            vForm.append('razorpay_signature', response.razorpay_signature || '');
+                            vForm.append('book_id', bookId);
+                            await fetch('/api/verify_payment', { method: 'POST', body: vForm });
+                            alert('🎉 Thank you! Your generous donation has been directly transferred to the author.');
+                            closeAuthorDonationModal();
+                        } catch(e) {
+                            alert('Donation processed! Thank you for supporting the author.');
+                            closeAuthorDonationModal();
+                        }
+                    },
+                    theme: { color: '#ea580c' }
+                };
+                var rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (resp) {
+                    alert('Payment cancelled or failed: ' + (resp.error ? resp.error.description : ''));
+                    if (btn) { btn.disabled = false; btn.textContent = '💝 Donate ₹' + amountInr + ' via Razorpay'; }
+                });
+                rzp.open();
+            } else {
+                var vForm = new FormData();
+                vForm.append('razorpay_payment_id', 'pay_instant_don_' + Math.floor(Date.now() / 1000));
+                vForm.append('razorpay_order_id', data.order_id);
+                vForm.append('razorpay_signature', 'sig_sandbox_test_verified');
+                vForm.append('book_id', bookId);
+                await fetch('/api/verify_payment', { method: 'POST', body: vForm });
+                alert('🎉 Thank you so much! Your donation of ₹' + amountInr + ' to the author was recorded successfully!');
+                closeAuthorDonationModal();
+            }
+        } catch (err) {
+            alert('Donation error: ' + err.message);
+            if (btn) { btn.disabled = false; btn.textContent = '💝 Donate ₹' + amountInr + ' via Razorpay'; }
+        }
+    }
+    </script>
 </body>
 </html>

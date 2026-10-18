@@ -4199,7 +4199,8 @@ def ensure_payment_schema():
             ("official_reviewer_name", "VARCHAR(100) DEFAULT NULL"),
             ("drm_watermark_enabled", "BOOLEAN DEFAULT FALSE"),
             ("view_count", "INT DEFAULT 0"),
-            ("completion_count", "INT DEFAULT 0")
+            ("completion_count", "INT DEFAULT 0"),
+            ("allow_author_donations", "INT DEFAULT 0")
         ]:
             try:
                 cursor.execute(f"SHOW COLUMNS FROM books LIKE '{col_def[0]}'")
@@ -4212,7 +4213,10 @@ def ensure_payment_schema():
             ("author_bio", "TEXT DEFAULT NULL"),
             ("social_links_json", "TEXT DEFAULT NULL"),
             ("reading_streak", "INT DEFAULT 1"),
-            ("monthly_reading_goal", "INT DEFAULT 5")
+            ("monthly_reading_goal", "INT DEFAULT 5"),
+            ("allow_author_donations", "INT DEFAULT 0"),
+            ("rp_key_id", "VARCHAR(255) DEFAULT NULL"),
+            ("rp_key_secret", "VARCHAR(255) DEFAULT NULL")
         ]:
             try:
                 cursor.execute(f"SHOW COLUMNS FROM users LIKE '{col_def[0]}'")
@@ -4769,11 +4773,21 @@ def view_book(book_id):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT b.*, COALESCE(u.username, 'Author') as author_name FROM books b LEFT JOIN users u ON b.author_id = u.id WHERE b.id = %s", (book_id,))
+        cursor.execute("""
+            SELECT b.*, COALESCE(u.username, 'Author') as author_name,
+                   u.rp_key_id as user_rp_key_id, u.rp_key_secret as user_rp_key_secret,
+                   COALESCE(u.allow_author_donations, 0) as user_allow_donations
+            FROM books b 
+            LEFT JOIN users u ON b.author_id = u.id 
+            WHERE b.id = %s
+        """, (book_id,))
         book = cursor.fetchone()
         if not book: 
             flash("The requested book could not be found.", "error")
             return redirect(url_for('index'))
+
+        effective_author_key = (book.get('rp_key_id') or book.get('user_rp_key_id') or '').strip()
+        allow_donations = bool((book.get('allow_author_donations') or book.get('user_allow_donations')) and effective_author_key)
 
         cursor.execute("SELECT i.*, COALESCE(u.username, 'Reader') as username FROM interactions i LEFT JOIN users u ON i.user_id = u.id WHERE i.book_id = %s ORDER BY i.created_at DESC", (book_id,))
         reviews = cursor.fetchall()
@@ -4821,7 +4835,7 @@ def view_book(book_id):
                 pass
         book['bestseller_badge'] = bestseller_badge
                 
-        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge)
+        return render_template('book.html', book=book, reviews=reviews, can_read=can_read, avg_rating=avg_rating, review_count=review_count, rating_counts=rating_counts, custom_badges=custom_badges, bestseller_badge=bestseller_badge, allow_donations=allow_donations)
     except Exception as e:
         import logging
         logging.exception(f"Error loading book details for book {book_id}: {e}")
@@ -6863,23 +6877,29 @@ def buy_book(book_id):
 
 
 @app.route('/api/checkout/create_order/<int:book_id>', methods=['POST'])
+@app.route('/api/create_order/<int:book_id>', methods=['POST'])
 def api_checkout_create_order(book_id):
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Authentication required.'}), 401
 
+    is_author_donation = request.form.get('is_author_donation') in ('1', 'true', True)
     try:
         donation_inr = int(request.form.get('donation_inr', 0) or 0)
     except (ValueError, TypeError):
         donation_inr = 0
 
-    donation_inr = max(0, min(5000, donation_inr))
+    if is_author_donation:
+        donation_inr = max(10, min(50000, donation_inr))
+    else:
+        donation_inr = max(0, min(5000, donation_inr))
 
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, u.username as author_name
+            SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, 
+                   u.username as author_name, u.rp_key_id as user_key_id, u.rp_key_secret as user_key_secret
             FROM books b 
             JOIN users u ON b.author_id = u.id
             WHERE b.id = %s
@@ -6893,23 +6913,32 @@ def api_checkout_create_order(book_id):
         fps = cursor.fetchone() or {}
 
         checkout_donation_active = bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True)
-        if not checkout_donation_active:
+        if not checkout_donation_active and not is_author_donation:
             donation_inr = 0
 
-        # Gateway Credentials: AUTHOR CREDENTIALS FIRST so funds deposit directly into author's bank account!
-        gateway_key_id = book.get('author_key_id') or fps.get('dev_key_id') or os.environ.get('RAZORPAY_KEY_ID')
-        gateway_key_secret = book.get('author_key_secret') or fps.get('dev_key_secret') or os.environ.get('RAZORPAY_KEY_SECRET')
+        # Gateway Credentials: AUTHOR CREDENTIALS FIRST (per-book or author profile)
+        author_rp_key_id = (book.get('author_key_id') or book.get('user_key_id') or '').strip()
+        author_rp_key_secret = (book.get('author_key_secret') or book.get('user_key_secret') or '').strip()
+        gateway_key_id = author_rp_key_id or fps.get('dev_key_id') or os.environ.get('RAZORPAY_KEY_ID')
+        gateway_key_secret = author_rp_key_secret or fps.get('dev_key_secret') or os.environ.get('RAZORPAY_KEY_SECRET')
 
-        book_price_paise = book.get('price_paise', 0)
-        donation_paise = donation_inr * 100
-        total_paise = book_price_paise + donation_paise
+        if is_author_donation:
+            book_price_paise = 0
+            donation_paise = donation_inr * 100
+            total_paise = donation_paise
+            convenience_fee_paise = 0
+            author_earning_paise = total_paise
+        else:
+            book_price_paise = book.get('price_paise', 0)
+            donation_paise = donation_inr * 100
+            total_paise = book_price_paise + donation_paise
 
-        # Standard Razorpay Payment Gateway Convenience Fee:
-        razorpay_fee_paise = int(round(book_price_paise * 0.0236))
-        author_earning_paise = max(0, book_price_paise - razorpay_fee_paise)
-        convenience_fee_paise = razorpay_fee_paise
+            # Standard Razorpay Payment Gateway Convenience Fee:
+            razorpay_fee_paise = int(round(book_price_paise * 0.0236))
+            author_earning_paise = max(0, book_price_paise - razorpay_fee_paise)
+            convenience_fee_paise = razorpay_fee_paise
 
-        order_receipt = f"pv-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
+        order_receipt = f"pv-{'don' if is_author_donation else 'buy'}-{session['user_id']}-{book_id}-{secrets.token_hex(4)}"
         order_id = order_receipt
         is_real_razorpay_order = False
 
@@ -7631,7 +7660,7 @@ def dashboard():
         search_query = request.args.get('search', '')
         role_filter = request.args.get('role_filter', 'all')
         
-        cursor.execute("SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity, COALESCE(can_publish, 0) as can_publish FROM users WHERE id = %s", (session['user_id'],))
+        cursor.execute("SELECT id, username, email, role, is_verified, two_factor_enabled, security_question, created_at, last_activity, COALESCE(can_publish, 0) as can_publish, author_bio, social_links_json, rp_key_id, rp_key_secret, COALESCE(allow_author_donations, 0) as allow_author_donations FROM users WHERE id = %s", (session['user_id'],))
         user_profile = cursor.fetchone() or {}
         
         can_user_publish = (role == 'developer') or (role == 'author') or (role == 'official' and bool(user_profile.get('can_publish', 0)))
@@ -7775,13 +7804,15 @@ def dashboard():
                 is_quarantined = 1 if (is_archive and role == 'author') else 0
                 archive_status = 'pending' if (is_archive and role == 'author') else 'approved'
 
+                allow_author_donations = 1 if request.form.get('allow_author_donations') in ('1', 'true', 'on', True) else 0
+
                 cursor.execute(
-                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn, is_quarantined, archive_status) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO books (title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise, private_pdf, preview_pages, rp_key_id, rp_key_secret, rp_verified, rp_verify_message, rp_verified_at, description, sbin_no, isbn, is_quarantined, archive_status, allow_author_donations) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (request.form['title'], session['user_id'], request.form['catalog'], f_cov, f_pdf, is_paid,
                      price_paise if is_paid else 0, is_paid, preview_pages, book_key_id, book_key_secret,
                      rp_verified, rp_verify_message, datetime.now() if rp_verified else None, description, user_sbin, user_sbin,
-                     is_quarantined, archive_status)
+                     is_quarantined, archive_status, allow_author_donations)
                 )
                 new_book_id = cursor.lastrowid
                 db.commit()
@@ -8236,16 +8267,18 @@ def edit_book(book_id):
             pdf_folder = app.config['PRIVATE_PDF_FOLDER'] if is_paid else os.path.join(app.config['UPLOAD_FOLDER'], 'pdfs')
             p_file.save(os.path.join(pdf_folder, f_pdf))
 
+        allow_author_donations = 1 if request.form.get('allow_author_donations') in ('1', 'true', 'on', True) else 0
+
         update_sql = (
             "UPDATE books SET title=%s, catalog=%s, cover_image=%s, pdf_file=%s, is_paid=%s, price_paise=%s, "
             "private_pdf=%s, preview_pages=%s, rp_key_id=%s, rp_key_secret=%s, rp_verified=%s, rp_verify_message=%s"
-            + rp_verified_at_sql + ", description=%s WHERE id=%s"
+            + rp_verified_at_sql + ", description=%s, allow_author_donations=%s WHERE id=%s"
         )
         params = [title, catalog, f_cov, f_pdf, is_paid, price_paise if is_paid else 0, is_paid, preview_pages,
                   book_key_id, book_key_secret, rp_verified, rp_verify_message]
         if rp_verified_at_sql.strip().startswith(", rp_verified_at=%s"):
             params.append(rp_verified_at_param)
-        params.extend([description, book_id])
+        params.extend([description, allow_author_donations, book_id])
 
         cursor.execute(update_sql, tuple(params))
         db.commit()
@@ -9519,6 +9552,9 @@ def author_profile_update():
     linkedin = request.form.get('social_linkedin', '').strip()
     twitter = request.form.get('social_twitter', '').strip()
     website = request.form.get('social_website', '').strip()
+    rp_key_id = request.form.get('rp_key_id', '').strip() or None
+    rp_key_secret = request.form.get('rp_key_secret', '').strip() or None
+    allow_author_donations = 1 if request.form.get('allow_author_donations') in ('1', 'true', 'on', True) else 0
     
     socials = json.dumps({'github': github, 'linkedin': linkedin, 'twitter': twitter, 'website': website})
     
@@ -9526,9 +9562,14 @@ def author_profile_update():
     try:
         db = get_db_connection()
         cursor = db.cursor()
-        cursor.execute("UPDATE users SET author_bio = %s, social_links_json = %s WHERE id = %s", (bio, socials, session['user_id']))
+        if rp_key_id and rp_key_secret:
+            cursor.execute("UPDATE users SET author_bio = %s, social_links_json = %s, rp_key_id = %s, rp_key_secret = %s, allow_author_donations = %s WHERE id = %s", (bio, socials, rp_key_id, rp_key_secret, allow_author_donations, session['user_id']))
+        elif rp_key_id:
+            cursor.execute("UPDATE users SET author_bio = %s, social_links_json = %s, rp_key_id = %s, allow_author_donations = %s WHERE id = %s", (bio, socials, rp_key_id, allow_author_donations, session['user_id']))
+        else:
+            cursor.execute("UPDATE users SET author_bio = %s, social_links_json = %s, allow_author_donations = %s WHERE id = %s", (bio, socials, allow_author_donations, session['user_id']))
         db.commit()
-        flash("Author profile & portfolio badges updated successfully!", "success")
+        flash("Author profile & creator settings updated successfully!", "success")
     except Exception as e:
         flash(f"Error updating profile: {str(e)}", "error")
     finally:

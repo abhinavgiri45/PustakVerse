@@ -1463,7 +1463,31 @@
                             <input type="text" name="social_twitter" placeholder="Twitter/X Handle" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;">
                             <input type="text" name="social_website" placeholder="Personal Website URL" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;">
                         </div>
-                        <button type="submit" class="btn-sm btn-green" style="padding: 8px 16px;">Save Creator Profile</button>
+                        <div style="margin-top: 14px; padding: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px;">
+                            <label style="font-weight: 800; font-size: 0.88rem; color: #1e293b; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <span>⚡</span> Direct Author Razorpay Payouts & Donations
+                            </label>
+                            <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 10px; line-height: 1.4;">
+                                Enter your Razorpay credentials here to receive reader tips and book revenues directly into your bank account.
+                            </p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Razorpay Key ID</label>
+                                    <input type="text" name="rp_key_id" value="" placeholder="rzp_live_..." style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; width: 100%; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Razorpay Key Secret</label>
+                                    <input type="password" name="rp_key_secret" value="" placeholder="Key Secret" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; width: 100%; box-sizing: border-box;">
+                                </div>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 700; color: #b45309; cursor: pointer; background: #fffbeb; padding: 8px 12px; border-radius: 6px; border: 1px solid #fde68a;">
+                                <input type="checkbox" name="allow_author_donations" value="1" >
+                                <span>💝 Enable Reader Donations across all my published books</span>
+                            </label>
+                        </div>
+                        <div style="margin-top: 14px;">
+                            <button type="submit" class="btn-sm btn-green" style="padding: 8px 16px;">Save Creator Profile</button>
+                        </div>
                     </form>
                 </div>
 
@@ -3218,6 +3242,11 @@
                         
                         <!-- New Verify Button -->
                         <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('edit')">Test / Verify Keys</button>
+
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #1e293b; cursor: pointer; margin-top: 10px;">
+                            <input type="checkbox" name="allow_author_donations" id="edit_allow_author_donations" value="1">
+                            <span>💝 Allow readers to donate directly to author on this book</span>
+                        </label>
                         
                         <small style="color:#64748b; display:block; margin-top:10px;">Changing either key re-verifies your Razorpay details when you save. You can update these any time.</small>
                     </div>
@@ -3376,6 +3405,11 @@
                 keySecretInput.value = ''; 
                 keySecretInput.required = false;
                 rpStatus.style.display = 'none';
+            }
+
+            const donCheck = document.getElementById('edit_allow_author_donations');
+            if (donCheck) {
+                donCheck.checked = (btn.dataset.allowdonations === '1');
             }
             
             document.getElementById('editBookModal').style.display = 'flex';

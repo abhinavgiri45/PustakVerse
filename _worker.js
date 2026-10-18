@@ -3496,6 +3496,7 @@ Format with these exact markdown sections:
             const rpKeyId = (formData.get("rp_key_id") || "").trim() || null;
             const rpKeySecret = (formData.get("rp_key_secret") || "").trim() || null;
             const rpVerified = rpKeyId ? 1 : 0;
+            const allowAuthorDonations = (formData.get("allow_author_donations") === "1" || formData.get("allow_author_donations") === "on") ? 1 : 0;
 
             const hasSbin = formData.get("has_sbin");
             let sbinNo = (formData.get("sbin_no") || formData.get("isbn") || "").trim();
@@ -3512,30 +3513,31 @@ Format with these exact markdown sections:
                 `INSERT INTO books (
                    title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
                    preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                   is_quarantined, archive_status, created_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                   is_quarantined, archive_status, allow_author_donations, created_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
               ).bind(
                 title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
                 5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
-                isQuarantined, archiveStatus
+                isQuarantined, archiveStatus, allowAuthorDonations
               ).run();
             } catch (insertErr) {
               const errMsg = String(insertErr?.message || insertErr);
-              if (errMsg.includes("no column named archive_status") || errMsg.includes("no column named isbn")) {
+              if (errMsg.includes("no column named archive_status") || errMsg.includes("no column named isbn") || errMsg.includes("no column named allow_author_donations")) {
                 try {
                   await env.DB.prepare("ALTER TABLE books ADD COLUMN isbn TEXT DEFAULT NULL").run().catch(() => {});
                   await env.DB.prepare("ALTER TABLE books ADD COLUMN archive_status TEXT DEFAULT 'approved'").run().catch(() => {});
                   await env.DB.prepare("ALTER TABLE books ADD COLUMN is_quarantined INTEGER DEFAULT 0").run().catch(() => {});
+                  await env.DB.prepare("ALTER TABLE books ADD COLUMN allow_author_donations INTEGER DEFAULT 0").run().catch(() => {});
                   await env.DB.prepare(
                     `INSERT INTO books (
                        title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
                        preview_pages, rp_key_id, rp_key_secret, rp_verified, description, sbin_no, isbn,
-                       is_quarantined, archive_status, created_at
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+                       is_quarantined, archive_status, allow_author_donations, created_at
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
                   ).bind(
                     title, user.id, catalog, normCover, normPdf, isPaid ? 1 : 0, pricePaise,
                     5, rpKeyId, rpKeySecret, rpVerified, description, sbinNo, sbinNo,
-                    isQuarantined, archiveStatus
+                    isQuarantined, archiveStatus, allowAuthorDonations
                   ).run();
                 } catch (retryErr) {
                   // Fallback without new columns
@@ -3794,6 +3796,27 @@ Format with these exact markdown sections:
           sql += ", cover_image = ?";
           binds.push(driveCover);
         }
+      }
+      if (formData.has("allow_author_donations")) {
+        const allowDon = (formData.get("allow_author_donations") === "1" || formData.get("allow_author_donations") === "on") ? 1 : 0;
+        sql += ", allow_author_donations = ?";
+        binds.push(allowDon);
+      }
+      if (formData.has("is_paid")) {
+        const isPaid = formData.get("is_paid") === "on" || formData.get("is_paid") === "true";
+        const pricePaise = isPaid ? Math.round(parseFloat(formData.get("price_inr") || "0") * 100) : 0;
+        sql += ", is_paid = ?, price_paise = ?";
+        binds.push(isPaid ? 1 : 0, pricePaise);
+      }
+      const rpKeyId = (formData.get("rp_key_id") || "").trim();
+      const rpKeySecret = (formData.get("rp_key_secret") || "").trim();
+      if (rpKeyId) {
+        sql += ", rp_key_id = ?, rp_verified = 1";
+        binds.push(rpKeyId);
+      }
+      if (rpKeySecret) {
+        sql += ", rp_key_secret = ?";
+        binds.push(rpKeySecret);
       }
       sql += " WHERE id = ?";
       binds.push(bookId);
@@ -6226,8 +6249,13 @@ Format with these exact markdown sections:
         const couponCode = (formData.get("coupon_code") || "").trim().toUpperCase();
 
         let book = await env.DB.prepare(
-          `SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret
-           FROM books b WHERE b.id = ? LIMIT 1`
+          `SELECT b.id, b.title, b.is_paid, b.price_paise,
+                  COALESCE(b.rp_key_id, u.rp_key_id) as author_key_id,
+                  COALESCE(b.rp_key_secret, u.rp_key_secret) as author_key_secret,
+                  u.username as author_name
+           FROM books b 
+           LEFT JOIN users u ON b.author_id = u.id 
+           WHERE b.id = ? LIMIT 1`
         ).bind(targetBookId).first();
 
         if (targetBookId === 9999) {
@@ -6238,7 +6266,8 @@ Format with these exact markdown sections:
               is_paid: 1,
               price_paise: 100,
               author_key_id: null,
-              author_key_secret: null
+              author_key_secret: null,
+              author_name: "PustakVerse Official"
             };
           } else {
             book.id = 9999;
@@ -6254,10 +6283,11 @@ Format with these exact markdown sections:
           });
         }
 
-        let effectiveBookPricePaise = book.price_paise || 0;
+        const isAuthorDonation = formData.get("is_author_donation") === "1" || formData.get("is_author_donation") === "true";
+        let effectiveBookPricePaise = isAuthorDonation ? 0 : (book.price_paise || 0);
         let appliedCouponId = null;
 
-        if (couponCode) {
+        if (couponCode && !isAuthorDonation) {
           await ensureAuthorCouponsTable(env);
           try {
             const couponRow = await env.DB.prepare(
@@ -6282,12 +6312,14 @@ Format with these exact markdown sections:
         const isCheckoutDonationEnabled = (fps.checkout_donation_active !== undefined && fps.checkout_donation_active !== null)
           ? (Number(fps.checkout_donation_active) === 1 || fps.checkout_donation_active === true || fps.checkout_donation_active === "1" || fps.checkout_donation_active === "true")
           : true;
-        const activeDonation = isCheckoutDonationEnabled ? donationInr : 0;
+        const activeDonation = (isAuthorDonation || isCheckoutDonationEnabled) ? donationInr : 0;
         const gatewayKeyId = book.author_key_id || fps.dev_key_id || env.RAZORPAY_KEY_ID;
         const gatewayKeySecret = book.author_key_secret || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
 
         const totalPaise = effectiveBookPricePaise + (activeDonation * 100);
-        const orderReceipt = `pv-${sessionUser.id}-${targetBookId}-${Math.floor(Date.now() / 1000)}`;
+        const orderReceipt = isAuthorDonation
+          ? `don-${sessionUser.id}-${targetBookId}-${Math.floor(Date.now() / 1000)}`
+          : `pv-${sessionUser.id}-${targetBookId}-${Math.floor(Date.now() / 1000)}`;
 
         let razorpayOrderId = orderReceipt;
         let isRealRazorpayOrder = false;
@@ -6324,8 +6356,8 @@ Format with these exact markdown sections:
           } catch (_) {}
         }
 
-        const feePaise = Math.round(effectiveBookPricePaise * 0.0236);
-        const authorEarningPaise = Math.max(0, effectiveBookPricePaise - feePaise);
+        const feePaise = isAuthorDonation ? 0 : Math.round(effectiveBookPricePaise * 0.0236);
+        const authorEarningPaise = isAuthorDonation ? totalPaise : Math.max(0, effectiveBookPricePaise - feePaise);
 
         try {
           await env.DB.prepare(
@@ -6340,7 +6372,8 @@ Format with these exact markdown sections:
           is_real_razorpay_order: isRealRazorpayOrder,
           amount_paise: totalPaise,
           razorpay_key: gatewayKeyId || "rzp_test_pustakverse",
-          book_title: book.title
+          book_title: book.title,
+          author_name: book.author_name || "Author"
         }), {
           headers: { "Content-Type": "application/json" }
         });
@@ -6844,15 +6877,26 @@ Format with these exact markdown sections:
 
             try {
               book = await env.DB.prepare(
-                `SELECT b.*, COALESCE(u.username, 'Author') as author_name 
+                `SELECT b.*, COALESCE(u.username, 'Author') as author_name,
+                        u.rp_key_id as user_rp_key_id, u.rp_key_secret as user_rp_key_secret,
+                        COALESCE(u.allow_author_donations, 0) as user_allow_donations
                  FROM books b 
                  LEFT JOIN users u ON b.author_id = u.id 
                  WHERE b.id = ? LIMIT 1`
               ).bind(bookId).first();
             } catch (_) {
               try {
-                book = await env.DB.prepare("SELECT * FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
-              } catch (_) {}
+                book = await env.DB.prepare(
+                  `SELECT b.*, COALESCE(u.username, 'Author') as author_name 
+                   FROM books b 
+                   LEFT JOIN users u ON b.author_id = u.id 
+                   WHERE b.id = ? LIMIT 1`
+                ).bind(bookId).first();
+              } catch (__) {
+                try {
+                  book = await env.DB.prepare("SELECT * FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
+                } catch (___) {}
+              }
             }
 
             if (bookId === 9999) {
@@ -7203,11 +7247,23 @@ Format with these exact markdown sections:
       const linkedin = (formData.get("social_linkedin") || "").toString().trim();
       const twitter = (formData.get("social_twitter") || "").toString().trim();
       const website = (formData.get("social_website") || "").toString().trim();
+      const rpKeyId = (formData.get("rp_key_id") || "").toString().trim();
+      const rpKeySecret = (formData.get("rp_key_secret") || "").toString().trim();
+      const allowDonations = (formData.get("allow_author_donations") === "1" || formData.get("allow_author_donations") === "on") ? 1 : 0;
       const socials = JSON.stringify({ github, linkedin, twitter, website });
 
-      await env.DB.prepare(
-        "UPDATE users SET author_bio = ?, social_links_json = ? WHERE id = ?"
-      ).bind(bio, socials, user.id).run();
+      try {
+        await env.DB.prepare(
+          "UPDATE users SET author_bio = ?, social_links_json = ?, rp_key_id = COALESCE(NULLIF(?, ''), rp_key_id), rp_key_secret = COALESCE(NULLIF(?, ''), rp_key_secret), allow_author_donations = ? WHERE id = ?"
+        ).bind(bio, socials, rpKeyId, rpKeySecret, allowDonations, user.id).run();
+      } catch (_) {
+        await env.DB.prepare("ALTER TABLE users ADD COLUMN allow_author_donations INTEGER DEFAULT 0").run().catch(() => {});
+        await env.DB.prepare("ALTER TABLE users ADD COLUMN rp_key_id TEXT DEFAULT NULL").run().catch(() => {});
+        await env.DB.prepare("ALTER TABLE users ADD COLUMN rp_key_secret TEXT DEFAULT NULL").run().catch(() => {});
+        await env.DB.prepare(
+          "UPDATE users SET author_bio = ?, social_links_json = ?, rp_key_id = COALESCE(NULLIF(?, ''), rp_key_id), rp_key_secret = COALESCE(NULLIF(?, ''), rp_key_secret), allow_author_donations = ? WHERE id = ?"
+        ).bind(bio, socials, rpKeyId, rpKeySecret, allowDonations, user.id).run();
+      }
       return Response.redirect(`${url.origin}/dashboard?profile_updated=1`, 302);
     }
 
@@ -8524,6 +8580,7 @@ async function ensureBooksTable(env) {
     ["sbin_no", "TEXT DEFAULT NULL"],
     ["isbn", "TEXT DEFAULT NULL"],
     ["author_name", "TEXT DEFAULT NULL"],
+    ["allow_author_donations", "INTEGER DEFAULT 0"],
     ["archive_status", "TEXT DEFAULT 'approved'"]
   ];
   for (const [col, colType] of bookCols) {
@@ -8534,6 +8591,15 @@ async function ensureBooksTable(env) {
 
   try {
     await env.DB.prepare("ALTER TABLE users ADD COLUMN can_publish INTEGER DEFAULT 0").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN allow_author_donations INTEGER DEFAULT 0").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN rp_key_id TEXT DEFAULT NULL").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN rp_key_secret TEXT DEFAULT NULL").run();
   } catch (_) {}
 
   try {
@@ -12818,6 +12884,15 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
     `;
   }
 
+  const effectiveAuthorKeyId = (book.rp_key_id || book.user_rp_key_id || "").trim();
+  const allowDonations = (Number(book.allow_author_donations) === 1 || Number(book.user_allow_donations) === 1 || Number(book.user_allow_author_donations) === 1 || Number(book.donate_to_author) === 1) && !!effectiveAuthorKeyId;
+
+  const donateBtnHtml = allowDonations ? `
+    <button type="button" onclick="openAuthorDonationModal()" class="btn-author-donate" style="width: 100%; margin-top: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.94rem; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3); transition: transform 0.2s, box-shadow 0.2s;">
+      <span>💝</span> Donate to Author (${escapeHtml(book.author_name || 'Creator')})
+    </button>
+  ` : "";
+
   let actionsHtml = "";
   if (isPaid) {
     if (canRead) {
@@ -12826,9 +12901,9 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
           <span>✓ You own full access to this premium book</span>
           <span style="font-size: 0.82rem; background: #d1fae5; padding: 2px 8px; border-radius: 6px;">Active License</span>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 2; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800;">📖 Read Full Book Now</a>
-          <a href="/buy_book/${book.id}?force=1" class="btn btn-green" style="flex: 1; min-width: 160px; text-align: center; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;" title="Test checkout or buy another license">⚡ Buy Now (₹${priceFormatted})</a>
+        <div>
+          <a href="/read_book/${book.id}" class="btn btn-dark" style="width: 100%; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; display: block; box-sizing: border-box;">📖 Read Full Book Now</a>
+          ${donateBtnHtml}
         </div>
       `;
     } else {
@@ -12842,6 +12917,7 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
           <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 1; text-align: center; background: #475569; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; color: white;">Free Preview</a>
           <a href="/buy_book/${book.id}" class="btn btn-green" style="flex: 2; text-align: center; background: linear-gradient(135deg, #10b981, #059669); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹${priceFormatted})</a>
         </div>
+        ${donateBtnHtml}
       `;
     }
   } else {
@@ -12853,6 +12929,7 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
           <button type="submit" class="btn btn-dark" style="width: 100%; background: #cbd5e1; color: #0f172a; padding: 12px; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">Save to Library</button>
         </form>
       </div>
+      ${donateBtnHtml}
     `;
   }
 
@@ -12921,6 +12998,7 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
 
     <link rel="stylesheet" href="/static/style.css">
     <script src="/static/theme.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         :root {
             --nav-bg: #0f172a;
@@ -13338,7 +13416,153 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
         } else {
             loadGirionixAiReviewSummary(false);
         }
+
+        function openAuthorDonationModal() {
+            var modal = document.getElementById('authorDonationModal');
+            if (modal) modal.style.display = 'flex';
+        }
+        function closeAuthorDonationModal() {
+            var modal = document.getElementById('authorDonationModal');
+            if (modal) modal.style.display = 'none';
+        }
+        function setAuthorDonationAmt(val) {
+            var inp = document.getElementById('authorDonationCustomInput');
+            if (inp) {
+                inp.value = val;
+                updateAuthorDonationButton(val);
+            }
+        }
+        function updateAuthorDonationButton(val) {
+            var btn = document.getElementById('authorDonationSubmitBtn');
+            if (btn) btn.textContent = '❤️ Donate ₹' + (val || '0') + ' via Razorpay';
+        }
+        async function processAuthorDonation(bookId) {
+            var amtInput = document.getElementById('authorDonationCustomInput');
+            var amountInr = parseInt(amtInput ? amtInput.value : '100', 10) || 100;
+            if (amountInr < 10) {
+                alert('Minimum donation amount is ₹10.');
+                return;
+            }
+            var btn = document.getElementById('authorDonationSubmitBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Preparing Payment...';
+            }
+            try {
+                var formData = new FormData();
+                formData.append('is_author_donation', '1');
+                formData.append('donation_inr', amountInr);
+
+                var res = await fetch('/api/create_order/' + bookId, {
+                    method: 'POST',
+                    body: formData
+                });
+                var data = await res.json();
+                if (!data.success) {
+                    if (res.status === 401 || (data.error && data.error.includes('Authentication'))) {
+                        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                        return;
+                    }
+                    alert('Could not initiate donation: ' + (data.error || 'Unknown error'));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '❤️ Donate ₹' + amountInr + ' via Razorpay';
+                    }
+                    return;
+                }
+
+                if (typeof Razorpay !== 'undefined' && data.order_id && (data.is_real_razorpay_order || (data.razorpay_key && !data.razorpay_key.includes('test_pustakverse')))) {
+                    var options = {
+                        key: data.razorpay_key,
+                        amount: data.amount_paise,
+                        currency: 'INR',
+                        name: 'PustakVerse · Author Donation',
+                        description: 'Direct Author Support: ' + (data.book_title || 'Book'),
+                        image: '/static/PustakVerse.png',
+                        order_id: data.is_real_razorpay_order ? data.order_id : undefined,
+                        handler: async function (response) {
+                            try {
+                                var vForm = new FormData();
+                                vForm.append('razorpay_payment_id', response.razorpay_payment_id);
+                                vForm.append('razorpay_order_id', response.razorpay_order_id || data.order_id);
+                                vForm.append('razorpay_signature', response.razorpay_signature || '');
+                                vForm.append('book_id', bookId);
+                                await fetch('/api/verify_payment', { method: 'POST', body: vForm });
+                                alert('🎉 Thank you! Your generous donation has been directly transferred to the author.');
+                                closeAuthorDonationModal();
+                            } catch(e) {
+                                alert('Donation processed! Thank you for supporting the author.');
+                                closeAuthorDonationModal();
+                            }
+                        },
+                        theme: { color: '#ea580c' }
+                    };
+                    var rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (resp) {
+                        alert('Payment cancelled or failed: ' + (resp.error ? resp.error.description : ''));
+                        if (btn) { btn.disabled = false; btn.textContent = '❤️ Donate ₹' + amountInr + ' via Razorpay'; }
+                    });
+                    rzp.open();
+                } else {
+                    var vForm = new FormData();
+                    vForm.append('razorpay_payment_id', 'pay_instant_don_' + Math.floor(Date.now() / 1000));
+                    vForm.append('razorpay_order_id', data.order_id);
+                    vForm.append('razorpay_signature', 'sig_sandbox_test_verified');
+                    vForm.append('book_id', bookId);
+                    await fetch('/api/verify_payment', { method: 'POST', body: vForm });
+                    alert('🎉 Thank you so much! Your donation of ₹' + amountInr + ' to the author was recorded successfully!');
+                    closeAuthorDonationModal();
+                }
+            } catch (err) {
+                alert('Donation error: ' + err.message);
+                if (btn) { btn.disabled = false; btn.textContent = '❤️ Donate ₹' + amountInr + ' via Razorpay'; }
+            }
+        }
     </script>
+
+    <!-- AUTHOR DONATION MODAL -->
+    <div id="authorDonationModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px);">
+      <div style="background: var(--surface-card, #ffffff); border-radius: 16px; border: 1px solid var(--border-subtle, #e2e8f0); max-width: 440px; width: 100%; padding: 26px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); text-align: left; position: relative; color: var(--text-primary, #0f172a);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #d97706;">
+              <span>💝</span> Donate to Author
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+              Support <strong>${escapeHtml(book.author_name || 'Author')}</strong> for "${escapeHtml(book.title)}".
+            </p>
+          </div>
+          <button type="button" onclick="closeAuthorDonationModal()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted, #64748b); line-height: 1;">&times;</button>
+        </div>
+
+        <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 0.82rem; color: #92400e; line-height: 1.45;">
+          ✨ <strong>100% Direct Support:</strong> Your donation is routed directly to this author's linked Razorpay account to support their writing &amp; research.
+        </div>
+
+        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary, #334155); display: block; margin-bottom: 8px;">Select Donation Amount (₹ INR):</label>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;">
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(50)" style="padding: 8px 4px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: var(--bg-canvas, #f8fafc); font-weight: 700; cursor: pointer; font-size: 0.88rem; color: inherit;">₹50</button>
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(100)" style="padding: 8px 4px; border: 1.5px solid #f59e0b; border-radius: 8px; background: #fffbeb; font-weight: 800; cursor: pointer; font-size: 0.88rem; color: #b45309;">₹100</button>
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(250)" style="padding: 8px 4px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: var(--bg-canvas, #f8fafc); font-weight: 700; cursor: pointer; font-size: 0.88rem; color: inherit;">₹250</button>
+          <button type="button" class="donation-chip" onclick="setAuthorDonationAmt(500)" style="padding: 8px 4px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: var(--bg-canvas, #f8fafc); font-weight: 700; cursor: pointer; font-size: 0.88rem; color: inherit;">₹500</button>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted, #64748b); display: block; margin-bottom: 4px;">Or enter custom amount (Min ₹10):</label>
+          <div style="display: flex; align-items: center; border: 1.5px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: var(--card-bg, #ffffff);">
+            <span style="padding: 10px 14px; font-weight: 800; color: var(--text-muted, #64748b); background: rgba(0,0,0,0.03); border-right: 1px solid #cbd5e1;">₹</span>
+            <input type="number" id="authorDonationCustomInput" value="100" min="10" max="50000" step="10" style="width: 100%; border: none; padding: 10px 12px; font-size: 1rem; font-weight: 800; outline: none; background: transparent; color: inherit;" oninput="updateAuthorDonationButton(this.value)">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" onclick="closeAuthorDonationModal()" style="flex: 1; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: transparent; font-weight: 700; cursor: pointer; color: var(--text-muted, #64748b);">Cancel</button>
+          <button type="button" id="authorDonationSubmitBtn" onclick="processAuthorDonation(${book.id})" style="flex: 2; padding: 11px; border: none; border-radius: 8px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+            ❤️ Donate ₹100 via Razorpay
+          </button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>`;
 }
