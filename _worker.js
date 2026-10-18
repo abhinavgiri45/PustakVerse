@@ -4038,8 +4038,12 @@ Format with these exact markdown sections:
         const heroSubtitle = (formData.get("hero_subtitle") || "").trim();
         const introTagline = (formData.get("intro_tagline") || "").trim();
         const introSubTagline = (formData.get("intro_sub_tagline") || "").trim();
-        const donationActive = formData.has("donation_active") ? 1 : 0;
-        const checkoutActive = formData.has("checkout_donation_active") ? 1 : 0;
+        const donationActive = formData.has("donation_active_val") 
+          ? (formData.get("donation_active_val") === "1" ? 1 : 0) 
+          : (formData.has("donation_active") ? 1 : 0);
+        const checkoutActive = formData.has("checkout_donation_active_val") 
+          ? (formData.get("checkout_donation_active_val") === "1" ? 1 : 0) 
+          : (formData.has("checkout_donation_active") ? 1 : 0);
         const donationDefaultInr = parseInt(formData.get("donation_default_inr") || "10", 10) || 10;
         const keyId = (formData.get("rp_key_id") || "").trim();
         const keySecret = (formData.get("rp_key_secret") || "").trim();
@@ -4142,8 +4146,12 @@ Format with these exact markdown sections:
         return new Response("Unauthorized", { status: 403 });
       }
       const formData = await request.formData().catch(() => new FormData());
-      const donationActive = formData.has("donation_active") ? 1 : 0;
-      const checkoutActive = formData.has("checkout_donation_active") ? 1 : 0;
+      const donationActive = formData.has("donation_active_val") 
+        ? (formData.get("donation_active_val") === "1" ? 1 : 0) 
+        : (formData.has("donation_active") ? 1 : 0);
+      const checkoutActive = formData.has("checkout_donation_active_val") 
+        ? (formData.get("checkout_donation_active_val") === "1" ? 1 : 0) 
+        : (formData.has("checkout_donation_active") ? 1 : 0);
       await env.DB.prepare(
         "UPDATE front_page_settings SET donation_active = ?, checkout_donation_active = ? WHERE id = 1"
       ).bind(donationActive, checkoutActive).run();
@@ -5230,11 +5238,15 @@ Format with these exact markdown sections:
             hero_subtitle: fps?.hero_subtitle || "Empowering Readers & Authors Worldwide",
             logo_image: fps?.logo_image || "PustakVerse.png",
             font_color: fps?.font_color || "#ffffff",
-            donation_active: Boolean(fps?.donation_active),
+            donation_active: (fps?.donation_active !== undefined && fps?.donation_active !== null)
+              ? (Number(fps.donation_active) === 1 || fps.donation_active === true || fps.donation_active === "1" || fps.donation_active === "true")
+              : false,
             donation_qr: fps?.donation_qr || "",
             intro_tagline: fps?.intro_tagline || "Every Book. Every Mind. Infinite Knowledge.",
             intro_sub_tagline: fps?.intro_sub_tagline || "Prepare to explore the universe of knowledge...",
-            checkout_donation_active: fps?.checkout_donation_active !== undefined ? Boolean(fps?.checkout_donation_active) : true,
+            checkout_donation_active: (fps?.checkout_donation_active !== undefined && fps?.checkout_donation_active !== null)
+              ? (Number(fps.checkout_donation_active) === 1 || fps.checkout_donation_active === true || fps.checkout_donation_active === "1" || fps.checkout_donation_active === "true")
+              : true,
             donation_default_inr: fps?.donation_default_inr || 10,
             rp_key_id: fps?.rp_key_id || "",
             alert_ticker_message: fps?.alert_ticker_message || "",
@@ -5244,7 +5256,7 @@ Format with these exact markdown sections:
         }), {
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=30"
+            "Cache-Control": "private, no-cache, no-store, must-revalidate"
           }
         });
       } catch (err) {
@@ -5543,7 +5555,9 @@ Format with these exact markdown sections:
           ).first() || {};
         } catch (_) {}
 
-        const checkoutDonationActive = fps.checkout_donation_active !== 0;
+        const checkoutDonationActive = (fps.checkout_donation_active !== undefined && fps.checkout_donation_active !== null)
+          ? (Number(fps.checkout_donation_active) === 1 || fps.checkout_donation_active === true || fps.checkout_donation_active === "1" || fps.checkout_donation_active === "true")
+          : true;
         const defaultDonationInr = fps.donation_default_inr || 10;
         const razorpayKey = fps.dev_key_id || book.author_key_id || env.RAZORPAY_KEY_ID || "rzp_test_pustakverse";
 
@@ -6237,7 +6251,10 @@ Format with these exact markdown sections:
           ).first() || {};
         } catch (_) {}
 
-        const activeDonation = fps.checkout_donation_active !== 0 ? donationInr : 0;
+        const isCheckoutDonationEnabled = (fps.checkout_donation_active !== undefined && fps.checkout_donation_active !== null)
+          ? (Number(fps.checkout_donation_active) === 1 || fps.checkout_donation_active === true || fps.checkout_donation_active === "1" || fps.checkout_donation_active === "true")
+          : true;
+        const activeDonation = isCheckoutDonationEnabled ? donationInr : 0;
         const gatewayKeyId = book.author_key_id || fps.dev_key_id || env.RAZORPAY_KEY_ID;
         const gatewayKeySecret = book.author_key_secret || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
 
@@ -9015,8 +9032,12 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     const rKeyId = escapeHtml(fps.rp_key_id || "");
     const rKeySecret = escapeHtml(fps.rp_key_secret || "");
     const dDefault = fps.donation_default_inr || 10;
-    const isDonActive = Boolean(fps.donation_active);
-    const isCheckActive = fps.checkout_donation_active !== undefined ? Boolean(fps.checkout_donation_active) : true;
+    const isDonActive = (fps.donation_active !== undefined && fps.donation_active !== null)
+      ? (Number(fps.donation_active) === 1 || fps.donation_active === true || fps.donation_active === "1" || fps.donation_active === "true")
+      : false;
+    const isCheckActive = (fps.checkout_donation_active !== undefined && fps.checkout_donation_active !== null)
+      ? (Number(fps.checkout_donation_active) === 1 || fps.checkout_donation_active === true || fps.checkout_donation_active === "1" || fps.checkout_donation_active === "true")
+      : true;
 
     out = out.replace(/name="hero_title"\s+id="setting_hero_title"\s+value="[^"]*"/i, `name="hero_title" id="setting_hero_title" value="${hTitle}"`);
     out = out.replace(/name="hero_subtitle"\s+id="setting_hero_subtitle"\s+value="[^"]*"/i, `name="hero_subtitle" id="setting_hero_subtitle" value="${hSubtitle}"`);
@@ -9035,17 +9056,16 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     out = out.replace(/name="rp_key_secret"\s+value="[^"]*"/i, `name="rp_key_secret" value="${rKeySecret}"`);
     out = out.replace(/name="donation_default_inr"\s+value="[^"]*"/i, `name="donation_default_inr" value="${dDefault}"`);
 
-    if (isDonActive) {
-      out = out.replace(/name="donation_active"(?!\s+checked)/i, `name="donation_active" checked`);
-    } else {
-      out = out.replace(/name="donation_active"\s+checked/i, `name="donation_active"`);
-    }
+    // Accurately toggle checkbox checked attribute regardless of attribute order or surrounding markup
+    out = out.replace(/(<input[^>]*name="donation_active"[^>]*>)/i, (tag) => {
+      let cleanTag = tag.replace(/\s+checked(?:="[^"]*"|='[^']*')?/gi, "");
+      return isDonActive ? cleanTag.replace(/(\/?>)$/, " checked$1") : cleanTag;
+    });
 
-    if (isCheckActive) {
-      out = out.replace(/name="checkout_donation_active"(?!\s+checked)/i, `name="checkout_donation_active" checked`);
-    } else {
-      out = out.replace(/name="checkout_donation_active"\s+checked/i, `name="checkout_donation_active"`);
-    }
+    out = out.replace(/(<input[^>]*name="checkout_donation_active"[^>]*>)/i, (tag) => {
+      let cleanTag = tag.replace(/\s+checked(?:="[^"]*"|='[^']*')?/gi, "");
+      return isCheckActive ? cleanTag.replace(/(\/?>)$/, " checked$1") : cleanTag;
+    });
   }
 
   // Hydrate Author Creator Profile (Bio & Social Links)

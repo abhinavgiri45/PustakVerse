@@ -1143,7 +1143,7 @@
                             </p>
                             
                             <label style="display: flex; align-items: center; gap: 10px; font-weight: 700; color: #f1f5f9; margin-bottom: 14px; cursor: pointer; user-select: none;">
-                                <input type="checkbox" name="checkout_donation_active" id="setting_checkout_donation_active" {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;"> 
+                                <input type="checkbox" name="checkout_donation_active" id="setting_checkout_donation_active" onchange="updateDonationBadgePreview()" {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;"> 
                                 Enable "Donate to PustakVerse Team" Option at Checkout
                             </label>
 
@@ -1160,6 +1160,21 @@
                             <div style="margin-bottom: 0;">
                                 <label style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 4px;">Developer Razorpay Key Secret</label>
                                 <input type="password" name="rp_key_secret" id="setting_rp_key_secret" value="{{ site_settings.rp_key_secret or '' }}" placeholder="Paste Razorpay Secret..." style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
+                            </div>
+
+                            <!-- LIVE ACCOUNT & PAYMENT ROUTING ARCHITECTURE AUDIT -->
+                            <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px dashed #0284c7; border-radius: 8px; padding: 14px; margin-top: 16px; font-size: 0.82rem; line-height: 1.55; color: #cbd5e1;">
+                                <div style="font-weight: 800; color: #38bdf8; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                    <span style="display: flex; align-items: center; gap: 6px;">🏛️ Live Transaction & Account Routing Breakdown</span>
+                                    <span id="badgeCheckoutDonationStatus" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; background: {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}#065f46; color: #6ee7b7;{% else %}#7f1d1d; color: #fca5a5;{% endif %}">
+                                        {% if site_settings.checkout_donation_active or site_settings.checkout_donation_active is not defined %}Donation: ACTIVE{% else %}Donation: DISABLED{% endif %}
+                                    </span>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div><strong style="color: #4ade80;">1. Author Books (Custom Gateway Keys):</strong> If the author set their Razorpay Key ID & Secret, 100% of book purchase money deposits directly into the <strong style="color: #4ade80;">Author's Bank Account</strong> via their Razorpay gateway (minus standard 2.36% gateway fee).</div>
+                                    <div><strong style="color: #fb923c;">2. Platform Books & Fallback:</strong> If the author has not set custom gateway credentials, buyer funds deposit into the <strong style="color: #fb923c;">Developer Razorpay Account configured above</strong>.</div>
+                                    <div><strong style="color: #38bdf8;">3. Voluntary Team Donations:</strong> When enabled, reader contributions are earmarked for platform servers & Girionix AI models (<code style="background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px; color: #38bdf8;">purchases.donation_paise</code>). When disabled, the donation prompt is completely eliminated from checkout.</div>
+                                </div>
                             </div>
                         </div>
                         
@@ -5902,9 +5917,24 @@
         } catch (_) {}
     }
 
+    function updateDonationBadgePreview() {
+        const chk = document.getElementById('setting_checkout_donation_active');
+        const badge = document.getElementById('badgeCheckoutDonationStatus');
+        if (!badge || !chk) return;
+        if (chk.checked) {
+            badge.style.background = '#065f46';
+            badge.style.color = '#6ee7b7';
+            badge.textContent = 'Donation: ACTIVE';
+        } else {
+            badge.style.background = '#7f1d1d';
+            badge.style.color = '#fca5a5';
+            badge.textContent = 'Donation: DISABLED';
+        }
+    }
+
     async function loadWebsiteSettings() {
         try {
-            const res = await fetch('/api/front_page_settings');
+            const res = await fetch('/api/front_page_settings', { cache: 'no-store' });
             if (!res.ok) return;
             const data = await res.json();
             if (data.success && data.settings) {
@@ -5922,12 +5952,13 @@
                 
                 const donEl = document.getElementById('setting_donation_active');
                 if (donEl && s.donation_active !== undefined) {
-                    donEl.checked = Boolean(s.donation_active);
+                    donEl.checked = (s.donation_active === true || s.donation_active === 1 || s.donation_active === '1' || s.donation_active === 'true');
                 }
                 const chkEl = document.getElementById('setting_checkout_donation_active');
                 if (chkEl && s.checkout_donation_active !== undefined) {
-                    chkEl.checked = Boolean(s.checkout_donation_active);
+                    chkEl.checked = (s.checkout_donation_active === true || s.checkout_donation_active === 1 || s.checkout_donation_active === '1' || s.checkout_donation_active === 'true');
                 }
+                updateDonationBadgePreview();
             }
         } catch (_) {}
     }
@@ -5947,6 +5978,11 @@
         }
 
         const formData = new FormData(form);
+        const chkEl = document.getElementById('setting_checkout_donation_active');
+        const donEl = document.getElementById('setting_donation_active');
+        formData.set('checkout_donation_active_val', chkEl && chkEl.checked ? '1' : '0');
+        formData.set('donation_active_val', donEl && donEl.checked ? '1' : '0');
+
         try {
             const res = await fetch(form.action || '/update_front_page', {
                 method: 'POST',
@@ -5963,12 +5999,23 @@
             } catch (_) {}
 
             if (res.ok && (!data || data.success !== false)) {
+                if (data && data.settings) {
+                    if (chkEl && data.settings.checkout_donation_active !== undefined) {
+                        chkEl.checked = Boolean(data.settings.checkout_donation_active);
+                    }
+                    if (donEl && data.settings.donation_active !== undefined) {
+                        donEl.checked = Boolean(data.settings.donation_active);
+                    }
+                }
+                updateDonationBadgePreview();
+                const isChk = chkEl && chkEl.checked;
+                const donDef = document.getElementById('setting_donation_default_inr')?.value || '10';
                 if (alertBox) {
                     alertBox.style.display = 'block';
                     alertBox.style.background = '#dcfce7';
                     alertBox.style.color = '#166534';
                     alertBox.style.border = '1px solid #86efac';
-                    alertBox.innerHTML = '🎉 <strong>Website Settings Updated & Synced!</strong> Changes are live across the website, homepage, and checkout gateway.';
+                    alertBox.innerHTML = `🎉 <strong>Website Settings Updated & Synced!</strong><br><span style="font-size: 0.84rem; display: inline-block; margin-top: 4px;">• Checkout Donation: <strong>${isChk ? 'ENABLED (₹' + donDef + ' Default)' : 'DISABLED (Completely hidden at checkout)'}</strong><br>• Homepage Donation Modal: <strong>${(donEl && donEl.checked) ? 'ENABLED' : 'DISABLED'}</strong></span>`;
                     alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
                 if (submitBtn) {

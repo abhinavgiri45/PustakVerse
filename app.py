@@ -8319,8 +8319,15 @@ def update_front_page():
     subtitle = request.form.get('hero_subtitle')
     font_color = request.form.get('font_color')
     logo_file = request.files.get('logo_image')
-    donation_active = request.form.get('donation_active') == 'on'
-    checkout_donation_active = request.form.get('checkout_donation_active') == 'on'
+    if 'donation_active_val' in request.form:
+        donation_active = request.form.get('donation_active_val') == '1'
+    else:
+        donation_active = request.form.get('donation_active') == 'on'
+
+    if 'checkout_donation_active_val' in request.form:
+        checkout_donation_active = request.form.get('checkout_donation_active_val') == '1'
+    else:
+        checkout_donation_active = request.form.get('checkout_donation_active') == 'on'
     donation_default_inr = int(request.form.get('donation_default_inr', 10) or 10)
     donation_qr_file = request.files.get('donation_qr')
     rp_key_id = request.form.get('rp_key_id', '').strip()
@@ -8391,11 +8398,11 @@ def api_front_page_settings():
                 'hero_subtitle': fps.get('hero_subtitle') or 'Empowering Readers & Authors Worldwide',
                 'logo_image': fps.get('logo_image') or 'PustakVerse.png',
                 'font_color': fps.get('font_color') or '#ffffff',
-                'donation_active': bool(fps.get('donation_active')),
+                'donation_active': str(fps.get('donation_active', '')).strip().lower() in ('1', 'true'),
                 'donation_qr': fps.get('donation_qr') or '',
                 'intro_tagline': fps.get('intro_tagline') or 'Every Book. Every Mind. Infinite Knowledge.',
                 'intro_sub_tagline': fps.get('intro_sub_tagline') or 'Prepare to explore the universe of knowledge...',
-                'checkout_donation_active': bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True),
+                'checkout_donation_active': True if fps.get('checkout_donation_active') is None else (str(fps.get('checkout_donation_active')).strip().lower() not in ('0', 'false', 'none')),
                 'donation_default_inr': int(fps.get('donation_default_inr') or 10),
                 'rp_key_id': fps.get('rp_key_id') or '',
                 'alert_ticker_message': fps.get('alert_ticker_message') or '',
