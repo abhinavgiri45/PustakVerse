@@ -267,7 +267,7 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Just a moment... | \${safeHost}</title>
+  <title>Just a moment... | ${safeHost}</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <style>
@@ -439,11 +439,11 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
-        <span>\${safeHost}</span>
+        <span>${safeHost}</span>
       </div>
       <h1 class="cf-title">Verify you are human</h1>
       <p class="cf-desc">
-        \${safeHost} needs to review the security of your connection before proceeding.
+        ${safeHost} needs to review the security of your connection before proceeding.
       </p>
     </div>
 
@@ -456,17 +456,17 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
     </div>
 
     <button id="cf-fallback-btn" class="cf-fallback-btn" type="button" onclick="triggerFallback()">
-      Proceed to \${safeHost}
+      Proceed to ${safeHost}
     </button>
 
     <div class="cf-info">
-      Why am I seeing this page? Automatic verification protects \${safeHost} from malicious automated attacks and ensures a secure reading experience.
+      Why am I seeing this page? Automatic verification protects ${safeHost} from malicious automated attacks and ensures a secure reading experience.
     </div>
   </div>
 
   <div class="cf-footer">
     <div class="cf-footer-details">
-      <span>Ray ID: <code>\${safeRayId}</code></span> &bull; <span>Your IP: <code>\${safeClientIp}</code></span>
+      <span>Ray ID: <code>${safeRayId}</code></span> &bull; <span>Your IP: <code>${safeClientIp}</code></span>
     </div>
     <div class="cf-footer-brand">
       <svg width="22" height="14" viewBox="0 0 48 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -478,7 +478,7 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
 
   <form id="cf-form-fallback" method="POST" action="/__cf_challenge_verify" style="display:none;">
     <input type="hidden" name="token" value="">
-    <input type="hidden" name="next" value="\${safeTargetUrl}">
+    <input type="hidden" name="next" value="${safeTargetUrl}">
   </form>
 
   <script>
@@ -487,7 +487,7 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
       if (window.turnstile) {
         try {
           turnstile.render('#cf-turnstile', {
-            sitekey: '\${safeSiteKey}',
+            sitekey: '${safeSiteKey}',
             theme: 'auto',
             size: 'normal',
             callback: function(token) {
@@ -517,12 +517,20 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
       submitVerification('bypass_client_fallback');
     }
 
+    // If Turnstile widget doesn't load within 1.5 seconds (e.g. adblocker), show fallback button
     setTimeout(function() {
       var box = document.getElementById('cf-turnstile');
       if (!box || box.children.length === 0) {
         showFallback();
       }
-    }, 3800);
+    }, 1500);
+
+    // Auto-fallback after 3.5s so no user is ever locked out indefinitely
+    setTimeout(function() {
+      if (!submitted) {
+        triggerFallback();
+      }
+    }, 3500);
 
     function submitVerification(token) {
       if (submitted) return;
@@ -534,7 +542,7 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
         status.style.color = '#16a34a';
       }
 
-      var target = \${jsonTargetUrl};
+      var target = ${jsonTargetUrl};
 
       fetch('/__cf_challenge_verify', {
         method: 'POST',
@@ -1451,8 +1459,21 @@ export default {
     const hasActiveSession = !!reqCookies.pv_session;
     const isClearanceVerified = await isHumanVerified(reqCookies, clearanceSecret);
 
-    // If request is GET/HEAD to a web page and user is not verified, show Cloudflare Human Challenge
-    if (!isChallengeExemptPath && !isBot && !hasActiveSession && !isClearanceVerified && (request.method === "GET" || request.method === "HEAD")) {
+    // Only challenge visitors if Turnstile / Bot Protection is active
+    let isChallengeEnabled = false;
+    if (env && (env.TURNSTILE_ENABLED === "1" || env.ENABLE_BOT_PROTECTION === "1")) {
+      isChallengeEnabled = true;
+    } else if (env && env.DB) {
+      try {
+        const fpsRow = await env.DB.prepare("SELECT cf_turnstile_active FROM front_page_settings WHERE id = 1").first();
+        if (fpsRow && (Number(fpsRow.cf_turnstile_active) === 1 || fpsRow.cf_turnstile_active === true || fpsRow.cf_turnstile_active === "1" || fpsRow.cf_turnstile_active === "true")) {
+          isChallengeEnabled = true;
+        }
+      } catch (_) {}
+    }
+
+    // If challenge is enabled, request is GET/HEAD to a web page and user is not verified, show Cloudflare Human Challenge
+    if (isChallengeEnabled && !isChallengeExemptPath && !isBot && !hasActiveSession && !isClearanceVerified && (request.method === "GET" || request.method === "HEAD")) {
       const rayId = request.headers.get("cf-ray") || (Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10));
       const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-real-ip") || "127.0.0.1";
       const siteKey = (env && env.TURNSTILE_SITE_KEY) || "1x00000000000000000000AA";
@@ -4045,6 +4066,9 @@ Format with these exact markdown sections:
           ? (formData.get("checkout_donation_active_val") === "1" ? 1 : 0) 
           : (formData.has("checkout_donation_active") ? 1 : 0);
         const donationDefaultInr = parseInt(formData.get("donation_default_inr") || "10", 10) || 10;
+        const turnstileActive = formData.has("cf_turnstile_active_val") 
+          ? (formData.get("cf_turnstile_active_val") === "1" ? 1 : 0) 
+          : (formData.has("cf_turnstile_active") ? 1 : 0);
         const keyId = (formData.get("rp_key_id") || "").trim();
         const keySecret = (formData.get("rp_key_secret") || "").trim();
 
@@ -4083,12 +4107,12 @@ Format with these exact markdown sections:
             UPDATE front_page_settings 
             SET hero_title = ?, hero_subtitle = ?, intro_tagline = ?, intro_sub_tagline = ?,
                 donation_active = ?, checkout_donation_active = ?, donation_default_inr = ?,
-                rp_key_id = ?, rp_key_secret = ?, donation_qr = ?
+                rp_key_id = ?, rp_key_secret = ?, donation_qr = ?, cf_turnstile_active = ?
             WHERE id = 1
           `).bind(
             finalHeroTitle, finalHeroSubtitle, finalIntroTagline, finalIntroSubTagline,
             donationActive, checkoutActive, donationDefaultInr,
-            finalRpKeyId, finalRpKeySecret, finalDonationQr
+            finalRpKeyId, finalRpKeySecret, finalDonationQr, turnstileActive
           ).run();
         } catch (dbErr) {
           console.warn("Primary UPDATE front_page_settings failed, applying resilient fallback:", dbErr.message);
@@ -4101,6 +4125,8 @@ Format with these exact markdown sections:
             .bind(donationActive, checkoutActive, donationDefaultInr).run().catch(() => {});
           await env.DB.prepare("UPDATE front_page_settings SET rp_key_id = ?, rp_key_secret = ? WHERE id = 1")
             .bind(finalRpKeyId, finalRpKeySecret).run().catch(() => {});
+          await env.DB.prepare("UPDATE front_page_settings SET cf_turnstile_active = ? WHERE id = 1")
+            .bind(turnstileActive).run().catch(() => {});
           if (finalDonationQr) {
             await env.DB.prepare("UPDATE front_page_settings SET donation_qr = ? WHERE id = 1")
               .bind(finalDonationQr).run().catch(() => {});
@@ -4119,7 +4145,8 @@ Format with these exact markdown sections:
               donation_active: Boolean(donationActive),
               checkout_donation_active: Boolean(checkoutActive),
               donation_default_inr: donationDefaultInr,
-              rp_key_id: finalRpKeyId
+              rp_key_id: finalRpKeyId,
+              cf_turnstile_active: Boolean(turnstileActive)
             }
           }), {
             headers: { "Content-Type": "application/json" }
@@ -5251,7 +5278,8 @@ Format with these exact markdown sections:
             rp_key_id: fps?.rp_key_id || "",
             alert_ticker_message: fps?.alert_ticker_message || "",
             alert_ticker_active: Boolean(fps?.alert_ticker_active),
-            maintenance_mode: Boolean(fps?.maintenance_mode)
+            maintenance_mode: Boolean(fps?.maintenance_mode),
+            cf_turnstile_active: Boolean(Number(fps?.cf_turnstile_active) === 1 || fps?.cf_turnstile_active === true || fps?.cf_turnstile_active === "1" || fps?.cf_turnstile_active === "true")
           }
         }), {
           headers: {
@@ -8773,7 +8801,8 @@ async function ensureFrontPageSettingsTable(env) {
         maintenance_start TEXT DEFAULT NULL,
         maintenance_end TEXT DEFAULT NULL,
         maintenance_reason TEXT DEFAULT NULL,
-        maintenance_notified INTEGER DEFAULT 0
+        maintenance_notified INTEGER DEFAULT 0,
+        cf_turnstile_active INTEGER DEFAULT 0
       )
     `).run();
 
@@ -8799,7 +8828,8 @@ async function ensureFrontPageSettingsTable(env) {
       ["maintenance_start", "TEXT DEFAULT NULL"],
       ["maintenance_end", "TEXT DEFAULT NULL"],
       ["maintenance_reason", "TEXT DEFAULT NULL"],
-      ["maintenance_notified", "INTEGER DEFAULT 0"]
+      ["maintenance_notified", "INTEGER DEFAULT 0"],
+      ["cf_turnstile_active", "INTEGER DEFAULT 0"]
     ];
 
     for (const [col, colDef] of requiredCols) {
@@ -9056,7 +9086,10 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     out = out.replace(/name="rp_key_secret"\s+value="[^"]*"/i, `name="rp_key_secret" value="${rKeySecret}"`);
     out = out.replace(/name="donation_default_inr"\s+value="[^"]*"/i, `name="donation_default_inr" value="${dDefault}"`);
 
-    // Accurately toggle checkbox checked attribute regardless of attribute order or surrounding markup
+    const isTurnstileActive = (fps.cf_turnstile_active !== undefined && fps.cf_turnstile_active !== null)
+      ? (Number(fps.cf_turnstile_active) === 1 || fps.cf_turnstile_active === true || fps.cf_turnstile_active === "1" || fps.cf_turnstile_active === "true")
+      : false;
+
     out = out.replace(/(<input[^>]*name="donation_active"[^>]*>)/i, (tag) => {
       let cleanTag = tag.replace(/\s+checked(?:="[^"]*"|='[^']*')?/gi, "");
       return isDonActive ? cleanTag.replace(/(\/?>)$/, " checked$1") : cleanTag;
@@ -9065,6 +9098,11 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     out = out.replace(/(<input[^>]*name="checkout_donation_active"[^>]*>)/i, (tag) => {
       let cleanTag = tag.replace(/\s+checked(?:="[^"]*"|='[^']*')?/gi, "");
       return isCheckActive ? cleanTag.replace(/(\/?>)$/, " checked$1") : cleanTag;
+    });
+
+    out = out.replace(/(<input[^>]*name="cf_turnstile_active"[^>]*>)/i, (tag) => {
+      let cleanTag = tag.replace(/\s+checked(?:="[^"]*"|='[^']*')?/gi, "");
+      return isTurnstileActive ? cleanTag.replace(/(\/?>)$/, " checked$1") : cleanTag;
     });
   }
 

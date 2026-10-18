@@ -8328,6 +8328,11 @@ def update_front_page():
         checkout_donation_active = request.form.get('checkout_donation_active_val') == '1'
     else:
         checkout_donation_active = request.form.get('checkout_donation_active') == 'on'
+
+    if 'cf_turnstile_active_val' in request.form:
+        cf_turnstile_active = request.form.get('cf_turnstile_active_val') == '1'
+    else:
+        cf_turnstile_active = request.form.get('cf_turnstile_active') == 'on'
     donation_default_inr = int(request.form.get('donation_default_inr', 10) or 10)
     donation_qr_file = request.files.get('donation_qr')
     rp_key_id = request.form.get('rp_key_id', '').strip()
@@ -8359,10 +8364,16 @@ def update_front_page():
         final_rp_secret = rp_key_secret if rp_key_secret else settings_data.get('rp_key_secret', '')
         
         # Save everything to the database
-        cursor.execute(
-            "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
-            (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
-        )
+        try:
+            cursor.execute(
+                "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s, cf_turnstile_active=%s WHERE id=1", 
+                (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline, cf_turnstile_active)
+            )
+        except Exception:
+            cursor.execute(
+                "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
+                (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
+            )
         db.commit()
         invalidate_cache()
         fast_cache.delete('site_settings')
@@ -8407,7 +8418,8 @@ def api_front_page_settings():
                 'rp_key_id': fps.get('rp_key_id') or '',
                 'alert_ticker_message': fps.get('alert_ticker_message') or '',
                 'alert_ticker_active': bool(fps.get('alert_ticker_active')),
-                'maintenance_mode': bool(fps.get('maintenance_mode'))
+                'maintenance_mode': bool(fps.get('maintenance_mode')),
+                'cf_turnstile_active': str(fps.get('cf_turnstile_active', '')).strip().lower() in ('1', 'true')
             }
         })
     except Exception as ex:

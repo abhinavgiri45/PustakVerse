@@ -928,6 +928,25 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- CLOUDFLARE BOT PROTECTION & TURNSTILE GATE -->
+                        <div style="background: #0f172a; padding: 18px; border-radius: 10px; border: 1.5px solid #1e3a5f; margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <label style="color: #38bdf8; font-weight: 800; font-size: 0.98rem; display: flex; align-items: center; gap: 6px; margin: 0;">
+                                    <span>🛡️</span> Cloudflare Bot Protection (Turnstile Gate)
+                                </label>
+                                <span id="badgeTurnstileStatus" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; background: #334155; color: #94a3b8;">
+                                    Off: Frictionless Access
+                                </span>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4;">
+                                Require first-time visitors to complete a modern Cloudflare human verification check before accessing the website (Under Attack mode). Leave disabled for open, instant access.
+                            </p>
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 700; color: #f1f5f9; cursor: pointer; user-select: none;">
+                                <input type="checkbox" name="cf_turnstile_active" id="setting_cf_turnstile_active" onchange="updateTurnstileBadgePreview()"  style="width: 18px; height: 18px; accent-color: #38bdf8; cursor: pointer;">
+                                Enable Cloudflare Human Verification Challenge for all new visitors
+                            </label>
+                        </div>
                         
                         <button type="submit" id="btnUpdateSettings" class="btn-sm btn-orange" style="width: 100%; padding: 14px; font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35); border: none;">
                             <span>💾</span> Save & Sync Website Settings
@@ -5512,6 +5531,21 @@
         }
     }
 
+    function updateTurnstileBadgePreview() {
+        const chk = document.getElementById('setting_cf_turnstile_active');
+        const badge = document.getElementById('badgeTurnstileStatus');
+        if (!badge || !chk) return;
+        if (chk.checked) {
+            badge.style.background = '#065f46';
+            badge.style.color = '#6ee7b7';
+            badge.textContent = 'Active: Challenging Bots';
+        } else {
+            badge.style.background = '#334155';
+            badge.style.color = '#94a3b8';
+            badge.textContent = 'Off: Frictionless Access';
+        }
+    }
+
     async function loadWebsiteSettings() {
         try {
             const res = await fetch('/api/front_page_settings', { cache: 'no-store' });
@@ -5538,7 +5572,12 @@
                 if (chkEl && s.checkout_donation_active !== undefined) {
                     chkEl.checked = (s.checkout_donation_active === true || s.checkout_donation_active === 1 || s.checkout_donation_active === '1' || s.checkout_donation_active === 'true');
                 }
+                const turnEl = document.getElementById('setting_cf_turnstile_active');
+                if (turnEl && s.cf_turnstile_active !== undefined) {
+                    turnEl.checked = (s.cf_turnstile_active === true || s.cf_turnstile_active === 1 || s.cf_turnstile_active === '1' || s.cf_turnstile_active === 'true');
+                }
                 updateDonationBadgePreview();
+                updateTurnstileBadgePreview();
             }
         } catch (_) {}
     }
@@ -5560,8 +5599,10 @@
         const formData = new FormData(form);
         const chkEl = document.getElementById('setting_checkout_donation_active');
         const donEl = document.getElementById('setting_donation_active');
+        const turnEl = document.getElementById('setting_cf_turnstile_active');
         formData.set('checkout_donation_active_val', chkEl && chkEl.checked ? '1' : '0');
         formData.set('donation_active_val', donEl && donEl.checked ? '1' : '0');
+        formData.set('cf_turnstile_active_val', turnEl && turnEl.checked ? '1' : '0');
 
         try {
             const res = await fetch(form.action || '/update_front_page', {
@@ -5586,16 +5627,21 @@
                     if (donEl && data.settings.donation_active !== undefined) {
                         donEl.checked = Boolean(data.settings.donation_active);
                     }
+                    if (turnEl && data.settings.cf_turnstile_active !== undefined) {
+                        turnEl.checked = Boolean(data.settings.cf_turnstile_active);
+                    }
                 }
                 updateDonationBadgePreview();
+                updateTurnstileBadgePreview();
                 const isChk = chkEl && chkEl.checked;
+                const isTurn = turnEl && turnEl.checked;
                 const donDef = document.getElementById('setting_donation_default_inr')?.value || '10';
                 if (alertBox) {
                     alertBox.style.display = 'block';
                     alertBox.style.background = '#dcfce7';
                     alertBox.style.color = '#166534';
                     alertBox.style.border = '1px solid #86efac';
-                    alertBox.innerHTML = `🎉 <strong>Website Settings Updated & Synced!</strong><br><span style="font-size: 0.84rem; display: inline-block; margin-top: 4px;">• Checkout Donation: <strong>${isChk ? 'ENABLED (₹' + donDef + ' Default)' : 'DISABLED (Completely hidden at checkout)'}</strong><br>• Homepage Donation Modal: <strong>${(donEl && donEl.checked) ? 'ENABLED' : 'DISABLED'}</strong></span>`;
+                    alertBox.innerHTML = `🎉 <strong>Website Settings Updated & Synced!</strong><br><span style="font-size: 0.84rem; display: inline-block; margin-top: 4px;">• Checkout Donation: <strong>${isChk ? 'ENABLED (₹' + donDef + ' Default)' : 'DISABLED (Completely hidden at checkout)'}</strong><br>• Homepage Donation Modal: <strong>${(donEl && donEl.checked) ? 'ENABLED' : 'DISABLED'}</strong><br>• Cloudflare Bot Gate: <strong>${isTurn ? 'ACTIVE (Challenging all new visitors)' : 'OFF (Frictionless open access)'}</strong></span>`;
                     alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
                 if (submitBtn) {
