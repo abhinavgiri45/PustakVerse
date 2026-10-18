@@ -233,11 +233,6 @@
         <div style="display: flex; align-items: center; gap: 16px;">
             <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="{{ url_for('index') }}">Global Library</a>
-            {% if session.get('user_id') %}
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            {% else %}
-                <a href="{{ url_for('login') }}">Sign In</a>
-            {% endif %}
         </div>
     </nav>
 

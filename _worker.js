@@ -7269,6 +7269,14 @@ Format with these exact markdown sections:
           await env.DB.prepare("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0").run().catch(() => {});
         } catch (_) {}
 
+        // Ensure books table columns exist without throwing
+        try {
+          await env.DB.prepare("ALTER TABLE books ADD COLUMN author_name TEXT DEFAULT NULL").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE books ADD COLUMN is_quarantined INTEGER DEFAULT 0").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE books ADD COLUMN is_featured INTEGER DEFAULT 0").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE books ADD COLUMN price_paise INTEGER DEFAULT 0").run().catch(() => {});
+        } catch (_) {}
+
         // 1. Try finding user by username
         try {
           author = await env.DB.prepare(
@@ -7289,51 +7297,82 @@ Format with these exact markdown sections:
           } catch (_) {}
         }
 
-        // 3. If still not found, check if books exist with this author_name
+        // 3. If still not found, check if books exist with an author matching this username
         if (!author) {
           try {
             const b = await env.DB.prepare(
-              "SELECT author_id, author_name FROM books WHERE LOWER(author_name) = LOWER(?) LIMIT 1"
+              `SELECT b.author_id, u.username as author_name 
+               FROM books b 
+               JOIN users u ON b.author_id = u.id 
+               WHERE LOWER(u.username) = LOWER(?) 
+               LIMIT 1`
             ).bind(authorUsername).first();
-            if (b) {
-              if (b.author_id) {
-                author = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(b.author_id).first().catch(() => null);
-              }
-              if (!author) {
-                author = {
-                  id: b.author_id || 0,
-                  username: b.author_name || authorUsername,
-                  role: "author",
-                  author_bio: `Official author profile for ${b.author_name || authorUsername} on PustakVerse.`,
-                  is_verified: 1
-                };
-              }
+            if (b && b.author_id) {
+              author = await env.DB.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").bind(b.author_id).first().catch(() => null);
             }
           } catch (_) {}
         }
 
-        // 4. Query books by author_id OR author_name
-        const targetId = author?.id || 0;
-        const targetName = author?.username || authorUsername;
+        // 4. Query books by author_id OR joined author username
+        const targetId = author?.id ? Number(author.id) : 0;
+        const targetName = (author?.username || authorUsername).trim();
+
         try {
+          // Primary query: join books with users table so both author_id and username match!
           const booksRes = await env.DB.prepare(
-            `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined, author_id, author_name 
-             FROM books 
-             WHERE (author_id = ? OR LOWER(author_name) = LOWER(?)) 
-               AND (is_quarantined = 0 OR is_quarantined IS NULL) 
-             ORDER BY id DESC`
-          ).bind(targetId, targetName).all();
+            `SELECT b.id, b.title, b.catalog, b.price_paise, b.cover_image, b.pdf_file, 
+                    b.is_paid, b.is_featured, b.is_quarantined, b.author_id,
+                    COALESCE(u.username, ?) as author_name 
+             FROM books b 
+             LEFT JOIN users u ON b.author_id = u.id 
+             WHERE ((? > 0 AND b.author_id = ?) OR (u.id IS NOT NULL AND LOWER(u.username) = LOWER(?))) 
+               AND (b.is_quarantined = 0 OR b.is_quarantined IS NULL) 
+             ORDER BY b.id DESC`
+          ).bind(targetName, targetId, targetId, targetName).all();
           authorBooks = booksRes.results || [];
-        } catch (_) {
+        } catch (err1) {
           try {
-            const booksRes = await env.DB.prepare(
-              `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured 
+            // Fallback 1: Query by author_id directly on books
+            if (targetId > 0) {
+              const booksRes = await env.DB.prepare(
+                `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, is_quarantined, author_id 
+                 FROM books 
+                 WHERE author_id = ? 
+                   AND (is_quarantined = 0 OR is_quarantined IS NULL) 
+                 ORDER BY id DESC`
+              ).bind(targetId).all();
+              authorBooks = booksRes.results || [];
+            }
+          } catch (err2) {
+            try {
+              // Fallback 2: Minimal columns by author_id
+              if (targetId > 0) {
+                const booksRes = await env.DB.prepare(
+                  `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, author_id 
+                   FROM books 
+                   WHERE author_id = ? 
+                   ORDER BY id DESC`
+                ).bind(targetId).all();
+                authorBooks = booksRes.results || [];
+              }
+            } catch (_) {}
+          }
+        }
+
+        // Fallback 3: If authorBooks is still empty, check if author_name column was populated on books
+        if (authorBooks.length === 0) {
+          try {
+            const byNameRes = await env.DB.prepare(
+              `SELECT id, title, catalog, price_paise, cover_image, pdf_file, is_paid, is_featured, author_id 
                FROM books 
-               WHERE LOWER(author_name) = LOWER(?) 
+               WHERE LOWER(COALESCE(author_name, '')) = LOWER(?) 
+                 AND (is_quarantined = 0 OR is_quarantined IS NULL) 
                ORDER BY id DESC`
             ).bind(targetName).all();
-            authorBooks = booksRes.results || [];
-          } catch (__) {}
+            if (byNameRes && byNameRes.results && byNameRes.results.length > 0) {
+              authorBooks = byNameRes.results;
+            }
+          } catch (_) {}
         }
       }
 
@@ -8484,6 +8523,7 @@ async function ensureBooksTable(env) {
     ["is_featured", "INTEGER NOT NULL DEFAULT 0"],
     ["sbin_no", "TEXT DEFAULT NULL"],
     ["isbn", "TEXT DEFAULT NULL"],
+    ["author_name", "TEXT DEFAULT NULL"],
     ["archive_status", "TEXT DEFAULT 'approved'"]
   ];
   for (const [col, colType] of bookCols) {
@@ -13316,13 +13356,6 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
     }
   } catch (_) {}
 
-  const isOwnerOrAdmin = currentUser && (
-    (currentUser.id && author.id && currentUser.id === author.id) ||
-    (currentUser.username && author.username && currentUser.username.toLowerCase() === author.username.toLowerCase()) ||
-    currentUser.role === "developer" ||
-    currentUser.role === "official"
-  );
-
   const booksHtml = (books || []).map(b => {
     let coverSrc = resolveEffectiveBookCover(b);
     const isPaid = !!b.is_paid && (b.price_paise > 0);
@@ -13735,13 +13768,6 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
     <div class="nav-actions">
       <button type="button" class="theme-toggle-btn" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
       <a href="/">Global Library</a>
-      ${isOwnerOrAdmin
-        ? `<a href="/dashboard" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; padding: 7px 16px; border-radius: 20px; font-weight: 700;">⚙️ Author Dashboard</a>`
-        : (currentUser
-            ? `<a href="/dashboard">Dashboard</a>`
-            : `<a href="/login" style="background: rgba(255,255,255,0.12); padding: 6px 16px; border-radius: 20px;">Sign In</a>`
-          )
-      }
     </div>
   </nav>
 
@@ -13779,17 +13805,6 @@ function renderEdgeAuthorHtml(author, books = [], currentUser = null) {
             <span id="shareBtnIcon">🔗</span> <span id="shareBtnText">Share Profile</span>
           </button>
         </div>
-
-        ${isOwnerOrAdmin ? `
-          <div class="author-actions-top">
-            <a href="/dashboard#publishNewBookSection" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; font-weight: 700; padding: 9px 20px; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
-              <span>🚀</span> Publish a New Book
-            </a>
-            <a href="/dashboard" style="background: var(--card-bg); color: var(--text-dark); border: 1.5px solid var(--border-line); font-weight: 700; padding: 9px 20px; border-radius: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem;">
-              <span>✏️</span> Edit Profile / Dashboard
-            </a>
-          </div>
-        ` : ''}
       </div>
     </div>
 

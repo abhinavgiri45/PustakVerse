@@ -10358,15 +10358,25 @@ def public_author_profile(username):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id, username, email, role, is_verified, author_bio, social_links_json, created_at FROM users WHERE username = %s", (username,))
+        clean_name = (username or '').strip()
+        cursor.execute("SELECT id, username, email, role, is_verified, author_bio, social_links_json, created_at FROM users WHERE LOWER(username) = LOWER(%s)", (clean_name,))
         author = cursor.fetchone()
+        if not author and clean_name.isdigit():
+            cursor.execute("SELECT id, username, email, role, is_verified, author_bio, social_links_json, created_at FROM users WHERE id = %s", (int(clean_name),))
+            author = cursor.fetchone()
         if not author:
             flash(f"Author '{username}' profile not found.", "error")
             return redirect(url_for('index'))
             
         social_links = json.loads(author.get('social_links_json') or '{}') if author.get('social_links_json') else {}
         
-        cursor.execute("SELECT id, title, catalog, cover_image, pdf_file, is_paid, price_paise, preview_pages, is_featured, description, created_at FROM books WHERE author_id = %s AND (is_quarantined IS NULL OR is_quarantined = FALSE) ORDER BY created_at DESC", (author['id'],))
+        cursor.execute("""
+            SELECT id, title, catalog, cover_image, pdf_file, is_paid, price_paise, preview_pages, is_featured, description, created_at 
+            FROM books 
+            WHERE author_id = %s 
+              AND (is_quarantined IS NULL OR is_quarantined = FALSE OR is_quarantined = 0) 
+            ORDER BY created_at DESC
+        """, (author['id'],))
         books = clean_book_data(cursor.fetchall())
         
         return render_template('author_profile.html', author=author, social_links=social_links, books=books)
