@@ -2699,6 +2699,7 @@ Format with these exact markdown sections:
 
       await ensureAuthorCouponsTable(env);
 
+      try {
         let coupon = await env.DB.prepare(
           "SELECT id, code, discount_percent, max_uses, times_used, is_active FROM author_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? AND (is_active = 1 OR is_active IS NULL) LIMIT 1"
         ).bind(bookId, code).first().catch(() => null);
@@ -4429,6 +4430,7 @@ Format with these exact markdown sections:
           await env.DB.prepare(
             "INSERT OR REPLACE INTO users (username, email, password_hash, role, is_verified, two_factor_enabled, security_question, security_answer) VALUES (?, ?, ?, 'official', 1, 1, 'Official Platform Access', 'Authorized')"
           ).bind(offUsername, offEmail, hash).run();
+        }
         try {
           await ensureLeadershipTable(env);
           const exLead = await env.DB.prepare("SELECT id FROM leadership_team WHERE email = ? OR name = ?").bind(offEmail, offUsername).first();
