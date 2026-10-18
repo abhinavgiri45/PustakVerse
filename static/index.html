@@ -234,6 +234,34 @@
         .btn-read { background-color: #2d3748; color: white; }
         .btn-save { background-color: var(--pv-btn-save-bg); color: var(--pv-btn-save-text); border: 1px solid var(--pv-card-border); }
         .btn-premium { background-color: #14532d; color: white; }
+        /* Modern Skeleton Loader Cards & Shimmer */
+        @keyframes pvShimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .pv-skeleton-card {
+            background: var(--pv-card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid var(--pv-card-border);
+            padding: 14px;
+            box-sizing: border-box;
+        }
+        .pv-skeleton-shimmer {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: pvShimmer 1.5s ease-in-out infinite;
+            border-radius: 6px;
+        }
+        :root.dark-theme .pv-skeleton-shimmer,
+        html.dark-theme .pv-skeleton-shimmer,
+        body.dark-theme .pv-skeleton-shimmer {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+        }
         /* Trending Leaderboard & Ranking Badges */
         .trending-leaderboard-banner {
             display: none;
@@ -1141,9 +1169,105 @@
 
         <div class="book-grid" id="bookGrid">
             
-                <div id="noBooksPlaceholder" style="text-align: center; grid-column: 1 / -1; padding: 50px 0;">
-                    <h2 style="color: var(--pv-text);">Connecting to PustakVerse Library...</h2>
-                    <div style="width: 32px; height: 32px; border: 3px solid #cbd5e1; border-top-color: #f66d2f; border-radius: 50%; margin: 15px auto; animation: spin 0.8s linear infinite;"></div>
+                <div id="noBooksPlaceholder" style="grid-column: 1 / -1; width: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 4px 2px;">
+                        <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--pv-text); font-size: 1.05rem;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #f66d2f; box-shadow: 0 0 10px #f66d2f; display: inline-block;"></span>
+                            Connecting to PustakVerse Library...
+                        </span>
+                        <span style="font-size: 0.85rem; color: var(--pv-text-muted);">Syncing live shelf</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; width: 100%;">
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="pv-skeleton-card">
+                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
+                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
+                            <div style="display: flex; gap: 8px; margin-top: auto;">
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
+                            </div>
+                        </div>
+                        
+                    </div>
                 </div>
             
 
@@ -1153,7 +1277,9 @@
             </div>
         </div>
 
-        
+        <div id="loadMoreContainer" style="text-align: center; margin-top: 30px; display: none;">
+            <button id="loadMoreBtn" style="padding: 12px 30px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1.1rem;">Load More Books</button>
+        </div>
 
     </div>
 
@@ -1166,6 +1292,270 @@
             }
             return window.__pvUserPromise;
         }
+
+        let _pvCurrentPaginationItems = 10;
+        const _pvPaginationStep = 10;
+
+        function setupLoadMoreHandler() {
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            if (!loadMoreBtn) return;
+            loadMoreBtn.onclick = function() {
+                const bookCards = document.querySelectorAll('.book-card');
+                for (let i = _pvCurrentPaginationItems; i < _pvCurrentPaginationItems + _pvPaginationStep && i < bookCards.length; i++) {
+                    bookCards[i].style.display = 'flex';
+                }
+                _pvCurrentPaginationItems += _pvPaginationStep;
+                if (_pvCurrentPaginationItems >= bookCards.length) {
+                    loadMoreBtn.style.display = 'none';
+                    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+                }
+            };
+        }
+
+        // RENDER BOOK CARDS INTO GRID WITH INSTANT ZERO-DELAY HYDRATION
+        function renderBooksIntoGrid(books) {
+            if (!Array.isArray(books) || books.length === 0) return;
+
+            const grid = document.querySelector('.book-grid');
+            if (!grid) return;
+
+            const placeholder = document.getElementById('noBooksPlaceholder');
+            if (placeholder) placeholder.remove();
+
+            const bEl = document.getElementById('metricTotalBooks');
+            if (bEl) bEl.textContent = `📚 ${books.length}`;
+
+            // Refresh book grid
+            grid.innerHTML = '';
+            _pvCurrentPaginationItems = 10;
+
+            books.forEach((b, index) => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.setAttribute('data-book-id', b.id);
+                card.setAttribute('data-title', (b.title || '').toLowerCase());
+                card.setAttribute('data-author', (b.author_name || '').toLowerCase());
+                card.setAttribute('data-catalog', (b.catalog || '').toLowerCase());
+                card.setAttribute('data-trending-rank', b.trending_rank || '');
+                card.setAttribute('data-week-purchases', b.week_purchases || 0);
+                card.setAttribute('data-month-purchases', b.month_purchases || 0);
+                card.setAttribute('data-lifetime-purchases', b.lifetime_purchases || 0);
+                card.setAttribute('data-trending', ((b.trending_rank && b.trending_rank <= 30) || b.is_trending) ? 'true' : 'false');
+
+                // Pagination: show first 10, hide the rest
+                if (index >= 10) {
+                    card.style.display = 'none';
+                }
+
+                let coverSrc = (b.cover_image || '').trim();
+                if (coverSrc) {
+                    const driveMatch = coverSrc.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+                    if (driveMatch) {
+                        coverSrc = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+                    }
+                }
+                const isDefaultLogo = !coverSrc || coverSrc === '/static/PustakVerse.png' || coverSrc === 'PustakVerse.png' || coverSrc.endsWith('/PustakVerse.png');
+                if (isDefaultLogo && b.pdf_file && typeof b.pdf_file === 'string') {
+                    const pdfMatch = b.pdf_file.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
+                    if (pdfMatch) {
+                        coverSrc = `https://lh3.googleusercontent.com/d/${pdfMatch[1]}`;
+                    }
+                }
+                if (!coverSrc) {
+                    coverSrc = '/static/PustakVerse.png';
+                }
+
+                const isPaid = !!b.is_paid && (b.price_paise > 0);
+                card.setAttribute('data-is-paid', isPaid ? 'true' : 'false');
+                const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
+                let detailsHref = b.id ? `/book/${b.id}` : '#';
+                let readHref = b.id ? `/read_book/${b.id}` : (b.pdf_file || '#');
+                if (window.location.hostname.endsWith('github.io') && b.id) {
+                    readHref = `viewer.html?id=${b.id}&title=${encodeURIComponent(b.title || '')}&src=${encodeURIComponent(b.pdf_file || '')}`;
+                }
+
+                const buyHref = b.id ? `/buy_book/${b.id}` : '#';
+
+                card.style.cursor = 'pointer';
+                card.onclick = (e) => {
+                    if (!e.target.closest('button, form, a, input, select, textarea')) {
+                        window.location.href = detailsHref;
+                    }
+                };
+
+                let actionsHtml = '';
+                const bid = Number(b.id);
+                const hasInLib = !!(window.userLibraryIds && window.userLibraryIds.has(bid));
+                const hasInPurchased = !!(window.userPurchasedIds && window.userPurchasedIds.has(bid));
+                const isPurchased = !!(b.has_purchased || hasInPurchased || (isPaid && hasInLib));
+                const inLibrary = !!(b.in_library || hasInLib || hasInPurchased || isPurchased);
+                if (isPaid) {
+                    if (isPurchased || inLibrary) {
+                        actionsHtml = `
+                            <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                                <div class="in-library-badge-active" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
+                                    ✓ Purchased · In Library
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <a href="${readHref}" class="btn" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; padding: 8px 6px;" onclick="event.stopPropagation();">📖 Read Full Book</a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        const mrpPaise = Math.round((b.price_paise || 0) * 1.4);
+                        const mrpFormatted = `₹${(mrpPaise / 100).toFixed(2)}`;
+                        actionsHtml = `
+                            <div class="price-row" style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
+                                <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">${priceFormatted}</span>
+                                <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ${mrpFormatted}</span>
+                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
+                            </div>
+                            <div class="book-actions" style="display: flex; gap: 8px;">
+                                <a href="/book/${b.id}" class="btn btn-read" style="flex: 1; font-size: 0.82rem; padding: 8px 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onclick="event.stopPropagation();">🔍 Look Inside</a>
+                                <a href="${buyHref}" class="btn btn-premium" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px;" onclick="event.stopPropagation();">⚡ Buy Now (${priceFormatted})</a>
+                            </div>
+                        `;
+                    }
+                } else {
+                    actionsHtml = `
+                        <div class="book-actions" style="display: flex; gap: 8px;">
+                            <a href="${readHref}" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                            ${inLibrary ? `
+                                <div class="in-library-badge-active" style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
+                                    ✓ In Library
+                                </div>
+                            ` : `
+                            <form action="/save_book/${b.id}" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                            </form>
+                            `}
+                        </div>
+                    `;
+                }
+
+                let badgesHtml = '';
+                if (b.bestseller_badge) {
+                    const bgStyle = b.bestseller_badge.bg || '#d97706';
+                    const borderStyle = b.bestseller_badge.border || '#b45309';
+                    const text = b.bestseller_badge.text || '⭐ Bestseller';
+                    badgesHtml += `
+                        <div style="margin-bottom: 6px;">
+                            <span style="background: ${bgStyle}; color: #ffffff; border: 1px solid ${borderStyle}; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
+                                ${text}
+                            </span>
+                        </div>
+                    `;
+                }
+                if (Array.isArray(b.custom_badges) && b.custom_badges.length > 0) {
+                    badgesHtml += `
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
+                            ${b.custom_badges.map(bg => `<span class="badge-accolade-chip badge-color-${bg.badge_color || 'gold'}">${bg.badge_label}</span>`).join('')}
+                        </div>
+                    `;
+                }
+
+                let trendingRankHtml = '';
+                if (b.trending_rank && b.trending_rank <= 30) {
+                    let rankClass = 'trending-rank-other';
+                    let rankText = `🎖️ #${b.trending_rank} Trending`;
+                    if (b.trending_rank === 1) {
+                        rankClass = 'trending-rank-1';
+                        rankText = '👑 #1 Trending Leader';
+                    } else if (b.trending_rank === 2) {
+                        rankClass = 'trending-rank-2';
+                        rankText = '🥈 #2 Trending';
+                    } else if (b.trending_rank === 3) {
+                        rankClass = 'trending-rank-3';
+                        rankText = '🥉 #3 Trending';
+                    }
+                    trendingRankHtml = `
+                        <div style="margin-bottom: 8px;">
+                            <span class="trending-rank-badge ${rankClass}">
+                                ${rankText}
+                            </span>
+                        </div>
+                    `;
+                }
+
+                let trendingMetricsHtml = '';
+                const isTrendingViewActive = (typeof currentActiveFilter !== 'undefined' && currentActiveFilter === 'trending') || (document.getElementById('bookGrid') && document.getElementById('bookGrid').classList.contains('trending-mode-active'));
+                if (isTrendingViewActive && (b.trending_rank && b.trending_rank <= 30)) {
+                    trendingMetricsHtml = `
+                        <div class="trending-metrics-strip" style="display: block !important;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                    ⚡ Week: <strong>${b.week_purchases || 0}</strong>
+                                </span>
+                                <span class="trending-metric-month" title="Purchased users / readers this month">
+                                    🗓️ Month: <strong>${b.month_purchases || 0}</strong>
+                                </span>
+                            </div>
+                            <div class="trending-metric-lifetime">
+                                <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                                <span class="trending-metric-lifetime-val">${b.lifetime_purchases || 0}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <a href="${detailsHref}" class="book-cover-link" title="View Details, Synopsis & Reviews">
+                        <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
+                    </a>
+                    <div class="book-info">
+                        ${trendingRankHtml}
+                        ${badgesHtml}
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span class="book-tag" onclick="event.stopPropagation(); filterByCategory('${b.catalog || 'General'}');">${b.catalog || 'General'}</span>
+                            ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ Featured</span>' : ''}
+                        </div>
+                        <h3 class="book-title"><a href="${detailsHref}" title="View Details, Synopsis & Reviews">${b.title}</a></h3>
+                        <p class="book-author">By ${b.author_name || 'PustakVerse'}</p>
+                        <div style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='${detailsHref}#customer-reviews';" title="View Reviews">★★★★★ <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span></div>
+                        ${trendingMetricsHtml}
+                        ${actionsHtml}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            if (loadMoreContainer && loadMoreBtn) {
+                if (books.length > 10) {
+                    loadMoreContainer.style.display = 'block';
+                    loadMoreBtn.style.display = 'inline-block';
+                    setupLoadMoreHandler();
+                } else {
+                    loadMoreContainer.style.display = 'none';
+                }
+            }
+
+            if (window.userPurchasedIds || window.userLibraryIds) {
+                syncGlobalLibraryWithMyLibrary(Array.from(window.userPurchasedIds || []), Array.from(window.userLibraryIds || []));
+            }
+        }
+
+        // 0-MS INSTANT LOCAL STORAGE RENDER FOR RETURNING VISITORS
+        (function tryInstantLocalCache() {
+            try {
+                const cachedRaw = localStorage.getItem('pv_cached_books_catalog');
+                if (cachedRaw) {
+                    const cachedBooks = JSON.parse(cachedRaw);
+                    if (Array.isArray(cachedBooks) && cachedBooks.length > 0) {
+                        const grid = document.querySelector('.book-grid');
+                        if (grid) {
+                            renderBooksIntoGrid(cachedBooks);
+                        } else {
+                            document.addEventListener('DOMContentLoaded', () => {
+                                renderBooksIntoGrid(cachedBooks);
+                            }, { once: true });
+                        }
+                    }
+                }
+            } catch (_) {}
+        })();
 
         // CLIENT-SIDE DYNAMIC BOOK HYDRATION FROM CLOUDFLARE D1
         async function hydrateBooksFromD1() {
@@ -1185,229 +1575,42 @@
                     })
                     .catch(() => {});
 
-                // Fetch books and user session concurrently in parallel
-                const userSyncPromise = (!window.userPurchasedIds && !window.userLibraryIds)
-                    ? getEdgeUserPromise().then(meUser => {
+                // Fetch user session concurrently without blocking book catalog rendering
+                if (!window.userPurchasedIds && !window.userLibraryIds) {
+                    getEdgeUserPromise().then(meUser => {
                         if (meUser && meUser.logged_in) {
                             window.userPurchasedIds = new Set((meUser.purchased_book_ids || []).map(Number));
                             window.userLibraryIds = new Set((meUser.library_book_ids || []).map(Number));
+                            syncGlobalLibraryWithMyLibrary(Array.from(window.userPurchasedIds), Array.from(window.userLibraryIds));
+                        }
+                    }).catch(() => {});
+                }
+
+                // Fetch books catalog independently for fast edge response
+                fetch('/api/d1/books')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(books => {
+                        if (Array.isArray(books) && books.length > 0) {
+                            try {
+                                localStorage.setItem('pv_cached_books_catalog', JSON.stringify(books));
+                            } catch (_) {}
+                            renderBooksIntoGrid(books);
+                        } else {
+                            const placeholder = document.getElementById('noBooksPlaceholder');
+                            if (placeholder && (!document.querySelectorAll('.book-card').length)) {
+                                placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">No books found in the library currently.</p>';
+                            }
                         }
                     })
-                    : Promise.resolve();
-
-                const [_, res] = await Promise.all([userSyncPromise, fetch('/api/d1/books')]);
-                const placeholder = document.getElementById('noBooksPlaceholder');
-                if (!res.ok) {
-                    if (placeholder) placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">Explore library collections above.</p>';
-                    return;
-                }
-                const books = await res.json();
-                if (!Array.isArray(books) || books.length === 0) {
-                    if (placeholder) placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">No books found in the library currently.</p>';
-                    return;
-                }
-
-                if (placeholder) placeholder.remove();
-
-                const bEl = document.getElementById('metricTotalBooks');
-                if (bEl) bEl.textContent = `📚 ${books.length}`;
-
-                const grid = document.querySelector('.book-grid');
-                if (!grid) return;
-
-                // Refresh book grid to stay 100% in sync with live Cloudflare D1 books
-                grid.innerHTML = '';
-
-                books.forEach(b => {
-                    const card = document.createElement('div');
-                    card.className = 'book-card';
-                    card.setAttribute('data-book-id', b.id);
-                    card.setAttribute('data-title', (b.title || '').toLowerCase());
-                    card.setAttribute('data-author', (b.author_name || '').toLowerCase());
-                    card.setAttribute('data-catalog', (b.catalog || '').toLowerCase());
-                    card.setAttribute('data-trending-rank', b.trending_rank || '');
-                    card.setAttribute('data-week-purchases', b.week_purchases || 0);
-                    card.setAttribute('data-month-purchases', b.month_purchases || 0);
-                    card.setAttribute('data-lifetime-purchases', b.lifetime_purchases || 0);
-                    card.setAttribute('data-trending', ((b.trending_rank && b.trending_rank <= 30) || b.is_trending) ? 'true' : 'false');
-
-                    let coverSrc = (b.cover_image || '').trim();
-                    if (coverSrc) {
-                        const driveMatch = coverSrc.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
-                        if (driveMatch) {
-                            coverSrc = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+                    .catch(() => {
+                        const placeholder = document.getElementById('noBooksPlaceholder');
+                        if (placeholder && (!document.querySelectorAll('.book-card').length)) {
+                            placeholder.style.display = 'none';
                         }
-                    }
-                    const isDefaultLogo = !coverSrc || coverSrc === '/static/PustakVerse.png' || coverSrc === 'PustakVerse.png' || coverSrc.endsWith('/PustakVerse.png');
-                    if (isDefaultLogo && b.pdf_file && typeof b.pdf_file === 'string') {
-                        const pdfMatch = b.pdf_file.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/);
-                        if (pdfMatch) {
-                            coverSrc = `https://lh3.googleusercontent.com/d/${pdfMatch[1]}`;
-                        }
-                    }
-                    if (!coverSrc) {
-                        coverSrc = '/static/PustakVerse.png';
-                    }
-
-                    const isPaid = !!b.is_paid && (b.price_paise > 0);
-                    card.setAttribute('data-is-paid', isPaid ? 'true' : 'false');
-                    const priceFormatted = `₹${((b.price_paise || 0) / 100).toFixed(2)}`;
-                    let detailsHref = b.id ? `/book/${b.id}` : '#';
-                    let readHref = b.id ? `/read_book/${b.id}` : (b.pdf_file || '#');
-                    if (window.location.hostname.endsWith('github.io') && b.id) {
-                        readHref = `viewer.html?id=${b.id}&title=${encodeURIComponent(b.title || '')}&src=${encodeURIComponent(b.pdf_file || '')}`;
-                    }
-
-                    const buyHref = b.id ? `/buy_book/${b.id}` : '#';
-
-                    card.style.cursor = 'pointer';
-                    card.onclick = (e) => {
-                        if (!e.target.closest('button, form, a, input, select, textarea')) {
-                            window.location.href = detailsHref;
-                        }
-                    };
-
-                    let actionsHtml = '';
-                    const bid = Number(b.id);
-                    const hasInLib = !!(window.userLibraryIds && window.userLibraryIds.has(bid));
-                    const hasInPurchased = !!(window.userPurchasedIds && window.userPurchasedIds.has(bid));
-                    const isPurchased = !!(b.has_purchased || hasInPurchased || (isPaid && hasInLib));
-                    const inLibrary = !!(b.in_library || hasInLib || hasInPurchased || isPurchased);
-                    if (isPaid) {
-                        if (isPurchased || inLibrary) {
-                            actionsHtml = `
-                                <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div class="in-library-badge-active" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
-                                        ✓ Purchased · In Library
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <a href="${readHref}" class="btn" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; padding: 8px 6px;" onclick="event.stopPropagation();">📖 Read Full Book</a>
-                                    </div>
-                                </div>
-                            `;
-                        } else {
-                            const mrpPaise = Math.round((b.price_paise || 0) * 1.4);
-                            const mrpFormatted = `₹${(mrpPaise / 100).toFixed(2)}`;
-                            actionsHtml = `
-                                <div class="price-row" style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
-                                    <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">${priceFormatted}</span>
-                                    <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ${mrpFormatted}</span>
-                                    <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
-                                </div>
-                                <div class="book-actions" style="display: flex; gap: 8px;">
-                                    <a href="/book/${b.id}" class="btn btn-read" style="flex: 1; font-size: 0.82rem; padding: 8px 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onclick="event.stopPropagation();">🔍 Look Inside</a>
-                                    <a href="${buyHref}" class="btn btn-premium" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px;" onclick="event.stopPropagation();">⚡ Buy Now (${priceFormatted})</a>
-                                </div>
-                            `;
-                        }
-                    } else {
-                        actionsHtml = `
-                            <div class="book-actions" style="display: flex; gap: 8px;">
-                                <a href="${readHref}" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
-                                ${inLibrary ? `
-                                    <div class="in-library-badge-active" style="flex: 1; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 6px 8px;">
-                                        ✓ In Library
-                                    </div>
-                                ` : `
-                                <form action="/save_book/${b.id}" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                    <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
-                                </form>
-                                `}
-                            </div>
-                        `;
-                    }
-
-                    let badgesHtml = '';
-                    if (b.bestseller_badge) {
-                        const bgStyle = b.bestseller_badge.bg || '#d97706';
-                        const borderStyle = b.bestseller_badge.border || '#b45309';
-                        const text = b.bestseller_badge.text || '⭐ Bestseller';
-                        badgesHtml += `
-                            <div style="margin-bottom: 6px;">
-                                <span style="background: ${bgStyle}; color: #ffffff; border: 1px solid ${borderStyle}; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
-                                    ${text}
-                                </span>
-                            </div>
-                        `;
-                    }
-                    if (Array.isArray(b.custom_badges) && b.custom_badges.length > 0) {
-                        badgesHtml += `
-                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
-                                ${b.custom_badges.map(bg => `<span class="badge-accolade-chip badge-color-${bg.badge_color || 'gold'}">${bg.badge_label}</span>`).join('')}
-                            </div>
-                        `;
-                    }
-
-                    let trendingRankHtml = '';
-                    if (b.trending_rank && b.trending_rank <= 30) {
-                        let rankClass = 'trending-rank-other';
-                        let rankText = `🎖️ #${b.trending_rank} Trending`;
-                        if (b.trending_rank === 1) {
-                            rankClass = 'trending-rank-1';
-                            rankText = '👑 #1 Trending Leader';
-                        } else if (b.trending_rank === 2) {
-                            rankClass = 'trending-rank-2';
-                            rankText = '🥈 #2 Trending';
-                        } else if (b.trending_rank === 3) {
-                            rankClass = 'trending-rank-3';
-                            rankText = '🥉 #3 Trending';
-                        }
-                        trendingRankHtml = `
-                            <div style="margin-bottom: 8px;">
-                                <span class="trending-rank-badge ${rankClass}">
-                                    ${rankText}
-                                </span>
-                            </div>
-                        `;
-                    }
-
-                    let trendingMetricsHtml = '';
-                    const isTrendingViewActive = (typeof currentActiveFilter !== 'undefined' && currentActiveFilter === 'trending') || (document.getElementById('bookGrid') && document.getElementById('bookGrid').classList.contains('trending-mode-active'));
-                    if (isTrendingViewActive && (b.trending_rank && b.trending_rank <= 30)) {
-                        trendingMetricsHtml = `
-                            <div class="trending-metrics-strip" style="display: block !important;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                    <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
-                                        ⚡ Week: <strong>${b.week_purchases || 0}</strong>
-                                    </span>
-                                    <span class="trending-metric-month" title="Purchased users / readers this month">
-                                        🗓️ Month: <strong>${b.month_purchases || 0}</strong>
-                                    </span>
-                                </div>
-                                <div class="trending-metric-lifetime">
-                                    <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
-                                    <span class="trending-metric-lifetime-val">${b.lifetime_purchases || 0}</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    card.innerHTML = `
-                        <a href="${detailsHref}" class="book-cover-link" title="View Details, Synopsis & Reviews">
-                            <img src="${coverSrc}" class="book-cover" alt="${b.title}" onerror="this.src='/static/PustakVerse.png'">
-                        </a>
-                        <div class="book-info">
-                            ${trendingRankHtml}
-                            ${badgesHtml}
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <span class="book-tag" onclick="event.stopPropagation(); filterByCategory('${b.catalog || 'General'}');">${b.catalog || 'General'}</span>
-                                ${b.is_featured ? '<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">⭐ Featured</span>' : ''}
-                            </div>
-                            <h3 class="book-title"><a href="${detailsHref}" title="View Details, Synopsis & Reviews">${b.title}</a></h3>
-                            <p class="book-author">By ${b.author_name || 'PustakVerse'}</p>
-                            <div style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='${detailsHref}#customer-reviews';" title="View Reviews">★★★★★ <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span></div>
-                            ${trendingMetricsHtml}
-                            ${actionsHtml}
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-                if (window.userPurchasedIds || window.userLibraryIds) {
-                    syncGlobalLibraryWithMyLibrary(Array.from(window.userPurchasedIds || []), Array.from(window.userLibraryIds || []));
-                }
+                    });
             } catch (_) {
                 const placeholder = document.getElementById('noBooksPlaceholder');
-                if (placeholder) placeholder.style.display = 'none';
+                if (placeholder && (!document.querySelectorAll('.book-card').length)) placeholder.style.display = 'none';
             }
         }
 

@@ -1285,6 +1285,11 @@ function computeBookTrendingMetrics(book, weekId, realWeek = 0, realMonth = 0, r
   };
 }
 
+let _trendingStatsCache = {
+  data: null,
+  expiresAt: 0
+};
+
 async function enrichBooksWithTrendingMetrics(books, env) {
   if (!books || !Array.isArray(books) || books.length === 0) return books;
 
@@ -1293,7 +1298,10 @@ async function enrichBooksWithTrendingMetrics(books, env) {
   const monthStartIso = cycle.monthStart.toISOString();
 
   let realStatsByBook = {};
-  if (env && env.DB) {
+  const now = Date.now();
+  if (_trendingStatsCache.data && now < _trendingStatsCache.expiresAt) {
+    realStatsByBook = _trendingStatsCache.data;
+  } else if (env && env.DB) {
     try {
       await ensurePurchasesTable(env);
       const pRows = await env.DB.prepare(`
@@ -1335,6 +1343,11 @@ async function enrichBooksWithTrendingMetrics(books, env) {
         realStatsByBook[r.book_id].life += Number(r.life_cnt) || 0;
       });
     } catch (_) {}
+
+    _trendingStatsCache = {
+      data: realStatsByBook,
+      expiresAt: now + 60000 // Cache for 60 seconds across requests
+    };
   }
 
   books.forEach(b => {
@@ -6642,7 +6655,7 @@ Format with these exact markdown sections:
             const isDevOrAuthor = sessionUser && (sessionUser.role === 'developer' || sessionUser.id === b.author_id);
             const hasPurchased = sessionUser && (purchasedBookIds.has(bid) || (isPaidBook && libraryBookIds.has(bid)));
             const inLibrary = sessionUser && (libraryBookIds.has(bid) || purchasedBookIds.has(bid));
-            const canRead = sessionUser && (!isPaidBook || isDevOrAuthor || hasPurchased);
+            const canRead = (!isPaidBook) || (sessionUser && (isDevOrAuthor || hasPurchased));
             return {
               ...b,
               pdf_file: canRead ? b.pdf_file : null,
@@ -6716,7 +6729,7 @@ Format with these exact markdown sections:
           });
         }
 
-        const cacheHeader = sessionUser ? "private, no-cache" : "public, max-age=15, stale-while-revalidate=60";
+        const cacheHeader = sessionUser ? "private, max-age=15, stale-while-revalidate=60" : "public, max-age=30, stale-while-revalidate=120";
         return new Response(JSON.stringify(results), {
           headers: { "Content-Type": "application/json", "Cache-Control": cacheHeader }
         });
