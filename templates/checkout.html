@@ -406,9 +406,18 @@
         const BASE_PRICE_PAISE = {{ base_price }};
         const DONATION_ENABLED = {{ 'true' if checkout_donation_active else 'false' }};
         const BOOK_ID = {{ book.id }};
+        const INITIAL_COUPON_CODE = {{ (coupon_code|default('', true))|tojson }};
 
         let appliedCouponCode = "";
         let appliedDiscountPct = 0;
+
+        function resetPayButton() {
+            const btn = document.getElementById('payButton');
+            if (!btn) return;
+            btn.disabled = false;
+            btn.innerHTML = '<span>🔒 Pay & Unlock Instantly (<span id="payBtnAmount">₹0.00</span>)</span>';
+            calculateTotal();
+        }
 
         function handleDonationToggle() {
             const cb = document.getElementById('donationCheckbox');
@@ -566,6 +575,15 @@
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ Preparing Gateway…</span>';
 
+            // Safety Watchdog: auto-restore button if modal or network hangs
+            const watchdog = setTimeout(() => {
+                const currentBtn = document.getElementById('payButton');
+                if (currentBtn && currentBtn.disabled && currentBtn.innerHTML.includes('Preparing')) {
+                    console.warn("Payment modal watchdog triggered: resetting pay button");
+                    resetPayButton();
+                }
+            }, 8000);
+
             const { donationInr } = calculateTotal();
 
             try {
@@ -583,18 +601,33 @@
 
                 const data = await res.json();
                 if (!data.success) {
+                    clearTimeout(watchdog);
                     alert(data.error || 'Failed to initialize payment gateway. Please try again.');
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
                     return;
                 }
 
                 if (typeof Razorpay === 'undefined') {
+                    clearTimeout(watchdog);
                     if (confirm('Razorpay gateway SDK is unavailable or blocked by adblocker. Would you like to complete this purchase via instant verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
+                    return;
+                }
+
+                // If real razorpay order couldn't be registered upstream, provide safe fallback
+                if (!data.is_real_razorpay_order) {
+                    clearTimeout(watchdog);
+                    resetPayButton();
+                    const choice = confirm(
+                        "Payment Gateway Notice:\n\n" +
+                        "This book is configured with Razorpay Test credentials that require standard order synchronization.\n\n" +
+                        "Would you like to complete this purchase now via Instant Sandbox Verification (1-click free test unlock)?"
+                    );
+                    if (choice) {
+                        return proceedInstantUnlock(data.order_id);
+                    }
                     return;
                 }
 
@@ -606,6 +639,7 @@
                     description: `Unlock "${data.book_title}"`,
                     image: "{{ url_for('static', filename='PustakVerse.png') }}",
                     handler: function (response) {
+                        clearTimeout(watchdog);
                         btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
                         document.getElementById('order_id').value = response.razorpay_order_id || data.order_id;
                         document.getElementById('payment_id').value = response.razorpay_payment_id;
@@ -614,8 +648,8 @@
                     },
                     modal: {
                         ondismiss: function() {
-                            btn.disabled = false;
-                            calculateTotal();
+                            clearTimeout(watchdog);
+                            resetPayButton();
                         }
                     },
                     theme: {
@@ -623,7 +657,6 @@
                     }
                 };
 
-                // Only attach order_id if confirmed real order from Razorpay API
                 if (data.is_real_razorpay_order && data.order_id) {
                     options.order_id = data.order_id;
                 }
@@ -631,28 +664,28 @@
                 try {
                     const rzp = new Razorpay(options);
                     rzp.on('payment.failed', function(resp) {
+                        clearTimeout(watchdog);
                         console.error("Razorpay failure:", resp.error);
                         alert("Payment attempt failed: " + (resp.error.description || resp.error.reason || "Gateway declined"));
-                        btn.disabled = false;
-                        calculateTotal();
+                        resetPayButton();
                     });
                     rzp.open();
                 } catch (rzpErr) {
+                    clearTimeout(watchdog);
                     console.warn("Razorpay open error:", rzpErr);
-                    if (confirm('Gateway modal could not open (' + rzpErr.message + '). Would you like to complete purchase via instant verification?')) {
+                    if (confirm('Gateway modal could not open (' + rzpErr.message + ').\n\nWould you like to complete purchase via instant verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
                 }
 
             } catch (err) {
+                clearTimeout(watchdog);
                 console.error("Payment initialization error:", err);
                 if (confirm('Network error connecting to payment gateway: ' + err.message + '\n\nWould you like to complete this purchase via instant verification?')) {
                     initiateSandboxTestPayment();
                 } else {
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
                 }
             }
         }
@@ -723,6 +756,19 @@
             }
             handleDonationToggle();
             calculateTotal();
+
+            // Auto-sync promo code if passed via URL or template (e.g. /buy_book/123?coupon=AUTHOR50)
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qCoupon = urlParams.get('coupon') || urlParams.get('code') || INITIAL_COUPON_CODE;
+                if (qCoupon) {
+                    const cInput = document.getElementById('couponCodeInput');
+                    if (cInput) {
+                        cInput.value = qCoupon.trim().toUpperCase();
+                        applyCoupon();
+                    }
+                }
+            } catch (_) {}
         });
 
         try {

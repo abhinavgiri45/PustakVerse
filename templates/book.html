@@ -906,7 +906,7 @@
                 <!-- BUY / READ / SAVE ACTION BOX -->
                 <div class="action-box">
                     {% if book.is_paid %}
-                        {% if can_read %}
+                        {% if can_read or (purchased_book_ids and book.id in purchased_book_ids) or (session.user_id and session.user_id == book.author_id) or session.role == 'developer' %}
                             <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <span>✓</span> You own full access to this premium book
                             </div>
@@ -927,9 +927,10 @@
                             
                             <div style="display: flex; gap: 10px;">
                                 <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-dark" style="flex: 1; background: #475569; text-align: center; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; color: white;">Free Preview</a>
-                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2; margin: 0;">
+                                <form id="buyBookForm" action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 2; margin: 0;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-green" style="width: 100%; padding: 12px; border-radius: 8px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>
+                                    <input type="hidden" name="coupon" id="buyFormCoupon" value="">
+                                    <button type="submit" id="buyNowSubmitBtn" class="btn btn-green" style="width: 100%; padding: 12px; border-radius: 8px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>
                                 </form>
                             </div>
                         {% endif %}
@@ -1336,7 +1337,25 @@
                         displayPrice.innerHTML = `<span style="text-decoration: line-through; color: #94a3b8; font-size: 1.1rem; margin-right: 8px;">₹${(data.original_price/100).toFixed(2)}</span> ₹${(data.discounted_price/100).toFixed(2)} <span style="font-size: 0.8rem; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px;">${data.discount_percent}% OFF</span>`;
                     }
                 }
-        // GIRIONIX AI REVIEW CONSENSUS ENGINE CLIENT
+                if (data.success) {
+                    const buyForm = document.getElementById('buyBookForm');
+                    const buyCouponInput = document.getElementById('buyFormCoupon');
+                    const buyBtn = document.getElementById('buyNowSubmitBtn');
+                    if (buyCouponInput) buyCouponInput.value = code.toUpperCase();
+                    if (buyForm) buyForm.action = `/buy_book/${bookId}?coupon=${encodeURIComponent(code.toUpperCase())}`;
+                    if (buyBtn) {
+                        buyBtn.innerHTML = `⚡ Buy Now (₹${(data.discounted_price/100).toFixed(2)})`;
+                    }
+                }
+            }).catch(err => {
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.style.background = '#fee2e2';
+                    msg.style.color = '#991b1b';
+                    msg.textContent = 'Coupon check error: ' + err.message;
+                }
+            });
+        }
         const BOOK_ID = {{ book.id | tojson }};
         async function loadGirionixAiReviewSummary(isRefresh = false) {
             const card = document.getElementById('girionixAiConsensusCard');

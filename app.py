@@ -298,6 +298,27 @@ def inject_security_and_globals():
         'current_year': datetime.now().year
     }
 
+@app.context_processor
+def inject_user_purchased_books():
+    uid = session.get('user_id')
+    if not uid:
+        return {'purchased_book_ids': set()}
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT book_id FROM purchases WHERE user_id = %s AND status IN ('paid', 'completed', 'verified')", (uid,))
+        p_ids = {row['book_id'] for row in cursor.fetchall() if row.get('book_id')}
+        cursor.execute("SELECT book_id FROM personal_library WHERE user_id = %s", (uid,))
+        p_ids.update({row['book_id'] for row in cursor.fetchall() if row.get('book_id')})
+        return {'purchased_book_ids': p_ids}
+    except Exception:
+        return {'purchased_book_ids': set()}
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 # ==========================================
 # MULTI-LAYER HTTP SECURITY HEADERS & CACHING
 # ==========================================
@@ -6838,9 +6859,15 @@ def buy_book(book_id):
             db.commit()
             return redirect(url_for('read_book', book_id=book_id))
             
-        cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (session['user_id'], book_id))
+        cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status IN ('paid', 'completed', 'verified')", (session['user_id'], book_id))
         if cursor.fetchone(): 
             return redirect(url_for('read_book', book_id=book_id))
+
+        cursor.execute("SELECT id FROM personal_library WHERE user_id = %s AND book_id = %s", (session['user_id'], book_id))
+        if cursor.fetchone(): 
+            return redirect(url_for('read_book', book_id=book_id))
+
+        coupon_code = (request.args.get('coupon') or request.form.get('coupon') or request.args.get('code') or '').strip().upper()
 
         cursor.execute("SELECT checkout_donation_active, donation_default_inr, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1")
         fps = cursor.fetchone() or {}
@@ -6864,7 +6891,8 @@ def buy_book(book_id):
             checkout_donation_active=checkout_donation_active, 
             default_donation_inr=default_donation_inr, 
             total_paise=total_paise, 
-            razorpay_key=primary_key_id
+            razorpay_key=primary_key_id,
+            coupon_code=coupon_code
         )
     except Exception as e: 
         logging.error(f"Error initiating buy_book #{book_id}: {e}")
@@ -6930,6 +6958,21 @@ def api_checkout_create_order(book_id):
             author_earning_paise = total_paise
         else:
             book_price_paise = book.get('price_paise', 0)
+            coupon_code = (request.form.get('coupon_code') or (request.json.get('coupon_code') if request.is_json else '') or '').strip().upper()
+            if coupon_code:
+                try:
+                    cursor.execute("SELECT * FROM author_coupons WHERE UPPER(code) = %s AND is_active = TRUE AND (book_id = %s OR book_id IS NULL OR book_id = 0)", (coupon_code, book_id))
+                    c_row = cursor.fetchone()
+                    if not c_row:
+                        cursor.execute("SELECT * FROM book_coupons WHERE UPPER(code) = %s AND (book_id = %s OR book_id IS NULL OR book_id = 0)", (coupon_code, book_id))
+                        c_row = cursor.fetchone()
+                    if c_row and (c_row.get('times_used', 0) or c_row.get('used_count', 0)) < c_row.get('max_uses', 100):
+                        discount_pct = c_row.get('discount_percent', 0)
+                        discount_paise = int(book_price_paise * (discount_pct / 100))
+                        book_price_paise = max(0, book_price_paise - discount_paise)
+                except Exception as c_err:
+                    logging.warning(f"Coupon discount apply notice: {c_err}")
+
             donation_paise = donation_inr * 100
             total_paise = book_price_paise + donation_paise
 
@@ -9480,36 +9523,50 @@ def api_apply_coupon():
     code = (data.get('code') or '').strip().upper()
     
     if not book_id or not code:
-        return jsonify({'valid': False, 'message': 'Please provide a valid coupon code.'}), 400
+        return jsonify({'success': False, 'valid': False, 'message': 'Please provide a valid coupon code.'}), 400
         
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM book_coupons WHERE book_id = %s AND code = %s", (book_id, code))
+        
+        # Check author_coupons first
+        cursor.execute("SELECT * FROM author_coupons WHERE UPPER(code) = %s AND is_active = TRUE AND (book_id = %s OR book_id IS NULL OR book_id = 0)", (code, book_id))
         coupon = cursor.fetchone()
+        
+        # Fallback to book_coupons
         if not coupon:
-            return jsonify({'valid': False, 'message': 'Invalid coupon code for this book.'})
-        if coupon.get('used_count', 0) >= coupon.get('max_uses', 100):
-            return jsonify({'valid': False, 'message': 'This coupon has reached its maximum redemptions.'})
+            cursor.execute("SELECT * FROM book_coupons WHERE UPPER(code) = %s AND (book_id = %s OR book_id IS NULL OR book_id = 0)", (code, book_id))
+            coupon = cursor.fetchone()
+
+        if not coupon:
+            return jsonify({'success': False, 'valid': False, 'message': 'Invalid coupon code for this book.'})
+        
+        times_used = coupon.get('times_used', 0) or coupon.get('used_count', 0) or 0
+        max_uses = coupon.get('max_uses', 100) or 100
+        if times_used >= max_uses:
+            return jsonify({'success': False, 'valid': False, 'message': 'This coupon has reached its maximum redemptions.'})
             
         cursor.execute("SELECT price_paise FROM books WHERE id = %s", (book_id,))
         book = cursor.fetchone()
-        orig_price = book['price_paise'] if book else 0
-        discount_pct = coupon['discount_percent']
+        orig_price = book['price_paise'] if (book and book.get('price_paise')) else (100 if int(book_id) == 9999 else 0)
+        discount_pct = coupon.get('discount_percent', 20)
         new_price = max(0, int(orig_price * (100 - discount_pct) / 100))
         
         return jsonify({
+            'success': True,
             'valid': True,
             'code': code,
             'discount_percent': discount_pct,
+            'original_price': orig_price,
             'original_price_inr': round(orig_price / 100, 2),
+            'discounted_price': new_price,
             'discounted_price_inr': round(new_price / 100, 2),
             'discounted_price_paise': new_price,
             'message': f'🎉 Coupon applied! {discount_pct}% discount!'
         })
     except Exception as e:
-        return jsonify({'valid': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'valid': False, 'message': str(e)}), 500
     finally:
         if db: db.close()
 

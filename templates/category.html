@@ -399,18 +399,27 @@
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; flex-wrap: wrap;">
-                                <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
-                                <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span>
-                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
-                            </div>
-                            <div style="display: flex; gap: 8px;">
-                                <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Preview</a>
-                                <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1.4; display: flex; margin: 0;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-premium" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800;">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>
-                                </form>
-                            </div>
+                            {% if (purchased_book_ids and book.id in purchased_book_ids) or (session.user_id and session.user_id == book.author_id) or session.role == 'developer' %}
+                                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
+                                    ✓ Purchased · In Library
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; padding: 8px 6px;">📖 Read Full Book</a>
+                                </div>
+                            {% else %}
+                                <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; flex-wrap: wrap;">
+                                    <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">₹{{ "%.2f"|format(book.price_paise/100) }}</span>
+                                    <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ₹{{ "%.2f"|format((book.price_paise/100) * 1.4) }}</span>
+                                    <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Preview</a>
+                                    <form action="{{ url_for('buy_book', book_id=book.id) }}" method="POST" style="flex: 1.4; display: flex; margin: 0;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-premium" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800;">⚡ Buy Now (₹{{ "%.2f"|format(book.price_paise/100) }})</button>
+                                    </form>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <div style="display: flex; gap: 8px;">
                                 <a href="{{ url_for('read_book', book_id=book.id) }}" class="btn btn-read" style="flex: 1;">Read Now</a>

@@ -2146,12 +2146,21 @@ export default {
             }
           }
 
-          // Insert or update coupon in D1 author_coupons
-          await env.DB.prepare(
-            `INSERT INTO author_coupons (author_id, book_id, code, discount_percent, max_uses, times_used, is_active)
-             VALUES (?, ?, ?, ?, ?, 0, 1)
-             ON CONFLICT(code) DO UPDATE SET discount_percent = excluded.discount_percent, max_uses = excluded.max_uses, book_id = excluded.book_id, is_active = 1`
-          ).bind(user.id, bookId, code, discount, maxUses).run();
+          // Insert or update coupon in D1 author_coupons with robust fallback
+          try {
+            await env.DB.prepare(
+              `INSERT INTO author_coupons (author_id, book_id, code, discount_percent, max_uses, times_used, is_active)
+               VALUES (?, ?, ?, ?, ?, 0, 1)
+               ON CONFLICT(code) DO UPDATE SET discount_percent = excluded.discount_percent, max_uses = excluded.max_uses, book_id = excluded.book_id, is_active = 1`
+            ).bind(user.id, bookId, code, discount, maxUses).run();
+          } catch (_) {
+            const existing = await env.DB.prepare("SELECT id FROM author_coupons WHERE UPPER(code) = ? LIMIT 1").bind(code).first();
+            if (existing) {
+              await env.DB.prepare("UPDATE author_coupons SET discount_percent = ?, max_uses = ?, book_id = ?, is_active = 1 WHERE id = ?").bind(discount, maxUses, bookId, existing.id).run();
+            } else {
+              await env.DB.prepare("INSERT INTO author_coupons (author_id, book_id, code, discount_percent, max_uses, times_used, is_active) VALUES (?, ?, ?, ?, ?, 0, 1)").bind(user.id, bookId, code, discount, maxUses).run();
+            }
+          }
 
           return new Response(JSON.stringify({ success: true, message: `Promo code "${code}" created successfully with ${discount}% discount!` }), {
             headers: { "Content-Type": "application/json" }
@@ -2326,7 +2335,7 @@ Format with these exact markdown sections:
 
       try {
         const coupon = await env.DB.prepare(
-          "SELECT * FROM author_coupons WHERE (book_id = ? OR book_id IS NULL) AND code = ? AND is_active = 1 LIMIT 1"
+          "SELECT * FROM author_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? AND is_active = 1 LIMIT 1"
         ).bind(bookId, code).first();
 
         if (!coupon) {
@@ -2341,21 +2350,27 @@ Format with these exact markdown sections:
           });
         }
 
+        let origPrice = 0;
         const book = await env.DB.prepare("SELECT price_paise FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
-        const origPrice = book ? (book.price_paise || 0) : 0;
-        const discountPct = coupon.discount_percent || 20;
+        if (book && book.price_paise) {
+          origPrice = book.price_paise;
+        } else if (bookId === 9999) {
+          origPrice = 100;
+        }
+
+        const discountPct = Math.max(5, Math.min(99, coupon.discount_percent || 20));
         const newPrice = Math.max(0, Math.floor(origPrice * (100 - discountPct) / 100));
 
         return new Response(JSON.stringify({
           success: true,
           valid: true,
-          code,
+          code: coupon.code,
           discount_percent: discountPct,
           original_price: origPrice,
           original_price_inr: (origPrice / 100).toFixed(2),
           discounted_price: newPrice,
           discounted_price_inr: (newPrice / 100).toFixed(2),
-          message: `🎉 Promo code "${code}" applied! ${discountPct}% discount granted.`
+          message: `🎉 Promo code "${coupon.code}" applied! ${discountPct}% discount granted.`
         }), {
           headers: { "Content-Type": "application/json" }
         });
@@ -5210,9 +5225,15 @@ Format with these exact markdown sections:
           if (sessionUser && sessionUser.id) {
             try {
               const pRes = await env.DB.prepare(
-                "SELECT book_id FROM purchases WHERE user_id = ? AND status = 'paid'"
+                "SELECT book_id FROM purchases WHERE user_id = ? AND status IN ('paid', 'completed', 'verified')"
               ).bind(sessionUser.id).all();
               (pRes?.results || []).forEach(p => purchasedBookIds.add(p.book_id));
+            } catch (_) {}
+            try {
+              const libRes = await env.DB.prepare(
+                "SELECT book_id FROM personal_library WHERE user_id = ?"
+              ).bind(sessionUser.id).all();
+              (libRes?.results || []).forEach(p => purchasedBookIds.add(p.book_id));
             } catch (_) {}
           }
 
@@ -5224,6 +5245,8 @@ Format with these exact markdown sections:
             return {
               ...b,
               pdf_file: canRead ? b.pdf_file : null,
+              has_purchased: !!hasPurchased,
+              can_read: !!canRead,
               cover_image: resolveEffectiveBookCover(b),
               custom_badges: badgesByBook[b.id] || []
             };
@@ -5590,9 +5613,17 @@ Format with these exact markdown sections:
         let existingPurchase = null;
         try {
           existingPurchase = await env.DB.prepare(
-            "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+            "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
           ).bind(sessionUser.id, targetBookId).first();
         } catch (_) {}
+
+        if (!existingPurchase) {
+          try {
+            existingPurchase = await env.DB.prepare(
+              "SELECT id FROM personal_library WHERE user_id = ? AND book_id = ? LIMIT 1"
+            ).bind(sessionUser.id, targetBookId).first();
+          } catch (_) {}
+        }
 
         if (existingPurchase && !isTester) {
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
@@ -6061,11 +6092,28 @@ Format with these exact markdown sections:
             calculateTotal();
         }
 
+        function resetPayButton() {
+            const btn = document.getElementById('payButton');
+            if (!btn) return;
+            btn.disabled = false;
+            const { totalPaise } = calculateTotal();
+            const formattedTotal = '₹' + (totalPaise / 100).toFixed(2);
+            btn.innerHTML = '<span>🔒 Pay <span id="payBtnAmount">' + formattedTotal + '</span> with Razorpay</span>';
+        }
+
         async function initiateSinglePayment() {
             const btn = document.getElementById('payButton');
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ Preparing Gateway…</span>';
             const { donationInr } = calculateTotal();
+
+            // Safety watchdog timer: ensure button NEVER remains stuck on Preparing Gateway
+            const watchdog = setTimeout(function() {
+                const b = document.getElementById('payButton');
+                if (b && b.disabled && b.innerHTML.includes('Preparing')) {
+                    resetPayButton();
+                }
+            }, 8000);
 
             try {
                 const formData = new FormData();
@@ -6079,18 +6127,31 @@ Format with these exact markdown sections:
                 });
                 const data = await res.json();
                 if (!data.success) {
+                    clearTimeout(watchdog);
                     alert(data.error || 'Failed to initialize payment gateway.');
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
                     return;
                 }
 
                 if (typeof Razorpay === 'undefined') {
-                    if (confirm('Razorpay gateway SDK is blocked or unavailable in your browser. Would you like to complete this purchase via instant verification?')) {
+                    clearTimeout(watchdog);
+                    if (confirm('Razorpay gateway SDK is blocked or unavailable in your browser.\n\nWould you like to complete this purchase via instant simulation unlock?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
+                    return;
+                }
+
+                // If real Razorpay order could not be registered with Razorpay's API
+                // (e.g. invalid test secret or keys not configured on Razorpay's servers)
+                if (!data.is_real_razorpay_order) {
+                    clearTimeout(watchdog);
+                    const errMsg = data.order_error || 'Payment gateway could not generate a live order with Razorpay credentials.';
+                    console.warn("Order creation notice:", errMsg);
+                    if (confirm('Notice from Payment Gateway:\n' + errMsg + '\n\nWould you like to complete this purchase via Instant Sandbox Verification?')) {
+                        return proceedInstantUnlock(data.order_id);
+                    }
+                    resetPayButton();
                     return;
                 }
 
@@ -6101,7 +6162,9 @@ Format with these exact markdown sections:
                     name: "PustakVerse",
                     description: 'Unlock "' + (data.book_title || 'Book') + '"',
                     image: "/static/PustakVerse.png",
+                    order_id: data.order_id,
                     handler: function (response) {
+                        clearTimeout(watchdog);
                         btn.innerHTML = '<span>✓ Verifying & Unlocking Book…</span>';
                         document.getElementById('order_id').value = response.razorpay_order_id || data.order_id;
                         document.getElementById('payment_id').value = response.razorpay_payment_id;
@@ -6110,42 +6173,40 @@ Format with these exact markdown sections:
                     },
                     modal: {
                         ondismiss: function() {
-                            btn.disabled = false;
-                            calculateTotal();
-                        }
+                            clearTimeout(watchdog);
+                            resetPayButton();
+                        },
+                        escape: true,
+                        animation: true
                     },
                     theme: { color: "#ea580c" }
                 };
 
-                // Only attach order_id if it's a verified real order from Razorpay API
-                if (data.is_real_razorpay_order && data.order_id) {
-                    options.order_id = data.order_id;
-                }
-
                 try {
                     const rzp = new Razorpay(options);
                     rzp.on('payment.failed', function(resp) {
+                        clearTimeout(watchdog);
                         console.error("Razorpay failure:", resp.error);
-                        alert("Payment attempt failed: " + (resp.error.description || resp.error.reason || "Gateway declined"));
-                        btn.disabled = false;
-                        calculateTotal();
+                        const reason = resp.error?.description || resp.error?.reason || "Gateway declined payment";
+                        alert("Payment attempt failed: " + reason + "\n\nYou can retry or use the Instant Sandbox Simulator.");
+                        resetPayButton();
                     });
                     rzp.open();
                 } catch (rzpErr) {
+                    clearTimeout(watchdog);
                     console.warn("Razorpay open error:", rzpErr);
-                    if (confirm('Gateway modal could not open (' + rzpErr.message + '). Would you like to complete this purchase via instant verification?')) {
+                    if (confirm('Gateway modal could not open (' + rzpErr.message + ').\n\nWould you like to complete this purchase via instant verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
                 }
             } catch (err) {
+                clearTimeout(watchdog);
                 console.error("Payment initialization error:", err);
-                if (confirm('Network error connecting to payment gateway: ' + err.message + '\\n\\nWould you like to complete this purchase via instant verification?')) {
+                if (confirm('Network error connecting to payment gateway: ' + err.message + '\n\nWould you like to complete this purchase via instant verification?')) {
                     initiateSandboxTestPayment();
                 } else {
-                    btn.disabled = false;
-                    calculateTotal();
+                    resetPayButton();
                 }
             }
         }
@@ -6209,6 +6270,19 @@ Format with these exact markdown sections:
             }
             handleDonationToggle();
             calculateTotal();
+
+            // Auto-sync promo code if passed via URL (e.g. /buy_book/123?coupon=AUTHOR50)
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qCoupon = urlParams.get('coupon') || urlParams.get('code');
+                if (qCoupon) {
+                    const cInput = document.getElementById('couponCodeInput');
+                    if (cInput) {
+                        cInput.value = qCoupon.trim().toUpperCase();
+                        applyCoupon();
+                    }
+                }
+            } catch (_) {}
         });
 
         // Immediate initial calculation
@@ -6290,9 +6364,14 @@ Format with these exact markdown sections:
         if (couponCode && !isAuthorDonation) {
           await ensureAuthorCouponsTable(env);
           try {
-            const couponRow = await env.DB.prepare(
-              "SELECT id, discount_percent, max_uses, times_used FROM author_coupons WHERE (book_id = ? OR book_id IS NULL) AND code = ? AND is_active = 1 LIMIT 1"
+            let couponRow = await env.DB.prepare(
+              "SELECT id, discount_percent, max_uses, times_used FROM author_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? AND is_active = 1 LIMIT 1"
             ).bind(targetBookId, couponCode).first();
+            if (!couponRow) {
+              couponRow = await env.DB.prepare(
+                "SELECT id, discount_percent, max_uses, used_count as times_used FROM book_coupons WHERE (book_id = ? OR book_id IS NULL OR book_id = 0) AND UPPER(code) = ? LIMIT 1"
+              ).bind(targetBookId, couponCode).first();
+            }
 
             if (couponRow && (couponRow.times_used || 0) < (couponRow.max_uses || 100)) {
               appliedCouponId = couponRow.id;
@@ -6987,10 +7066,21 @@ Format with these exact markdown sections:
         if (edgeUser && edgeUser.id && env.DB) {
           try {
             const purchase = await env.DB.prepare(
-              "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+              "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
             ).bind(edgeUser.id, bookId).first();
             if (purchase) isPurchased = true;
           } catch (_) {}
+          if (!isPurchased) {
+            try {
+              const inLib = await env.DB.prepare(
+                "SELECT id FROM personal_library WHERE user_id = ? AND book_id = ? LIMIT 1"
+              ).bind(edgeUser.id, bookId).first();
+              if (inLib) {
+                // If it's a paid book, verify ownership via purchase or library
+                isPurchased = true;
+              }
+            } catch (_) {}
+          }
         }
 
         let canRead = false;
