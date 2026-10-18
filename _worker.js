@@ -1787,7 +1787,8 @@ export default {
         const bQuar = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_quarantined = 1").first();
         let salesVol = 0;
         try {
-          const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
+          await ensurePurchasesTable(env);
+          const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount_paise), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
           salesVol = sRes?.total || 0;
         } catch (_) {}
 
@@ -3654,7 +3655,8 @@ Format with these exact markdown sections:
             const bQuar = await env.DB.prepare("SELECT count(*) as cnt FROM books WHERE is_quarantined = 1").first();
             let salesVol = 0;
             try {
-              const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
+              await ensurePurchasesTable(env);
+              const sRes = await env.DB.prepare("SELECT COALESCE(SUM(amount_paise), 0) / 100.0 as total FROM purchases WHERE status = 'paid' OR status = 'SUCCESS'").first();
               salesVol = sRes?.total || 0;
             } catch (_) {}
             fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first();
@@ -4737,6 +4739,7 @@ Format with these exact markdown sections:
         // Paid transactions stream
         recentPurchases = [];
         try {
+          await ensurePurchasesTable(env);
           const pRes = await env.DB.prepare(`
             SELECT p.id, p.amount_paise, p.razorpay_order_id, p.status, p.created_at, p.paid_at,
                    u.username as buyer_name, b.title as book_title
@@ -5469,6 +5472,11 @@ Format with these exact markdown sections:
       }
 
       try {
+        await ensureBooksTable(env);
+        await ensurePurchasesTable(env);
+        await ensurePersonalLibraryTable(env);
+        await ensureFrontPageSettingsTable(env);
+
         let book = await env.DB.prepare(
           `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
                   b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret,
@@ -5516,9 +5524,12 @@ Format with these exact markdown sections:
 
         // Check if already purchased (allow developer or ?force=1 to test checkout anytime)
         const isTester = sessionUser.role === "developer" || sessionUser.role === "official" || url.searchParams.has("force") || url.searchParams.has("test");
-        const existingPurchase = await env.DB.prepare(
-          "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
-        ).bind(sessionUser.id, targetBookId).first();
+        let existingPurchase = null;
+        try {
+          existingPurchase = await env.DB.prepare(
+            "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+          ).bind(sessionUser.id, targetBookId).first();
+        } catch (_) {}
 
         if (existingPurchase && !isTester) {
           return Response.redirect(`${url.origin}/read_book/${targetBookId}`, 302);
@@ -5960,6 +5971,9 @@ Format with these exact markdown sections:
       }
 
       try {
+        await ensureBooksTable(env);
+        await ensurePurchasesTable(env);
+        await ensurePersonalLibraryTable(env);
         const formData = await request.formData().catch(() => new FormData());
         const donationInr = Math.max(0, Math.min(5000, parseInt(formData.get("donation_inr") || "0", 10) || 0));
         const couponCode = (formData.get("coupon_code") || "").trim().toUpperCase();
@@ -6061,9 +6075,9 @@ Format with these exact markdown sections:
 
         try {
           await env.DB.prepare(
-            `INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, donation_paise, fee_paise, author_earning_paise, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
-          ).bind(sessionUser.id, targetBookId, razorpayOrderId, totalPaise || 0, (activeDonation * 100) || 0, feePaise || 0, authorEarningPaise || 0).run();
+            `INSERT INTO purchases (user_id, book_id, razorpay_order_id, amount_paise, amount, donation_paise, fee_paise, author_earning_paise, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+          ).bind(sessionUser.id, targetBookId, razorpayOrderId, totalPaise || 0, totalPaise || 0, (activeDonation * 100) || 0, feePaise || 0, authorEarningPaise || 0).run();
         } catch (_) {}
 
         return new Response(JSON.stringify({
@@ -6103,6 +6117,9 @@ Format with these exact markdown sections:
       }
 
       try {
+        await ensurePurchasesTable(env);
+        await ensurePersonalLibraryTable(env);
+
         // Query purchase record and associated keys
         const pur = await env.DB.prepare(
           `SELECT p.*, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.title as book_title
@@ -6243,6 +6260,8 @@ Format with these exact markdown sections:
       }
 
       try {
+        await ensurePurchasesTable(env);
+        await ensurePersonalLibraryTable(env);
         let books = [];
         if (sessionUser.role === "developer" || sessionUser.role === "official") {
           const res = await env.DB.prepare(
@@ -6348,6 +6367,7 @@ Format with these exact markdown sections:
       }
 
       try {
+        await ensurePurchasesTable(env);
         const pRes = await env.DB.prepare(`
           SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, p.donation_paise,
                  p.status, p.paid_at, p.created_at, b.id as book_id,
@@ -6846,6 +6866,7 @@ Format with these exact markdown sections:
         return Response.redirect(`${url.origin}/dashboard`, 302);
       }
 
+      await ensurePurchasesTable(env);
       const purchasesRes = await env.DB.prepare(`
         SELECT p.razorpay_order_id, p.razorpay_payment_id, p.amount_paise, p.fee_paise, 
                p.author_earning_paise, p.status, p.paid_at, 
@@ -8324,6 +8345,70 @@ async function ensureAuthorCouponsTable(env) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+  } catch (_) {}
+}
+
+async function ensurePurchasesTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS purchases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        book_id INTEGER NOT NULL,
+        razorpay_order_id TEXT NOT NULL UNIQUE,
+        razorpay_payment_id TEXT UNIQUE,
+        amount_paise INTEGER NOT NULL DEFAULT 0,
+        amount INTEGER DEFAULT 0,
+        donation_paise INTEGER DEFAULT 0,
+        fee_paise INTEGER NOT NULL DEFAULT 0,
+        author_earning_paise INTEGER DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        paid_at DATETIME NULL
+      )
+    `).run();
+  } catch (_) {}
+
+  const purchaseCols = [
+    ["amount_paise", "INTEGER NOT NULL DEFAULT 0"],
+    ["amount", "INTEGER DEFAULT 0"],
+    ["donation_paise", "INTEGER DEFAULT 0"],
+    ["fee_paise", "INTEGER NOT NULL DEFAULT 0"],
+    ["author_earning_paise", "INTEGER DEFAULT 0"],
+    ["razorpay_payment_id", "TEXT UNIQUE"],
+    ["paid_at", "DATETIME NULL"],
+    ["status", "TEXT NOT NULL DEFAULT 'pending'"]
+  ];
+  for (const [col, colDef] of purchaseCols) {
+    try {
+      await env.DB.prepare(`ALTER TABLE purchases ADD COLUMN ${col} ${colDef}`).run();
+    } catch (_) {}
+  }
+
+  try {
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_purchases_user_book ON purchases(user_id, book_id, status)").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_purchases_order ON purchases(razorpay_order_id)").run();
+  } catch (_) {}
+}
+
+async function ensurePersonalLibraryTable(env) {
+  if (!env || !env.DB) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS personal_library (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        book_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, book_id)
+      )
+    `).run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_personal_library_user ON personal_library(user_id, book_id)").run();
   } catch (_) {}
 }
 
