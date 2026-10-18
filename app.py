@@ -6168,14 +6168,21 @@ def promote_user(user_id):
 
 @app.route('/mass_message', methods=['POST'])
 def mass_message():
+    is_ajax = request.is_json or request.headers.get('Accept') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if session.get('role') != 'developer': 
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Unauthorized. Developer privileges required.'}), 403
         return redirect(url_for('dashboard'))
         
-    target_role = request.form.get('target_role')
-    subject = request.form.get('subject', 'Official Notice')
-    message_body = request.form.get('message_body', '').strip()
+    data = request.get_json(silent=True) or request.form
+    target_role = (data.get('target_role') or 'all').strip().lower()
+    subject = (data.get('subject') or 'Official Notice').strip()
+    message_body = (data.get('message_body') or '').strip()
     
     if not message_body: 
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Message body cannot be empty.'}), 400
         flash("Message body cannot be empty.", "error")
         return redirect(url_for('dashboard'))
 
@@ -6185,18 +6192,33 @@ def mass_message():
         cursor = db.cursor(dictionary=True)
         
         if target_role == 'all': 
-            cursor.execute("SELECT email FROM users")
+            cursor.execute("SELECT DISTINCT email, username FROM users WHERE email IS NOT NULL AND email != ''")
         else: 
-            cursor.execute("SELECT email FROM users WHERE role = %s", (target_role,))
+            cursor.execute("SELECT DISTINCT email, username FROM users WHERE LOWER(role) = %s AND email IS NOT NULL AND email != ''", (target_role,))
             
-        emails = [row['email'] for row in cursor.fetchall()]
+        rows = cursor.fetchall() or []
+        emails = [row['email'] for row in rows if row.get('email') and '@' in row['email']]
         
         if emails: 
             send_mass_message(emails, subject, message_body, target_role)
+            try:
+                log_official_activity(session.get('user_id', 1), f"Dispatched mass email broadcast to {len(emails)} users ({target_role})")
+            except Exception: pass
+            
+            if is_ajax:
+                return jsonify({
+                    'success': True, 
+                    'count': len(emails),
+                    'message': f"Mass broadcast dispatched successfully to {len(emails)} user(s)!"
+                })
             flash(f"Mass broadcast sent successfully to {len(emails)} users.", "success")
         else: 
+            if is_ajax:
+                return jsonify({'success': False, 'message': f"No registered users found with valid email addresses for target: '{target_role}'."}), 404
             flash("No users found for that specific role.", "info")
-    except Exception: 
+    except Exception as e: 
+        if is_ajax:
+            return jsonify({'success': False, 'message': f"Database error during mass broadcast: {str(e)}"}), 500
         flash("Database Error.", "error")
     finally:
         if db:

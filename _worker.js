@@ -4478,6 +4478,156 @@ Format with these exact markdown sections:
       return Response.redirect(`${url.origin}/dashboard`, 302);
     }
 
+    // Developer Broadcast Formal Email (Mass Messaging)
+    if ((url.pathname === "/mass_message" || url.pathname === "/api/mass_message") && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45" || user.username?.toLowerCase() === "abhinavgiri");
+      const acceptsJson = (request.headers.get("Accept") || "").includes("application/json") || (request.headers.get("X-Requested-With") === "XMLHttpRequest");
+
+      if (!user || !isPrivileged) {
+        if (acceptsJson) {
+          return new Response(JSON.stringify({ success: false, message: "Unauthorized. Developer access required to broadcast mass emails." }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?broadcast_error=unauthorized`, 302);
+      }
+
+      try {
+        let formData;
+        const contentType = request.headers.get("Content-Type") || "";
+        if (contentType.includes("application/json")) {
+          const json = await request.json().catch(() => ({}));
+          formData = new FormData();
+          for (const k in json) formData.append(k, json[k]);
+        } else {
+          formData = await request.formData().catch(() => new FormData());
+        }
+
+        const targetRole = (formData.get("target_role") || "all").trim().toLowerCase();
+        const subject = (formData.get("subject") || "Official PustakVerse Notice").trim();
+        const messageBody = (formData.get("message_body") || "").trim();
+
+        if (!messageBody) {
+          if (acceptsJson) {
+            return new Response(JSON.stringify({ success: false, message: "Message body cannot be empty." }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+          return Response.redirect(`${url.origin}/dashboard?broadcast_error=empty_body`, 302);
+        }
+
+        let users = [];
+        if (targetRole === "all") {
+          const res = await env.DB.prepare(
+            "SELECT DISTINCT email, username, role FROM users WHERE email IS NOT NULL AND email != '' AND email LIKE '%@%'"
+          ).all();
+          users = res?.results || [];
+        } else {
+          const res = await env.DB.prepare(
+            "SELECT DISTINCT email, username, role FROM users WHERE LOWER(role) = ? AND email IS NOT NULL AND email != '' AND email LIKE '%@%'"
+          ).bind(targetRole).all();
+          users = res?.results || [];
+        }
+
+        const validRecipients = users.filter(u => u.email && u.email.includes("@"));
+
+        if (validRecipients.length === 0) {
+          const msg = targetRole === "all" ? "No registered users found with email addresses." : `No registered users found with role '${targetRole}'.`;
+          if (acceptsJson) {
+            return new Response(JSON.stringify({ success: false, message: msg }), {
+              status: 404,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+          return Response.redirect(`${url.origin}/dashboard?broadcast_error=no_recipients`, 302);
+        }
+
+        // Format formal HTML broadcast template
+        const roleLabel = targetRole === "all" ? "All Community Members" : (targetRole.charAt(0).toUpperCase() + targetRole.slice(1) + "s");
+        const escapeHtmlText = (str) => (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const formattedBody = escapeHtmlText(messageBody).replace(/\n/g, "<br>");
+
+        let dispatchedCount = 0;
+        const sendPromises = validRecipients.map(async (u) => {
+          const recipientName = u.username ? escapeHtmlText(u.username) : "Valued Member";
+          const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtmlText(subject)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0f172a; margin: 0; padding: 24px; color: #f8fafc;">
+  <div style="max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 14px; overflow: hidden; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+    <div style="background: linear-gradient(135deg, #7c3aed, #4f46e5); padding: 28px 24px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: 0.5px;">PustakVerse Official Communication</h1>
+      <p style="color: #e0e7ff; margin: 8px 0 0; font-size: 0.88rem; font-weight: 600;">Dispatched to: ${escapeHtmlText(roleLabel)}</p>
+    </div>
+    <div style="padding: 28px 24px; font-size: 0.95rem; line-height: 1.65; color: #e2e8f0;">
+      <p style="margin-top: 0; font-size: 1rem; color: #f8fafc;">Hello <strong>${recipientName}</strong>,</p>
+      <div style="background: rgba(15, 23, 42, 0.5); border-left: 4px solid #8b5cf6; padding: 16px 18px; border-radius: 8px; margin: 18px 0; color: #f1f5f9; font-size: 0.93rem;">
+        ${formattedBody}
+      </div>
+      <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0;">This is an official administrative broadcast sent by the PustakVerse executive leadership team. Replies to this email are monitored by our administrative staff.</p>
+    </div>
+    <div style="background: #0f172a; padding: 16px; text-align: center; font-size: 0.78rem; color: #94a3b8; border-top: 1px solid #334155;">
+      &copy; ${new Date().getFullYear()} PustakVerse Global Digital Library &bull; <a href="https://pustakverse.com" style="color: #a78bfa; text-decoration: none;">pustakverse.com</a>
+    </div>
+  </div>
+</body>
+</html>`;
+
+          try {
+            await sendEdgeEmail(env, {
+              to: u.email,
+              subject: `[PustakVerse] ${subject}`,
+              html: htmlContent,
+              text: `Hello ${recipientName},\n\n${messageBody}\n\n--\nPustakVerse Administration\nhttps://pustakverse.com`
+            });
+            dispatchedCount++;
+          } catch (e) {
+            console.warn(`Failed to dispatch email to ${u.email}:`, e.message);
+          }
+        });
+
+        await Promise.allSettled(sendPromises);
+
+        // Record audit activity log if table exists
+        try {
+          await env.DB.prepare(
+            "INSERT INTO official_activity_logs (admin_id, action, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)"
+          ).bind(user.id || 1, `Dispatched Mass Broadcast Email to ${validRecipients.length} users (${roleLabel}) with subject: "${subject}"`).run();
+        } catch (_) {}
+
+        if (acceptsJson) {
+          return new Response(JSON.stringify({
+            success: true,
+            count: validRecipients.length,
+            target_role: targetRole,
+            subject: subject,
+            message: `Official broadcast successfully dispatched to ${validRecipients.length} recipient(s) in category: ${roleLabel}!`
+          }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        return Response.redirect(`${url.origin}/dashboard?broadcast_success=${validRecipients.length}`, 302);
+      } catch (err) {
+        console.error("Error in /mass_message:", err);
+        if (acceptsJson) {
+          return new Response(JSON.stringify({ success: false, message: err.message || "Failed to process mass broadcast" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return Response.redirect(`${url.origin}/dashboard?broadcast_error=server_error`, 302);
+      }
+    }
+
     // Appoint Executive Leadership (CEO, CTO, Founder)
     if ((url.pathname === "/appoint_leader" || url.pathname === "/developer/leadership/add") && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
