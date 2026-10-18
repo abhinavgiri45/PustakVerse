@@ -906,7 +906,7 @@
                 <!-- BUY / READ / SAVE ACTION BOX -->
                 <div class="action-box">
                     {% if book.is_paid %}
-                        {% if (purchased_book_ids and book.id in purchased_book_ids) or is_purchased or (in_library or (library_book_ids and book.id in library_book_ids)) %}
+                        {% if (purchased_book_ids and book.id in purchased_book_ids) or is_purchased %}
                             <div style="padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-weight: 700; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <span>✓</span> You own full access to this premium book
                             </div>
@@ -1701,8 +1701,8 @@
                 if (!data || !data.logged_in) return;
                 var pSet = new Set((data.purchased_book_ids || []).map(Number));
                 var lSet = new Set((data.library_book_ids || []).map(Number));
-                var isPurchased = pSet.has(currentBookId) || (isBookPaid && lSet.has(currentBookId));
-                var inLibrary = lSet.has(currentBookId) || isPurchased;
+                var isPurchased = pSet.has(currentBookId);
+                var inLibrary = isBookPaid ? isPurchased : lSet.has(currentBookId);
 
                 var actionBox = document.querySelector('.action-box');
                 if (!actionBox) return;

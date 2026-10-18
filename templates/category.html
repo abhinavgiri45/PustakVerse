@@ -399,7 +399,7 @@
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            {% if (purchased_book_ids and book.id in purchased_book_ids) or (library_book_ids and book.id in library_book_ids) %}
+                            {% if (purchased_book_ids and book.id in purchased_book_ids) %}
                                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
                                     ✓ Purchased · In Library
                                 </div>
@@ -564,8 +564,8 @@
                         const bid = Number(card.getAttribute('data-book-id'));
                         if (!bid) return;
                         const isPaid = card.getAttribute('data-is-paid') === 'true' || !!card.querySelector('form[action*="/buy_book/"]');
-                        const isPurchased = pSet.has(bid) || (isPaid && lSet.has(bid));
-                        const inLibrary = lSet.has(bid) || isPurchased;
+                        const isPurchased = pSet.has(bid);
+                        const inLibrary = isPaid ? isPurchased : lSet.has(bid);
 
                         const actionsBox = card.querySelector('.book-actions');
                         if (!actionsBox) return;

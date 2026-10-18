@@ -4845,10 +4845,7 @@ def view_book(book_id):
                 is_purchased = bool(cursor.fetchone())
             except Exception:
                 pass
-            if in_library and book.get('is_paid'):
-                is_purchased = True
-
-            if not book.get('is_paid') or session.get('user_id') == book.get('author_id') or session.get('role') == 'developer' or is_purchased or in_library:
+            if not book.get('is_paid') or session.get('user_id') == book.get('author_id') or session.get('role') == 'developer' or is_purchased:
                 can_read = True
 
         # BADGE SYSTEM: Query custom conferred badges for this specific book
@@ -6989,10 +6986,15 @@ def api_checkout_create_order(book_id):
             donation_inr = 0
 
         # Gateway Credentials: AUTHOR CREDENTIALS FIRST (per-book or author profile)
-        author_rp_key_id = (book.get('author_key_id') or book.get('user_key_id') or '').strip()
-        author_rp_key_secret = (book.get('author_key_secret') or book.get('user_key_secret') or '').strip()
-        gateway_key_id = author_rp_key_id or fps.get('dev_key_id') or os.environ.get('RAZORPAY_KEY_ID')
-        gateway_key_secret = author_rp_key_secret or fps.get('dev_key_secret') or os.environ.get('RAZORPAY_KEY_SECRET')
+        author_rp_key_id = str(book.get('author_key_id') or book.get('user_key_id') or '').strip()
+        author_rp_key_secret = str(book.get('author_key_secret') or book.get('user_key_secret') or '').strip()
+        dev_key_id = str(fps.get('dev_key_id') or '').strip()
+        dev_key_secret = str(fps.get('dev_key_secret') or '').strip()
+        env_key_id = str(os.environ.get('RAZORPAY_KEY_ID') or '').strip()
+        env_key_secret = str(os.environ.get('RAZORPAY_KEY_SECRET') or '').strip()
+
+        gateway_key_id = author_rp_key_id or dev_key_id or env_key_id
+        gateway_key_secret = author_rp_key_secret or dev_key_secret or env_key_secret
 
         if is_author_donation:
             book_price_paise = 0
@@ -7068,16 +7070,23 @@ def api_checkout_create_order(book_id):
 
 
 @app.route('/payment/verify', methods=['POST'])
+@app.route('/api/verify_payment', methods=['POST'])
 def verify_payment():
     if 'user_id' not in session: 
+        if request.is_json or 'application/json' in request.headers.get('Accept', '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Authentication required.'}), 401
         abort(401)
         
-    order_id = request.form.get('razorpay_order_id', '')
-    payment_id = request.form.get('razorpay_payment_id', '')
-    signature = request.form.get('razorpay_signature', '') or request.form.get('signature', '')
-    book_id = request.form.get('book_id', type=int)
+    order_id = request.form.get('razorpay_order_id', '') or (request.json.get('razorpay_order_id') if request.is_json else '')
+    payment_id = request.form.get('razorpay_payment_id', '') or (request.json.get('razorpay_payment_id') if request.is_json else '')
+    signature = request.form.get('razorpay_signature', '') or request.form.get('signature', '') or (request.json.get('razorpay_signature') if request.is_json else '')
+    book_id = request.form.get('book_id', type=int) or (request.json.get('book_id') if request.is_json else None)
     
+    is_ajax = request.is_json or 'application/json' in request.headers.get('Accept', '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if not order_id or not payment_id: 
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Missing order_id or payment_id'}), 400
         abort(400)
         
     db = None
@@ -7110,8 +7119,8 @@ def verify_payment():
             cursor.execute("SELECT rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1")
             fps = cursor.fetchone() or {}
 
-            key_id = fps.get('dev_key_id') or purchase.get('author_key_id') or os.environ.get('RAZORPAY_KEY_ID')
-            key_secret = fps.get('dev_key_secret') or purchase.get('author_key_secret') or os.environ.get('RAZORPAY_KEY_SECRET')
+            key_id = str(fps.get('dev_key_id') or purchase.get('author_key_id') or os.environ.get('RAZORPAY_KEY_ID') or '').strip()
+            key_secret = str(fps.get('dev_key_secret') or purchase.get('author_key_secret') or os.environ.get('RAZORPAY_KEY_SECRET') or '').strip()
             
             if not is_sandbox_test and key_id and key_secret and razorpay and order_id.startswith('order_') and signature:
                 try:
@@ -7124,13 +7133,28 @@ def verify_payment():
             cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
             db.commit()
             
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'order_id': order_id,
+                    'book_id': purchase['book_id'],
+                    'redirect_url': url_for('my_library', purchased=1, download_receipt=order_id, book_id=purchase['book_id'])
+                })
             flash('Payment successful! Your book has been unlocked and official receipt generated.', 'success')
             return redirect(url_for('my_library', purchased=1, download_receipt=order_id, book_id=purchase['book_id']))
         else: 
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'order_id': order_id,
+                    'redirect_url': url_for('my_library', purchased=1, download_receipt=order_id)
+                })
             flash('Payment recorded. Book has been added to your library.', 'success')
             return redirect(url_for('my_library', purchased=1, download_receipt=order_id))
     except Exception as e:
         logging.error(f"Payment verification failed: {e}")
+        if is_ajax:
+            return jsonify({'success': False, 'error': f'Verification error: {str(e)}'}), 500
         flash('Payment verification notice: Book unlocked in your library.', 'info')
         return redirect(url_for('my_library', purchased=1, download_receipt=order_id))
     finally:
@@ -7487,7 +7511,7 @@ def read_book(book_id):
         can_read = not is_paid or (user_id == book['author_id'] or user_role == 'developer')
         
         if is_paid and not can_read:
-            cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status = 'paid'", (user_id, book_id))
+            cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status IN ('paid', 'completed', 'verified')", (user_id, book_id))
             can_read = bool(cursor.fetchone())
     except Exception: 
         flash("Database error.", "error")
@@ -7705,7 +7729,16 @@ def save_book(book_id):
     db = None
     try:
         db = get_db_connection()
-        cursor = db.cursor()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, is_paid, price_paise, author_id FROM books WHERE id = %s", (book_id,))
+        b_info = cursor.fetchone()
+        if b_info and b_info.get('is_paid') and (b_info.get('price_paise') or 0) > 0:
+            if session.get('user_id') != b_info.get('author_id') and session.get('role') != 'developer':
+                cursor.execute("SELECT id FROM purchases WHERE user_id = %s AND book_id = %s AND status IN ('paid', 'completed', 'verified')", (session['user_id'], book_id))
+                if not cursor.fetchone():
+                    flash("This is a premium book. Please complete purchase to add to your library.", "info")
+                    return redirect(url_for('buy_book', book_id=book_id))
+
         cursor.execute("INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)", (session['user_id'], book_id))
         db.commit()
         flash("Book saved to My Library!", "success")

@@ -726,6 +726,54 @@
         }
         .front-divider span { padding: 0 10px; }
 
+        .mobile-bottom-dock {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding-bottom: 70px !important;
+            }
+            .mobile-bottom-dock {
+                display: flex !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                height: 60px !important;
+                background: #1e293b !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+                z-index: 99999 !important;
+                justify-content: space-around !important;
+                align-items: center !important;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+                padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            }
+            .mobile-dock-btn {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                text-decoration: none !important;
+                color: #94a3b8 !important;
+                font-size: 0.72rem !important;
+                font-weight: 700 !important;
+                flex: 1 !important;
+                height: 100% !important;
+                transition: color 0.2s !important;
+                gap: 2px !important;
+            }
+            .mobile-dock-btn.active, .mobile-dock-btn:hover {
+                color: #f97316 !important;
+            }
+            .mobile-dock-btn.highlight {
+                color: #fb923c !important;
+            }
+            .dock-icon {
+                font-size: 1.25rem !important;
+                line-height: 1.1 !important;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -737,9 +785,9 @@
             </a>
         </div>
         <div class="navbar-links">
+            <a href="{{ url_for('my_library') }}" style="background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.45); color: #fb923c !important; font-weight: 700; border-radius: 20px;">📚 My Library</a>
             <a href="{{ url_for('tools_hub') }}">🛠️ Tools</a>
             <a href="{{ url_for('contact') }}">Contact</a>
-            <a href="{{ url_for('my_library') }}">📚 My Library</a>
             <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             {% if session.user_id %}
                 <a href="{{ url_for('dashboard') }}" id="navDashboardLink">Dashboard</a>
@@ -996,7 +1044,7 @@
                     
                     <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
                         {% if book.is_paid %}
-                            {% if (purchased_book_ids and book.id in purchased_book_ids) or (library_book_ids and book.id in library_book_ids) %}
+                            {% if (purchased_book_ids and book.id in purchased_book_ids) %}
                                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; margin-bottom: 4px; text-align: center;">
                                     ✓ Purchased · In Library
                                 </div>
@@ -1255,8 +1303,8 @@
                 const bid = Number(bookId);
 
                 const isPaid = card.getAttribute('data-is-paid') === 'true' || !!card.querySelector('form[action*="/buy_book/"], a[href*="/buy_book/"], .btn-premium');
-                const isPurchased = pSet.has(bid) || (isPaid && lSet.has(bid));
-                const inLibrary = lSet.has(bid) || isPurchased;
+                const isPurchased = pSet.has(bid);
+                const inLibrary = isPaid ? isPurchased : lSet.has(bid);
 
                 const actionsBox = card.querySelector('.book-actions');
                 if (!actionsBox) return;
@@ -2351,6 +2399,32 @@
             </div>
         </div>
     </div>
+    <!-- MOBILE BOTTOM NAVIGATION DOCK (Phones & Small Viewports) -->
+    <nav class="mobile-bottom-dock" aria-label="Mobile Navigation">
+        <a href="/" class="mobile-dock-btn active">
+            <span class="dock-icon">🏠</span>
+            <span class="dock-label">Explore</span>
+        </a>
+        <a href="/my-library" class="mobile-dock-btn highlight">
+            <span class="dock-icon">📚</span>
+            <span class="dock-label">My Library</span>
+        </a>
+        <a href="/tools" class="mobile-dock-btn">
+            <span class="dock-icon">🛠️</span>
+            <span class="dock-label">Tools</span>
+        </a>
+        {% if session.user_id %}
+            <a href="/dashboard" class="mobile-dock-btn">
+                <span class="dock-icon">👤</span>
+                <span class="dock-label">Dashboard</span>
+            </a>
+        {% else %}
+            <a href="/login" class="mobile-dock-btn" onclick="openFrontScreenLogin('reader'); return false;">
+                <span class="dock-icon">🔑</span>
+                <span class="dock-label">Sign In</span>
+            </a>
+        {% endif %}
+    </nav>
 
 </body>
 </html>

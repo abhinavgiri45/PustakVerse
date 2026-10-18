@@ -610,15 +610,14 @@
                     return;
                 }
 
-                // If no real razorpay key is configured (using dummy fallback), offer instant unlock
-                if (!data.razorpay_key || data.razorpay_key.includes('test_pustakverse')) {
+                // If real order creation did not succeed or sandbox test key, offer instant verification
+                if (!data.is_real_razorpay_order || !data.razorpay_key || data.razorpay_key.includes('test_pustakverse')) {
                     clearTimeout(watchdog);
                     resetPayButton();
-                    const choice = confirm(
-                        "Payment Gateway Notice:\n\n" +
-                        "This book is configured with sandbox test credentials.\n\n" +
-                        "Would you like to complete this purchase now via Instant Verification (1-click free unlock)?"
-                    );
+                    const promptMsg = (!data.razorpay_key || data.razorpay_key.includes('test_pustakverse'))
+                        ? "Payment Gateway Notice:\n\nThis book is configured with sandbox test credentials.\n\nWould you like to complete this purchase now via Instant Verification (1-click free unlock)?"
+                        : "Payment Gateway Notice:\n\nLive Razorpay order creation is in test/sandbox mode or awaiting merchant credentials verification.\n\nWould you like to complete this purchase now via Instant Verification (1-click unlock & receipt)?";
+                    const choice = confirm(promptMsg);
                     if (choice) {
                         return proceedInstantUnlock(data.order_id);
                     }

@@ -5986,7 +5986,7 @@ Format with these exact markdown sections:
             <span>🔒 Pay <span id="payBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
         </button>
 
-        <a href="/read_book/${book.id}" class="btn-cancel">← Return to Book Page</a>
+        <a href="/book/${book.id}" class="btn-cancel">← Return to Book Page</a>
     </div>
 
     <form action="/payment/verify" method="POST" id="verifyForm">
@@ -6208,11 +6208,14 @@ Format with these exact markdown sections:
                     return;
                 }
 
-                // If no real razorpay key is configured (using dummy fallback), offer instant unlock
-                if (!data.razorpay_key || data.razorpay_key.includes('test_pustakverse')) {
+                // If real order creation did not succeed or sandbox test key, offer instant verification
+                if (!data.is_real_razorpay_order || !data.razorpay_key || data.razorpay_key.includes('test_pustakverse')) {
                     clearTimeout(watchdog);
                     resetPayButton();
-                    if (confirm('Notice from Payment Gateway:\nThis store is running in Sandbox Simulation mode.\n\nWould you like to complete this purchase via Instant Verification?')) {
+                    const promptMsg = (!data.razorpay_key || data.razorpay_key.includes('test_pustakverse'))
+                        ? 'Payment Gateway Notice:\nThis book is running in Sandbox Test mode.\n\nWould you like to complete this purchase via Instant Verification (1-click unlock & receipt)?'
+                        : 'Payment Gateway Notice:\nLive Razorpay server order could not be generated (merchant account verification or sandbox credentials).\n\nWould you like to complete this purchase via Instant Verification (1-click unlock & receipt)?';
+                    if (confirm(promptMsg)) {
                         return proceedInstantUnlock(data.order_id);
                     }
                     return;
@@ -6335,8 +6338,8 @@ Format with these exact markdown sections:
       }
     }
 
-    // 6A-3. Edge Checkout Create Order API: POST /api/checkout/create_order/:id
-    const createOrderMatch = url.pathname.match(/^\/api\/checkout\/create_order\/(\d+)/);
+    // 6A-3. Edge Checkout Create Order API: POST /api/checkout/create_order/:id and /api/create_order/:id
+    const createOrderMatch = url.pathname.match(/^\/api\/(?:checkout\/)?create_order\/(\d+)/);
     if (createOrderMatch && request.method === "POST" && env.DB) {
       const targetBookId = parseInt(createOrderMatch[1], 10);
       const sessionUser = getSessionUser(request);
@@ -6425,8 +6428,10 @@ Format with these exact markdown sections:
           ? (Number(fps.checkout_donation_active) === 1 || fps.checkout_donation_active === true || fps.checkout_donation_active === "1" || fps.checkout_donation_active === "true")
           : true;
         const activeDonation = (isAuthorDonation || isCheckoutDonationEnabled) ? donationInr : 0;
-        const gatewayKeyId = book.author_key_id || fps.dev_key_id || env.RAZORPAY_KEY_ID;
-        const gatewayKeySecret = book.author_key_secret || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
+        const rawKeyId = book.author_key_id || fps.dev_key_id || env.RAZORPAY_KEY_ID || "";
+        const rawKeySecret = book.author_key_secret || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET || "";
+        const gatewayKeyId = String(rawKeyId).trim();
+        const gatewayKeySecret = String(rawKeySecret).trim();
 
         const totalPaise = effectiveBookPricePaise + (activeDonation * 100);
         const orderReceipt = isAuthorDonation
@@ -6458,8 +6463,13 @@ Format with these exact markdown sections:
                 razorpayOrderId = rpOrder.id;
                 isRealRazorpayOrder = true;
               }
+            } else {
+              const errText = await rpRes.text().catch(() => "");
+              console.warn(`[Razorpay Orders API error HTTP ${rpRes.status}]: ${errText}`);
             }
-          } catch (_) {}
+          } catch (rpErr) {
+            console.warn("[Razorpay fetch exception]:", rpErr);
+          }
         }
 
         if (appliedCouponId) {
@@ -6496,8 +6506,8 @@ Format with these exact markdown sections:
       }
     }
 
-    // 6A-4. Edge Payment Verification: POST /payment/verify
-    if (url.pathname === "/payment/verify" && request.method === "POST" && env.DB) {
+    // 6A-4. Edge Payment Verification: POST /payment/verify and /api/verify_payment
+    if ((url.pathname === "/payment/verify" || url.pathname === "/api/verify_payment") && request.method === "POST" && env.DB) {
       const sessionUser = getSessionUser(request);
 
       if (!sessionUser || !sessionUser.id) {
@@ -6551,7 +6561,8 @@ Format with these exact markdown sections:
           ).first() || {};
         } catch (_) {}
 
-        const gatewayKeySecret = (pur && pur.author_key_secret) || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET;
+        const rawSecret = (pur && pur.author_key_secret) || fps.dev_key_secret || env.RAZORPAY_KEY_SECRET || "";
+        const gatewayKeySecret = String(rawSecret).trim();
 
         const isSandboxTest = paymentId.startsWith("pay_sandbox_") || 
                               paymentId.startsWith("pay_instant_") || 
@@ -6707,7 +6718,7 @@ Format with these exact markdown sections:
              FROM personal_library pl
              JOIN books b ON pl.book_id = b.id
              LEFT JOIN users u ON b.author_id = u.id
-             LEFT JOIN purchases p ON p.book_id = b.id AND p.user_id = pl.user_id AND p.status = 'paid'
+             LEFT JOIN purchases p ON p.book_id = b.id AND p.user_id = pl.user_id AND p.status IN ('paid', 'completed', 'verified')
              WHERE pl.user_id = ?
              ORDER BY pl.added_at DESC`
           ).bind(sessionUser.id).all();
@@ -6722,7 +6733,7 @@ Format with these exact markdown sections:
              FROM purchases p
              JOIN books b ON p.book_id = b.id
              LEFT JOIN users u ON b.author_id = u.id
-             WHERE p.user_id = ? AND p.status = 'paid'
+             WHERE p.user_id = ? AND p.status IN ('paid', 'completed', 'verified')
                AND b.id NOT IN (SELECT book_id FROM personal_library WHERE user_id = ?)`
           ).bind(sessionUser.id, sessionUser.id).all();
 
@@ -6765,6 +6776,26 @@ Format with these exact markdown sections:
       }
 
       try {
+        await ensureBooksTable(env);
+        await ensurePurchasesTable(env);
+        await ensurePersonalLibraryTable(env);
+
+        const book = await env.DB.prepare(
+          "SELECT id, author_id, is_paid, price_paise FROM books WHERE id = ? LIMIT 1"
+        ).bind(bookId).first();
+
+        if (book && book.is_paid && (book.price_paise || 0) > 0) {
+          const isPrivileged = sessionUser.id === book.author_id || sessionUser.role === "developer";
+          if (!isPrivileged) {
+            const purchase = await env.DB.prepare(
+              "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
+            ).bind(sessionUser.id, bookId).first();
+            if (!purchase) {
+              return Response.redirect(`${url.origin}/buy_book/${bookId}`, 302);
+            }
+          }
+        }
+
         await env.DB.prepare(
           "INSERT OR IGNORE INTO personal_library (user_id, book_id, added_at) VALUES (?, ?, datetime('now'))"
         ).bind(sessionUser.id, bookId).run();
@@ -7113,13 +7144,9 @@ Format with these exact markdown sections:
             if (lib) inLibrary = true;
           } catch (_) {}
         }
-        if (inLibrary && book.is_paid) {
-          isPurchased = true;
-        }
-
         let canRead = false;
         if (edgeUser) {
-          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer" || isPurchased || inLibrary) {
+          if (!book.is_paid || book.price_paise === 0 || edgeUser.id === book.author_id || edgeUser.role === "developer" || isPurchased) {
             canRead = true;
           }
         } else {
@@ -7924,7 +7951,7 @@ Format with these exact markdown sections:
             } else {
               try {
                 const purchase = await env.DB.prepare(
-                  "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status = 'paid' LIMIT 1"
+                  "SELECT id FROM purchases WHERE user_id = ? AND book_id = ? AND status IN ('paid', 'completed', 'verified') LIMIT 1"
                 ).bind(edgeCurrentUser.id, targetBookId).first();
                 if (purchase) canRead = true;
               } catch (_) {}
