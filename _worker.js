@@ -3398,6 +3398,33 @@ Format with these exact markdown sections:
       }
 
       if (contactHtml) {
+        // Authenticated Navbar SSR: If user has active session, replace Sign In button with Dashboard & Username
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        let sessionUser = null;
+        if (cookies.pv_session) {
+          try {
+            sessionUser = await verifySession(cookies.pv_session, env);
+          } catch (_) {}
+        }
+        if (sessionUser) {
+          const userAuthHtml = `<span id="contactNavAuthContainer" style="display: inline-flex; align-items: center; gap: 8px;">
+            <a href="/dashboard" id="contactNavAuthLink" class="btn-nav-primary" style="display: inline-flex; align-items: center; gap: 5px;">👤 ${escapeHtml(sessionUser.username || "Dashboard")}</a>
+            <a href="/logout" class="nav-link" style="color: #94a3b8; font-size: 0.88rem;">Logout</a>
+          </span>`;
+          if (contactHtml.includes('id="contactNavAuthContainer"')) {
+            contactHtml = contactHtml.replace(
+              /<span id="contactNavAuthContainer"[^>]*>[\s\S]*?<\/span>/i,
+              userAuthHtml
+            );
+          } else {
+            contactHtml = contactHtml.replace(
+              /<a href="[^"]*login[^"]*"[^>]*class="btn-nav-primary"[^>]*>Sign In<\/a>/i,
+              `<a href="/dashboard" id="contactNavAuthLink" class="btn-nav-primary" style="display: inline-flex; align-items: center; gap: 5px;">👤 ${escapeHtml(sessionUser.username || "Dashboard")}</a>
+               <a href="/logout" class="nav-link" style="color: #94a3b8; font-size: 0.88rem; margin-left: 6px;">Logout</a>`
+            );
+          }
+        }
+
         let leaders = [];
         if (env.DB) {
           try {

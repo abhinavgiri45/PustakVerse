@@ -528,9 +528,11 @@
             <button type="button" class="theme-toggle" id="globalThemeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">🌙 Theme</button>
             <a href="/" class="nav-link">← Back to Library</a>
             <a href="/my_library" class="nav-link">📚 My Library</a>
+            <span id="contactNavAuthContainer" style="display: inline-flex; align-items: center; gap: 8px;">
             
-                <a href="/login" class="btn-nav-primary">Sign In</a>
+                <a href="/login" id="contactNavAuthLink" class="btn-nav-primary">Sign In</a>
             
+            </span>
         </div>
     </nav>
 
@@ -913,9 +915,48 @@
                 console.warn('Hydrate leadership error:', err);
             }
         }
-        document.addEventListener('DOMContentLoaded', hydrateLeadership);
+
+        async function checkAuthStatus() {
+            try {
+                const res = await fetch('/api/user/me');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.logged_in && data.user) {
+                    const container = document.getElementById('contactNavAuthContainer');
+                    if (container) {
+                        container.innerHTML = `
+                            <a href="/dashboard" id="contactNavAuthLink" class="btn-nav-primary" style="display: inline-flex; align-items: center; gap: 5px;">👤 ${escapeHtmlLead(data.user.username || 'Dashboard')}</a>
+                            <a href="/logout" class="nav-link" style="color: #94a3b8; font-size: 0.88rem;">Logout</a>
+                        `;
+                    } else {
+                        const navActions = document.querySelector('.nav-actions');
+                        const signInBtn = navActions ? navActions.querySelector('a[href*="login"], .btn-nav-primary') : null;
+                        if (signInBtn && signInBtn.textContent.trim().toLowerCase().includes('sign in')) {
+                            signInBtn.href = '/dashboard';
+                            signInBtn.innerHTML = `👤 ${escapeHtmlLead(data.user.username || 'Dashboard')}`;
+                            if (!navActions.querySelector('a[href*="logout"]')) {
+                                const logoutA = document.createElement('a');
+                                logoutA.href = '/logout';
+                                logoutA.className = 'nav-link';
+                                logoutA.style.color = '#94a3b8';
+                                logoutA.style.fontSize = '0.88rem';
+                                logoutA.style.marginLeft = '8px';
+                                logoutA.textContent = 'Logout';
+                                navActions.appendChild(logoutA);
+                            }
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            hydrateLeadership();
+            checkAuthStatus();
+        });
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
             hydrateLeadership();
+            checkAuthStatus();
         }
     </script>
 </body>
