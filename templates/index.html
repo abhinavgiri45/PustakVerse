@@ -671,6 +671,8 @@
             padding: 12px;
             border: none;
             border-radius: 10px;
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3);
             color: #ffffff;
             font-size: 0.95rem;
             font-weight: 700;
@@ -678,10 +680,11 @@
             transition: transform 0.15s, box-shadow 0.15s;
             text-align: center;
             box-sizing: border-box;
+            display: block;
         }
         .front-btn-submit:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+            box-shadow: 0 6px 16px rgba(234, 88, 12, 0.4);
         }
         .front-btn-google {
             display: flex;
@@ -2087,7 +2090,7 @@
                     <div class="front-form-group">
                         <input type="text" id="front2faOtp" required placeholder="• • • • • •" autocomplete="off" style="letter-spacing: 6px; font-size: 1.35rem; text-align: center; font-weight: 800; padding: 12px; border-radius: 8px;">
                     </div>
-                    <button type="submit" id="front2faSubmitBtn" class="front-btn-submit" style="background: #2d3748; margin-top: 10px;">Verify & Continue</button>
+                    <button type="submit" id="front2faSubmitBtn" class="front-btn-submit" style="margin-top: 10px;">Verify & Continue</button>
                 </form>
                 <div style="text-align: center; margin-top: 14px;">
                     <button type="button" onclick="cancelFront2fa()" style="background: none; border: none; color: #ea580c; font-size: 0.85rem; font-weight: 700; cursor: pointer;">← Back to Login</button>
@@ -2157,7 +2160,7 @@
                             </label>
                             <a href="/forgot_password" style="color: #ea580c; text-decoration: none; font-weight: 700;">Forgot Password?</a>
                         </div>
-                        <button type="submit" id="frontOfficialSubmitBtn" class="front-btn-submit" style="background: #1e293b;">Secure Portal Sign In</button>
+                        <button type="submit" id="frontOfficialSubmitBtn" class="front-btn-submit">Secure Portal Sign In</button>
                     </form>
                 </div>
 
