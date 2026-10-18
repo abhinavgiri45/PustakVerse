@@ -11681,6 +11681,35 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     }
 
     out = out.replace(/<div id="couponBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="couponBookList" style="max-height: 140px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 6px; scrollbar-width: thin;">${couponBookRows}</div>`);
+
+    // 5B-2. Hydrate Gift Book License and Custom Accolade Book Lists with Real D1 Books
+    const giftBookRows = myBooks.map(b => {
+      const pricePaise = b.price_paise || (b.price ? Math.round(Number(b.price) * 100) : 0);
+      const isPaid = Boolean(b.is_paid === 1 || b.is_paid === true || pricePaise > 0);
+      const priceText = isPaid ? `₹${(pricePaise / 100).toFixed(2)}` : 'Free';
+      return `
+        <div class="gift-book-opt" data-id="${b.id}" data-title="${escapeHtml((b.title || '').toLowerCase())}" data-author="${escapeHtml((b.author_name || '').toLowerCase())}" onclick="selectGiftBook(this, '${b.id}', '${escapeHtml(b.title || '')}')">
+          <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${escapeHtml(b.title || 'Untitled')}</span>
+          <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: var(--border-line, #f1f5f9); font-weight: 700;">${priceText}</span>
+        </div>`;
+    }).join("") + `<div id="giftNoBooksMsg" style="display: none; padding: 10px; text-align: center; color: var(--text-light, #94a3b8); font-size: 0.82rem;">No matching books found.</div>`;
+
+    out = out.replace(/<div id="giftBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="giftBookList" style="max-height: 160px; overflow-y: auto; border: 1px solid var(--input-border, #cbd5e1); border-radius: 6px; background: var(--input-bg, #ffffff); padding: 4px; scrollbar-width: thin;">${giftBookRows}</div>`);
+
+    const badgeBookRows = myBooks.map(b => {
+      return `
+        <div class="badge-book-opt" data-id="${b.id}" data-title="${escapeHtml((b.title || '').toLowerCase())}" data-author="${escapeHtml((b.author_name || '').toLowerCase())}" onclick="selectBadgeBook(this, '${b.id}', '${escapeHtml(b.title || '')}')">
+          <div style="display: flex; flex-direction: column; overflow: hidden; max-width: 200px;">
+            <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(b.title || 'Untitled')}</span>
+            <span style="font-size: 0.72rem; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">by ${escapeHtml(b.author_name || 'Author')}</span>
+          </div>
+          <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: var(--border-line, #f1f5f9); font-weight: 700;">
+            ${escapeHtml(b.catalog || 'General')}
+          </span>
+        </div>`;
+    }).join("") + `<div id="badgeNoBooksMsg" style="display: none; padding: 10px; text-align: center; color: var(--text-light, #94a3b8); font-size: 0.82rem;">No matching books found.</div>`;
+
+    out = out.replace(/<div id="badgeBookList"[^>]*>[\s\S]*?<\/div>/i, `<div id="badgeBookList" style="max-height: 160px; overflow-y: auto; border: 1px solid var(--input-border, #cbd5e1); border-radius: 6px; background: var(--input-bg, #ffffff); padding: 4px; scrollbar-width: thin;">${badgeBookRows}</div>`);
   }
 
   // 5C. Inject Leadership Table into Executive Leadership Management Suite

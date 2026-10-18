@@ -8937,7 +8937,7 @@ def dashboard():
             except Exception:
                 pending_archive_books = []
 
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, COALESCE(users.username, 'Author') as author_name, users.role as author_role FROM books LEFT JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
             try:
                 cursor.execute("SELECT * FROM book_custom_badges")
@@ -9024,7 +9024,7 @@ def dashboard():
             except Exception:
                 pending_archive_books = []
             
-            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, users.username as author_name, users.role as author_role FROM books JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
+            cursor.execute("SELECT books.id, books.title, books.catalog, books.cover_image, books.pdf_file, books.is_paid, books.price_paise, books.private_pdf, books.description, books.is_quarantined, books.is_featured, books.rp_key_id, books.rp_key_secret, books.rp_verified, books.rp_verify_message, COALESCE(users.username, 'Author') as author_name, users.role as author_role FROM books LEFT JOIN users ON books.author_id = users.id ORDER BY books.created_at DESC")
             my_books = clean_book_data(cursor.fetchall())
             try:
                 cursor.execute("SELECT * FROM book_custom_badges")
