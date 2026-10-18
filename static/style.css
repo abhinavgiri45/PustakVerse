@@ -1431,4 +1431,45 @@ textarea:focus {
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
     }
 }
+
+/* ==========================================================================
+   SAVE TO LIBRARY HIGH-CONTRAST ACTION BUTTON
+   ========================================================================== */
+.btn-save-library {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+}
+
+.btn-save-library:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5) !important;
+    transform: translateY(-2px);
+    color: #ffffff !important;
+}
+
+.dark-theme .btn-save-library,
+html.dark-theme .btn-save-library,
+body.dark-theme .btn-save-library {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45) !important;
+}
+
+.dark-theme .btn-save-library:hover,
+html.dark-theme .btn-save-library:hover,
+body.dark-theme .btn-save-library:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    box-shadow: 0 6px 22px rgba(59, 130, 246, 0.6) !important;
+}
+
 

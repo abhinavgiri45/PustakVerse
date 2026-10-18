@@ -12924,9 +12924,11 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
     actionsHtml = `
       <div class="price" style="font-size: 1.8rem; font-weight: 900; color: #3b82f6; margin-bottom: 12px;">Free to Read (Open Access)</div>
       <div style="display: flex; gap: 10px;">
-        <a href="/read_book/${book.id}" class="btn btn-dark" style="flex: 1; text-align: center; background: #ea580c; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white;">Read Now</a>
-        <form action="/save_book/${book.id}" method="POST" style="flex: 1; margin: 0;">
-          <button type="submit" class="btn btn-dark" style="width: 100%; background: #cbd5e1; color: #0f172a; padding: 12px; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">Save to Library</button>
+        <a href="/read_book/${book.id}" class="btn" style="flex: 1.2; text-align: center; background: linear-gradient(135deg, #f97316, #ea580c); text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 800; color: white !important; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);">📖 Read Now</a>
+        <form action="/save_book/${book.id}" method="POST" style="flex: 1; margin: 0; display: flex;">
+          <button type="submit" class="btn btn-save-library" style="width: 100%; padding: 12px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; text-decoration: none; box-sizing: border-box; font-size: 0.95rem;">
+            <span>💾</span> Save to Library
+          </button>
         </form>
       </div>
       ${donateBtnHtml}
@@ -13118,6 +13120,36 @@ function renderEdgeBookHtml(book, reviews = [], currentUser = null, canRead = fa
         .bar-outer { flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
         .bar-inner { height: 100%; background: #f59e0b; border-radius: 5px; }
         .dark-theme .bar-outer { background: rgba(255,255,255,0.1); }
+
+        .btn-save-library {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+        }
+        .btn-save-library:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5) !important;
+            transform: translateY(-2px);
+            color: #ffffff !important;
+        }
+        .dark-theme .btn-save-library {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45) !important;
+        }
+        .dark-theme .btn-save-library:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            box-shadow: 0 6px 22px rgba(59, 130, 246, 0.6) !important;
+        }
     </style>
 </head>
 <body>
