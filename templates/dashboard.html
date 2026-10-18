@@ -28,13 +28,25 @@
         :root { 
             --nav-bg: #2d3748; 
             --primary-orange: #f66d2f; 
-            --bg-light: #f7fafc; 
-            --text-dark: #2d3748; 
-            --text-light: #718096; 
+            --bg-light: #f8fafc; 
+            --text-dark: #0f172a; 
+            --text-light: #64748b; 
             --card-bg: #ffffff; 
-            --border-line: #edf2f7;
-            --input-bg: #f8fafc;
-            --input-border: #e2e8f0;
+            --border-line: #e2e8f0;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+        }
+
+        :root.light-theme,
+        html.light-theme,
+        body.light-theme {
+            --bg-light: #f8fafc; 
+            --card-bg: #ffffff; 
+            --text-dark: #0f172a; 
+            --text-light: #64748b; 
+            --border-line: #e2e8f0;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -191,7 +203,15 @@
             position: sticky;
             top: 0;
             z-index: 2;
-            background: #f8fafc;
+            background: var(--card-bg, #ffffff);
+            color: var(--text-dark, #0f172a);
+        }
+
+        .dark-theme .table-scroll-container table thead th,
+        html.dark-theme .table-scroll-container table thead th,
+        body.dark-theme .table-scroll-container table thead th {
+            background: #0f172a !important;
+            color: #f8fafc !important;
         }
 
         table { 

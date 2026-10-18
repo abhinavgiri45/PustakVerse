@@ -1300,24 +1300,10 @@
             }
         }
 
-        // Multi-Theme Controller
-        // System Theme Controller (Defaults automatically to system preferences)
-        function applySystemTheme() {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                document.documentElement.classList.add('dark-theme');
-                if (document.body) document.body.classList.add('dark-theme');
-            } else {
-                document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                if (document.body) document.body.classList.remove('dark-theme', 'sepia-theme');
-            }
+        // Multi-Theme Controller handled universally by theme.js
+        if (window.applyTheme) {
+            window.applyTheme();
         }
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                applySystemTheme();
-            });
-        }
-        applySystemTheme();
 
         // Scroll Progress Bar
         window.addEventListener('scroll', function() {

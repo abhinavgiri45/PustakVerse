@@ -28,7 +28,22 @@
         :root {
             --pv-bg: #f4f6f9;
             --pv-surface: #ffffff;
-            --pv-text: #1e293b;
+            --pv-text: #0f172a;
+            --pv-text-muted: #64748b;
+            --pv-card-bg: #ffffff;
+            --pv-card-border: #e2e8f0;
+            --pv-card-title: #0f172a;
+            --pv-card-author: #475569;
+            --pv-btn-save-bg: #edf2f7;
+            --pv-btn-save-text: #1e293b;
+        }
+
+        :root.light-theme,
+        html.light-theme,
+        body.light-theme {
+            --pv-bg: #f8fafc;
+            --pv-surface: #ffffff;
+            --pv-text: #0f172a;
             --pv-text-muted: #64748b;
             --pv-card-bg: #ffffff;
             --pv-card-border: #e2e8f0;
@@ -524,23 +539,10 @@
             micBtn.style.display = 'none';
         }
 
-        // System Theme Controller (Defaults automatically to system preferences)
-        function applySystemTheme() {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                document.documentElement.classList.add('dark-theme');
-                if (document.body) document.body.classList.add('dark-theme');
-            } else {
-                document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                if (document.body) document.body.classList.remove('dark-theme', 'sepia-theme');
-            }
+        // Multi-Theme Controller handled universally by theme.js
+        if (window.applyTheme) {
+            window.applyTheme();
         }
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                applySystemTheme();
-            });
-        }
-        applySystemTheme();
 
         // Scroll Progress Bar
         window.addEventListener('scroll', function() {

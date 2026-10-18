@@ -63,30 +63,6 @@
 
     <link rel="preload" as="image" href="/static/PustakVerse.png" fetchpriority="high">
     
-    <!-- Universal System Theme Engine (Instant Sync) -->
-    <script>
-        (function() {
-            try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
-                    document.documentElement.classList.add('dark-theme');
-                } else {
-                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
-                }
-                if (window.matchMedia) {
-                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                        if (e.matches) {
-                            document.documentElement.classList.add('dark-theme');
-                            if (document.body) document.body.classList.add('dark-theme');
-                        } else {
-                            document.documentElement.classList.remove('dark-theme');
-                            if (document.body) document.body.classList.remove('dark-theme');
-                        }
-                    });
-                }
-            } catch(e) {}
-        })();
-    </script>
     <!-- Global Keyboard Shortcut Handler -->
     <script>
         // Global Keyboard Shortcut Handler
@@ -129,9 +105,9 @@
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         
         :root {
-            --pv-bg: #f4f6f9;
+            --pv-bg: #f8fafc;
             --pv-surface: #ffffff;
-            --pv-text: #1e293b;
+            --pv-text: #0f172a;
             --pv-text-muted: #64748b;
             --pv-card-bg: #ffffff;
             --pv-card-border: #e2e8f0;
@@ -143,8 +119,29 @@
             --pv-filter-item-bg: #f8fafc;
             --pv-filter-item-text: #334155;
             --pv-filter-item-border: #cbd5e1;
-            --pv-metric-card-bg: #f8fafc;
-            --pv-metric-card-border: #f1f5f9;
+            --pv-metric-card-bg: #ffffff;
+            --pv-metric-card-border: #e2e8f0;
+        }
+
+        :root.light-theme,
+        html.light-theme,
+        body.light-theme {
+            --pv-bg: #f8fafc;
+            --pv-surface: #ffffff;
+            --pv-text: #0f172a;
+            --pv-text-muted: #64748b;
+            --pv-card-bg: #ffffff;
+            --pv-card-border: #e2e8f0;
+            --pv-card-title: #0f172a;
+            --pv-card-author: #475569;
+            --pv-btn-save-bg: #edf2f7;
+            --pv-btn-save-text: #1e293b;
+            --pv-filter-bg: #ffffff;
+            --pv-filter-item-bg: #f8fafc;
+            --pv-filter-item-text: #334155;
+            --pv-filter-item-border: #cbd5e1;
+            --pv-metric-card-bg: #ffffff;
+            --pv-metric-card-border: #e2e8f0;
         }
 
         @media (prefers-color-scheme: dark) {

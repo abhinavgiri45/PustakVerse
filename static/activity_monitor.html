@@ -6,12 +6,19 @@
     <title>User Activity Monitor - PustakVerse</title>
     <link rel="icon" type="image/png" href="/static/PustakVerse.png">
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) document.documentElement.classList.add('dark-theme');
-                else document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
+                    document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
+                } else {
+                    document.documentElement.classList.add('light-theme');
+                    document.documentElement.classList.remove('dark-theme', 'sepia-theme');
+                }
             } catch(e) {}
         })();
     </script>
@@ -31,13 +38,36 @@
             --am-cyan: #06b6d4;
             --am-purple: #a855f7;
         }
-        .dark-theme {
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
             --am-bg: #090d16;
             --am-card: #0f172a;
             --am-card-hover: #1e293b;
             --am-text: #f8fafc;
             --am-muted: #94a3b8;
             --am-border: #1e293b;
+        }
+        :root.light-theme,
+        html.light-theme,
+        body.light-theme {
+            --am-bg: #f8fafc;
+            --am-card: #ffffff;
+            --am-card-hover: #f1f5f9;
+            --am-text: #0f172a;
+            --am-muted: #64748b;
+            --am-border: #e2e8f0;
+            --am-accent-glow: rgba(99, 102, 241, 0.12);
+        }
+        html.light-theme .pin-card,
+        body.light-theme .pin-card {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.1), 0 0 40px rgba(99, 102, 241, 0.12);
+        }
+        html.light-theme .pin-card h1,
+        body.light-theme .pin-card h1 {
+            color: #0f172a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }

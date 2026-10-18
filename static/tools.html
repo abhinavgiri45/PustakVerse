@@ -49,13 +49,26 @@
             --nav-bg: #0f172a;
             --bg-canvas: #f8fafc;
             --border-line: #e2e8f0;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        .dark-theme,
+        html.dark-theme,
+        body.dark-theme {
+            --bg-canvas: #0b0f19;
+            --border-line: rgba(255, 255, 255, 0.12);
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background-color: var(--bg-canvas); 
-            color: #0f172a; 
+            color: var(--text-main); 
             padding-bottom: 60px;
             min-height: 100vh;
         }
@@ -101,7 +114,7 @@
             justify-content: center;
             gap: 8px;
             padding: 16px 20px;
-            background: white;
+            background: var(--card-bg);
             border-bottom: 1px solid var(--border-line);
             flex-wrap: wrap;
             position: sticky;
@@ -113,9 +126,9 @@
             border-radius: 25px;
             font-weight: 700;
             font-size: 0.88rem;
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            color: #334155;
+            border: 1px solid var(--border-line);
+            background: var(--bg-canvas);
+            color: var(--text-main);
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -141,7 +154,7 @@
         }
 
         .tool-card {
-            background: white;
+            background: var(--card-bg);
             border: 1px solid var(--border-line);
             border-radius: 18px;
             padding: 24px;
@@ -153,13 +166,13 @@
         .tool-card h3 {
             font-size: 1.15rem;
             font-weight: 800;
-            color: #0f172a;
+            color: var(--text-main);
             margin-bottom: 6px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .tool-card p { font-size: 0.85rem; color: #64748b; margin-bottom: 16px; }
+        .tool-card p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; }
 
         input, select, textarea {
             width: 100%;
@@ -583,7 +596,7 @@
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': '2a6b211360ee33ecdf01b368c5aa79b6d5191dfc84c78edc6d6275a8ac6f7216'
+                    'X-CSRF-Token': '9ab7134c46c7070153cd2a2214413226afceba98fd33f4aaefcf5fbef31dedf3'
                 },
                 body: JSON.stringify({ title: title, catalog: catalog, notes: notes })
             })

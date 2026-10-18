@@ -16,13 +16,17 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
         (function() {
             try {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
+                var t = localStorage.getItem('pustakverse_theme') || 'system';
+                var d = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) {
                     document.documentElement.classList.add('dark-theme');
+                    document.documentElement.classList.remove('light-theme', 'sepia-theme');
                 } else {
+                    document.documentElement.classList.add('light-theme');
                     document.documentElement.classList.remove('dark-theme', 'sepia-theme');
                 }
             } catch(e) {}
@@ -38,6 +42,26 @@
             --text-muted: #94a3b8;
             --accent: #ea580c;
             --accent-purple: #8b5cf6;
+        }
+
+        :root.light-theme,
+        html.light-theme,
+        body.light-theme {
+            --bg-page: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+        html.light-theme .study-navbar,
+        body.light-theme .study-navbar {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        html.light-theme .study-nav-brand,
+        body.light-theme .study-nav-brand {
+            color: #0f172a;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }

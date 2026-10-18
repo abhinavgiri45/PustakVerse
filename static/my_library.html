@@ -37,6 +37,101 @@
             --accent-purple: #8b5cf6;
         }
 
+        :root.light-theme,
+        html.light-theme,
+        body.light-theme {
+            --bg-page: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        html.light-theme .lib-hero-title,
+        body.light-theme .lib-hero-title {
+            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        html.light-theme .streak-title,
+        body.light-theme .streak-title {
+            color: #0f172a !important;
+        }
+
+        html.light-theme .habit-goal-form,
+        body.light-theme .habit-goal-form {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        html.light-theme .habit-goal-select,
+        body.light-theme .habit-goal-select {
+            color: #0f172a;
+        }
+
+        html.light-theme .habit-goal-select option,
+        body.light-theme .habit-goal-select option {
+            background: #ffffff;
+            color: #0f172a;
+        }
+
+        html.light-theme .shelf-tab-btn,
+        body.light-theme .shelf-tab-btn {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #475569;
+        }
+
+        html.light-theme .shelf-tab-btn:hover,
+        body.light-theme .shelf-tab-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        html.light-theme .lib-search-box,
+        body.light-theme .lib-search-box {
+            background: #ffffff;
+            border-color: #cbd5e1;
+        }
+
+        html.light-theme .lib-search-input,
+        body.light-theme .lib-search-input {
+            color: #0f172a;
+        }
+
+        html.light-theme .book-card,
+        body.light-theme .book-card {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.06) !important;
+        }
+
+        html.light-theme .book-card:hover,
+        body.light-theme .book-card:hover {
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
+            border-color: #cbd5e1 !important;
+        }
+
+        html.light-theme .book-title,
+        body.light-theme .book-title {
+            color: #0f172a !important;
+        }
+
+        html.light-theme .shelf-dropdown,
+        body.light-theme .shelf-dropdown {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        html.light-theme .shelf-dropdown option,
+        body.light-theme .shelf-dropdown option {
+            background: #ffffff;
+            color: #0f172a;
+        }
+
         body, html {
             margin: 0;
             padding: 0;
