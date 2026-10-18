@@ -1810,6 +1810,47 @@
                         <div id="aiBlurbResultArea" style="background: #ffffff; border: 1.5px solid #e9d5ff; border-top: none; border-radius: 0 0 8px 8px; padding: 16px 18px; font-size: 0.88rem; line-height: 1.7; color: #1e293b; white-space: pre-wrap; max-height: 380px; overflow-y: auto; scrollbar-width: thin;"></div>
                     </div>
                 </div>
+
+                <!-- 4. PustakVerse Checkout Routing Hierarchy & Settlement Architecture -->
+                <div class="panel" style="border-left: 4px solid #0284c7; grid-column: span 2; margin-top: 15px; background: #ffffff; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 22px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <h2 style="color: #0284c7; display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.25rem;">
+                                <span>⚡</span> PustakVerse Checkout Routing Hierarchy & Settlement Architecture
+                            </h2>
+                            <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0;">
+                                Direct revenue attribution model ensuring 100% of reader payments deposit directly into author bank accounts.
+                            </p>
+                        </div>
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.78rem;">
+                            ✓ 100% Direct Deposit Flow
+                        </span>
+                    </div>
+
+                    <p style="color: #334155; font-size: 0.92rem; font-weight: 600; margin-bottom: 14px;">
+                        Here is the exact routing hierarchy executed by PustakVerse during checkout:
+                    </p>
+
+                    <div style="text-align: center; border-radius: 12px; overflow: hidden; background: #0f172a; border: 1.5px solid #334155; padding: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.12);">
+                        <img src="/static/checkout_routing_hierarchy.svg" alt="PustakVerse Checkout Routing Hierarchy Diagram" style="width: 100%; max-width: 900px; height: auto; display: block; margin: 0 auto; border-radius: 8px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px;">
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px; font-size: 0.88rem;">
+                            <strong style="color: #166534; display: block; margin-bottom: 5px; font-size: 0.92rem;">1. Author's Royalties (Direct Account Deposit):</strong>
+                            When an author publishes a paid book and enters their own Razorpay Key ID and Secret in their profile or book settings (<code>books.rp_key_id</code>, <code>books.rp_key_secret</code>), the payment modal opens with the <strong>Author's direct gateway</strong>. 100% of the book price deposits directly into the <strong>Author's bank account</strong> linked to their Razorpay account (minus Razorpay's standard 2.36% gateway processing fee).
+                        </div>
+                        <div style="background: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #ea580c; border-radius: 8px; padding: 14px; font-size: 0.88rem;">
+                            <strong style="color: #c2410c; display: block; margin-bottom: 5px; font-size: 0.92rem;">2. Platform & Fallback Books:</strong>
+                            If the author has <strong>not</strong> added their own Razorpay keys (or if the book is published by the platform), the checkout gateway falls back to the <strong>Developer Razorpay Key ID & Secret</strong> configured in the Developer Dashboard under <em>Website Settings & Payments</em> (<code>front_page_settings.rp_key_id</code>). In this case, 100% of the payment deposits into the platform developer account.
+                        </div>
+                        <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-left: 4px solid #8b5cf6; border-radius: 8px; padding: 14px; font-size: 0.88rem;">
+                            <strong style="color: #6d28d9; display: block; margin-bottom: 5px; font-size: 0.92rem;">3. Voluntary Team Support Donations:</strong>
+                            <strong>When DISABLED:</strong> The donation box and breakdown are completely removed from the checkout page. The reader pays strictly the book price.<br>
+                            <strong>When ENABLED:</strong> Voluntary reader donations (default ₹10) are collected and recorded in the database under <code>purchases.donation_paise</code> for Developer infrastructure and Girionix AI compute costs.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
