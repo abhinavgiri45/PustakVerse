@@ -1553,7 +1553,11 @@
         // 0-MS INSTANT LOCAL STORAGE RENDER FOR RETURNING VISITORS
         (function tryInstantLocalCache() {
             try {
-                const cachedRaw = localStorage.getItem('pv_cached_books_catalog');
+                // Clear any legacy cache that contained synthetic metrics
+                if (localStorage.getItem('pv_cached_books_catalog')) {
+                    localStorage.removeItem('pv_cached_books_catalog');
+                }
+                const cachedRaw = localStorage.getItem('pv_cached_books_catalog_v2');
                 if (cachedRaw) {
                     const cachedBooks = JSON.parse(cachedRaw);
                     if (Array.isArray(cachedBooks) && cachedBooks.length > 0) {
@@ -1605,7 +1609,7 @@
                     .then(books => {
                         if (Array.isArray(books) && books.length > 0) {
                             try {
-                                localStorage.setItem('pv_cached_books_catalog', JSON.stringify(books));
+                                localStorage.setItem('pv_cached_books_catalog_v2', JSON.stringify(books));
                             } catch (_) {}
                             renderBooksIntoGrid(books);
                         } else {

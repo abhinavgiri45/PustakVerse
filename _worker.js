@@ -1263,25 +1263,10 @@ function getTrendingCycleDates(d = new Date()) {
 }
 
 function computeBookTrendingMetrics(book, weekId, realWeek = 0, realMonth = 0, realLifetime = 0) {
-  const bid = Number(book.id) || 1;
-  const rating = Number(book.avg_rating) || 5.0;
-  const isFeat = book.is_featured ? 1 : 0;
-  // Deterministic 32-bit hash identical to Python implementation
-  const h = ((Math.imul(bid, 2654435761) ^ Math.imul(weekId, 2246822519)) >>> 0);
-  const weekOrganic = (h % 35) + 8 + (isFeat * 12) + Math.floor(rating * 2);
-  const hm = ((h ^ 0x5bd1e995) >>> 0);
-  const monthOrganic = weekOrganic * 3 + (hm % 40) + 25;
-  const hl = ((h ^ 0x1b873593) >>> 0);
-  const lifetimeOrganic = monthOrganic * 4 + (hl % 200) + 120;
-
-  const weekPurchases = realWeek + weekOrganic;
-  const monthPurchases = realMonth + monthOrganic + realWeek;
-  const lifetimePurchases = realLifetime + lifetimeOrganic + monthPurchases;
-
   return {
-    week_purchases: weekPurchases,
-    month_purchases: monthPurchases,
-    lifetime_purchases: lifetimePurchases
+    week_purchases: Math.max(0, parseInt(realWeek, 10) || 0),
+    month_purchases: Math.max(0, parseInt(realMonth, 10) || 0),
+    lifetime_purchases: Math.max(0, parseInt(realLifetime, 10) || 0)
   };
 }
 
@@ -1304,15 +1289,16 @@ async function enrichBooksWithTrendingMetrics(books, env) {
   } else if (env && env.DB) {
     try {
       await ensurePurchasesTable(env);
+      await ensurePersonalLibraryTable(env);
       const pRows = await env.DB.prepare(`
         SELECT book_id,
-          COUNT(CASE WHEN (paid_at >= ? OR (paid_at IS NULL AND created_at >= ?)) THEN 1 END) as week_cnt,
-          COUNT(CASE WHEN (paid_at >= ? OR (paid_at IS NULL AND created_at >= ?)) THEN 1 END) as month_cnt,
-          COUNT(*) as life_cnt
+          COUNT(DISTINCT CASE WHEN datetime(COALESCE(paid_at, created_at)) >= datetime(?) THEN user_id END) as week_cnt,
+          COUNT(DISTINCT CASE WHEN datetime(COALESCE(paid_at, created_at)) >= datetime(?) THEN user_id END) as month_cnt,
+          COUNT(DISTINCT user_id) as life_cnt
         FROM purchases
         WHERE status IN ('paid', 'completed', 'verified', 'SUCCESS')
         GROUP BY book_id
-      `).bind(mondayIso, mondayIso, monthStartIso, monthStartIso).all();
+      `).bind(mondayIso, monthStartIso).all();
 
       (pRows?.results || []).forEach(r => {
         realStatsByBook[r.book_id] = {
@@ -1324,12 +1310,11 @@ async function enrichBooksWithTrendingMetrics(books, env) {
     } catch (_) {}
 
     try {
-      await ensurePersonalLibraryTable(env);
       const lRows = await env.DB.prepare(`
         SELECT book_id,
-          COUNT(CASE WHEN added_at >= ? THEN 1 END) as week_cnt,
-          COUNT(CASE WHEN added_at >= ? THEN 1 END) as month_cnt,
-          COUNT(*) as life_cnt
+          COUNT(DISTINCT CASE WHEN datetime(added_at) >= datetime(?) THEN user_id END) as week_cnt,
+          COUNT(DISTINCT CASE WHEN datetime(added_at) >= datetime(?) THEN user_id END) as month_cnt,
+          COUNT(DISTINCT user_id) as life_cnt
         FROM personal_library
         GROUP BY book_id
       `).bind(mondayIso, monthStartIso).all();
@@ -1344,9 +1329,29 @@ async function enrichBooksWithTrendingMetrics(books, env) {
       });
     } catch (_) {}
 
+    try {
+      const rRows = await env.DB.prepare(`
+        SELECT book_id,
+          COUNT(DISTINCT CASE WHEN datetime(last_read_at) >= datetime(?) THEN user_id END) as week_cnt,
+          COUNT(DISTINCT CASE WHEN datetime(last_read_at) >= datetime(?) THEN user_id END) as month_cnt,
+          COUNT(DISTINCT user_id) as life_cnt
+        FROM reading_progress
+        GROUP BY book_id
+      `).bind(mondayIso, monthStartIso).all();
+
+      (rRows?.results || []).forEach(r => {
+        if (!realStatsByBook[r.book_id]) {
+          realStatsByBook[r.book_id] = { week: 0, month: 0, life: 0 };
+        }
+        realStatsByBook[r.book_id].week += Number(r.week_cnt) || 0;
+        realStatsByBook[r.book_id].month += Number(r.month_cnt) || 0;
+        realStatsByBook[r.book_id].life += Number(r.life_cnt) || 0;
+      });
+    } catch (_) {}
+
     _trendingStatsCache = {
       data: realStatsByBook,
-      expiresAt: now + 60000 // Cache for 60 seconds across requests
+      expiresAt: now + 30000 // Cache for 30 seconds across requests
     };
   }
 

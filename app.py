@@ -613,28 +613,10 @@ def get_trending_cycle_dates(dt=None):
 
 
 def compute_book_trending_stats(book, week_id, real_week=0, real_month=0, real_lifetime=0):
-    bid = int(book.get('id') or 1)
-    try:
-        rating = float(book.get('avg_rating') if book.get('avg_rating') is not None else 5.0)
-    except Exception:
-        rating = 5.0
-    is_feat = 1 if book.get('is_featured') else 0
-
-    h = ((bid * 2654435761) ^ (week_id * 2246822519)) & 0xFFFFFFFF
-    week_organic = (h % 35) + 8 + (is_feat * 12) + int(rating * 2)
-    hm = (h ^ 0x5bd1e995) & 0xFFFFFFFF
-    month_organic = week_organic * 3 + (hm % 40) + 25
-    hl = (h ^ 0x1b873593) & 0xFFFFFFFF
-    lifetime_organic = month_organic * 4 + (hl % 200) + 120
-
-    week_total = real_week + week_organic
-    month_total = real_month + month_organic + real_week
-    lifetime_total = real_lifetime + lifetime_organic + month_total
-
     return {
-        'week_purchases': week_total,
-        'month_purchases': month_total,
-        'lifetime_purchases': lifetime_total
+        'week_purchases': max(0, int(real_week or 0)),
+        'month_purchases': max(0, int(real_month or 0)),
+        'lifetime_purchases': max(0, int(real_lifetime or 0))
     }
 
 
@@ -652,9 +634,9 @@ def enrich_books_with_trending_metrics(books, db=None):
             cursor = db.cursor(dictionary=True)
             cursor.execute("""
                 SELECT book_id,
-                       SUM(CASE WHEN (paid_at >= %s OR (paid_at IS NULL AND created_at >= %s)) THEN 1 ELSE 0 END) as week_cnt,
-                       SUM(CASE WHEN (paid_at >= %s OR (paid_at IS NULL AND created_at >= %s)) THEN 1 ELSE 0 END) as month_cnt,
-                       COUNT(*) as life_cnt
+                       COUNT(DISTINCT CASE WHEN (paid_at >= %s OR (paid_at IS NULL AND created_at >= %s)) THEN user_id END) as week_cnt,
+                       COUNT(DISTINCT CASE WHEN (paid_at >= %s OR (paid_at IS NULL AND created_at >= %s)) THEN user_id END) as month_cnt,
+                       COUNT(DISTINCT user_id) as life_cnt
                 FROM purchases
                 WHERE status IN ('paid', 'completed', 'verified', 'SUCCESS')
                 GROUP BY book_id
@@ -671,10 +653,29 @@ def enrich_books_with_trending_metrics(books, db=None):
             cursor = db.cursor(dictionary=True)
             cursor.execute("""
                 SELECT book_id,
-                       SUM(CASE WHEN added_at >= %s THEN 1 ELSE 0 END) as week_cnt,
-                       SUM(CASE WHEN added_at >= %s THEN 1 ELSE 0 END) as month_cnt,
-                       COUNT(*) as life_cnt
+                       COUNT(DISTINCT CASE WHEN added_at >= %s THEN user_id END) as week_cnt,
+                       COUNT(DISTINCT CASE WHEN added_at >= %s THEN user_id END) as month_cnt,
+                       COUNT(DISTINCT user_id) as life_cnt
                 FROM personal_library
+                GROUP BY book_id
+            """, (monday_str, month_str))
+            for r in cursor.fetchall() or []:
+                bid = r['book_id']
+                if bid not in real_stats:
+                    real_stats[bid] = {'week': 0, 'month': 0, 'life': 0}
+                real_stats[bid]['week'] += int(r.get('week_cnt') or 0)
+                real_stats[bid]['month'] += int(r.get('month_cnt') or 0)
+                real_stats[bid]['life'] += int(r.get('life_cnt') or 0)
+        except Exception:
+            pass
+        try:
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT book_id,
+                       COUNT(DISTINCT CASE WHEN last_read_at >= %s THEN user_id END) as week_cnt,
+                       COUNT(DISTINCT CASE WHEN last_read_at >= %s THEN user_id END) as month_cnt,
+                       COUNT(DISTINCT user_id) as life_cnt
+                FROM reading_progress
                 GROUP BY book_id
             """, (monday_str, month_str))
             for r in cursor.fetchall() or []:
