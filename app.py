@@ -3910,6 +3910,8 @@ def send_book_saved_email(to_email, username, book_title, author_name, catalog, 
     return send_email_wrapper(to_email, f'📚 Saved to Your Library: {book_title}', generate_html_email("Library Collection Updated", content))
 
 def send_book_published_email(to_email, username, book_title, catalog, sbin_no, is_paid=False, price_inr=0.0):
+    access_color = '#10b981' if not is_paid else '#ea580c'
+    access_label = 'Free & Open-Access' if not is_paid else f'Premium (₹{price_inr:.2f})'
     content = (
         f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
         f"<p style='color: #475569; line-height: 1.6;'>Congratulations! Your book <strong>'{book_title}'</strong> is officially registered and live on PustakVerse.</p>"
@@ -3917,7 +3919,7 @@ def send_book_published_email(to_email, username, book_title, catalog, sbin_no, 
         f"<div style='margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Title:</span> <strong style='color: #0f172a;'>{book_title}</strong></div>"
         f"<div style='margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Catalog:</span> <strong style='color: #0f172a;'>{catalog}</strong></div>"
         f"<div style='margin-bottom: 8px; font-size: 14px;'><span style='color: #64748b;'>Standard Book Identifier (SBIN):</span> <span style='font-family: monospace; color: #ea580c; font-weight: 700;'>{sbin_no}</span></div>"
-        f"<div style='font-size: 14px;'><span style='color: #64748b;'>Access Model:</span> <strong style='color: {'#10b981' if not is_paid else '#ea580c'};'>{'Free & Open-Access' if not is_paid else f'Premium (₹{price_inr:.2f})'}</strong></div>"
+        f"<div style='font-size: 14px;'><span style='color: #64748b;'>Access Model:</span> <strong style='color: {access_color};'>{access_label}</strong></div>"
         f"</div>"
         f"<div style='text-align: center; margin: 25px 0;'>"
         f"<a href='https://pustakverse.com/' style='background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block;'>🚀 View in Global Library</a>"
@@ -3926,25 +3928,27 @@ def send_book_published_email(to_email, username, book_title, catalog, sbin_no, 
     return send_email_wrapper(to_email, f'🎉 Your Book "{book_title}" is Live on PustakVerse!', generate_html_email("Book Published Successfully", content))
 
 def send_book_request_confirmation_email(to_email, username, book_title, author, notes=""):
+    notes_html = f"<div style='font-size: 13px; color: #7c2d12; margin-top: 6px;'>Details: {notes}</div>" if notes else ""
     content = (
         f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
         f"<p style='color: #475569; line-height: 1.6;'>We've received your Book Acquisition & Wishlist request for <strong>'{book_title}'</strong>.</p>"
         f"<div style='background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 8px; padding: 16px; margin: 20px 0;'>"
         f"<div style='font-size: 15px; font-weight: 700; color: #9a3412;'>{book_title}</div>"
         f"<div style='font-size: 14px; color: #c2410c;'>Author / Publisher: {author}</div>"
-        f"{f'<div style=\"font-size: 13px; color: #7c2d12; margin-top: 6px;\">Details: {notes}</div>' if notes else ''}"
+        f"{notes_html}"
         f"</div>"
         f"<p style='color: #475569; font-size: 14px;'>Our community of verified authors, curators, and administrators will inspect acquisition options. We will notify you once this title is added to the catalog!</p>"
     )
     return send_email_wrapper(to_email, f'📚 Acquisition Request Logged: {book_title}', generate_html_email("Wishlist Request Received", content))
 
 def send_password_changed_security_email(to_email, username, client_ip=''):
+    ip_html = f"🌐 <strong>Initiating IP:</strong> {client_ip}<br>" if client_ip else ""
     content = (
         f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Hello <strong>{username}</strong>,</p>"
         f"<p style='color: #475569; line-height: 1.6;'>This is an official security confirmation that the password for your PustakVerse account was recently changed.</p>"
         f"<div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 18px 0; font-size: 13px; color: #475569;'>"
         f"📅 <strong>Timestamp:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC<br>"
-        f"{f'🌐 <strong>Initiating IP:</strong> {client_ip}<br>' if client_ip else ''}"
+        f"{ip_html}"
         f"🔒 <strong>Status:</strong> Password Successfully Updated"
         f"</div>"
         f"<p style='color: #b91c1c; font-size: 14px; font-weight: 600;'>If you did NOT perform this change, please reset your password immediately and contact support@pustakverse.org.</p>"
