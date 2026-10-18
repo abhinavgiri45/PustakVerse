@@ -3401,24 +3401,23 @@ Format with these exact markdown sections:
         let leaders = [];
         if (env.DB) {
           try {
-            await ensureLeadershipTable(env);
-            const lRes = await env.DB.prepare(
-              "SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC"
-            ).all();
-            leaders = lRes.results || [];
+            leaders = await getUnifiedLeadershipRoster(env);
           } catch (_) {}
         }
         if (leaders && leaders.length > 0) {
           const renderedCards = renderContactLeadershipCards(leaders);
-          contactHtml = contactHtml.replace(
-            /<div class="leadership-grid">[\s\S]*?<\/div>(?=\s*<\/div>\s*<!-- EMAIL COMPOSE)/i,
-            `<div class="leadership-grid">\n${renderedCards}\n        </div>`
-          );
-        } else if (env.DB) {
-          contactHtml = contactHtml.replace(
-            /<div class="leadership-grid">[\s\S]*?<\/div>(?=\s*<\/div>\s*<!-- EMAIL COMPOSE)/i,
-            `<div class="leadership-grid"><p style="text-align: center; color: #64748b; grid-column: 1/-1; padding: 24px; font-weight: 500;">Executive roster is currently being updated.</p></div>`
-          );
+          const gridRegex = /<div class="leadership-grid"[^>]*>[\s\S]*?<\/div>(?=\s*<\/div>\s*<!-- EMAIL COMPOSE)/i;
+          if (gridRegex.test(contactHtml)) {
+            contactHtml = contactHtml.replace(
+              gridRegex,
+              `<div class="leadership-grid" id="leadershipGrid">\n${renderedCards}\n        </div>`
+            );
+          } else {
+            contactHtml = contactHtml.replace(
+              /<div class="leadership-grid"[^>]*>[\s\S]*?<\/div>/i,
+              `<div class="leadership-grid" id="leadershipGrid">\n${renderedCards}\n        </div>`
+            );
+          }
         }
         return new Response(contactHtml, {
           status: 200,
@@ -3720,11 +3719,7 @@ Format with these exact markdown sections:
           }
 
           try {
-            await ensureLeadershipTable(env);
-            const lRes = await env.DB.prepare(
-              "SELECT * FROM leadership_team ORDER BY is_founder DESC, display_order ASC, id ASC"
-            ).all();
-            leadershipTeam = lRes.results || [];
+            leadershipTeam = await getUnifiedLeadershipRoster(env);
           } catch (e) {
             console.warn("Could not load leadership_team:", e.message);
           }
@@ -4017,9 +4012,17 @@ Format with these exact markdown sections:
           await env.DB.prepare(
             "INSERT OR REPLACE INTO users (username, email, password_hash, role, is_verified, two_factor_enabled, security_question, security_answer) VALUES (?, ?, ?, 'official', 1, 1, 'Official Platform Access', 'Authorized')"
           ).bind(offUsername, offEmail, hash).run();
-        }
+        try {
+          await ensureLeadershipTable(env);
+          const exLead = await env.DB.prepare("SELECT id FROM leadership_team WHERE email = ? OR name = ?").bind(offEmail, offUsername).first();
+          if (!exLead) {
+            await env.DB.prepare(
+              "INSERT INTO leadership_team (name, role_title, email, is_founder, display_order, is_active) VALUES (?, 'Official Staff Member', ?, 0, 10, 1)"
+            ).bind(offUsername, offEmail).run();
+          }
+        } catch (_) {}
       }
-      return Response.redirect(`${url.origin}/dashboard`, 302);
+      return Response.redirect(`${url.origin}/dashboard?official_created=1`, 302);
     }
 
     // Toggle Official Publishing Rights: POST /developer/toggle_official_publishing/:id
@@ -4916,22 +4919,41 @@ Format with these exact markdown sections:
       return new Response(monitorHtml, { status: 200, headers: resHeaders });
     }
 
-    // Assign Official Staff Post & Power Delegation
-    if (url.pathname === "/assign_staff_post" && request.method === "POST" && env.DB) {
+    // Assign Official Staff Post & Power Delegation (supports /developer/officials/assign_post/:id, /developer/assign_official_post/:id, /assign_staff_post)
+    const assignPostMatch = url.pathname.match(/^\/developer\/(?:officials\/assign_post|assign_official_post)\/(\d+)/);
+    if ((assignPostMatch || url.pathname === "/assign_staff_post") && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
-      if (!user || !["developer", "official"].includes(user.role)) {
+      if (!user || (!["developer", "official"].includes(user.role) && !isTechnicalLeadershipUser(user))) {
         return new Response("Unauthorized", { status: 403 });
       }
       const formData = await request.formData().catch(() => new FormData());
-      const targetUserId = parseInt(formData.get("user_id") || "0", 10);
+      const targetUserId = assignPostMatch ? parseInt(assignPostMatch[1], 10) : parseInt(formData.get("user_id") || formData.get("official_id") || "0", 10);
       const designation = (formData.get("designation") || "Official Moderator").trim();
       if (targetUserId > 0) {
+        const offUser = await env.DB.prepare("SELECT id, username, email, official_designation FROM users WHERE id = ?").bind(targetUserId).first();
         await env.DB.prepare(
           "UPDATE users SET official_designation = ?, role = 'official' WHERE id = ?"
         ).bind(designation, targetUserId).run();
+
+        // Auto-sync into leadership_team table
+        try {
+          await ensureLeadershipTable(env);
+          if (offUser) {
+            const desLower = designation.toLowerCase();
+            const isF = (desLower.includes("ceo") || desLower.includes("cto") || desLower.includes("founder")) ? 1 : 0;
+            const exLead = await env.DB.prepare("SELECT id FROM leadership_team WHERE email = ? OR name = ?").bind(offUser.email, offUser.username).first();
+            if (exLead) {
+              await env.DB.prepare("UPDATE leadership_team SET role_title = ?, is_founder = ? WHERE id = ?").bind(designation, isF, exLead.id).run();
+            } else {
+              await env.DB.prepare(
+                "INSERT INTO leadership_team (name, role_title, email, is_founder, display_order, is_active) VALUES (?, ?, ?, ?, 10, 1)"
+              ).bind(offUser.username, designation, offUser.email, isF).run();
+            }
+          }
+        } catch (_) {}
       }
-      return Response.redirect(`${url.origin}/dashboard`, 302);
+      return Response.redirect(`${url.origin}/dashboard?post_assigned=1`, 302);
     }
 
     // D1 Categories / Catalogs API for Real-Time Taxonomy Sync
@@ -7884,19 +7906,21 @@ Format with these exact markdown sections:
       return Response.redirect(`${url.origin}/dashboard?req_processed=1`, 302);
     }
 
-    // Live Leadership Roster API: GET /api/leadership
-    if (url.pathname === "/api/leadership" && env.DB) {
+    // Live Leadership & Officials Unified Roster API: GET /api/leadership
+    if ((url.pathname === "/api/leadership" || url.pathname === "/api/leadership/") && env.DB) {
       try {
-        await ensureLeadershipTable(env);
-        const lRes = await env.DB.prepare(
-          "SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC"
-        ).all();
-        return new Response(JSON.stringify({ success: true, leaders: lRes.results || [] }), {
-          headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" }
+        const leaders = await getUnifiedLeadershipRoster(env);
+        return new Response(JSON.stringify({ success: true, leaders: leaders }), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Access-Control-Allow-Origin": "*"
+          }
         });
       } catch (lErr) {
         return new Response(JSON.stringify({ success: false, leaders: [] }), {
-          status: 500, headers: { "Content-Type": "application/json" }
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
         });
       }
     }
@@ -8908,7 +8932,7 @@ async function ensureLeadershipTable(env) {
       if (!countRes || countRes.cnt === 0) {
         await env.DB.prepare(`
           INSERT INTO leadership_team (id, name, role_title, email, phone, address, photo, bio, is_founder, display_order, is_active, instagram_id, x_id, linkedin_id, github_id, website_url)
-          VALUES (1, 'Abhinav Giri', 'Founder & Chief Technology Officer (CTO)', 'abhinavgiri370@gmail.com', '+91 99999 99999', 'Greater Noida, Uttar Pradesh, India', '/static/PustakVerse.png', 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.', 1, 1, 1, 'https://www.instagram.com/abhinavgiri45/', 'https://x.com/abhinavgiri45', 'https://www.linkedin.com/in/abhinav-giri', 'https://github.com/abhinavgiri45', 'https://pustakverse.com')
+          VALUES (1, 'Abhinav Giri', 'Founder & Chief Technology Officer (CTO)', 'abhinavgiri370@gmail.com', NULL, 'Greater Noida, Uttar Pradesh, India', '/static/PustakVerse.png', 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.', 1, 1, 1, 'https://www.instagram.com/abhinavgiri45/', 'https://x.com/abhinavgiri45', 'https://www.linkedin.com/in/abhinav-giri', 'https://github.com/abhinavgiri45', 'https://pustakverse.com')
         `).run();
       }
       await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('seeded', '1')").run();
@@ -8916,6 +8940,79 @@ async function ensureLeadershipTable(env) {
   } catch (e) {
     console.warn("ensureLeadershipTable warning:", e.message);
   }
+}
+
+async function getUnifiedLeadershipRoster(env) {
+  let roster = [];
+  if (!env || !env.DB) return roster;
+  try {
+    await ensureLeadershipTable(env);
+    const lRes = await env.DB.prepare(
+      "SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC"
+    ).all();
+    roster = lRes.results ? [...lRes.results] : [];
+  } catch (e) {
+    console.warn("Could not load leadership_team:", e.message);
+  }
+
+  try {
+    const oRes = await env.DB.prepare(
+      "SELECT id, username, email, official_designation, avatar_url, phone, address, bio FROM users WHERE role = 'official' OR (role = 'developer' AND official_designation IS NOT NULL)"
+    ).all();
+    const officials = oRes.results || [];
+    const existingEmails = new Set(roster.filter(r => r.email).map(r => r.email.toLowerCase().trim()));
+    const existingNames = new Set(roster.filter(r => r.name).map(r => r.name.toLowerCase().trim()));
+
+    for (const off of officials) {
+      const offEmail = (off.email || "").toLowerCase().trim();
+      const offName = (off.username || "").toLowerCase().trim();
+      if ((offEmail && existingEmails.has(offEmail)) || (offName && existingNames.has(offName))) {
+        const match = roster.find(r => (r.email && r.email.toLowerCase().trim() === offEmail) || (r.name && r.name.toLowerCase().trim() === offName));
+        if (match) {
+          if (off.official_designation && (!match.role_title || match.role_title === 'Executive' || match.role_title === 'Official Staff Member')) {
+            match.role_title = off.official_designation;
+          }
+          if (off.avatar_url && (!match.photo || match.photo === '/static/PustakVerse.png' || match.photo === 'PustakVerse.png')) {
+            match.photo = off.avatar_url;
+          }
+          if (off.phone && !match.phone) match.phone = off.phone;
+          if (off.address && !match.address) match.address = off.address;
+        }
+        continue;
+      }
+
+      const des = off.official_designation || "Official Moderator";
+      const desLower = des.toLowerCase();
+      const isF = (desLower.includes("ceo") || desLower.includes("cto") || desLower.includes("founder")) ? 1 : 0;
+      roster.push({
+        id: `off-${off.id}`,
+        name: off.username,
+        role_title: des,
+        email: off.email,
+        phone: off.phone || null,
+        address: off.address || null,
+        photo: off.avatar_url || "/static/PustakVerse.png",
+        bio: off.bio || `Platform Official (${des})`,
+        is_founder: isF,
+        display_order: isF ? 1 : 20,
+        is_active: 1
+      });
+    }
+  } catch (e) {
+    console.warn("Could not merge officials into roster:", e.message);
+  }
+
+  roster.sort((a, b) => {
+    const aFounder = Boolean(a.is_founder);
+    const bFounder = Boolean(b.is_founder);
+    if (aFounder !== bFounder) return bFounder ? 1 : -1;
+    const aOrder = parseInt(a.display_order || "10", 10);
+    const bOrder = parseInt(b.display_order || "10", 10);
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return String(a.id || "").localeCompare(String(b.id || ""));
+  });
+
+  return roster;
 }
 
 async function ensureAnnouncementsTable(env) {
@@ -9203,7 +9300,7 @@ function renderContactLeadershipCards(leaders) {
                   </div>
               </div>
 
-              ${leader.phone ? `
+              ${(leader.phone && leader.phone !== '+91 99999 99999' && leader.phone.trim() !== '') ? `
               <div class="contact-row">
                   <span class="contact-icon">📞</span>
                   <div>

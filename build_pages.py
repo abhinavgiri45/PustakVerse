@@ -120,7 +120,7 @@ def build():
                         'name': 'Abhinav Giri',
                         'role_title': 'Founder & Chief Technology Officer (CTO)',
                         'email': 'abhinavgiri370@gmail.com',
-                        'phone': '+91 99999 99999',
+                        'phone': '',
                         'address': 'Greater Noida, Uttar Pradesh, India',
                         'bio': 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.',
                         'photo': '/static/PustakVerse.png',

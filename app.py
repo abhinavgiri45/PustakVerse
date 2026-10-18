@@ -5151,7 +5151,36 @@ def contact():
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM leadership_team WHERE is_active = TRUE ORDER BY is_founder DESC, display_order ASC, id ASC")
-        leaders = cursor.fetchall()
+        leaders = cursor.fetchall() or []
+        
+        # Merge officials from users
+        try:
+            cursor.execute("SELECT id, username, email, official_designation, avatar_url, phone, address, bio FROM users WHERE role = 'official' OR (role = 'developer' AND official_designation IS NOT NULL)")
+            officials = cursor.fetchall() or []
+            existing_emails = {l.get('email', '').lower().strip() for l in leaders if l.get('email')}
+            existing_names = {l.get('name', '').lower().strip() for l in leaders if l.get('name')}
+            for off in officials:
+                off_email = (off.get('email') or '').lower().strip()
+                off_name = (off.get('username') or '').lower().strip()
+                if (off_email and off_email in existing_emails) or (off_name and off_name in existing_names):
+                    continue
+                des = off.get('official_designation') or 'Official Moderator'
+                des_lower = des.lower()
+                is_f = True if any(kw in des_lower for kw in ['ceo', 'cto', 'founder']) else False
+                leaders.append({
+                    'id': f"off-{off['id']}",
+                    'name': off['username'],
+                    'role_title': des,
+                    'email': off['email'],
+                    'phone': off.get('phone') or None,
+                    'address': off.get('address') or None,
+                    'photo': off.get('avatar_url') or 'PustakVerse.png',
+                    'bio': off.get('bio') or f'Platform Official ({des})',
+                    'is_founder': is_f,
+                    'display_order': 1 if is_f else 20,
+                    'is_active': 1
+                })
+        except Exception: pass
     except Exception as e:
         logging.error(f"Error loading leadership team for contact page: {e}")
     finally:
@@ -5166,7 +5195,7 @@ def contact():
             'role_title': 'Founder & Chief Technology Officer (CTO)',
             'bio': 'Visionary founder and lead architect behind PustakVerse and Girionix AI. Dedicated to democratizing high-quality academic literature, research papers, and AI-powered learning tools worldwide.',
             'email': 'abhinavgiri370@gmail.com',
-            'phone': '+91 99999 99999',
+            'phone': None,
             'address': 'Greater Noida, Uttar Pradesh, India',
             'photo': 'PustakVerse.png',
             'is_founder': True,
@@ -8664,9 +8693,38 @@ def api_leadership():
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC")
         leaders = cursor.fetchall() or []
-        return jsonify(leaders)
+
+        try:
+            cursor.execute("SELECT id, username, email, official_designation, avatar_url, phone, address, bio FROM users WHERE role = 'official' OR (role = 'developer' AND official_designation IS NOT NULL)")
+            officials = cursor.fetchall() or []
+            existing_emails = {l.get('email', '').lower().strip() for l in leaders if l.get('email')}
+            existing_names = {l.get('name', '').lower().strip() for l in leaders if l.get('name')}
+            for off in officials:
+                off_email = (off.get('email') or '').lower().strip()
+                off_name = (off.get('username') or '').lower().strip()
+                if (off_email and off_email in existing_emails) or (off_name and off_name in existing_names):
+                    continue
+                des = off.get('official_designation') or 'Official Moderator'
+                des_lower = des.lower()
+                is_f = 1 if any(kw in des_lower for kw in ['ceo', 'cto', 'founder']) else 0
+                leaders.append({
+                    'id': f"off-{off['id']}",
+                    'name': off['username'],
+                    'role_title': des,
+                    'email': off['email'],
+                    'phone': off.get('phone') or None,
+                    'address': off.get('address') or None,
+                    'photo': off.get('avatar_url') or 'PustakVerse.png',
+                    'bio': off.get('bio') or f'Platform Official ({des})',
+                    'is_founder': is_f,
+                    'display_order': 1 if is_f else 20,
+                    'is_active': 1
+                })
+        except Exception: pass
+
+        return jsonify({'success': True, 'leaders': leaders})
     except Exception as ex:
-        return jsonify([]), 200
+        return jsonify({'success': False, 'leaders': []}), 200
     finally:
         if db:
             try: db.close()
@@ -8767,6 +8825,18 @@ def create_official():
         except Exception: pass
         cursor.execute("INSERT IGNORE INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, can_publish) VALUES (%s, %s, %s, 'official', TRUE, 'Dev', 'Dev', %s)", (request.form['username'], request.form['email'], generate_password_hash(raw_password), can_publish))
         db.commit()
+        
+        # Auto-sync new official to leadership_team
+        try:
+            cursor.execute("SELECT id FROM leadership_team WHERE email = %s OR name = %s", (request.form['email'], request.form['username']))
+            if not cursor.fetchone():
+                cursor.execute("""
+                    INSERT INTO leadership_team (name, role_title, email, is_founder, display_order, is_active)
+                    VALUES (%s, 'Official Staff Member', %s, 0, 10, 1)
+                """, (request.form['username'], request.form['email']))
+                db.commit()
+        except Exception: pass
+
         send_official_welcome(request.form['email'], request.form['username'], raw_password)
         flash("Official created and welcome email sent!", "success")
     except Exception: 
@@ -10943,6 +11013,7 @@ def api_receipt_download(order_id):
 # EXECUTIVE HIERARCHY: ASSIGN OFFICIAL POST & POWERS
 # ======================================================================
 @app.route('/developer/officials/assign_post/<int:official_id>', methods=['POST'])
+@app.route('/developer/assign_official_post/<int:official_id>', methods=['POST'])
 def developer_assign_official_post(official_id):
     if session.get('role') != 'developer' and not session.get('is_absolute_power'):
         flash('Unauthorized. Absolute Executive clearance (Founder, CEO, CTO) required.', 'error')
@@ -10961,6 +11032,23 @@ def developer_assign_official_post(official_id):
 
         cursor.execute("UPDATE users SET official_designation = %s WHERE id = %s", (designation, official_id))
         db.commit()
+
+        # Auto-sync to leadership_team so they immediately show on public Contact page and Leadership directory
+        try:
+            des_lower = designation.lower()
+            is_founder_flag = 1 if ('ceo' in des_lower or 'cto' in des_lower or 'founder' in des_lower) else 0
+            cursor.execute("SELECT id FROM leadership_team WHERE email = %s OR name = %s", (official['email'], official['username']))
+            existing_lead = cursor.fetchone()
+            if existing_lead:
+                cursor.execute("UPDATE leadership_team SET role_title = %s, is_founder = %s WHERE id = %s", (designation, is_founder_flag, existing_lead['id']))
+            else:
+                cursor.execute("""
+                    INSERT INTO leadership_team (name, role_title, email, is_founder, display_order, is_active)
+                    VALUES (%s, %s, %s, %s, 10, 1)
+                """, (official['username'], designation, official['email'], is_founder_flag))
+            db.commit()
+        except Exception: pass
+
         log_official_activity(session['user_id'], f"Assigned post '{designation}' to Official {official['username']}")
         flash(f"Successfully designated {official['username']} as {designation} with corresponding post powers!", "success")
     except Exception as e:

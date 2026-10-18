@@ -634,7 +634,7 @@
             <p class="section-sub">Meet the founders, executives, and architects driving the PustakVerse platform.</p>
         </div>
 
-        <div class="leadership-grid">
+        <div class="leadership-grid" id="leadershipGrid">
             {% for leader in leaders %}
             <div class="leader-card {% if leader.is_founder %}founder-card{% endif %}">
                 <div class="circle-avatar-wrap">
@@ -816,19 +816,21 @@
 
         async function hydrateLeadership() {
             try {
-                const res = await fetch('/api/leadership');
+                const res = await fetch('/api/leadership?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) return;
-                const leaders = await res.json();
-                if (!Array.isArray(leaders) || leaders.length === 0) return;
+                const data = await res.json();
+                const leaders = Array.isArray(data) ? data : (data && Array.isArray(data.leaders) ? data.leaders : []);
+                if (!leaders || leaders.length === 0) return;
 
-                const grid = document.querySelector('.leadership-grid');
+                const grid = document.getElementById('leadershipGrid') || document.querySelector('.leadership-grid');
                 if (!grid) return;
 
                 let html = '';
                 leaders.forEach(leader => {
                     const isFounder = Boolean(leader.is_founder) || 
                         (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) ||
-                        (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+                        (leader.name && leader.name.toLowerCase().includes('abhinav giri')) ||
+                        (leader.role_title && (leader.role_title.toLowerCase().includes('founder') || leader.role_title.toLowerCase().includes('ceo') || leader.role_title.toLowerCase().includes('cto')));
 
                     let photoSrc = '/static/PustakVerse.png';
                     if (leader.photo && (leader.photo.startsWith('http://') || leader.photo.startsWith('https://') || leader.photo.startsWith('/'))) {
@@ -849,12 +851,27 @@
                     const hasSocials = leader.instagram_id || leader.x_id || leader.linkedin_id || leader.github_id || leader.website_url;
                     if (hasSocials) {
                         socialsHtml = `
-                            <div class="leader-socials">
-                                ${leader.linkedin_id ? `<a href="${escapeHtmlLead(leader.linkedin_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn linkedin" title="LinkedIn Profile">💼</a>` : ''}
-                                ${leader.x_id ? `<a href="${escapeHtmlLead(leader.x_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn x-social" title="X (Twitter)">✖</a>` : ''}
-                                ${leader.instagram_id ? `<a href="${escapeHtmlLead(leader.instagram_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn instagram" title="Instagram">📷</a>` : ''}
-                                ${leader.github_id ? `<a href="${escapeHtmlLead(leader.github_id)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn github" title="GitHub">🐙</a>` : ''}
-                                ${leader.website_url ? `<a href="${escapeHtmlLead(leader.website_url)}" target="_blank" rel="noopener noreferrer" class="social-icon-btn website" title="Website">🌐</a>` : ''}
+                            <div class="leader-social-row">
+                                ${leader.instagram_id ? `
+                                <a href="${escapeHtmlLead(leader.instagram_id.startsWith('http') ? leader.instagram_id : 'https://instagram.com/' + leader.instagram_id.replace(/^@/, ''))}" target="_blank" rel="noopener noreferrer" class="social-pill ig" title="Instagram">
+                                    <span>📸</span> <span>Instagram</span>
+                                </a>` : ''}
+                                ${leader.x_id ? `
+                                <a href="${escapeHtmlLead(leader.x_id.startsWith('http') ? leader.x_id : 'https://x.com/' + leader.x_id.replace(/^@/, ''))}" target="_blank" rel="noopener noreferrer" class="social-pill x" title="X (Twitter)">
+                                    <span>𝕏</span> <span>Twitter</span>
+                                </a>` : ''}
+                                ${leader.linkedin_id ? `
+                                <a href="${escapeHtmlLead(leader.linkedin_id.startsWith('http') ? leader.linkedin_id : 'https://linkedin.com/in/' + leader.linkedin_id)}" target="_blank" rel="noopener noreferrer" class="social-pill li" title="LinkedIn">
+                                    <span>💼</span> <span>LinkedIn</span>
+                                </a>` : ''}
+                                ${leader.github_id ? `
+                                <a href="${escapeHtmlLead(leader.github_id.startsWith('http') ? leader.github_id : 'https://github.com/' + leader.github_id)}" target="_blank" rel="noopener noreferrer" class="social-pill gh" title="GitHub">
+                                    <span>💻</span> <span>GitHub</span>
+                                </a>` : ''}
+                                ${leader.website_url ? `
+                                <a href="${escapeHtmlLead(leader.website_url.startsWith('http') ? leader.website_url : 'https://' + leader.website_url)}" target="_blank" rel="noopener noreferrer" class="social-pill web" title="Website / Portfolio">
+                                    <span>🌐</span> <span>Portfolio</span>
+                                </a>` : ''}
                             </div>
                         `;
                     }
@@ -901,9 +918,14 @@
                     `;
                 });
                 grid.innerHTML = html;
-            } catch (_) {}
+            } catch (err) {
+                console.warn('Hydrate leadership error:', err);
+            }
         }
         document.addEventListener('DOMContentLoaded', hydrateLeadership);
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            hydrateLeadership();
+        }
     </script>
 </body>
 </html>
