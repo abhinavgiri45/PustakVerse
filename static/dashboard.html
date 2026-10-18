@@ -2441,7 +2441,7 @@
                             </span>
                         </h2>
                         <p style="margin: 0; color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
-                            Search profiles, send username policy revision notices, or file disciplinary reports to the Developer.
+                            Search profiles, inspect account statuses, and issue official username policy revision notices.
                         </p>
                     </div>
                 </div>
@@ -2568,9 +2568,6 @@
                                             <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('2', 'aarav_sharma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
                                             </button>
-                                            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('2', 'aarav_sharma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
-                                                <span>🚩</span> Report Dev
-                                            </button>
                                         </div>
                                         
                                     </td>
@@ -2617,9 +2614,6 @@
                                         <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                                             <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('3', 'priya_verma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
-                                            </button>
-                                            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('3', 'priya_verma')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
-                                                <span>🚩</span> Report Dev
                                             </button>
                                         </div>
                                         
@@ -2668,9 +2662,6 @@
                                             <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('4', 'rohit_moderator')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
                                                 <span>✉</span> Notice
                                             </button>
-                                            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('4', 'rohit_moderator')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
-                                                <span>🚩</span> Report Dev
-                                            </button>
                                         </div>
                                         
                                     </td>
@@ -2706,31 +2697,6 @@
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
                         <button type="button" class="btn-sm btn-dark" onclick="closeOfficialNoticeModal()" style="padding: 9px 16px; border-radius: 8px;">Cancel</button>
                         <button type="submit" class="btn-sm btn-dark" style="padding: 9px 20px; border-radius: 8px; background: #2563eb; color: #ffffff; border: none; font-weight: 600;">Dispatch Notice</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- OFFICIAL USER REPORT TO DEV MODAL -->
-        <div id="officialReportModal" class="pv-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
-            <div class="pv-modal-card" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 14px; max-width: 480px; width: 100%; padding: 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px; color: #f97316;">
-                        <span>🚩</span> Report User to Developer
-                    </h3>
-                    <button type="button" onclick="closeOfficialReportModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; padding: 0 4px;">&times;</button>
-                </div>
-                <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 18px;">
-                    Submit a formal disciplinary or deletion request for <strong id="reportTargetUsernameDisplay" style="color: #fb923c;">@user</strong> for Developer Supreme review.
-                </p>
-                <form id="officialReportForm" action="" method="POST">
-                    <div style="margin-bottom: 18px;">
-                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Violation Grounds / Evidence</label>
-                        <textarea name="reason" id="reportReasonInput" required rows="3" placeholder="e.g. Severe terms violation, intellectual property infringement, or malicious activity..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.88rem; resize: vertical; box-sizing: border-box;"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button type="button" class="btn-sm btn-dark" onclick="closeOfficialReportModal()" style="padding: 9px 16px; border-radius: 8px;">Cancel</button>
-                        <button type="submit" class="btn-sm btn-orange" style="padding: 9px 20px; border-radius: 8px; font-weight: 600;">Submit to Developer</button>
                     </div>
                 </form>
             </div>
@@ -2789,27 +2755,9 @@
             if (modal) modal.style.display = 'none';
         }
 
-        function openOfficialReportModal(userId, username) {
-            var modal = document.getElementById('officialReportModal');
-            var form = document.getElementById('officialReportForm');
-            var userSpan = document.getElementById('reportTargetUsernameDisplay');
-            var input = document.getElementById('reportReasonInput');
-            if (form) form.action = '/request_deletion/' + userId;
-            if (userSpan) userSpan.textContent = '@' + username;
-            if (input) input.value = '';
-            if (modal) modal.style.display = 'flex';
-        }
-
-        function closeOfficialReportModal() {
-            var modal = document.getElementById('officialReportModal');
-            if (modal) modal.style.display = 'none';
-        }
-
         window.addEventListener('click', function(e) {
             var nModal = document.getElementById('officialNoticeModal');
-            var rModal = document.getElementById('officialReportModal');
             if (e.target === nModal) closeOfficialNoticeModal();
-            if (e.target === rModal) closeOfficialReportModal();
         });
         </script>
         

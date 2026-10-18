@@ -10267,16 +10267,13 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       }
 
       let actionsHtml = '';
-      if (uRole === 'developer') {
+      if (uRole === 'developer' || (u.username && u.username.toLowerCase().startsWith('abhinavgiri'))) {
         actionsHtml = '<span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">🛡️ Protected Admin</span>';
       } else {
         actionsHtml = `
           <div style="display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
             <button type="button" class="btn-sm btn-dark" onclick="openOfficialNoticeModal('${u.id}', '${escapeHtml(u.username)}')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Send username policy violation notice">
               <span>✉</span> Notice
-            </button>
-            <button type="button" class="btn-sm btn-orange" onclick="openOfficialReportModal('${u.id}', '${escapeHtml(u.username)}')" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;" title="Report user to Developer for deletion or disciplinary review">
-              <span>🚩</span> Report Dev
             </button>
           </div>
         `;
