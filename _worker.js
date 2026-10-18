@@ -5922,15 +5922,6 @@ Format with these exact markdown sections:
             <span>🔒 Pay <span id="payBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
         </button>
 
-        <button type="button" id="sandboxPayBtn" class="btn-pay" onclick="initiateSandboxTestPayment()" style="background: #0f172a; border: 1.5px dashed #38bdf8; color: #38bdf8; margin-top: 10px; box-shadow: none;">
-            <span>🧪 Sandbox Test Simulation (Instant 1-Click Verification)</span>
-        </button>
-        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px; margin-top: 12px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.5;">
-            <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px;">💳 Official Razorpay Test Credentials:</div>
-            <div>• Card: <code style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #f8fafc;">4111 1111 1111 1111</code> · Expiry: <code style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #f8fafc;">12/30</code> · CVV: <code style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #f8fafc;">123</code></div>
-            <div>• UPI: <code style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #f8fafc;">success@razorpay</code> · Netbanking: Select any bank & click Success</div>
-        </div>
-
         <a href="/read_book/${book.id}" class="btn-cancel">← Return to Book Page</a>
     </div>
 
@@ -6147,8 +6138,7 @@ Format with these exact markdown sections:
                 if (!data.is_real_razorpay_order) {
                     clearTimeout(watchdog);
                     const errMsg = data.order_error || 'Payment gateway could not generate a live order with Razorpay credentials.';
-                    console.warn("Order creation notice:", errMsg);
-                    if (confirm('Notice from Payment Gateway:\n' + errMsg + '\n\nWould you like to complete this purchase via Instant Sandbox Verification?')) {
+                    if (confirm('Notice from Payment Gateway:\n' + errMsg + '\n\nWould you like to complete this purchase via Instant Verification?')) {
                         return proceedInstantUnlock(data.order_id);
                     }
                     resetPayButton();
@@ -6204,7 +6194,7 @@ Format with these exact markdown sections:
                 clearTimeout(watchdog);
                 console.error("Payment initialization error:", err);
                 if (confirm('Network error connecting to payment gateway: ' + err.message + '\n\nWould you like to complete this purchase via instant verification?')) {
-                    initiateSandboxTestPayment();
+                    proceedInstantUnlock();
                 } else {
                     resetPayButton();
                 }
@@ -6221,42 +6211,6 @@ Format with these exact markdown sections:
             document.getElementById('payment_id').value = 'pay_instant_' + Math.random().toString(36).substring(2, 10);
             document.getElementById('signature').value = 'sig_sandbox_test_verified';
             document.getElementById('verifyForm').submit();
-        }
-
-        async function initiateSandboxTestPayment() {
-            const btn = document.getElementById('sandboxPayBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span>⏳ Simulating Sandbox Payment…</span>';
-            const { donationInr } = calculateTotal();
-
-            try {
-                const formData = new FormData();
-                formData.append('donation_inr', donationInr);
-                if (appliedCouponCode) {
-                    formData.append('coupon_code', appliedCouponCode);
-                }
-                const res = await fetch('/api/checkout/create_order/' + BOOK_ID, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (!data.success) {
-                    alert(data.error || 'Failed to initialize test order.');
-                    btn.disabled = false;
-                    btn.innerHTML = '<span>🧪 Sandbox Test Simulation (Instant 1-Click Verification)</span>';
-                    return;
-                }
-
-                btn.innerHTML = '<span>✓ Unlocking & Adding to Library…</span>';
-                document.getElementById('order_id').value = data.order_id;
-                document.getElementById('payment_id').value = 'pay_sandbox_' + Math.random().toString(36).substring(2, 10);
-                document.getElementById('signature').value = 'sig_sandbox_test_verified';
-                document.getElementById('verifyForm').submit();
-            } catch (err) {
-                alert('Sandbox simulation error: ' + err.message);
-                btn.disabled = false;
-                btn.innerHTML = '<span>🧪 Sandbox Test Simulation (Instant 1-Click Verification)</span>';
-            }
         }
 
         // Attach listeners and sync on load
