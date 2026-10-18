@@ -483,6 +483,10 @@
             box-sizing: border-box;
         }
         @media (max-width: 768px) {
+            .platform-metrics-showcase,
+            #platformMetricsShowcase {
+                display: none !important;
+            }
             .navbar { 
                 flex-direction: row !important; 
                 padding: 8px 12px !important; 
@@ -1078,7 +1082,7 @@
 
     
     <!-- LIVE AUTHENTIC PLATFORM METRICS SHOWCASE -->
-    <div style="background: var(--pv-surface); border-bottom: 1px solid var(--pv-card-border); padding: 18px 20px;">
+    <div id="platformMetricsShowcase" class="platform-metrics-showcase" style="background: var(--pv-surface); border-bottom: 1px solid var(--pv-card-border); padding: 18px 20px;">
         <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: center;">
             <div class="metric-box" style="padding: 10px; border-radius: 12px;">
                 <div id="metricTotalBooks" style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 {{ stats.total_books if stats and stats.total_books is defined else (books|length) }}</div>
