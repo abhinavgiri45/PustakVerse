@@ -772,6 +772,9 @@
                 <button type="button" id="headerEndMaintenanceBtn" class="developer-only" onclick="endMaintenanceMode()" style="display: {{ 'inline-flex' if sys.maintenance_mode else 'none' }}; background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; font-weight: 800; padding: 10px 22px; border-radius: 25px; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4); font-size: 0.95rem;">
                     <span>🟢</span> End Maintenance Break
                 </button>
+                <a href="#pendingArchiveApprovalsPanel" style="background: linear-gradient(135deg, #059669, #047857); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); font-size: 0.95rem;">
+                    <span>🏛️</span> Archive Approvals Queue
+                </a>
                 <a href="#roleSectionOfficialUsers" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; font-weight: 700; padding: 10px 22px; border-radius: 25px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); font-size: 0.95rem;">
                     <span>👥</span> Manage Users ⚡
                 </a>
@@ -3253,7 +3256,8 @@
                                                     <span>✅</span> Approve
                                                 </button>
                                             </form>
-                                            <form action="/official/reject_archive_book/{{ abook.id }}" method="POST" style="margin: 0;" onsubmit="return confirm('Reject this archive book submission?');">
+                                            <form action="/official/reject_archive_book/{{ abook.id }}" method="POST" style="margin: 0;" onsubmit="return handleArchiveRejectPrompt(event, this);">
+                                                <input type="hidden" name="reason" value="">
                                                 <button type="submit" class="btn-sm btn-red" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
                                                     <span>❌</span> Reject
                                                 </button>
@@ -7503,6 +7507,18 @@
                 submitBtn.style.opacity = '1';
             }
         }
+    }
+
+    function handleArchiveRejectPrompt(event, form) {
+        if (event) event.preventDefault();
+        const reason = prompt("Please provide editorial feedback / reason for rejecting this Archive submission (this will be emailed to the author):", "Submission does not meet PustakVerse Archives curation and formatting standards.");
+        if (reason === null) return false;
+        const reasonInput = form.querySelector('input[name="reason"]');
+        if (reasonInput) {
+            reasonInput.value = reason.trim() || "Submission does not meet PustakVerse Archives curation and formatting standards.";
+        }
+        form.submit();
+        return true;
     }
 
     document.addEventListener('DOMContentLoaded', () => {

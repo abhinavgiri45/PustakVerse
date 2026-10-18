@@ -5220,7 +5220,13 @@ Format with these exact markdown sections:
       }
       const bookId = parseInt(approveArchiveMatch[1], 10);
       try {
-        const b = await env.DB.prepare("SELECT id, title FROM books WHERE id = ?").bind(bookId).first();
+        const b = await env.DB.prepare(`
+          SELECT b.id, b.title, b.author, b.cover_image, b.sbin_no, b.author_id, u.email as author_email, u.name as author_name, u.username as author_username
+          FROM books b
+          LEFT JOIN users u ON b.author_id = u.id
+          WHERE b.id = ?
+        `).bind(bookId).first();
+
         await env.DB.prepare("UPDATE books SET is_quarantined = 0, archive_status = 'approved' WHERE id = ?").bind(bookId).run();
         try {
           await env.DB.prepare("UPDATE archive_approval_requests SET status = 'approved', reviewed_by = ? WHERE book_id = ?").bind(user.id, bookId).run();
@@ -5229,6 +5235,58 @@ Format with these exact markdown sections:
           await env.DB.prepare("INSERT INTO official_activities (official_id, action, timestamp) VALUES (?, ?, datetime('now'))")
             .bind(user.id, `Approved Archive publication for book '${b?.title || bookId}' (ID: ${bookId})`).run();
         } catch (_) {}
+
+        // Send confirmation email to author
+        const authorEmail = b?.author_email;
+        if (authorEmail) {
+          const authorDisplayName = b.author_name || b.author_username || b.author || "Author";
+          const approverRole = user.role === "developer" ? "Platform Developer" : "Official Moderator";
+          const approverDesignation = user.official_designation || (user.role === "developer" ? "Chief System Architect" : "Official Editorial Board Member");
+          const bookTitle = b.title || "Untitled Archive Manuscript";
+          const sbinStr = b.sbin_no || `SBIN-ARC-${String(bookId).padStart(4, '0')}`;
+          const nowStr = new Date().toUTCString();
+          const coverHtml = b.cover_image ? `<div style='text-align: center; margin-bottom: 18px;'><img src='${b.cover_image}' alt='Cover' style='max-width: 130px; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'></div>` : "";
+
+          const emailHtml = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #0284c7; margin: 0; font-size: 24px;">🏛️ PustakVerse Archives</h1>
+                <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Open Access Curation Decision</p>
+              </div>
+              <p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Dear <strong>${authorDisplayName}</strong>,</p>
+              <p style='color: #475569; line-height: 1.6;'>We are delighted to inform you that your manuscript <strong>'${bookTitle}'</strong> submitted for the <strong>PustakVerse Public Archives</strong> has been thoroughly reviewed and <strong>officially approved</strong> for public global access.</p>
+              ${coverHtml}
+              <div style='background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 18px 20px; margin: 20px 0;'>
+                <div style='font-size: 12px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>
+                  ✅ Official Editorial Review Credentials
+                </div>
+                <table style='width: 100%; font-size: 14px; border-collapse: collapse;'>
+                  <tr><td style='padding: 5px 0; color: #4b5563; width: 140px;'>Approved By:</td><td style='padding: 5px 0; font-weight: 700; color: #0f172a;'>@${user.username}</td></tr>
+                  <tr><td style='padding: 5px 0; color: #4b5563;'>Platform Role:</td><td style='padding: 5px 0; font-weight: 700; color: #0284c7;'>${approverRole}</td></tr>
+                  <tr><td style='padding: 5px 0; color: #4b5563;'>Editorial Title:</td><td style='padding: 5px 0; font-weight: 700; color: #15803d;'>${approverDesignation}</td></tr>
+                  <tr><td style='padding: 5px 0; color: #4b5563;'>Review Date:</td><td style='padding: 4px 0; color: #374151;'>${nowStr}</td></tr>
+                </table>
+              </div>
+              <div style='background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;'>
+                <div style='font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>📖 Publication Details</div>
+                <div style='margin-bottom: 6px; font-size: 14px;'><span style='color: #64748b;'>Title:</span> <strong style='color: #0f172a;'>${bookTitle}</strong></div>
+                <div style='margin-bottom: 6px; font-size: 14px;'><span style='color: #64748b;'>Catalog:</span> <strong style='color: #0284c7;'>🏛️ Archives (Free Public Knowledge Repository)</strong></div>
+                <div style='margin-bottom: 6px; font-size: 14px;'><span style='color: #64748b;'>Standard Identifier:</span> <span style='font-family: monospace; color: #ea580c; font-weight: 700;'>${sbinStr}</span></div>
+                <div style='font-size: 14px;'><span style='color: #64748b;'>Access Status:</span> <strong style='color: #16a34a;'>100% Free & Open-Access Live</strong></div>
+              </div>
+              <div style='text-align: center; margin: 30px 0 15px 0;'>
+                <a href='https://pustakverse.com/book/${bookId}' style='background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);'>🚀 View Book in Public Archives</a>
+              </div>
+              <p style='color: #64748b; font-size: 13px; line-height: 1.5; text-align: center; margin-top: 20px;'>Thank you for dedicating your work to open scholarship and empowering readers globally through the PustakVerse Archives.</p>
+            </div>
+          `;
+
+          await sendEdgeEmail(env, {
+            to: authorEmail,
+            subject: `🏛️ Archive Publication Approved: "${bookTitle}" is Live on PustakVerse!`,
+            html: emailHtml
+          }).catch(e => console.error("Archive approval email error:", e));
+        }
       } catch (err) {
         console.error("Approve archive book error:", err);
       }
@@ -5247,7 +5305,13 @@ Format with these exact markdown sections:
       const formData = await request.formData().catch(() => new FormData());
       const reason = (formData.get("reason") || "Submission does not meet Archives curation standards.").trim();
       try {
-        const b = await env.DB.prepare("SELECT id, title FROM books WHERE id = ?").bind(bookId).first();
+        const b = await env.DB.prepare(`
+          SELECT b.id, b.title, b.author, b.author_id, u.email as author_email, u.name as author_name, u.username as author_username
+          FROM books b
+          LEFT JOIN users u ON b.author_id = u.id
+          WHERE b.id = ?
+        `).bind(bookId).first();
+
         await env.DB.prepare("UPDATE books SET is_quarantined = 1, archive_status = 'rejected' WHERE id = ?").bind(bookId).run();
         try {
           await env.DB.prepare("UPDATE archive_approval_requests SET status = 'rejected', reviewed_by = ?, reason = ? WHERE book_id = ?").bind(user.id, reason, bookId).run();
@@ -5256,6 +5320,42 @@ Format with these exact markdown sections:
           await env.DB.prepare("INSERT INTO official_activities (official_id, action, timestamp) VALUES (?, ?, datetime('now'))")
             .bind(user.id, `Rejected Archive publication for book '${b?.title || bookId}' (ID: ${bookId})`).run();
         } catch (_) {}
+
+        // Send rejection notification email to author
+        const authorEmail = b?.author_email;
+        if (authorEmail) {
+          const authorDisplayName = b.author_name || b.author_username || b.author || "Author";
+          const reviewerRole = user.role === "developer" ? "Platform Developer" : "Official Moderator";
+          const reviewerDesignation = user.official_designation || (user.role === "developer" ? "Chief System Architect" : "Official Editorial Board Member");
+          const bookTitle = b.title || "Untitled Archive Manuscript";
+          const nowStr = new Date().toUTCString();
+
+          const emailHtml = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #dc2626; margin: 0; font-size: 24px;">🏛️ PustakVerse Archives</h1>
+                <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Editorial Curation Decision</p>
+              </div>
+              <p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Dear <strong>${authorDisplayName}</strong>,</p>
+              <p style='color: #475569; line-height: 1.6;'>Thank you for submitting your manuscript <strong>'${bookTitle}'</strong> to the PustakVerse Public Archives. Following our editorial curation review, we regret to inform you that your submission was not approved at this time.</p>
+              <div style='background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 8px; padding: 16px 20px; margin: 20px 0;'>
+                <div style='font-size: 13px; font-weight: 800; color: #9a3412; text-transform: uppercase; margin-bottom: 6px;'>Editorial Feedback & Reason</div>
+                <div style='font-size: 14px; color: #7c2d12; line-height: 1.5;'>${reason}</div>
+              </div>
+              <div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #475569;'>
+                👤 <strong>Reviewed By:</strong> @${user.username} (${reviewerRole} · ${reviewerDesignation})<br>
+                📅 <strong>Review Date:</strong> ${nowStr}
+              </div>
+              <p style='color: #475569; font-size: 14px; line-height: 1.6;'>You are welcome to revise your manuscript, verify Google Drive sharing permissions, and resubmit through your Author Publishing Studio anytime.</p>
+            </div>
+          `;
+
+          await sendEdgeEmail(env, {
+            to: authorEmail,
+            subject: `Notice: Editorial Decision on Archive Submission - "${bookTitle}"`,
+            html: emailHtml
+          }).catch(e => console.error("Archive rejection email error:", e));
+        }
       } catch (err) {
         console.error("Reject archive book error:", err);
       }

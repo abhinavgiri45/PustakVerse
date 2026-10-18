@@ -4208,6 +4208,59 @@ def send_2fa_status_email(to_email, username, enabled):
     )
     return send_email_wrapper(to_email, f'🛡️ Security Update: Two-Factor Authentication {status_str.capitalize()}', generate_html_email("Security Notification", content))
 
+def send_archive_approved_email(to_email, author_name, book_title, approver_name, approver_role, approver_designation, book_id, cover_image=None, sbin_no=None):
+    now_str = datetime.utcnow().strftime('%d %B %Y, %I:%M %p UTC')
+    sbin_str = sbin_no if sbin_no else f"SBIN-ARC-{book_id:04d}"
+    cover_html = f"<div style='text-align: center; margin-bottom: 18px;'><img src='{cover_image}' alt='Cover' style='max-width: 130px; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'></div>" if cover_image else ""
+    
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Dear <strong>{author_name}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>We are delighted to inform you that your manuscript <strong>'{book_title}'</strong> submitted for the <strong>PustakVerse Public Archives</strong> has been thoroughly reviewed and <strong>officially approved</strong> for public global access.</p>"
+        f"{cover_html}"
+        f"<div style='background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 18px 20px; margin: 20px 0;'>"
+        f"<div style='font-size: 12px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;'>"
+        f"<span>✅</span> Official Editorial Review Credentials"
+        f"</div>"
+        f"<table style='width: 100%; font-size: 14px; border-collapse: collapse;'>"
+        f"<tr><td style='padding: 5px 0; color: #4b5563; width: 140px;'>Approved By:</td><td style='padding: 5px 0; font-weight: 700; color: #0f172a;'>@{approver_name}</td></tr>"
+        f"<tr><td style='padding: 5px 0; color: #4b5563;'>Platform Role:</td><td style='padding: 5px 0; font-weight: 700; color: #0284c7;'>{approver_role}</td></tr>"
+        f"<tr><td style='padding: 5px 0; color: #4b5563;'>Editorial Title:</td><td style='padding: 5px 0; font-weight: 700; color: #15803d;'>{approver_designation}</td></tr>"
+        f"<tr><td style='padding: 5px 0; color: #4b5563;'>Review Date:</td><td style='padding: 4px 0; color: #374151;'>{now_str}</td></tr>"
+        f"</table>"
+        f"</div>"
+        f"<div style='background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;'>"
+        f"<div style='font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>📖 Publication Details</div>"
+        f"<div style='margin-bottom: 6px; font-size: 14px;'><span style='color: #64748b;'>Title:</span> <strong style='color: #0f172a;'>{book_title}</strong></div>"
+        f"<div style='margin-bottom: 6px; font-size: 14px;'><span style='color: #64748b;'>Catalog:</span> <strong style='color: #0284c7;'>🏛️ Archives (Free Public Knowledge Repository)</strong></div>"
+        f"<div style='margin-bottom: 6px; font-size: 14px;'><span style='color: #64748b;'>Standard Identifier:</span> <span style='font-family: monospace; color: #ea580c; font-weight: 700;'>{sbin_str}</span></div>"
+        f"<div style='font-size: 14px;'><span style='color: #64748b;'>Access Status:</span> <strong style='color: #16a34a;'>100% Free & Open-Access Live</strong></div>"
+        f"</div>"
+        f"<div style='text-align: center; margin: 30px 0 15px 0;'>"
+        f"<a href='https://pustakverse.com/book/{book_id}' style='background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);'>🚀 View Book in Public Archives</a>"
+        f"</div>"
+        f"<p style='color: #64748b; font-size: 13px; line-height: 1.5; text-align: center; margin-top: 20px;'>Thank you for dedicating your work to open scholarship and empowering readers globally through the PustakVerse Archives.</p>"
+    )
+    return send_email_wrapper(to_email, f'🏛️ Archive Publication Approved: "{book_title}" is Live on PustakVerse!', generate_html_email("Archive Publication Approved", content))
+
+def send_archive_rejected_email(to_email, author_name, book_title, reviewer_name, reviewer_role, reviewer_designation, reason=""):
+    now_str = datetime.utcnow().strftime('%d %B %Y, %I:%M %p UTC')
+    reason_clean = reason if reason else "Submission does not meet PustakVerse Archives curation and formatting standards."
+    
+    content = (
+        f"<p style='font-size: 16px; color: #1e293b; margin-bottom: 12px;'>Dear <strong>{author_name}</strong>,</p>"
+        f"<p style='color: #475569; line-height: 1.6;'>Thank you for submitting your manuscript <strong>'{book_title}'</strong> to the PustakVerse Public Archives. Following our editorial curation review, we regret to inform you that your submission was not approved at this time.</p>"
+        f"<div style='background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 8px; padding: 16px 20px; margin: 20px 0;'>"
+        f"<div style='font-size: 13px; font-weight: 800; color: #9a3412; text-transform: uppercase; margin-bottom: 6px;'>Editorial Feedback & Reason</div>"
+        f"<div style='font-size: 14px; color: #7c2d12; line-height: 1.5;'>{reason_clean}</div>"
+        f"</div>"
+        f"<div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #475569;'>"
+        f"👤 <strong>Reviewed By:</strong> @{reviewer_name} ({reviewer_role} · {reviewer_designation})<br>"
+        f"📅 <strong>Review Date:</strong> {now_str}"
+        f"</div>"
+        f"<p style='color: #475569; font-size: 14px; line-height: 1.6;'>You are welcome to revise your manuscript, verify Google Drive sharing permissions, and resubmit through your Author Publishing Studio anytime.</p>"
+    )
+    return send_email_wrapper(to_email, f'Notice: Editorial Decision on Archive Submission - "{book_title}"', generate_html_email("Archive Curation Notice", content))
+
 # ==========================================
 # CLOUDFLARE D1 DATABASE CONNECTION
 # ==========================================
@@ -9680,7 +9733,13 @@ def official_approve_archive_book(book_id):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id, title, author_id, catalog FROM books WHERE id = %s", (book_id,))
+        cursor.execute("""
+            SELECT b.id, b.title, b.catalog, b.cover_image, b.pdf_file, b.sbin_no, b.description, b.author_id,
+                   u.username as author_name, u.email as author_email
+            FROM books b
+            LEFT JOIN users u ON b.author_id = u.id
+            WHERE b.id = %s
+        """, (book_id,))
         book = cursor.fetchone()
         if not book:
             flash("Book not found.", "error")
@@ -9697,8 +9756,30 @@ def official_approve_archive_book(book_id):
         except Exception: pass
         db.commit()
         
-        log_official_activity(session['user_id'], f"Approved Archive publication for book '{book['title']}' (ID: {book_id})")
-        flash(f"Book '{book['title']}' approved! It is now live in the Archives public repository.", "success")
+        # Approver Credentials
+        approver_username = session.get('username', 'Official Curator')
+        approver_role = 'Platform Developer' if session.get('role') == 'developer' else 'Official Moderator'
+        approver_designation = session.get('official_designation') or ('Lead Platform Architect' if session.get('role') == 'developer' else 'Official Editorial Board Member')
+        
+        log_official_activity(session['user_id'], f"Approved Archive publication for book '{book['title']}' (ID: {book_id}) by @{approver_username} ({approver_designation})")
+        
+        # Dispatch Notification Email to Author
+        author_email = book.get('author_email')
+        if author_email:
+            send_email_async(
+                send_archive_approved_email,
+                author_email,
+                book.get('author_name') or 'Author',
+                book['title'],
+                approver_username,
+                approver_role,
+                approver_designation,
+                book['id'],
+                book.get('cover_image'),
+                book.get('sbin_no')
+            )
+
+        flash(f"Book '{book['title']}' approved! It is now live in the Archives public repository, and an approval notification has been emailed to @{book.get('author_name', 'Author')} ({author_email or 'no email on file'}).", "success")
     except Exception as e:
         flash(f"Error approving book: {str(e)}", "error")
     finally:
@@ -9718,7 +9799,13 @@ def official_reject_archive_book(book_id):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id, title, author_id FROM books WHERE id = %s", (book_id,))
+        cursor.execute("""
+            SELECT b.id, b.title, b.catalog, b.cover_image, b.author_id,
+                   u.username as author_name, u.email as author_email
+            FROM books b
+            LEFT JOIN users u ON b.author_id = u.id
+            WHERE b.id = %s
+        """, (book_id,))
         book = cursor.fetchone()
         if not book:
             flash("Book not found.", "error")
@@ -9735,8 +9822,28 @@ def official_reject_archive_book(book_id):
         except Exception: pass
         db.commit()
         
-        log_official_activity(session['user_id'], f"Rejected Archive publication for book '{book['title']}' (ID: {book_id}): {reason}")
-        flash(f"Archive submission for '{book['title']}' rejected.", "info")
+        # Reviewer Credentials
+        reviewer_username = session.get('username', 'Official Curator')
+        reviewer_role = 'Platform Developer' if session.get('role') == 'developer' else 'Official Moderator'
+        reviewer_designation = session.get('official_designation') or ('Lead Platform Architect' if session.get('role') == 'developer' else 'Official Editorial Board Member')
+        
+        log_official_activity(session['user_id'], f"Rejected Archive publication for book '{book['title']}' (ID: {book_id}) by @{reviewer_username} ({reviewer_designation}): {reason}")
+        
+        # Dispatch Notification Email to Author
+        author_email = book.get('author_email')
+        if author_email:
+            send_email_async(
+                send_archive_rejected_email,
+                author_email,
+                book.get('author_name') or 'Author',
+                book['title'],
+                reviewer_username,
+                reviewer_role,
+                reviewer_designation,
+                reason
+            )
+
+        flash(f"Archive submission for '{book['title']}' rejected, and an editorial feedback notice was emailed to @{book.get('author_name', 'Author')}.", "info")
     except Exception as e:
         flash(f"Error rejecting book: {str(e)}", "error")
     finally:
