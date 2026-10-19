@@ -1269,6 +1269,172 @@ body.light-theme select option {
     color: #0f172a !important;
 }
 
+/* ==========================================================================
+   UNIVERSAL HERO SECTION THEME SAFEGUARDS (LIGHT & DARK MODES)
+   ========================================================================== */
+html.light-theme .hero,
+html.light-theme .hero-section,
+body.light-theme .hero,
+body.light-theme .hero-section {
+    background: radial-gradient(circle at 50% 12%, rgba(249, 115, 22, 0.08) 0%, rgba(248, 250, 252, 0.95) 55%, #f1f5f9 100%), #f8fafc !important;
+    color: #0f172a !important;
+    border-bottom: 3px solid #ea580c !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+}
+
+html.light-theme .hero h1,
+html.light-theme .hero-section h1,
+body.light-theme .hero h1,
+body.light-theme .hero-section h1 {
+    color: #0f172a !important;
+    background: linear-gradient(135deg, #0f172a 35%, #ea580c 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+}
+
+html.light-theme .hero p,
+html.light-theme .hero-section p,
+body.light-theme .hero p,
+body.light-theme .hero-section p {
+    color: #475569 !important;
+}
+
+html.light-theme .hero .search-container,
+html.light-theme .hero-section .search-container,
+body.light-theme .hero .search-container,
+body.light-theme .hero-section .search-container {
+    background: #ffffff !important;
+    border: 2px solid #cbd5e1 !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light-theme .hero .search-container input,
+html.light-theme .hero-section .search-container input,
+body.light-theme .hero .search-container input,
+body.light-theme .hero-section .search-container input {
+    color: #0f172a !important;
+}
+
+html.light-theme .hero .search-container input::placeholder,
+html.light-theme .hero-section .search-container input::placeholder,
+body.light-theme .hero .search-container input::placeholder,
+body.light-theme .hero-section .search-container input::placeholder {
+    color: #64748b !important;
+}
+
+html.light-theme .btn-surprise-me,
+body.light-theme .btn-surprise-me {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1.5px solid #cbd5e1 !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light-theme .btn-surprise-me:hover,
+body.light-theme .btn-surprise-me:hover {
+    background: #fff7ed !important;
+    border-color: #ea580c !important;
+    color: #ea580c !important;
+    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.2) !important;
+}
+
+html.light-theme .btn-surprise-me .surprise-kbd-badge,
+body.light-theme .btn-surprise-me .surprise-kbd-badge {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #ea580c !important;
+}
+
+html.light-theme #heroStreakContainer,
+body.light-theme #heroStreakContainer {
+    background: #ffffff !important;
+    color: #9a3412 !important;
+    border: 1.5px solid #fdba74 !important;
+    box-shadow: 0 3px 10px rgba(249, 115, 22, 0.1) !important;
+}
+
+html.light-theme #micBtn,
+body.light-theme #micBtn {
+    background: #f8fafc !important;
+    color: #ea580c !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+html.light-theme #micBtn:hover,
+body.light-theme #micBtn:hover {
+    background: #ffedd5 !important;
+    color: #c2410c !important;
+    transform: scale(1.08) !important;
+}
+
+/* Dark Theme Hero Overrides */
+html.dark-theme .hero,
+html.dark-theme .hero-section,
+body.dark-theme .hero,
+body.dark-theme .hero-section {
+    background: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.12) 0%, rgba(15, 23, 42, 0.95) 60%, #0b0f19 100%), #0b0f19 !important;
+    color: #ffffff !important;
+    border-bottom: 3px solid #ea580c !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark-theme .hero h1,
+html.dark-theme .hero-section h1,
+body.dark-theme .hero h1,
+body.dark-theme .hero-section h1 {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #ffffff 40%, #fdba74 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+html.dark-theme .hero p,
+html.dark-theme .hero-section p,
+body.dark-theme .hero p,
+body.dark-theme .hero-section p {
+    color: #cbd5e1 !important;
+}
+
+html.dark-theme .hero .search-container,
+html.dark-theme .hero-section .search-container,
+body.dark-theme .hero .search-container,
+body.dark-theme .hero-section .search-container {
+    background: #1e293b !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark-theme .hero .search-container input,
+html.dark-theme .hero-section .search-container input,
+body.dark-theme .hero .search-container input,
+body.dark-theme .hero-section .search-container input {
+    color: #f8fafc !important;
+}
+
+html.dark-theme .hero .search-container input::placeholder,
+html.dark-theme .hero-section .search-container input::placeholder,
+body.dark-theme .hero .search-container input::placeholder,
+body.dark-theme .hero-section .search-container input::placeholder {
+    color: #94a3b8 !important;
+}
+
+html.dark-theme #heroStreakContainer,
+body.dark-theme #heroStreakContainer {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #fbd38d !important;
+    border: 1px solid rgba(251, 211, 141, 0.3) !important;
+}
+
+html.dark-theme #micBtn,
+body.dark-theme #micBtn {
+    background: #334155 !important;
+    color: #fb923c !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+}
+
 html.dark-theme .book-title,
 html.dark-theme .book-title a,
 html.dark-theme .book-card h3,

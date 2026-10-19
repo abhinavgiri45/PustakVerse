@@ -147,6 +147,13 @@
             --pv-filter-item-border: #cbd5e1;
             --pv-metric-card-bg: #ffffff;
             --pv-metric-card-border: #e2e8f0;
+            --pv-hero-bg: radial-gradient(circle at 50% 12%, rgba(249, 115, 22, 0.08) 0%, rgba(248, 250, 252, 0.95) 55%, #f1f5f9 100%), #f8fafc;
+            --pv-hero-border: #ea580c;
+            --pv-hero-title-color: #0f172a;
+            --pv-hero-subtitle-color: #475569;
+            --pv-hero-search-bg: #ffffff;
+            --pv-hero-search-border: #cbd5e1;
+            --pv-hero-search-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
         }
 
         @media (prefers-color-scheme: dark) {
@@ -167,6 +174,13 @@
                 --pv-filter-item-border: rgba(255,255,255,0.12);
                 --pv-metric-card-bg: #182234;
                 --pv-metric-card-border: rgba(255,255,255,0.08);
+                --pv-hero-bg: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.12) 0%, rgba(15, 23, 42, 0.95) 60%, #0b0f19 100%), #0b0f19;
+                --pv-hero-border: #ea580c;
+                --pv-hero-title-color: #ffffff;
+                --pv-hero-subtitle-color: #cbd5e1;
+                --pv-hero-search-bg: #1e293b;
+                --pv-hero-search-border: rgba(255,255,255,0.15);
+                --pv-hero-search-shadow: 0 10px 25px -5px rgba(0,0,0,0.4);
             }
         }
 
@@ -189,6 +203,13 @@
             --pv-filter-item-border: rgba(255,255,255,0.12);
             --pv-metric-card-bg: #182234;
             --pv-metric-card-border: rgba(255,255,255,0.08);
+            --pv-hero-bg: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.12) 0%, rgba(15, 23, 42, 0.95) 60%, #0b0f19 100%), #0b0f19;
+            --pv-hero-border: #ea580c;
+            --pv-hero-title-color: #ffffff;
+            --pv-hero-subtitle-color: #cbd5e1;
+            --pv-hero-search-bg: #1e293b;
+            --pv-hero-search-border: rgba(255,255,255,0.15);
+            --pv-hero-search-shadow: 0 10px 25px -5px rgba(0,0,0,0.4);
         }
 
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--pv-bg); color: var(--pv-text); font-size: 16px; }
@@ -200,16 +221,131 @@
         .navbar-links a { color: white; text-decoration: none; font-weight: 600; font-size: 1rem; transition: 0.2s; padding: 12px 16px; min-height: 48px; display: inline-flex; align-items: center; box-sizing: border-box; }
         .navbar-links a:hover { color: #992b00; }
         
-        .hero-section { background: #1a202c; color: white; padding: 60px 40px; text-align: center; border-bottom: 4px solid #992b00; }
-        .hero-section h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; }
-        .hero-section p { font-size: 1.2rem; color: #cbd5e1; margin-top: 10px; }
+        .hero-section { 
+            background: var(--pv-hero-bg); 
+            color: var(--pv-text); 
+            padding: 60px 40px; 
+            text-align: center; 
+            border-bottom: 3px solid #ea580c; 
+            position: relative;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        .hero-section h1 { 
+            margin: 0; 
+            font-size: 3.5rem; 
+            letter-spacing: -1px; 
+            font-weight: 800;
+            color: var(--pv-hero-title-color);
+        }
+        .hero-section p { 
+            font-size: 1.2rem; 
+            color: var(--pv-hero-subtitle-color); 
+            margin-top: 10px; 
+            font-weight: 500;
+        }
 
-        .search-container { max-width: 600px; margin: 30px auto 0 auto; display: flex; align-items: center; background: var(--pv-surface); border-radius: 30px; padding: 5px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid var(--pv-card-border); }
-        .search-container input { flex: 1; border: none; outline: none; padding: 15px 10px; font-size: 1.1rem; color: var(--pv-text); background: transparent; }
-        .search-container input::placeholder { color: var(--pv-text-muted); opacity: 1; }
+        /* Specific high-contrast theme overrides for hero title & subtitle */
+        html.light-theme .hero-section,
+        body.light-theme .hero-section {
+            background: radial-gradient(circle at 50% 12%, rgba(249, 115, 22, 0.08) 0%, rgba(248, 250, 252, 0.95) 55%, #f1f5f9 100%), #f8fafc !important;
+            color: #0f172a !important;
+            border-bottom: 3px solid #ea580c !important;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+        }
+        html.light-theme .hero-section h1,
+        body.light-theme .hero-section h1 {
+            color: #0f172a !important;
+            background: linear-gradient(135deg, #0f172a 35%, #ea580c 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            text-shadow: none !important;
+        }
+        html.light-theme .hero-section p,
+        body.light-theme .hero-section p {
+            color: #475569 !important;
+        }
+
+        html.dark-theme .hero-section,
+        body.dark-theme .hero-section {
+            background: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.12) 0%, rgba(15, 23, 42, 0.95) 60%, #0b0f19 100%), #0b0f19 !important;
+            color: #ffffff !important;
+            border-bottom: 3px solid #ea580c !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+        }
+        html.dark-theme .hero-section h1,
+        body.dark-theme .hero-section h1 {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #ffffff 40%, #fdba74 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+        }
+        html.dark-theme .hero-section p,
+        body.dark-theme .hero-section p {
+            color: #cbd5e1 !important;
+        }
+
+        .search-container { 
+            max-width: 600px; 
+            margin: 30px auto 0 auto; 
+            display: flex; 
+            align-items: center; 
+            background: var(--pv-hero-search-bg); 
+            border-radius: 30px; 
+            padding: 5px 15px; 
+            box-shadow: var(--pv-hero-search-shadow); 
+            border: 2px solid var(--pv-hero-search-border); 
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-container:focus-within {
+            border-color: #ea580c !important;
+            box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15), var(--pv-hero-search-shadow) !important;
+        }
+        .search-container input { 
+            flex: 1; 
+            border: none; 
+            outline: none; 
+            padding: 15px 10px; 
+            font-size: 1.1rem; 
+            color: var(--pv-text); 
+            background: transparent; 
+        }
+        .search-container input::placeholder { 
+            color: var(--pv-text-muted); 
+            opacity: 1; 
+        }
         
+        html.light-theme .search-container,
+        body.light-theme .search-container {
+            background: #ffffff !important;
+            border: 2px solid #cbd5e1 !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+        }
+        html.light-theme .search-container input,
+        body.light-theme .search-container input {
+            color: #0f172a !important;
+        }
+        html.light-theme .search-container input::placeholder,
+        body.light-theme .search-container input::placeholder {
+            color: #64748b !important;
+        }
+        html.dark-theme .search-container,
+        body.dark-theme .search-container {
+            background: #1e293b !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4) !important;
+        }
+        html.dark-theme .search-container input,
+        body.dark-theme .search-container input {
+            color: #f8fafc !important;
+        }
+        html.dark-theme .search-container input::placeholder,
+        body.dark-theme .search-container input::placeholder {
+            color: #94a3b8 !important;
+        }
+
         .icon-btn { background: none; border: none; cursor: pointer; color: var(--pv-text-muted); min-width: 48px; min-height: 48px; display: flex; align-items: center; justify-content: center; transition: 0.2s; padding: 0; }
         .icon-btn:hover { color: #ea580c; transform: scale(1.1); }
+
 
         .filter-nav { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; padding: 20px 40px; background: var(--pv-surface); border-bottom: 1px solid var(--pv-card-border); }
         .filter-nav a { padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 1rem; color: var(--pv-filter-item-text); background: var(--pv-filter-item-bg); border: 1px solid var(--pv-filter-item-border); transition: 0.2s; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
@@ -713,6 +849,65 @@
             font-weight: 800;
             margin-left: 2px;
         }
+
+        html.light-theme .btn-surprise-me,
+        body.light-theme .btn-surprise-me {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1.5px solid #cbd5e1 !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        }
+        html.light-theme .btn-surprise-me:hover,
+        body.light-theme .btn-surprise-me:hover {
+            background: #fff7ed !important;
+            border-color: #ea580c !important;
+            color: #ea580c !important;
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.2) !important;
+        }
+        html.light-theme .btn-surprise-me .surprise-kbd-badge,
+        body.light-theme .btn-surprise-me .surprise-kbd-badge {
+            background: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #ea580c !important;
+        }
+
+        /* Hero Streak Container Themes */
+        html.light-theme #heroStreakContainer,
+        body.light-theme #heroStreakContainer {
+            background: #ffffff !important;
+            color: #9a3412 !important;
+            border: 1.5px solid #fdba74 !important;
+            box-shadow: 0 3px 10px rgba(249, 115, 22, 0.1) !important;
+        }
+        html.dark-theme #heroStreakContainer,
+        body.dark-theme #heroStreakContainer {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #fbd38d !important;
+            border: 1px solid rgba(251, 211, 141, 0.3) !important;
+        }
+
+        /* Voice Mic Button Themes */
+        html.light-theme #micBtn,
+        body.light-theme #micBtn {
+            background: #f8fafc !important;
+            color: #ea580c !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+        }
+        html.light-theme #micBtn:hover,
+        body.light-theme #micBtn:hover {
+            background: #ffedd5 !important;
+            color: #c2410c !important;
+            transform: scale(1.08) !important;
+        }
+        html.dark-theme #micBtn,
+        body.dark-theme #micBtn {
+            background: #334155 !important;
+            color: #fb923c !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+        }
+
         @keyframes pvHighlightPulse {
             0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.85); transform: scale(1); }
             50% { box-shadow: 0 0 35px 8px rgba(245, 158, 11, 0.65); transform: scale(1.03); }
@@ -1162,7 +1357,7 @@
         
         <form class="search-container" role="search" id="searchForm" action="javascript:void(0);">
             <input type="search" id="searchInput" name="search" placeholder="Search for a book, author, or category... (Ctrl + K)" aria-label="Search for a book or author">
-            <button type="button" id="micBtn" class="icon-btn" title="Search by Voice (Gemini Voice Search)" aria-label="Search by Voice" style="background: white; color: #475569; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border: none; cursor: pointer; transition: all 0.2s ease;">
+            <button type="button" id="micBtn" class="icon-btn mic-btn" title="Search by Voice (Gemini Voice Search)" aria-label="Search by Voice" style="border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all 0.2s ease;">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -1176,7 +1371,7 @@
                 <span>Surprise Me</span>
                 <span class="surprise-kbd-badge" title="Shortcut key: R">R</span>
             </button>
-            <span id="heroStreakContainer" style="display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.1); color: #fbd38d; border: 1px solid rgba(251, 211, 141, 0.3); border-radius: 20px; padding: 9px 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
+            <span id="heroStreakContainer" class="hero-streak-container" style="display: inline-flex; align-items: center; border-radius: 20px; padding: 9px 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
                 📖 <span id="heroStreakDisplay">Open a Book to Start Streak</span>
             </span>
             <button type="button" id="heroFrontLoginBtn" onclick="openFrontScreenLogin('reader')" style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: #ffffff; border: none; border-radius: 999px; padding: 9px 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4); transition: transform 0.2s, box-shadow 0.2s;" title="Instant Reader Sign In">
@@ -1475,7 +1670,7 @@
                                 <a href="/read/120001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/120001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -1584,7 +1779,7 @@
                                 <a href="/read/210001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/210001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -1687,7 +1882,7 @@
                                 <a href="/read/60001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/60001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -1790,7 +1985,7 @@
                                 <a href="/read/150001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/150001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -1883,7 +2078,7 @@
                                 <a href="/read/210003" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/210003" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -1984,7 +2179,7 @@
                                 <a href="/read/30001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/30001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -2077,7 +2272,7 @@
                                 <a href="/read/210004" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
                                 
                                     <form action="/save_book/210004" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
                                     </form>
                                 
@@ -2185,7 +2380,7 @@
                                 <div style="display: flex; gap: 8px;">
                                     <a href="/book/9999" class="btn btn-read" style="flex: 1; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onclick="event.stopPropagation();">🔍 Look Inside</a>
                                     <form action="/buy_book/9999" method="POST" style="flex: 1.3; display: flex; margin: 0;" onclick="event.stopPropagation();">
-                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <input type="hidden" name="csrf_token" value="33edaea52c8c5dfc1e6dbab343a24426ab49baf68e97fa830da7a648ed49de58">
                                         <button type="submit" class="btn btn-premium" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800;">⚡ Buy Now (₹1.00)</button>
                                     </form>
                                 </div>
