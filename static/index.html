@@ -1123,7 +1123,7 @@
 
 </style>
 </head>
-<body>
+<body data-user-logged-in="false">
 
     <nav class="navbar">
         <div class="navbar-brand">
@@ -2112,7 +2112,7 @@
             if (!container || !grid) return;
 
             const q = (query || '').trim();
-            if (!q || q.length < 2) {
+            if (!q) {
                 container.style.display = 'none';
                 grid.innerHTML = '';
                 lastAuthorSearchQuery = '';
@@ -2128,8 +2128,10 @@
             const cards = document.querySelectorAll('.book-card');
             cards.forEach(card => {
                 const author = (card.getAttribute('data-author') || '').trim();
+                const aId = parseInt(card.getAttribute('data-author-id') || '0', 10);
                 if (author && author.toLowerCase().includes(qLower) && !matchedAuthorsMap.has(author.toLowerCase())) {
                     matchedAuthorsMap.set(author.toLowerCase(), {
+                        id: aId,
                         username: author,
                         role: 'author',
                         book_count: 1,
@@ -2139,6 +2141,9 @@
                     });
                 } else if (author && matchedAuthorsMap.has(author.toLowerCase())) {
                     matchedAuthorsMap.get(author.toLowerCase()).book_count++;
+                    if (!matchedAuthorsMap.get(author.toLowerCase()).id && aId) {
+                        matchedAuthorsMap.get(author.toLowerCase()).id = aId;
+                    }
                 }
             });
 
@@ -2164,7 +2169,7 @@
                 } catch (err) {
                     console.error('Error fetching authors:', err);
                 }
-            }, 120);
+            }, 100);
         }
 
         function renderAuthorCards(authors) {
@@ -2209,7 +2214,7 @@
                         ${bio ? `<p class="pv-author-bio-snippet">${escapeHtml(bio)}</p>` : ''}
                         <div class="pv-author-card-footer">
                             <a href="/author/${encodeURIComponent(authorName)}" class="pv-author-view-link">View Author Showcase →</a>
-                            <button type="button" class="btn-author-like ${userHasLiked ? 'liked' : ''}" onclick="handleAuthorLike(event, ${authorId}, this)" data-author-id="${authorId}" title="${userHasLiked ? 'You like this author' : 'Give a like to this author'}">
+                            <button type="button" class="btn-author-like ${userHasLiked ? 'liked' : ''}" onclick="handleAuthorLike(event, ${authorId}, this)" data-author-id="${authorId}" title="${userHasLiked ? 'You like this author' : 'Give a like to this author (Sign In Required)'}">
                                 <span class="heart-icon">${userHasLiked ? '❤️' : '🤍'}</span>
                                 <span class="like-label">${userHasLiked ? 'Liked' : 'Like'}</span>
                                 <span class="like-badge">${likeCount}</span>
@@ -2228,11 +2233,18 @@
                 event.preventDefault();
             }
             if (!btn) return;
-            if (!authorId || authorId <= 0) {
+
+            // Check if user is logged in
+            const isUserLoggedIn = document.body.dataset.userLoggedIn === 'true' || !!document.querySelector('.nav-user-badge, .mobile-dock-btn[href="/dashboard"]');
+            
+            if (!isUserLoggedIn || !authorId || authorId <= 0) {
                 if (typeof openFrontScreenLogin === 'function') {
                     openFrontScreenLogin('reader');
+                    if (typeof showFrontLoginAlert === 'function') {
+                        showFrontLoginAlert('Please sign in to PustakVerse to give likes to authors ❤️');
+                    }
                 } else {
-                    window.location.href = '/login';
+                    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
                 }
                 return;
             }
@@ -2248,13 +2260,11 @@
                     btn.disabled = false;
                     if (typeof openFrontScreenLogin === 'function') {
                         openFrontScreenLogin('reader');
+                        if (typeof showFrontLoginAlert === 'function') {
+                            showFrontLoginAlert('Please sign in to PustakVerse to like this author ❤️');
+                        }
                     } else {
                         window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
-                    }
-                    if (typeof showToast === 'function') {
-                        showToast('Please sign in to like this author ❤️', 'warning');
-                    } else {
-                        alert('Please sign in to PustakVerse to give a like to this author ❤️');
                     }
                     return;
                 }
@@ -2313,8 +2323,13 @@
             });
             
             let noResults = document.getElementById('noResultsMsg');
+            let authorContainer = document.getElementById('authorSearchResultContainer');
+            let authorCardsGrid = document.getElementById('authorCardsGrid');
+            let hasAuthorResults = authorContainer && authorContainer.style.display !== 'none' && authorCardsGrid && authorCardsGrid.children.length > 0;
+
             if (noResults) {
-                noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+                // If we found matching author results, don't show the jarring "No matches found in the library"
+                noResults.style.display = (visibleCount === 0 && cards.length > 0 && !hasAuthorResults) ? 'block' : 'none';
             }
             // Hide the load more button when filtering
             let loadMore = document.getElementById('loadMoreBtn');
