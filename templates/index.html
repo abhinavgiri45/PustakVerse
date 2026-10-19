@@ -2628,7 +2628,7 @@
                         ${bio ? `<p class="pv-author-bio-snippet">${escapeHtml(bio)}</p>` : ''}
                         <div class="pv-author-card-footer">
                             <a href="/author/${encodeURIComponent(authorName)}" class="pv-author-view-link">View Author Showcase →</a>
-                            <button type="button" class="btn-author-like ${userHasLiked ? 'liked' : ''}" onclick="handleAuthorLike(event, ${authorId}, this)" data-author-id="${authorId}" title="${userHasLiked ? 'You like this author' : 'Give a like to this author (Sign In Required)'}">
+                            <button type="button" class="btn-author-like ${userHasLiked ? 'liked' : ''}" onclick="handleAuthorLike(event, ${authorId}, this)" data-author-id="${authorId}" title="${userHasLiked ? 'You like this author' : 'Give a like to this author'}">
                                 <span class="heart-icon">${userHasLiked ? '❤️' : '🤍'}</span>
                                 <span class="like-label">${userHasLiked ? 'Liked' : 'Like'}</span>
                                 <span class="like-badge">${likeCount}</span>
@@ -2646,28 +2646,13 @@
                 event.stopPropagation();
                 event.preventDefault();
             }
-            if (!btn) return;
-
-            // Check if user is logged in
-            const isUserLoggedIn = document.body.dataset.userLoggedIn === 'true' || !!document.querySelector('.nav-user-badge, .mobile-dock-btn[href="/dashboard"]');
-            
-            if (!isUserLoggedIn || !authorId || authorId <= 0) {
-                if (typeof openFrontScreenLogin === 'function') {
-                    openFrontScreenLogin('reader');
-                    if (typeof showFrontLoginAlert === 'function') {
-                        showFrontLoginAlert('Please sign in to PustakVerse to give likes to authors ❤️');
-                    }
-                } else {
-                    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
-                }
-                return;
-            }
+            if (!btn || !authorId || authorId <= 0) return;
 
             btn.disabled = true;
             try {
                 const res = await fetch(`/api/author/${authorId}/like`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
                 });
 
                 if (res.status === 401) {
@@ -2675,7 +2660,7 @@
                     if (typeof openFrontScreenLogin === 'function') {
                         openFrontScreenLogin('reader');
                         if (typeof showFrontLoginAlert === 'function') {
-                            showFrontLoginAlert('Please sign in to PustakVerse to like this author ❤️');
+                            showFrontLoginAlert('Please sign in to PustakVerse to give likes to authors ❤️');
                         }
                     } else {
                         window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
@@ -2700,8 +2685,12 @@
                             if (icon) icon.textContent = '🤍';
                             if (lbl) lbl.textContent = 'Like';
                         }
-                        if (badge) badge.textContent = data.like_count;
+                        if (badge && typeof data.like_count !== 'undefined') {
+                            badge.textContent = data.like_count;
+                        }
                     });
+                } else if (data && data.message) {
+                    alert(data.message);
                 }
             } catch (err) {
                 btn.disabled = false;
@@ -3655,6 +3644,8 @@
                 .then(r => r.ok ? r.json() : null)
                 .then(user => {
                     if (user && user.logged_in) {
+                        document.body.dataset.userLoggedIn = 'true';
+                        window.__pvCurrentUser = user.user || user;
                         if (typeof syncGlobalLibraryWithMyLibrary === 'function' && (user.purchased_book_ids || user.library_book_ids)) {
                             syncGlobalLibraryWithMyLibrary(user.purchased_book_ids, user.library_book_ids);
                         }
@@ -3662,11 +3653,17 @@
                         if (heroBtn) heroBtn.style.display = 'none';
                         const navSignIn = document.getElementById('navSignInLink');
                         if (navSignIn) {
-                            const uname = user.username || user.user?.username || 'User';
+                            const uname = (user.user && user.user.username) || user.username || 'User';
                             navSignIn.outerHTML = `
                                 <a href="/dashboard" id="navDashboardLink" class="nav-user-pill" title="Go to Dashboard">👤 ${escapeHtml(uname)}</a>
                                 <a href="/logout" id="navLogoutLink" class="nav-logout-pill" title="Sign out of PustakVerse">Logout</a>
                             `;
+                        }
+                        const mobileDockLogin = document.querySelector('.mobile-dock-btn[onclick*="openFrontScreenLogin"], .mobile-dock-btn[href="/login"]');
+                        if (mobileDockLogin) {
+                            mobileDockLogin.removeAttribute('onclick');
+                            mobileDockLogin.setAttribute('href', '/dashboard');
+                            mobileDockLogin.innerHTML = '<span style="font-size: 1.25rem;">👤</span><span style="font-size: 0.72rem; font-weight: 700;">Dashboard</span>';
                         }
                     }
                 })
