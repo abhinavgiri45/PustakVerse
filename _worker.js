@@ -13952,14 +13952,12 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
             resultBox.style.borderColor = '#86efac';
           }
           if (resultText) {
-            resultText.innerHTML = `
-              <div style="color: #166534; font-weight: 700; margin-bottom: 4px;">✓ Live Email Dispatched Successfully!</div>
-              <div style="font-size: 0.82rem; color: #15803d; line-height: 1.5;">
-                Recipient: <strong>${data.test_email}</strong><br>
-                Provider: <strong>${data.active_provider}</strong> (${data.sender})<br>
-                Latency: <strong>${data.latency_ms} ms</strong> | Type: <strong>${data.test_type}</strong>
-              </div>
-            `;
+            resultText.innerHTML = '<div style="color: #166534; font-weight: 700; margin-bottom: 4px;">✓ Live Email Dispatched Successfully!</div>' +
+              '<div style="font-size: 0.82rem; color: #15803d; line-height: 1.5;">' +
+              'Recipient: <strong>' + (data.test_email || '') + '</strong><br>' +
+              'Provider: <strong>' + (data.active_provider || '') + '</strong> (' + (data.sender || '') + ')<br>' +
+              'Latency: <strong>' + (data.latency_ms || 0) + ' ms</strong> | Type: <strong>' + (data.test_type || '') + '</strong>' +
+              '</div>';
           }
         } else {
           if (resultBox) {
@@ -13967,12 +13965,10 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
             resultBox.style.borderColor = '#fca5a5';
           }
           if (resultText) {
-            resultText.innerHTML = `
-              <div style="color: #991b1b; font-weight: 700; margin-bottom: 4px;">✗ Email Dispatch Failed</div>
-              <div style="font-size: 0.82rem; color: #b91c1c;">
-                Error: ${data.message || data.dispatch_result?.error || 'Unknown failure'}
-              </div>
-            `;
+            resultText.innerHTML = '<div style="color: #991b1b; font-weight: 700; margin-bottom: 4px;">✗ Email Dispatch Failed</div>' +
+              '<div style="font-size: 0.82rem; color: #b91c1c;">' +
+              'Error: ' + (data.message || (data.dispatch_result && data.dispatch_result.error) || 'Unknown failure') +
+              '</div>';
           }
         }
       } catch (err) {
@@ -13980,7 +13976,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
           resultBox.style.background = '#fef2f2';
           resultBox.style.borderColor = '#fca5a5';
         }
-        if (resultText) resultText.innerHTML = `<span style="color: #991b1b;">Connection Error: ${err.message}</span>`;
+        if (resultText) resultText.innerHTML = '<span style="color: #991b1b;">Connection Error: ' + (err.message || 'Network failure') + '</span>';
       } finally {
         if (btn) {
           btn.disabled = false;
