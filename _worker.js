@@ -901,10 +901,8 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
                 </span>
             </div>
         </div>
-        <div class="leadership-box" style="flex-wrap: wrap; gap: 14px; justify-content: center;">
+        <div class="leadership-box">
             <span>Engineering Status: <strong style="color: #38bdf8;">Cluster Sync In Progress</strong></span>
-            <span style="opacity: 0.4;">•</span>
-            <a href="/bypass_maintenance" class="leadership-link" style="font-size: 0.78rem; padding: 5px 12px;">🔑 Developer Bypass</a>
         </div>
     </div>
 </body>
