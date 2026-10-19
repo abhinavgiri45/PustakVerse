@@ -86,6 +86,12 @@ def build():
             with open(out_path, "wb") as f:
                 f.write(content)
 
+            if out_file == "index.html":
+                static_index_path = os.path.join(static_src, "index.html")
+                with open(static_index_path, "wb") as f_static:
+                    f_static.write(content)
+                print("[+] Also updated static/index.html with pre-rendered book catalog!")
+
         # 4. Generate custom 404 page for GitHub Pages
         print("[+] Generating 404.html...")
         resp_404 = client.get("/")

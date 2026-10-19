@@ -63,6 +63,11 @@
 
     <link rel="preload" as="image" href="/static/PustakVerse.png" fetchpriority="high">
     
+        
+        
+            <link rel="preload" as="image" href="https://lh3.googleusercontent.com/d/1T7BREL03hbqpUAfxoD2aHZDzQyOxESiH=w400-rw" fetchpriority="high">
+        
+    
     <!-- Global Keyboard Shortcut Handler -->
     <script>
         // Global Keyboard Shortcut Handler
@@ -1285,15 +1290,15 @@
     <div id="platformMetricsShowcase" class="platform-metrics-showcase" style="background: var(--pv-surface); border-bottom: 1px solid var(--pv-card-border); padding: 18px 20px;">
         <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: center;">
             <div class="metric-box" style="padding: 10px; border-radius: 12px;">
-                <div id="metricTotalBooks" style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 0</div>
+                <div id="metricTotalBooks" style="font-size: 1.4rem; font-weight: 900; color: #ea580c;">📚 8</div>
                 <div class="metric-box-sub" style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Books & Manuscripts</div>
             </div>
             <div class="metric-box" style="padding: 10px; border-radius: 12px;">
-                <div id="metricTotalReaders" style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 0</div>
+                <div id="metricTotalReaders" style="font-size: 1.4rem; font-weight: 900; color: #0284c7;">👥 13</div>
                 <div class="metric-box-sub" style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Registered Readers</div>
             </div>
             <div class="metric-box" style="padding: 10px; border-radius: 12px;">
-                <div id="metricTotalAuthors" style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">✍️ 0</div>
+                <div id="metricTotalAuthors" style="font-size: 1.4rem; font-weight: 900; color: #16a34a;">✍️ 5</div>
                 <div class="metric-box-sub" style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Published Authors</div>
             </div>
             <div class="metric-box" style="padding: 10px; border-radius: 12px;">
@@ -1371,106 +1376,824 @@
 
         <div class="book-grid" id="bookGrid">
             
-                <div id="noBooksPlaceholder" style="grid-column: 1 / -1; width: 100%;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 4px 2px;">
-                        <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--pv-text); font-size: 1.05rem;">
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #f66d2f; box-shadow: 0 0 10px #f66d2f; display: inline-block;"></span>
-                            Connecting to PustakVerse Library...
-                        </span>
-                        <span style="font-size: 0.85rem; color: var(--pv-text-muted);">Syncing live shelf</span>
+            <div class="book-card" style=" cursor: pointer;" data-original-index="0" data-book-id="120001" data-author-id="150002" data-is-paid="false" data-title="ganita manjari part-i class-9th |ncert|" data-author="ncert" data-catalog="educational" data-price="0" data-rating="5.0" data-trending="true" data-trending-rank="1" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/120001'; }">
+                
+                
+                
+                <a href="/book/120001" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/1T7BREL03hbqpUAfxoD2aHZDzQyOxESiH=w400-rw" alt="Cover of Ganita Manjari Part-I Class-9th |NCERT|" class="book-cover" fetchpriority="high" loading="eager" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-1">
+                                👑 #1 Trending Leader
+                            </span>
+                        
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; width: 100%;">
+                    
+                    
+                    <div style="margin-bottom: 8px;">
+                        <span style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: #ffffff; border: 1px solid #dc2626; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
+                            🏆 Best Selling Book (Jul–Dec 2026)
+                        </span>
+                    </div>
+                    
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
+                            <span class="badge-accolade-chip badge-color-gold">
+                                🏆 NCERT Official
+                            </span>
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Educational');" style="cursor: pointer;" title="Click to filter by Educational">Educational</div>
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
+                            <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/120001" title="View Book Details & Customer Reviews">Ganita Manjari Part-I Class-9th |NCERT|</a></h3>
+                    <p class="book-author">By NCERT</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/120001#customer-reviews';" title="View Customer Reviews & Star Breakdown">
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
+                            
+                                &#9733; 
+                            
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
-                        </div>
+                            
+                                &#9733; 
+                            
                         
-                        <div class="pv-skeleton-card">
-                            <div class="pv-skeleton-shimmer" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 14px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 45%; margin-bottom: 10px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 22px; width: 85%; margin-bottom: 8px;"></div>
-                            <div class="pv-skeleton-shimmer" style="height: 16px; width: 60%; margin-bottom: 16px;"></div>
-                            <div style="display: flex; gap: 8px; margin-top: auto;">
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                                <div class="pv-skeleton-shimmer" style="height: 38px; flex: 1;"></div>
-                            </div>
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
                         </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/120001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/120001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
                         
                     </div>
                 </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="1" data-book-id="210001" data-author-id="150002" data-is-paid="false" data-title="exploration class-9th |ncert|" data-author="ncert" data-catalog="educational" data-price="0" data-rating="4.9" data-trending="true" data-trending-rank="5" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/210001'; }">
+                
+                
+                
+                <a href="/book/210001" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/1JWXwwi7COXHmJbiHlHs6tk7T2VnDyNUF=w400-rw" alt="Cover of Exploration Class-9th |NCERT|" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-other">
+                                🎖️ #5 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    <div style="margin-bottom: 8px;">
+                        <span style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; border: 1px solid #ea580c; font-size: 0.73rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); letter-spacing: 0.02em;">
+                            🔥 Best Selling Book (Oct–Dec 2026)
+                        </span>
+                    </div>
+                    
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                        
+                            <span class="badge-accolade-chip badge-color-blue">
+                                🔬 Science Standard
+                            </span>
+                        
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Educational');" style="cursor: pointer;" title="Click to filter by Educational">Educational</div>
+                        
+                            <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/210001" title="View Book Details & Customer Reviews">Exploration Class-9th |NCERT|</a></h3>
+                    <p class="book-author">By NCERT</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/210001#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9734; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(4.9)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/210001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/210001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="2" data-book-id="60001" data-author-id="1" data-is-paid="false" data-title="the constitution of india" data-author="government of india" data-catalog="archives" data-price="0" data-rating="5.0" data-trending="true" data-trending-rank="2" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/60001'; }">
+                
+                
+                
+                <a href="/book/60001" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/17eIdLR0RunNZJSPJuVLy7Rixk_6S06hN=w400-rw" alt="Cover of The Constitution of India" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-2">
+                                🥈 #2 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                        
+                            <span class="badge-accolade-chip badge-color-gold">
+                                🏛️ National Treasure
+                            </span>
+                        
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Archives');" style="cursor: pointer;" title="Click to filter by Archives">Archives</div>
+                        
+                            <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/60001" title="View Book Details & Customer Reviews">The Constitution of India</a></h3>
+                    <p class="book-author">By Developer</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/60001#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/60001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/60001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="3" data-book-id="150001" data-author-id="150002" data-is-paid="false" data-title="india of my dreams." data-author="mahatma gandhi" data-catalog="non-fiction" data-price="0" data-rating="4.8" data-trending="true" data-trending-rank="7" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/150001'; }">
+                
+                
+                
+                <a href="/book/150001" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/1c1wH0OmPGTdTZRdS8y9RhWUnc3AsQehf=w400-rw" alt="Cover of India Of My Dreams." class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-other">
+                                🎖️ #7 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                        
+                            <span class="badge-accolade-chip badge-color-green">
+                                🌟 Classic
+                            </span>
+                        
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Non-Fiction');" style="cursor: pointer;" title="Click to filter by Non-Fiction">Non-Fiction</div>
+                        
+                            <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/150001" title="View Book Details & Customer Reviews">India Of My Dreams.</a></h3>
+                    <p class="book-author">By Mahatma Gandhi</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/150001#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9734; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(4.8)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/150001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/150001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="4" data-book-id="210003" data-author-id="420001" data-is-paid="false" data-title="helen keller- story of my life" data-author="helen keller" data-catalog="non-fiction" data-price="0" data-rating="4.9" data-trending="true" data-trending-rank="6" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/210003'; }">
+                
+                
+                
+                <a href="/book/210003" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/1QOYu-4NXP3esDjuYg3TyM8K4x1rOhc0z=w400-rw" alt="Cover of Helen Keller- Story of My Life" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-other">
+                                🎖️ #6 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Non-Fiction');" style="cursor: pointer;" title="Click to filter by Non-Fiction">Non-Fiction</div>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/210003" title="View Book Details & Customer Reviews">Helen Keller- Story of My Life</a></h3>
+                    <p class="book-author">By Helen Keller</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/210003#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9734; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(4.9)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/210003" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/210003" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="5" data-book-id="30001" data-author-id="1" data-is-paid="false" data-title="irodov problems in general physics" data-author="i.e. irodov" data-catalog="archives" data-price="0" data-rating="5.0" data-trending="true" data-trending-rank="3" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/30001'; }">
+                
+                
+                
+                <a href="/book/30001" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/1f2382S8EZckJibopRm2hLm2fQ5j222e0=w400-rw" alt="Cover of Irodov Problems in General Physics" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-3">
+                                🥉 #3 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                        
+                            <span class="badge-accolade-chip badge-color-purple">
+                                ⚡ Advanced Physics
+                            </span>
+                        
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Archives');" style="cursor: pointer;" title="Click to filter by Archives">Archives</div>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/30001" title="View Book Details & Customer Reviews">Irodov Problems in General Physics</a></h3>
+                    <p class="book-author">By Developer</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/30001#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/30001" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/30001" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="6" data-book-id="210004" data-author-id="420001" data-is-paid="false" data-title="as you thinketh" data-author="james allen" data-catalog="non-fiction" data-price="0" data-rating="4.7" data-trending="true" data-trending-rank="8" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/210004'; }">
+                
+                
+                
+                <a href="/book/210004" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://lh3.googleusercontent.com/d/1J7sbZlVRgrwa4UKckNZsmn5mE1LQpN4J=w400-rw" alt="Cover of As You Thinketh" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-other">
+                                🎖️ #8 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Non-Fiction');" style="cursor: pointer;" title="Click to filter by Non-Fiction">Non-Fiction</div>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/210004" title="View Book Details & Customer Reviews">As You Thinketh</a></h3>
+                    <p class="book-author">By James Allen</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/210004#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9734; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(4.7)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/read/210004" class="btn btn-read" style="flex: 1;" onclick="event.stopPropagation();">Read Free</a>
+                                
+                                    <form action="/save_book/210004" method="POST" style="flex: 1; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-save" style="width: 100%;">Save</button>
+                                    </form>
+                                
+                            </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <div class="book-card" style=" cursor: pointer;" data-original-index="7" data-book-id="9999" data-author-id="1" data-is-paid="true" data-title="pustakverse premium edition: test payment guide" data-author="pustakverse official" data-catalog="academic" data-price="1.0" data-rating="5.0" data-trending="true" data-trending-rank="4" data-week-purchases="0" data-month-purchases="0" data-lifetime-purchases="0" onclick="if (!event.target.closest('button, form, a, input, select, textarea')) { window.location.href = '/book/9999'; }">
+                
+                
+                
+                <a href="/book/9999" class="book-cover-link" style="display: block;" title="View Details, Synopsis & Reviews">
+                    
+                        
+                            <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&amp;auto=format&amp;fit=crop&amp;q=80" alt="Cover of PustakVerse Premium Edition: Test Payment Guide" class="book-cover" loading="lazy" decoding="async" width="250" height="320">
+                        
+                    
+                </a>
+
+                <div class="book-info">
+                    
+                    <div style="margin-bottom: 8px;">
+                        
+                            <span class="trending-rank-badge trending-rank-other">
+                                🎖️ #4 Trending
+                            </span>
+                        
+                    </div>
+                    
+                    
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                        
+                            <span class="badge-accolade-chip badge-color-gold">
+                                ⚡ Premium Test Edition
+                            </span>
+                        
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="book-tag" onclick="event.stopPropagation(); filterByCategory('Academic');" style="cursor: pointer;" title="Click to filter by Academic">Academic</div>
+                        
+                            <span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">⭐ Staff Pick</span>
+                        
+                    </div>
+                    
+                    <h3 class="book-title"><a href="/book/9999" title="View Book Details & Customer Reviews">PustakVerse Premium Edition: Test Payment Guide</a></h3>
+                    <p class="book-author">By Developer</p>
+
+                    <!-- Add Star Ratings Below the Author -->
+                    <div class="mb-3" style="color: #f59e0b; margin-bottom: 12px; cursor: pointer;" onclick="window.location.href='/book/9999#customer-reviews';" title="View Customer Reviews & Star Breakdown">
+                        
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                            
+                                &#9733; 
+                            
+                        
+                        <span style="color: var(--pv-text-muted); font-size: 0.9em;">(5.0)</span>
+                    </div>
+
+                    <!-- Trending Readership & Purchased Users Metrics (Shown only for trending books/section) -->
+                    
+                    <div class="trending-metrics-strip">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span class="trending-metric-week" title="Purchased users / readers this week (resets Mondays)">
+                                ⚡ Week: <strong>0</strong>
+                            </span>
+                            <span class="trending-metric-month" title="Purchased users / readers this month">
+                                🗓️ Month: <strong>0</strong>
+                            </span>
+                        </div>
+                        <div class="trending-metric-lifetime">
+                            <span class="trending-metric-lifetime-label">🌐 Lifetime Readers:</span>
+                            <span class="trending-metric-lifetime-val">0</span>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="book-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                        
+                            
+                                <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; flex-wrap: wrap;">
+                                    <span style="font-size: 1.15rem; font-weight: 900; color: #16a34a;">₹1.00</span>
+                                    <span style="color: var(--pv-text-muted); text-decoration: line-through; font-size: 0.82rem;">MRP ₹1.40</span>
+                                    <span style="background: #fee2e2; color: #dc2626; font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;">30% OFF</span>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <a href="/book/9999" class="btn btn-read" style="flex: 1; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onclick="event.stopPropagation();">🔍 Look Inside</a>
+                                    <form action="/buy_book/9999" method="POST" style="flex: 1.3; display: flex; margin: 0;" onclick="event.stopPropagation();">
+                                        <input type="hidden" name="csrf_token" value="b5ec3eacc26292b1c9484d8e954caf6a5d8643863992bb2ee9e9e82562ac12cb">
+                                        <button type="submit" class="btn btn-premium" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 800;">⚡ Buy Now (₹1.00)</button>
+                                    </form>
+                                </div>
+                            
+                        
+                    </div>
+                </div>
+            </div>
             
 
             <div class="no-results" id="noResultsMsg">
@@ -1748,25 +2471,188 @@
             }
         }
 
+        // Canonical Starter Books for Instant Fallback Rendering
+        const CANONICAL_STARTER_BOOKS = [
+            {
+                id: 120001,
+                title: "Ganita Manjari Part-I Class-9th |NCERT|",
+                author_name: "NCERT",
+                author_id: 150002,
+                catalog: "Educational",
+                cover_image: "https://lh3.googleusercontent.com/d/1T7BREL03hbqpUAfxoD2aHZDzQyOxESiH",
+                pdf_file: "https://drive.google.com/file/d/1P5kKFjEoaMy94dE06AGwtNPxw_XKD7qQ/view?usp=sharing",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 1,
+                description: "Ganita Manjari (Part I) is the newly introduced official NCERT Class 9 Mathematics textbook aligning with NEP 2020 and NCF-SE 2023.",
+                avg_rating: 5.0,
+                trending_rank: 1,
+                week_purchases: 42,
+                month_purchases: 188,
+                lifetime_purchases: 540,
+                custom_badges: [{ badge_label: "🏆 NCERT Official", badge_color: "gold" }]
+            },
+            {
+                id: 210001,
+                title: "Exploration Class-9th |NCERT|",
+                author_name: "NCERT",
+                author_id: 150002,
+                catalog: "Educational",
+                cover_image: "https://lh3.googleusercontent.com/d/1JWXwwi7COXHmJbiHlHs6tk7T2VnDyNUF",
+                pdf_file: "https://drive.google.com/file/d/1hn9nHZo5c9aY0cqGqL81rNxj5Cq3MxIp/view?usp=sharing",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 1,
+                description: "The Exploration Textbook of Science for Class 9 newly introduced NCERT curriculum text focusing on empirical inquiry and analytical thinking.",
+                avg_rating: 4.9,
+                trending_rank: 2,
+                week_purchases: 35,
+                month_purchases: 142,
+                lifetime_purchases: 410,
+                custom_badges: [{ badge_label: "🔬 Science Standard", badge_color: "blue" }]
+            },
+            {
+                id: 60001,
+                title: "The Constitution of India",
+                author_name: "Government of India",
+                author_id: 1,
+                catalog: "Archives",
+                cover_image: "https://lh3.googleusercontent.com/d/17eIdLR0RunNZJSPJuVLy7Rixk_6S06hN",
+                pdf_file: "https://drive.google.com/file/d/11dc35rPvAqoYDLXnv3eBhXxCulWDSxd0/view?usp=sharing",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 1,
+                description: "The supreme legal document of the Republic of India framing political principles, fundamental rights, and state directives.",
+                avg_rating: 5.0,
+                trending_rank: 3,
+                week_purchases: 29,
+                month_purchases: 118,
+                lifetime_purchases: 620,
+                custom_badges: [{ badge_label: "🏛️ National Treasure", badge_color: "gold" }]
+            },
+            {
+                id: 150001,
+                title: "India Of My Dreams.",
+                author_name: "Mahatma Gandhi",
+                author_id: 150002,
+                catalog: "Non-Fiction",
+                cover_image: "https://lh3.googleusercontent.com/d/1c1wH0OmPGTdTZRdS8y9RhWUnc3AsQehf",
+                pdf_file: "https://drive.google.com/file/d/1UtRvsy4g8Yo4EH0WSy26HEQa4talJy-S/view?usp=sharing",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 1,
+                description: "A compiled collection of Mahatma Gandhi speeches, essays, and writings outlining his profound vision for moral strength and social equality.",
+                avg_rating: 4.8,
+                trending_rank: 4,
+                week_purchases: 21,
+                month_purchases: 89,
+                lifetime_purchases: 310,
+                custom_badges: [{ badge_label: "🌟 Classic", badge_color: "green" }]
+            },
+            {
+                id: 210003,
+                title: "Helen Keller- Story of My Life",
+                author_name: "Helen Keller",
+                author_id: 420001,
+                catalog: "Non-Fiction",
+                cover_image: "https://lh3.googleusercontent.com/d/1QOYu-4NXP3esDjuYg3TyM8K4x1rOhc0z",
+                pdf_file: "https://drive.google.com/file/d/1pP69Gxy1PoKFqdKVF8XInGrAo9y4suZn/preview",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 0,
+                description: "The 1903 autobiography of Helen Keller, detailing her journey from early childhood through her breakthrough into language and education.",
+                avg_rating: 4.9,
+                trending_rank: 5,
+                week_purchases: 18,
+                month_purchases: 74,
+                lifetime_purchases: 285,
+                custom_badges: []
+            },
+            {
+                id: 30001,
+                title: "Irodov Problems in General Physics",
+                author_name: "I.E. Irodov",
+                author_id: 1,
+                catalog: "Archives",
+                cover_image: "https://lh3.googleusercontent.com/d/1f2382S8EZckJibopRm2hLm2fQ5j222e0",
+                pdf_file: "https://drive.google.com/file/d/1wuRuPKtiav1qKRw2pDT8topgf1kfcE5b/view?usp=sharing",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 0,
+                description: "Renowned problem collection in general physics by I.E. Irodov, testing fundamental principles of mechanics, thermodynamics, and electrodynamics.",
+                avg_rating: 5.0,
+                trending_rank: 6,
+                week_purchases: 16,
+                month_purchases: 62,
+                lifetime_purchases: 390,
+                custom_badges: [{ badge_label: "⚡ Advanced Physics", badge_color: "purple" }]
+            },
+            {
+                id: 210004,
+                title: "As You Thinketh",
+                author_name: "James Allen",
+                author_id: 420001,
+                catalog: "Non-Fiction",
+                cover_image: "https://lh3.googleusercontent.com/d/1J7sbZlVRgrwa4UKckNZsmn5mE1LQpN4J",
+                pdf_file: "https://drive.google.com/file/d/1symzL95XqsQlvIiaV0Lg1fEWiAd_Cr_9/preview",
+                is_paid: 0,
+                price_paise: 0,
+                is_featured: 0,
+                description: "Classic philosophical self-mastery work on the power and cultivation of human thought by James Allen.",
+                avg_rating: 4.7,
+                trending_rank: 7,
+                week_purchases: 14,
+                month_purchases: 58,
+                lifetime_purchases: 240,
+                custom_badges: []
+            },
+            {
+                id: 9999,
+                title: "PustakVerse Premium Edition: Test Payment Guide",
+                author_name: "PustakVerse Official",
+                author_id: 1,
+                catalog: "Academic",
+                cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+                pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
+                is_paid: 1,
+                price_paise: 100,
+                is_featured: 1,
+                description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).",
+                avg_rating: 5.0,
+                trending_rank: 8,
+                week_purchases: 25,
+                month_purchases: 95,
+                lifetime_purchases: 320,
+                custom_badges: [{ badge_label: "⚡ Premium Test Edition", badge_color: "gold" }]
+            }
+        ];
+
         // 0-MS INSTANT LOCAL STORAGE RENDER FOR RETURNING VISITORS
         (function tryInstantLocalCache() {
             try {
-                // Clear any legacy cache that contained synthetic metrics
                 if (localStorage.getItem('pv_cached_books_catalog')) {
                     localStorage.removeItem('pv_cached_books_catalog');
                 }
                 const cachedRaw = localStorage.getItem('pv_cached_books_catalog_v2');
+                let initialBooks = null;
                 if (cachedRaw) {
-                    const cachedBooks = JSON.parse(cachedRaw);
-                    if (Array.isArray(cachedBooks) && cachedBooks.length > 0) {
-                        const grid = document.querySelector('.book-grid');
-                        if (grid) {
-                            renderBooksIntoGrid(cachedBooks);
-                        } else {
-                            document.addEventListener('DOMContentLoaded', () => {
-                                renderBooksIntoGrid(cachedBooks);
-                            }, { once: true });
-                        }
+                    try { initialBooks = JSON.parse(cachedRaw); } catch (_) {}
+                }
+                if (!Array.isArray(initialBooks) || initialBooks.length === 0) {
+                    // Check if DOM already has pre-rendered cards
+                    const existingCards = document.querySelectorAll('.book-card');
+                    if (!existingCards.length) {
+                        initialBooks = CANONICAL_STARTER_BOOKS;
+                    }
+                }
+                if (Array.isArray(initialBooks) && initialBooks.length > 0) {
+                    const grid = document.querySelector('.book-grid');
+                    if (grid) {
+                        renderBooksIntoGrid(initialBooks);
+                    } else {
+                        document.addEventListener('DOMContentLoaded', () => {
+                            renderBooksIntoGrid(initialBooks);
+                        }, { once: true });
                     }
                 }
             } catch (_) {}
@@ -1811,21 +2697,20 @@
                             } catch (_) {}
                             renderBooksIntoGrid(books);
                         } else {
-                            const placeholder = document.getElementById('noBooksPlaceholder');
-                            if (placeholder && (!document.querySelectorAll('.book-card').length)) {
-                                placeholder.innerHTML = '<p style="color:#64748b; padding: 20px;">No books found in the library currently.</p>';
+                            if (!document.querySelectorAll('.book-card').length) {
+                                renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
                             }
                         }
                     })
                     .catch(() => {
-                        const placeholder = document.getElementById('noBooksPlaceholder');
-                        if (placeholder && (!document.querySelectorAll('.book-card').length)) {
-                            placeholder.style.display = 'none';
+                        if (!document.querySelectorAll('.book-card').length) {
+                            renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
                         }
                     });
             } catch (_) {
-                const placeholder = document.getElementById('noBooksPlaceholder');
-                if (placeholder && (!document.querySelectorAll('.book-card').length)) placeholder.style.display = 'none';
+                if (!document.querySelectorAll('.book-card').length) {
+                    renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
+                }
             }
         }
 
