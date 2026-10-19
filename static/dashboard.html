@@ -3104,12 +3104,54 @@
                 </div>
 
                 <!-- Change Password Section -->
-                
-                    <form action="/send_change_password_otp" method="POST" style="margin-bottom: 25px;">
-                        <input type="hidden" name="csrf_token" value="">
-                        <button type="submit" class="btn-sm btn-dark" style="padding: 12px 25px;">Change My Password</button>
-                    </form>
-                
+                <div id="changePasswordCard" style="background: #fff; padding: 20px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-bottom: 25px;">
+                    <h3 style="margin-top: 0; font-size: 1.15rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                        <span>🔑</span> Change Account Password
+                    </h3>
+                    
+                    <div id="changePasswordOtpSection" style="display: block;">
+                        <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 14px; line-height: 1.5;">
+                            To ensure high account security, a 6-digit verification code will be dispatched to your registered email address before changing your password.
+                        </p>
+                        <form action="/send_change_password_otp" method="POST" id="formSendChangePwOtp" onsubmit="handleSendChangePwOtp(event)">
+                            <input type="hidden" name="csrf_token" value="">
+                            <button type="submit" id="btnSendChangePwOtp" class="btn-sm btn-dark" style="padding: 11px 22px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                <span>📧</span> Request Verification Code to Change Password
+                            </button>
+                        </form>
+                    </div>
+
+                    <div id="changePasswordFormSection" style="display: none; margin-top: 14px;">
+                        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.86rem; color: #166534;">
+                            ✓ <strong>Verification Code Dispatched:</strong> Check your email inbox (and spam folder) for the 6-digit code.
+                        </div>
+                        <form action="/change_password" method="POST" id="formChangePassword">
+                            <input type="hidden" name="csrf_token" value="">
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Enter 6-Digit Email Verification Code</label>
+                                <input type="text" name="otp" id="changePwOtpInput" required placeholder="• • • • • •" maxlength="6" style="letter-spacing: 6px; font-weight: 800; font-size: 1.15rem; width: 220px; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Current Password</label>
+                                <input type="password" name="old_password" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">New Password (Min 6 characters)</label>
+                                <input type="password" name="new_password" id="dash_new_pw" required minlength="6" oninput="checkPassStrength(this.value, 'dash_pw_meter', 'dash_pw_text')" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
+                                <div style="margin-top: 6px;">
+                                    <div style="height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                                        <div id="dash_pw_meter" style="height: 100%; width: 0%; transition: width 0.3s;"></div>
+                                    </div>
+                                    <small id="dash_pw_text" style="font-size: 0.75rem; color: #64748b; margin-top: 2px; display: block;">Strength: Enter password</small>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <button type="submit" class="btn-sm btn-green" style="padding: 10px 22px; font-weight: 800;">Update Password</button>
+                                <button type="button" onclick="cancelChangePwForm()" class="btn-sm" style="background: #e2e8f0; color: #334155; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
 
                 <!-- Danger Zone: Permanent Account Deletion (Visible for all roles, with strict developer protection) -->
                 
@@ -4241,6 +4283,52 @@
                     <span style="font-weight: 700; color: #16a34a; font-size: 0.8rem;">● 0 PENDING UNLOCK TICKETS</span>
                 </div>
                 
+            </div>
+
+            <!-- Email & OTP Dispatch Engine Diagnostics Hub -->
+            <div id="devEmailDiagnosticsHub" style="margin-top: 18px; background: white; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+                    <div>
+                        <h3 style="margin: 0; color: #1e40af; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                            <span>📨</span> Email &amp; OTP Dispatch Engine Diagnostics Hub
+                        </h3>
+                        <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.82rem;">Test live email and OTP delivery across Google Gmail REST API, Resend, Brevo, and SendGrid with real-time latency feedback.</p>
+                    </div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">● Gmail REST API (OAuth2) Active</span>
+                        <span style="background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 6px;">Resend / Brevo Fallback</span>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Target Recipient Email:</label>
+                        <input type="email" id="diagTargetEmail" value="abhinavgiri370@gmail.com" placeholder="Enter email to test..." style="width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Test Scenario / Template:</label>
+                        <select id="diagTestType" style="width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem; background: white;">
+                            <option value="otp">🔑 6-Digit Registration &amp; Account OTP Code</option>
+                            <option value="2fa">🔐 Two-Step Verification (2FA) Login Code</option>
+                            <option value="password_change">🛡️ Password Change Verification Code</option>
+                            <option value="maintenance">📢 Scheduled System Maintenance Announcement Preview</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" onclick="runEmailDiagnosticTest(this, document.getElementById('diagTestType').value)" class="btn-sm btn-dark" style="padding: 9px 18px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: #1e40af; border: none; cursor: pointer;">
+                        ⚡ Send Live Test Dispatch
+                    </button>
+                    <button type="button" onclick="runEmailDiagnosticTest(this, 'maintenance')" class="btn-sm" style="padding: 9px 16px; font-weight: 700; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; cursor: pointer;">
+                        📢 Test Maintenance Broadcast
+                    </button>
+                </div>
+
+                <!-- Live Test Result Output Box -->
+                <div id="diagResultBox" style="display: none; margin-top: 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; background: #f8fafc; font-size: 0.85rem;">
+                    <div id="diagResultText"></div>
+                </div>
             </div>
         </div>
 

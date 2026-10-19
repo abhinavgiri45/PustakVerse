@@ -5066,7 +5066,14 @@ def check_system_maintenance():
         '/static', '/favicon.ico', '/payment/webhook',
         '/api/user/heartbeat', '/developer/toggle_maintenance',
         '/api/developer/toggle_maintenance', '/developer/end_maintenance',
-        '/api/developer/end_maintenance', '/admin/activity-monitor'
+        '/api/developer/end_maintenance', '/admin/activity-monitor',
+        '/two_factor', '/api/two_factor', '/api/verify_2fa', '/resend_2fa',
+        '/send_change_password_otp', '/change_password',
+        '/send_change_email_otp', '/verify_change_email_otp',
+        '/send_delete_account_otp', '/delete_account', '/delete_my_account',
+        '/api/test-email', '/api/verify-email-engine', '/api/developer/test-email',
+        '/forgot_password', '/reset_password', '/api/auth/reset-password',
+        '/api/auth/send-otp', '/api/auth/verify-otp'
     ]
     for p in exempt_paths:
         if request.path.startswith(p):
@@ -7697,7 +7704,10 @@ def developer_purge_cache():
 
 @app.route('/send_change_password_otp', methods=['POST'])
 def send_change_password_otp():
+    is_ajax = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     if 'user_id' not in session: 
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Authentication required'}), 401
         return redirect(url_for('login'))
         
     db = None
@@ -7705,9 +7715,11 @@ def send_change_password_otp():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT email FROM users WHERE id = %s", (session['user_id'],))
+        cursor.execute("SELECT email, username FROM users WHERE id = %s", (session['user_id'],))
         user = cursor.fetchone()
-    except Exception: 
+    except Exception as e: 
+        if is_ajax:
+            return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
         flash("Database connection error. Please try again.", "error")
         return redirect(url_for('dashboard'))
     finally:
@@ -7715,13 +7727,21 @@ def send_change_password_otp():
             try: db.close()
             except: pass
 
-    if user:
+    if user and user.get('email'):
         otp = str(random.randint(100000, 999999))
         session['change_pw_otp'] = otp
         if send_otp_email(user['email'], otp): 
+            if is_ajax:
+                return jsonify({'success': True, 'message': f"A 6-digit verification code has been dispatched to {user['email']}."})
             flash("An OTP has been sent to your registered email.", "info")
         else: 
+            if is_ajax:
+                return jsonify({'success': False, 'message': "Failed to send OTP. Please check the email server."}), 500
             flash("Failed to send OTP. Please check the email server.", "error")
+    else:
+        if is_ajax:
+            return jsonify({'success': False, 'message': "No registered email address found for this account."}), 400
+        flash("No registered email address found.", "error")
             
     return redirect(url_for('dashboard'))
 
