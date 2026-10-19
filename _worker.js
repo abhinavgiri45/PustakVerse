@@ -4746,6 +4746,18 @@ Format with these exact markdown sections:
       try { sessionUser = JSON.parse(atob(cookies.pv_session)); } catch (_) {}
       if (!sessionUser) return Response.redirect(`${url.origin}/login`, 302);
 
+      const isDevAccount = (
+        sessionUser.role === "developer" ||
+        (sessionUser.username && sessionUser.username.toLowerCase() === "abhinavgiri45") ||
+        (sessionUser.email && sessionUser.email.toLowerCase() === "abhinavgiri370@gmail.com")
+      );
+      if (isDevAccount) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="4;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#f97316;}</style></head><body><h3>🛡️ Developer Account Protected</h3><p>Developer accounts cannot be deleted as they are essential for site governance, security enforcement, and core infrastructure maintenance.</p><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
       const delOtp = Math.floor(100000 + Math.random() * 900000).toString();
       console.log(`⚠️ [DELETE ACCOUNT OTP] ${sessionUser.username} (${sessionUser.email}) -> ${delOtp}`);
 
@@ -4761,7 +4773,7 @@ Format with these exact markdown sections:
       return new Response(null, { status: 302, headers: resHeaders });
     }
 
-    // 5I-4. Delete Account Confirmation: POST /delete_my_account or POST /delete_account
+    // 5I-4. Delete Account Confirmation: POST /delete_my_account or POST /delete_account (4-Factor Verified)
     if ((url.pathname === "/delete_my_account" || url.pathname === "/delete_account") && request.method === "POST") {
       const cookies = parseCookies(request.headers.get("Cookie"));
       if (!cookies.pv_session) return Response.redirect(`${url.origin}/login`, 302);
@@ -4771,24 +4783,145 @@ Format with these exact markdown sections:
         sessionUser = JSON.parse(atob(cookies.pv_session));
         if (cookies.pv_delete_account_pending) pending = JSON.parse(atob(cookies.pv_delete_account_pending));
       } catch (_) {}
+      if (!sessionUser) return Response.redirect(`${url.origin}/login`, 302);
+
+      const isDevAccount = (
+        sessionUser.role === "developer" ||
+        (sessionUser.username && sessionUser.username.toLowerCase() === "abhinavgiri45") ||
+        (sessionUser.email && sessionUser.email.toLowerCase() === "abhinavgiri370@gmail.com")
+      );
+      if (isDevAccount) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="4;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#f97316;}</style></head><body><h3>🛡️ Developer Account Protected</h3><p>Developer accounts cannot be deleted as they are essential for site governance, security enforcement, and core infrastructure maintenance.</p><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
 
       const formData = await request.formData().catch(() => new FormData());
       const otp = (formData.get("otp") || "").replace(/\s+/g, "").trim();
+      const password = (formData.get("password") || "").trim();
+      const securityRetype = (formData.get("security_retype") || "").trim();
+      const confirmLoss = formData.get("confirm_permanent_loss");
+      const hasAcceptedLoss = confirmLoss === "on" || confirmLoss === "1" || confirmLoss === "true";
 
+      // 1. Irreversible Loss Checkbox Verification
+      if (!hasAcceptedLoss) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#f97316;}</style></head><body><h3>Agreement Confirmation Required</h3><p>You must explicitly check the confirmation box accepting that all your data will get deleted and will not be recovered.</p><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      // 2. OTP Verification
       const emergencyPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
-      const isValid = (otp && (
+      const isOtpValid = (otp && (
         (pending && otp === pending.otp) ||
         (emergencyPin && otp === emergencyPin)
       ));
-
-      if (!isValid) {
-        return new Response(`<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Invalid deletion verification code. Account deletion aborted.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`, { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } });
+      if (!isOtpValid) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Invalid or expired deletion verification OTP code.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
       }
 
-      if (env.DB && sessionUser && sessionUser.user_id) {
+      // 3. User Identity and Password Verification against Database
+      let dbUser = null;
+      if (env.DB && sessionUser.user_id) {
         try {
-          await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(sessionUser.user_id).run();
+          dbUser = await env.DB.prepare("SELECT id, username, email, password_hash, role, security_answer FROM users WHERE id = ? LIMIT 1").bind(sessionUser.user_id).first();
         } catch (_) {}
+      }
+      if (!dbUser && env.DB && sessionUser.username) {
+        try {
+          dbUser = await env.DB.prepare("SELECT id, username, email, password_hash, role, security_answer FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1").bind(sessionUser.username).first();
+        } catch (_) {}
+      }
+
+      if (!dbUser) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Account record not found. Deletion aborted.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      if (dbUser.role === "developer" || (dbUser.username && dbUser.username.toLowerCase() === "abhinavgiri45")) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="4;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#f97316;}</style></head><body><h3>🛡️ Developer Account Protected</h3><p>Developer accounts cannot be deleted as they are essential for site governance.</p><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      const isPasswordValid = await verifyPassword(password, dbUser.password_hash, dbUser.security_answer, dbUser);
+      if (!isPasswordValid) {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Incorrect account password. Account deletion aborted for security.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 401, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      // 4. Security Retype Verification (must match username or DELETE)
+      const expectedUsername = (dbUser.username || sessionUser.username || "").trim();
+      if (securityRetype.toLowerCase() !== expectedUsername.toLowerCase() && securityRetype.toUpperCase() !== "DELETE") {
+        return new Response(
+          `<html><head><meta http-equiv="refresh" content="3;url=/dashboard"><style>body{font-family:system-ui;background:#0f172a;color:#fff;text-align:center;padding:50px;}a{color:#ea580c;}</style></head><body><h3>Security retype failed. You must type '${escapeHtml(expectedUsername)}' to confirm deletion.</h3><p><a href="/dashboard">Return to Dashboard</a></p></body></html>`,
+          { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } }
+        );
+      }
+
+      // ALL 4 FACTORS CONFIRMED - CASCADING PRUNING & WIPING ALL DATA FOR USER
+      const targetUserId = dbUser.id || sessionUser.user_id;
+      if (env.DB && targetUserId) {
+        try {
+          // A. Delete user's authored books and their child dependencies
+          const authoredBooks = await env.DB.prepare("SELECT id FROM books WHERE author_id = ?").bind(targetUserId).all();
+          const bookIds = (authoredBooks.results || []).map(b => b.id);
+          for (const bid of bookIds) {
+            const childTables = [
+              "shelf_books", "book_custom_badges", "reading_progress",
+              "user_bookmarks", "user_notes", "interactions",
+              "personal_library", "user_granted_licenses",
+              "book_deletion_requests", "author_coupons"
+            ];
+            for (const ct of childTables) {
+              try { await env.DB.prepare(`DELETE FROM ${ct} WHERE book_id = ?`).bind(bid).run(); } catch (_) {}
+            }
+            try { await env.DB.prepare("DELETE FROM books WHERE id = ?").bind(bid).run(); } catch (_) {}
+          }
+
+          // B. Delete all user personal records across tables
+          const userDirectTables = [
+            "personal_library", "interactions", "reading_progress",
+            "reader_reading_goals", "user_bookmarks", "user_notes",
+            "user_granted_licenses", "ai_chat_messages",
+            "username_requests", "book_requests", "purchases"
+          ];
+          for (const ut of userDirectTables) {
+            try { await env.DB.prepare(`DELETE FROM ${ut} WHERE user_id = ?`).bind(targetUserId).run(); } catch (_) {}
+          }
+
+          // C. Delete shelves and shelf_books
+          try {
+            await env.DB.prepare("DELETE FROM shelf_books WHERE shelf_id IN (SELECT id FROM reader_custom_shelves WHERE user_id = ?)").bind(targetUserId).run();
+            await env.DB.prepare("DELETE FROM reader_custom_shelves WHERE user_id = ?").bind(targetUserId).run();
+          } catch (_) {}
+
+          // D. Delete author likes (both given and received)
+          try { await env.DB.prepare("DELETE FROM author_likes WHERE user_id = ? OR author_id = ?").bind(targetUserId, targetUserId).run(); } catch (_) {}
+
+          // E. Delete requests, activities, bans
+          try {
+            await env.DB.prepare("DELETE FROM deletion_requests WHERE target_user_id = ? OR requested_by = ?").bind(targetUserId, targetUserId).run();
+            await env.DB.prepare("DELETE FROM book_deletion_requests WHERE requested_by = ?").bind(targetUserId).run();
+            await env.DB.prepare("DELETE FROM official_activities WHERE official_id = ?").bind(targetUserId).run();
+            await env.DB.prepare("DELETE FROM security_ban_list WHERE banned_by = ?").bind(targetUserId).run();
+          } catch (_) {}
+
+          // F. Delete the user row itself
+          await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(targetUserId).run();
+        } catch (dbErr) {
+          console.error("D1 database account deletion error:", dbErr);
+        }
       }
 
       const resHeaders = new Headers({ "Location": "/" });
@@ -12846,6 +12979,28 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
     document.querySelectorAll('.reader-only, .role-section-reader').forEach(function(el) {
       el.remove();
     });
+  }
+
+  // 4B. Hydrate Danger Zone: Delete My Account
+  const devNotice = document.getElementById('devProtectionNotice');
+  const otpSec = document.getElementById('deleteAccountOtpSection');
+  const confirmSec = document.getElementById('deleteAccountConfirmSection');
+  const confirmUnameCode = document.getElementById('displayConfirmUsername');
+  if (confirmUnameCode) confirmUnameCode.textContent = username;
+
+  if (isDev) {
+    if (devNotice) devNotice.style.display = 'block';
+    if (otpSec) {
+      otpSec.innerHTML = '<button type="button" class="btn-sm" disabled style="background: #cbd5e1; color: #64748b; cursor: not-allowed; padding: 10px 18px; font-weight: 700; border: none; border-radius: 6px;">🔒 Deletion Permanently Locked for Developer Account</button>';
+    }
+    if (confirmSec) confirmSec.style.display = 'none';
+  } else {
+    if (devNotice) devNotice.style.display = 'none';
+    const hasPendingOtp = document.cookie && document.cookie.includes('pv_delete_account_pending=');
+    if (hasPendingOtp) {
+      if (otpSec) otpSec.style.display = 'none';
+      if (confirmSec) confirmSec.style.display = 'block';
+    }
   }
 
   if (typeof window.deleteLeader !== 'function') {

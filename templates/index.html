@@ -278,6 +278,60 @@
             from { opacity: 0; transform: translateY(-6px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* User Profile Pill & Logout Pill Buttons */
+        .nav-user-pill {
+            background: #ea580c !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 0.88rem !important;
+            padding: 7px 18px !important;
+            border-radius: 9999px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            text-decoration: none !important;
+            box-shadow: 0 2px 8px rgba(234, 88, 12, 0.35);
+            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+            border: none !important;
+            white-space: nowrap !important;
+        }
+        .nav-user-pill:hover {
+            background: #c2410c !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.45);
+        }
+        .nav-logout-pill {
+            background: #dde3ea !important;
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 0.88rem !important;
+            padding: 7px 18px !important;
+            border-radius: 9999px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-decoration: none !important;
+            transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+            border: none !important;
+            white-space: nowrap !important;
+        }
+        .nav-logout-pill:hover {
+            background: #cbd5e1 !important;
+            color: #0f172a !important;
+            transform: translateY(-1px);
+        }
+        :root.dark-theme .nav-logout-pill,
+        html.dark-theme .nav-logout-pill,
+        body.dark-theme .nav-logout-pill {
+            background: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+        :root.dark-theme .nav-logout-pill:hover,
+        html.dark-theme .nav-logout-pill:hover,
+        body.dark-theme .nav-logout-pill:hover {
+            background: #475569 !important;
+            color: #ffffff !important;
+        }
         .trending-rank-badge {
             display: inline-flex;
             align-items: center;
@@ -1083,8 +1137,8 @@
             <a href="{{ url_for('contact') }}">Contact</a>
             <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme (Auto / Light / Dark)">🌙 Theme</button>
             {% if session.user_id %}
-                <a href="{{ url_for('dashboard') }}" id="navDashboardLink">Dashboard</a>
-                <a href="{{ url_for('logout') }}" id="navLogoutLink" style="background: #e53e3e; border-radius: 25px;">Logout</a>
+                <a href="{{ url_for('dashboard') }}" id="navDashboardLink" class="nav-user-pill" title="Go to Dashboard">👤 {{ session.username }}</a>
+                <a href="{{ url_for('logout') }}" id="navLogoutLink" class="nav-logout-pill" title="Sign out of PustakVerse">Logout</a>
             {% else %}
                 <a href="{{ url_for('login') }}" id="navSignInLink" onclick="openFrontScreenLogin('reader'); return false;" style="background: #992b00; border-radius: 25px;">Sign In / Login</a>
             {% endif %}
@@ -1961,10 +2015,11 @@
                         const loginLink = navLinks.querySelector('a[href*="login"], .nav-btn-highlight');
                         if (loginLink) {
                             const hasLibrary = navLinks.querySelector('a[href*="my_library"], a[href*="my-library"]');
+                            const uname = data.user?.username || data.username || 'User';
                             loginLink.outerHTML = `
-                                ${!hasLibrary ? '<a href="/my-library">📚 My Library</a>' : ''}
-                                <a href="/dashboard" style="color: #ea580c; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">👤 ${data.user.username}</a>
-                                <a href="/logout" style="color: #94a3b8; font-size: 0.88rem; margin-left: 6px;">Logout</a>
+                                ${!hasLibrary ? '<a href="/my-library" style="background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.45); color: #fb923c !important; font-weight: 700; border-radius: 20px;">📚 My Library</a>' : ''}
+                                <a href="/dashboard" id="navDashboardLink" class="nav-user-pill" title="Go to Dashboard">👤 ${escapeHtml(uname)}</a>
+                                <a href="/logout" id="navLogoutLink" class="nav-logout-pill" title="Sign out of PustakVerse">Logout</a>
                             `;
                         }
                     }
@@ -3102,10 +3157,11 @@
                         if (heroBtn) heroBtn.style.display = 'none';
                         const navSignIn = document.getElementById('navSignInLink');
                         if (navSignIn) {
-                            navSignIn.href = '/dashboard';
-                            navSignIn.textContent = 'Dashboard';
-                            navSignIn.onclick = null;
-                            navSignIn.style.background = '';
+                            const uname = user.username || user.user?.username || 'User';
+                            navSignIn.outerHTML = `
+                                <a href="/dashboard" id="navDashboardLink" class="nav-user-pill" title="Go to Dashboard">👤 ${escapeHtml(uname)}</a>
+                                <a href="/logout" id="navLogoutLink" class="nav-logout-pill" title="Sign out of PustakVerse">Logout</a>
+                            `;
                         }
                     }
                 })

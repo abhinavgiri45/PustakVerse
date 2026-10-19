@@ -6522,28 +6522,38 @@ def forgot_password():
     return render_template('forgot_password.html')
 
 # ==========================================
-# ACCOUNT DELETION (OTP VERIFIED)
+# ACCOUNT DELETION (4-FACTOR VERIFIED WITH STRICT DEVELOPER PROTECTION)
 # ==========================================
 @app.route('/send_delete_account_otp', methods=['POST'])
 def send_delete_account_otp():
     if 'user_id' not in session: 
         return redirect(url_for('login'))
         
+    # Developer accounts are permanently protected against deletion
+    if session.get('role') == 'developer' or session.get('username', '').lower() == 'abhinavgiri45':
+        flash("Developer accounts cannot be deleted as they are essential for platform maintenance, security, and governance.", "error")
+        return redirect(url_for('dashboard'))
+
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT email FROM users WHERE id = %s", (session['user_id'],))
+        cursor.execute("SELECT id, username, email, role FROM users WHERE id = %s", (session['user_id'],))
         user = cursor.fetchone()
         
         if user:
+            if user.get('role') == 'developer' or user.get('username', '').lower() == 'abhinavgiri45':
+                flash("Developer accounts cannot be deleted as they are essential for platform maintenance, security, and governance.", "error")
+                return redirect(url_for('dashboard'))
+
             otp = str(random.randint(100000, 999999))
             session['delete_account_otp'] = otp
-            send_account_deletion_otp(user['email'], otp)
-            flash("An OTP has been sent to your email to confirm account deletion.", "info")
             session['show_delete_otp_form'] = True
-    except Exception: 
-        flash("Database Error.", "error")
+            send_account_deletion_otp(user['email'], otp)
+            flash("A 6-digit confirmation OTP has been dispatched to your email. Please complete all 4 verification checks below.", "info")
+    except Exception as e: 
+        logging.error(f"Error in send_delete_account_otp: {e}")
+        flash("Database Error while generating deletion code.", "error")
     finally:
         if db:
             try: db.close()
@@ -6551,40 +6561,174 @@ def send_delete_account_otp():
     return redirect(url_for('dashboard'))
 
 
-
 @app.route('/delete_my_account', methods=['POST'])
 def delete_my_account():
     if 'user_id' not in session: 
         return redirect(url_for('login'))
-        
-    user_otp = request.form.get('otp', '').strip()
-    valid_otp = session.pop('delete_account_otp', None)
-    session.pop('show_delete_otp_form', None)
-    
-    if user_otp and valid_otp and user_otp == valid_otp:
-        db = None
+
+    # Developer account protection
+    if session.get('role') == 'developer' or session.get('username', '').lower() == 'abhinavgiri45':
+        flash("Developer accounts cannot be deleted as they are essential for platform maintenance, security, and governance.", "error")
+        return redirect(url_for('dashboard'))
+
+    user_otp = (request.form.get('otp') or '').replace(' ', '').strip()
+    user_password = (request.form.get('password') or '').strip()
+    security_retype = (request.form.get('security_retype') or '').strip()
+    confirm_loss = request.form.get('confirm_permanent_loss') in ['on', '1', 'true', True]
+    valid_otp = session.get('delete_account_otp')
+
+    # 1. Verification of Data Loss Agreement Checkbox
+    if not confirm_loss:
+        flash("You must explicitly confirm and accept that your whole data will get deleted and will not be recovered.", "error")
+        session['show_delete_otp_form'] = True
+        return redirect(url_for('dashboard'))
+
+    # 2. Verification of OTP
+    if not user_otp or not valid_otp or user_otp != valid_otp:
+        flash("Invalid or expired 6-digit deletion OTP. Account deletion aborted.", "error")
+        session['show_delete_otp_form'] = True
+        return redirect(url_for('dashboard'))
+
+    # 3. Verification of Password and User Identity
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, email, password_hash, role FROM users WHERE id = %s", (session['user_id'],))
+        db_user = cursor.fetchone()
+
+        if not db_user:
+            flash("User record not found. Deletion aborted.", "error")
+            return redirect(url_for('dashboard'))
+
+        if db_user.get('role') == 'developer' or db_user.get('username', '').lower() == 'abhinavgiri45':
+            flash("Developer accounts cannot be deleted as they are essential for platform maintenance, security, and governance.", "error")
+            return redirect(url_for('dashboard'))
+
+        # Check password against hashed password
+        password_valid = False
+        stored_hash = db_user.get('password_hash') or ''
+        if stored_hash:
+            if user_password == stored_hash:
+                password_valid = True
+            else:
+                try:
+                    if check_password_hash(stored_hash, user_password):
+                        password_valid = True
+                except Exception:
+                    pass
+                if not password_valid and stored_hash.startswith('sha256$'):
+                    import hashlib
+                    exp_hex = stored_hash.split('$', 1)[1]
+                    if hashlib.sha256(user_password.encode('utf-8')).hexdigest() == exp_hex:
+                        password_valid = True
+                if not password_valid:
+                    import hashlib
+                    if hashlib.sha256(user_password.encode('utf-8')).hexdigest() == stored_hash:
+                        password_valid = True
+
+        if not password_valid:
+            flash("Incorrect account password. Account deletion aborted for security reasons.", "error")
+            session['show_delete_otp_form'] = True
+            return redirect(url_for('dashboard'))
+
+        # 4. Verification of Security Retype Option
+        expected_username = db_user.get('username', '').strip()
+        if security_retype.lower() != expected_username.lower() and security_retype.upper() != 'DELETE':
+            flash(f"Security retype verification failed. You must re-type your exact username '{expected_username}' to confirm deletion.", "error")
+            session['show_delete_otp_form'] = True
+            return redirect(url_for('dashboard'))
+
+        # All 4 security factors verified! Clear OTP flags
+        session.pop('delete_account_otp', None)
+        session.pop('show_delete_otp_form', None)
+
+        user_id = db_user['id']
+        username = db_user['username']
+
+        # COMPREHENSIVE DATABASE CLEANUP FOR DELETED USER
+        # A. Find authored books and cascade delete all child references
+        cursor.execute("SELECT id FROM books WHERE author_id = %s", (user_id,))
+        b_rows = cursor.fetchall() or []
+        b_ids = [b['id'] for b in b_rows]
+        if b_ids:
+            b_fmt = ','.join(['%s'] * len(b_ids))
+            book_child_tables = [
+                'shelf_books', 'book_custom_badges', 'reading_progress',
+                'user_bookmarks', 'user_notes', 'interactions',
+                'personal_library', 'user_granted_licenses',
+                'book_deletion_requests', 'author_coupons'
+            ]
+            for tbl in book_child_tables:
+                try:
+                    cursor.execute(f"DELETE FROM {tbl} WHERE book_id IN ({b_fmt})", tuple(b_ids))
+                except Exception:
+                    pass
+            try:
+                cursor.execute(f"DELETE FROM books WHERE id IN ({b_fmt})", tuple(b_ids))
+            except Exception:
+                pass
+
+        # B. Clean up user's own data across all platform tables
+        user_direct_tables = [
+            'personal_library', 'interactions', 'reading_progress',
+            'reader_reading_goals', 'user_bookmarks', 'user_notes',
+            'user_granted_licenses', 'ai_chat_messages',
+            'username_requests', 'book_requests', 'purchases'
+        ]
+        for tbl in user_direct_tables:
+            try:
+                cursor.execute(f"DELETE FROM {tbl} WHERE user_id = %s", (user_id,))
+            except Exception:
+                pass
+
+        # Clean shelves created by user
         try:
-            db = get_db_connection()
-            cursor = db.cursor()
-            user_id = session['user_id']
-            tables = ['personal_library', 'interactions', 'books', 'users']
-            
-            for table in tables:
-                column = 'author_id' if table == 'books' else ('id' if table == 'users' else 'user_id')
-                cursor.execute(f"DELETE FROM {table} WHERE {column} = %s", (user_id,))
-            db.commit()
-            
-            session.clear()
-            flash("Your account and all associated data have been permanently deleted.", "success")
-            return redirect(url_for('index'))
-        except Exception: 
-            flash("Database Error during deletion.", "error")
-        finally:
-            if db:
-                try: db.close()
-                except: pass
-    else: 
-        flash("Invalid OTP. Account deletion aborted.", "error")
+            cursor.execute("DELETE FROM shelf_books WHERE shelf_id IN (SELECT id FROM reader_custom_shelves WHERE user_id = %s)", (user_id,))
+            cursor.execute("DELETE FROM reader_custom_shelves WHERE user_id = %s", (user_id,))
+        except Exception:
+            pass
+
+        # Clean author likes (given & received)
+        try:
+            cursor.execute("DELETE FROM author_likes WHERE user_id = %s OR author_id = %s", (user_id, user_id))
+        except Exception:
+            pass
+
+        # Clean deletion requests
+        try:
+            cursor.execute("DELETE FROM deletion_requests WHERE target_user_id = %s OR requested_by = %s", (user_id, user_id))
+            cursor.execute("DELETE FROM book_deletion_requests WHERE requested_by = %s", (user_id,))
+        except Exception:
+            pass
+
+        # Clean official activities & bans
+        try:
+            cursor.execute("DELETE FROM official_activities WHERE official_id = %s", (user_id,))
+            cursor.execute("DELETE FROM security_ban_list WHERE banned_by = %s", (user_id,))
+        except Exception:
+            pass
+
+        # Finally delete user record
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        db.commit()
+
+        log_official_activity(1, f"User account '{username}' (ID: {user_id}) permanently deleted and all associated database records wiped.")
+
+        session.clear()
+        flash("Your account and all associated platform data have been permanently deleted from PustakVerse.", "success")
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        if db:
+            try: db.rollback()
+            except: pass
+        logging.error(f"Error during account deletion: {e}")
+        flash(f"Database error during deletion: {str(e)}", "error")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
     return redirect(url_for('dashboard'))
 
 # ==========================================

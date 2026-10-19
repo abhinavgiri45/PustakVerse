@@ -3087,7 +3087,74 @@
                     </form>
                 
 
-                <!-- Hide Delete Account Section completely for Developer -->
+                <!-- Danger Zone: Permanent Account Deletion (Visible for all roles, with strict developer protection) -->
+                
+                <div id="dangerZoneDeleteAccount" style="background: #fff5f5; padding: 22px; border-radius: 12px; border: 1.5px solid #feb2b2; margin-top: 25px;">
+                    <h3 style="margin-top: 0; font-size: 1.15rem; color: #991b1b; display: flex; align-items: center; gap: 8px;">
+                        <span>⚠️</span> Danger Zone: Delete My Account
+                    </h3>
+                    <div id="devProtectionNotice" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px 16px; margin: 12px 0; color: #9f1239; font-size: 0.88rem; line-height: 1.5;">
+                        <strong>🛡️ Master Developer Account Protected:</strong> Developer and Platform Governor accounts cannot be deleted as they are essential for site governance, security enforcement, and core infrastructure maintenance.
+                    </div>
+                    <p id="deleteAccountDesc" style="font-size: 0.88rem; color: #7f1d1d; line-height: 1.5; margin-bottom: 14px;">
+                        Permanently delete your PustakVerse account. This action is <strong>irreversible</strong> and will completely wipe all your published books, personal library, reading streak, bookmarks, reviews, and purchases from the database.
+                    </p>
+
+                    <div id="deleteAccountOtpSection">
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #991b1b; margin-bottom: 14px;">
+                            <strong>Security Verification:</strong> Requires 4-Factor Authentication (Email OTP + Account Password + Exact Username Retype + Irreversible Data Loss Acceptance).
+                        </div>
+                        <form action="/send_delete_account_otp" method="POST" id="formRequestDeleteOtp">
+                            <input type="hidden" name="csrf_token" value="">
+                            <button type="submit" id="btnRequestDeleteOtp" class="btn-sm btn-red" style="padding: 10px 22px; font-weight: 700;">Request Deletion Verification OTP</button>
+                        </form>
+                    </div>
+
+                    <div id="deleteAccountConfirmSection" style="display: none; margin-top: 14px;">
+                        <div style="background: #fef2f2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                            <div style="color: #991b1b; font-weight: 800; font-size: 0.95rem; margin-bottom: 4px;">🔐 4-Factor Irreversible Deletion Verification</div>
+                            <p style="font-size: 0.82rem; color: #b91c1c; margin: 0;">An OTP has been dispatched to your email. You must satisfy all 4 security checks below to delete your account.</p>
+                        </div>
+                        <form action="/delete_my_account" method="POST">
+                            <input type="hidden" name="csrf_token" value="">
+                            
+                            <!-- 1. 6-Digit Email OTP -->
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #7f1d1d; display: block; margin-bottom: 4px;">1. Enter 6-Digit Verification OTP *</label>
+                                <input type="text" name="otp" required placeholder="• • • • • •" style="width: 100%; max-width: 280px; padding: 9px 12px; font-size: 1.1rem; letter-spacing: 4px; font-weight: 700; border: 1.5px solid #f87171; border-radius: 6px; box-sizing: border-box;">
+                            </div>
+
+                            <!-- 2. Account Password -->
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #7f1d1d; display: block; margin-bottom: 4px;">2. Your Account Password *</label>
+                                <input type="password" name="password" required placeholder="Enter your current password" style="width: 100%; max-width: 380px; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #f87171; border-radius: 6px; box-sizing: border-box;">
+                            </div>
+
+                            <!-- 3. Security Retype Option -->
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #7f1d1d; display: block; margin-bottom: 4px;">
+                                    3. Security Retype: Type your exact username <code id="displayConfirmUsername" style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px;">abhinavgiri45</code> to confirm *
+                                </label>
+                                <input type="text" name="security_retype" required placeholder="Type username exactly as shown above" autocomplete="off" style="width: 100%; max-width: 380px; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #f87171; border-radius: 6px; box-sizing: border-box;">
+                            </div>
+
+                            <!-- 4. Explicit Data Loss Acceptance Agreement -->
+                            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 18px;">
+                                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.84rem; color: #7f1d1d; line-height: 1.5;">
+                                    <input type="checkbox" name="confirm_permanent_loss" required style="margin-top: 3px; transform: scale(1.15); accent-color: #dc2626;">
+                                    <span><strong>I accept that all my data will get deleted and will not be recovered:</strong> I acknowledge and agree that my entire profile, all uploaded/published books, reviews, bookmarks, notes, personal library, streaks, and purchases will be permanently wiped from the database and cannot be recovered.</span>
+                                </label>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <button type="submit" class="btn-sm btn-red" style="padding: 10px 22px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
+                                    🗑️ Permanently Delete My Account &amp; Wipe All Data
+                                </button>
+                                <a href="/dashboard" class="btn-sm btn-dark" style="text-decoration: none; padding: 10px 18px; font-size: 0.88rem;">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                 
             </div>
         </div>
