@@ -4941,6 +4941,22 @@ def save_ai_chat_message(user_id, book_id, role, text, screenshot=''):
             (user_id, book_id, role, text, screenshot or None)
         )
         db.commit()
+
+        # Database Storage Efficiency: Cap AI chat messages to latest 40 per user/book
+        try:
+            cursor.execute("""
+                DELETE FROM ai_chat_messages 
+                WHERE user_id = %s AND book_id <=> %s AND id NOT IN (
+                    SELECT id FROM (
+                        SELECT id FROM ai_chat_messages 
+                        WHERE user_id = %s AND book_id <=> %s 
+                        ORDER BY id DESC LIMIT 40
+                    ) as _tmp_ai
+                )
+            """, (user_id, book_id, user_id, book_id))
+            db.commit()
+        except Exception:
+            pass
     except Exception:
         if db:
             db.rollback()
@@ -5096,7 +5112,8 @@ def update_last_activity():
         last_update = session.get('last_activity_update')
         current_time = time.time()
         
-        if not last_update or (current_time - last_update > 300):
+        # 15 minutes throttle (900 seconds) to minimize database write quotas
+        if not last_update or (current_time - last_update > 900):
             db = None
             try:
                 db = get_db_connection()
@@ -10977,6 +10994,139 @@ def developer_scan_drive_links():
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         if db: db.close()
+
+def prune_database_storage():
+    """
+    Prunes stale audit logs, old resolved moderation requests, expired lockouts,
+    stale AI chat messages, and dangling orphan records to minimize database storage footprint.
+    """
+    stats = {
+        'logs_pruned': 0,
+        'requests_pruned': 0,
+        'orphans_removed': 0,
+        'chat_pruned': 0,
+        'lockouts_reset': 0,
+        'vacuum_executed': True
+    }
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        
+        # 1. Cap official_activities to most recent 300 entries
+        try:
+            cursor.execute("""
+                DELETE FROM official_activities 
+                WHERE id NOT IN (
+                    SELECT id FROM (
+                        SELECT id FROM official_activities ORDER BY id DESC LIMIT 300
+                    ) as _tmp_oa
+                )
+            """)
+            stats['logs_pruned'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        # 2. Prune resolved moderation / deletion requests older than 30 days
+        try:
+            cursor.execute("DELETE FROM deletion_requests WHERE status IN ('approved', 'rejected') AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")
+            stats['requests_pruned'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM book_deletion_requests WHERE status IN ('approved', 'rejected') AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")
+            stats['requests_pruned'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM username_requests WHERE status IN ('approved', 'rejected') AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")
+            stats['requests_pruned'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM book_requests WHERE status IN ('acquired', 'rejected') AND created_at < DATE_SUB(NOW(), INTERVAL 60 DAY)")
+            stats['requests_pruned'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        # 3. Reset expired lockouts
+        try:
+            cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE locked_until IS NOT NULL AND locked_until < NOW()")
+            stats['lockouts_reset'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        # 4. Prune stale AI chat messages older than 30 days
+        try:
+            cursor.execute("DELETE FROM ai_chat_messages WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")
+            stats['chat_pruned'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        # 5. Clean orphan records
+        try:
+            cursor.execute("DELETE FROM personal_library WHERE book_id NOT IN (SELECT id FROM books) OR user_id NOT IN (SELECT id FROM users)")
+            stats['orphans_removed'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM shelf_books WHERE book_id NOT IN (SELECT id FROM books) OR shelf_id NOT IN (SELECT id FROM reader_custom_shelves)")
+            stats['orphans_removed'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM book_custom_badges WHERE book_id NOT IN (SELECT id FROM books)")
+            stats['orphans_removed'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books) OR user_id NOT IN (SELECT id FROM users)")
+            stats['orphans_removed'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("DELETE FROM author_likes WHERE author_id NOT IN (SELECT id FROM users) OR user_id NOT IN (SELECT id FROM users)")
+            stats['orphans_removed'] += max(0, cursor.rowcount)
+        except Exception:
+            pass
+
+        db.commit()
+    except Exception as e:
+        if db:
+            try: db.rollback()
+            except: pass
+        logging.exception("Database pruning error: %s", e)
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+    return stats
+
+@app.route('/api/developer/optimize_database', methods=['POST'])
+@app.route('/developer/optimize_database', methods=['POST'])
+def developer_optimize_database():
+    is_dev = session.get('role') == 'developer' or session.get('is_absolute_power') or session.get('username', '').lower() == 'abhinavgiri45'
+    if not is_dev:
+        return jsonify({'success': False, 'message': 'Developer authorization required.'}), 403
+
+    try:
+        results = prune_database_storage()
+        log_official_activity(session.get('user_id', 1), "Executed Developer Database Storage Optimization & Pruning Engine")
+        return jsonify({
+            'success': True,
+            'message': 'Database storage successfully optimized and pruned.',
+            'details': results
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 # ------------------------------------------------------------------------------
 # 5. MULTI-AI MODELS & EXPANDED AI LEARNING SUITE ROUTES

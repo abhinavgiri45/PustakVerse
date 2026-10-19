@@ -4126,6 +4126,21 @@
                     <button type="button" onclick="generateApiKey()" class="btn-sm btn-dark" style="width: 100%; padding: 8px; font-size: 0.85rem;">+ Generate API Key</button>
                     <div id="apiKeyDisplay" style="display: none; margin-top: 10px; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; word-break: break-all;"></div>
                 </div>
+
+                <!-- 5. Database Storage Optimizer & Auto-Prune Engine -->
+                <div style="background: #f8fafc; border: 1.5px solid #10b981; border-radius: 12px; padding: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <h3 style="margin: 0; font-size: 1.05rem; color: #065f46; display: flex; align-items: center; gap: 6px;">
+                            <span>🧹</span> DB Storage Optimizer
+                        </h3>
+                        <span style="background: #dcfce7; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 999px;">D1 / MySQL</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 12px;">Auto-prunes audit logs (&gt;300 entries), resolved requests (&gt;30d), expired lockouts, orphan rows, and runs SQLite compaction.</p>
+                    <button type="button" id="btnRunDbOptimizer" onclick="runDatabaseOptimizer()" class="btn-sm btn-green" style="width: 100%; padding: 9px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                        <span>⚡</span> Run DB Storage Optimizer
+                    </button>
+                    <div id="dbOptimizerResults" style="display: none; margin-top: 10px; font-size: 0.8rem; padding: 10px; border-radius: 8px; line-height: 1.45;"></div>
+                </div>
             </div>
 
             <!-- 5. MULTI-AI MODELS & API PROVIDER GATEWAY -->
@@ -5637,6 +5652,55 @@
                     display.innerHTML = `<strong>Your New API Key:</strong><br><code>${data.api_key}</code>`;
                 }
             }).catch(() => {});
+        }
+
+        async function runDatabaseOptimizer() {
+            const btn = document.getElementById('btnRunDbOptimizer');
+            const res = document.getElementById('dbOptimizerResults');
+            if (btn) btn.disabled = true;
+            if (res) {
+                res.style.display = 'block';
+                res.style.background = '#fef3c7';
+                res.style.color = '#92400e';
+                res.innerHTML = '<strong>⚡ Optimizing Database Storage...</strong><br>Pruning old audit logs, purging expired lockouts & resolved requests, cleaning orphans, and compacting tables...';
+            }
+            try {
+                const response = await fetch('/api/developer/optimize_database', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ csrf_token() }}'
+                    }
+                });
+                const data = await response.json();
+                if (res && data.success) {
+                    res.style.background = '#dcfce7';
+                    res.style.color = '#166534';
+                    const details = data.details || {};
+                    res.innerHTML = `<strong>✓ Database Storage Optimization Successful!</strong><br>` +
+                        `• <strong>Audit Logs Pruned:</strong> ${details.logs_pruned || 0} entries<br>` +
+                        `• <strong>Stale Requests Cleared:</strong> ${details.requests_pruned || 0} resolved requests<br>` +
+                        `• <strong>Orphan References Purged:</strong> ${details.orphans_removed || 0} rows<br>` +
+                        `• <strong>Stale AI Chat History Cleared:</strong> ${details.chat_pruned || 0} messages<br>` +
+                        `• <strong>Expired Lockouts Reset:</strong> ${details.lockouts_reset || 0} accounts<br>` +
+                        `• <strong>Table Compaction / Optimization:</strong> ${details.vacuum_executed ? 'Executed' : 'Completed'}<br>` +
+                        `• <strong>Routine DB Writes Throttling:</strong> Active (15 min window)`;
+                } else {
+                    if (res) {
+                        res.style.background = '#fee2e2';
+                        res.style.color = '#991b1b';
+                        res.textContent = `❌ Optimization failed: ${data.message || 'Unknown error'}`;
+                    }
+                }
+            } catch (err) {
+                if (res) {
+                    res.style.background = '#fee2e2';
+                    res.style.color = '#991b1b';
+                    res.textContent = `❌ Network error while executing optimizer: ${err.message}`;
+                }
+            } finally {
+                if (btn) btn.disabled = false;
+            }
         }
 
         // Multi-AI Models Manager

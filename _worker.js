@@ -1972,6 +1972,157 @@ function generateEdgePasswordChangedEmail(username, clientIp = "") {
 </html>`;
 }
 
+// ============================================================================
+// DATABASE STORAGE OPTIMIZATION & WRITE THROTTLING ENGINE
+// ============================================================================
+const _userLastTouchMap = new Map();
+function shouldTouchUserActivity(userId, intervalMs = 15 * 60 * 1000) {
+  if (!userId) return false;
+  const now = Date.now();
+  const lastTouch = _userLastTouchMap.get(userId) || 0;
+  if (now - lastTouch > intervalMs) {
+    if (_userLastTouchMap.size > 5000) {
+      _userLastTouchMap.clear();
+    }
+    _userLastTouchMap.set(userId, now);
+    return true;
+  }
+  return false;
+}
+
+let _lastAutoPruneTimestamp = 0;
+function shouldRunAutoPrune(intervalMs = 60 * 60 * 1000) {
+  const now = Date.now();
+  if (now - _lastAutoPruneTimestamp > intervalMs) {
+    _lastAutoPruneTimestamp = now;
+    return true;
+  }
+  return false;
+}
+
+async function pruneOldDatabaseRecords(env) {
+  const stats = {
+    logs_pruned: 0,
+    requests_pruned: 0,
+    orphans_removed: 0,
+    chat_pruned: 0,
+    lockouts_reset: 0,
+    vacuum_executed: false
+  };
+
+  if (!env || !env.DB) return stats;
+
+  try {
+    // 1. Cap official_activities to most recent 300 entries
+    try {
+      const actCount = await env.DB.prepare("SELECT count(*) as c FROM official_activities").first();
+      if (actCount && actCount.c > 300) {
+        const delRes = await env.DB.prepare(
+          "DELETE FROM official_activities WHERE id NOT IN (SELECT id FROM official_activities ORDER BY id DESC LIMIT 300)"
+        ).run();
+        stats.logs_pruned += (delRes?.meta?.changes ?? (actCount.c - 300));
+      }
+    } catch (_) {}
+
+    // 2. Prune resolved moderation / deletion requests older than 30 days
+    try {
+      const d1 = await env.DB.prepare(
+        "DELETE FROM deletion_requests WHERE status IN ('approved', 'rejected') AND created_at < datetime('now', '-30 days')"
+      ).run();
+      stats.requests_pruned += (d1?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const d2 = await env.DB.prepare(
+        "DELETE FROM book_deletion_requests WHERE status IN ('approved', 'rejected') AND created_at < datetime('now', '-30 days')"
+      ).run();
+      stats.requests_pruned += (d2?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const d3 = await env.DB.prepare(
+        "DELETE FROM username_requests WHERE status IN ('approved', 'rejected') AND created_at < datetime('now', '-30 days')"
+      ).run();
+      stats.requests_pruned += (d3?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const d4 = await env.DB.prepare(
+        "DELETE FROM book_requests WHERE status IN ('acquired', 'rejected') AND created_at < datetime('now', '-60 days')"
+      ).run();
+      stats.requests_pruned += (d4?.meta?.changes || 0);
+    } catch (_) {}
+
+    // 3. Reset expired lockouts
+    try {
+      const lockRes = await env.DB.prepare(
+        "UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE locked_until IS NOT NULL AND locked_until < datetime('now')"
+      ).run();
+      stats.lockouts_reset += (lockRes?.meta?.changes || 0);
+    } catch (_) {}
+
+    // 4. Prune stale AI chat messages older than 30 days
+    try {
+      const chatRes = await env.DB.prepare(
+        "DELETE FROM ai_chat_messages WHERE created_at < datetime('now', '-30 days')"
+      ).run();
+      stats.chat_pruned += (chatRes?.meta?.changes || 0);
+    } catch (_) {}
+
+    // 5. Clean orphan records
+    try {
+      const o1 = await env.DB.prepare(
+        "DELETE FROM personal_library WHERE book_id NOT IN (SELECT id FROM books) OR user_id NOT IN (SELECT id FROM users)"
+      ).run();
+      stats.orphans_removed += (o1?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const o2 = await env.DB.prepare(
+        "DELETE FROM shelf_books WHERE book_id NOT IN (SELECT id FROM books) OR shelf_id NOT IN (SELECT id FROM reader_custom_shelves)"
+      ).run();
+      stats.orphans_removed += (o2?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const o3 = await env.DB.prepare(
+        "DELETE FROM book_custom_badges WHERE book_id NOT IN (SELECT id FROM books)"
+      ).run();
+      stats.orphans_removed += (o3?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const o4 = await env.DB.prepare(
+        "DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books) OR user_id NOT IN (SELECT id FROM users)"
+      ).run();
+      stats.orphans_removed += (o4?.meta?.changes || 0);
+    } catch (_) {}
+
+    try {
+      const o5 = await env.DB.prepare(
+        "DELETE FROM author_likes WHERE author_id NOT IN (SELECT id FROM users) OR user_id NOT IN (SELECT id FROM users)"
+      ).run();
+      stats.orphans_removed += (o5?.meta?.changes || 0);
+    } catch (_) {}
+
+    // 6. Database compaction / optimize
+    try {
+      await env.DB.prepare("PRAGMA optimize;").run();
+      stats.vacuum_executed = true;
+    } catch (_) {
+      try {
+        await env.DB.prepare("VACUUM;").run();
+        stats.vacuum_executed = true;
+      } catch (_) {}
+    }
+
+  } catch (err) {
+    console.error("Database pruning error:", err);
+  }
+
+  return stats;
+}
+
 export default {
   async fetch(request, env, ctx) {
     try {
@@ -2573,14 +2724,16 @@ export default {
       }
     }
 
-    // 3B. Active User Heartbeat & Automatic Activity Touch
+    // 3B. Active User Heartbeat & Automatic Activity Touch (15 min throttled to conserve DB writes)
     if (url.pathname === "/api/user/heartbeat" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       const user = await verifySession(cookies.pv_session, env);
       if (user && user.id) {
-        try {
-          await env.DB.prepare("UPDATE users SET last_activity = datetime('now') WHERE id = ?").bind(user.id).run();
-        } catch (_) {}
+        if (shouldTouchUserActivity(user.id)) {
+          try {
+            await env.DB.prepare("UPDATE users SET last_activity = datetime('now') WHERE id = ?").bind(user.id).run();
+          } catch (_) {}
+        }
         return new Response(JSON.stringify({ status: "ok", active: true, user_id: user.id }), {
           headers: { "Content-Type": "application/json" }
         });
@@ -2590,17 +2743,44 @@ export default {
       });
     }
 
-    // Touch user activity on authenticated requests (throttled every request)
+    // Touch user activity on authenticated requests (strictly throttled to once every 15 minutes per user)
     if (env.DB && !url.pathname.startsWith("/static/") && !url.pathname.includes(".")) {
       const cookies = parseCookies(request.headers.get("Cookie"));
       if (cookies.pv_session) {
         const userQuick = getSessionUser(cookies.pv_session);
-        if (userQuick && userQuick.id) {
+        if (userQuick && userQuick.id && shouldTouchUserActivity(userQuick.id)) {
           try {
             await env.DB.prepare("UPDATE users SET last_activity = datetime('now') WHERE id = ?").bind(userQuick.id).run();
           } catch (_) {}
         }
       }
+    }
+
+    // Automated Background Database Pruning (Runs non-blocking once every 60 minutes)
+    if (env.DB && shouldRunAutoPrune()) {
+      bgTask(pruneOldDatabaseRecords(env));
+    }
+
+    // Developer Database Storage Optimizer & Auto-Pruner API: POST /api/developer/optimize_database or /developer/optimize_database
+    if ((url.pathname === "/api/developer/optimize_database" || url.pathname === "/developer/optimize_database") && request.method === "POST" && env.DB) {
+      const cookies = parseCookies(request.headers.get("Cookie"));
+      const user = await verifySession(cookies.pv_session, env);
+      const isPrivileged = user && (user.role === "developer" || user.username?.toLowerCase() === "abhinavgiri45" || isTechnicalLeadershipUser(user));
+      if (!user || !isPrivileged) {
+        return new Response(JSON.stringify({ success: false, message: "Unauthorized. Developer access required." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      const results = await pruneOldDatabaseRecords(env);
+      return new Response(JSON.stringify({
+        success: true,
+        message: "Database storage successfully optimized and pruned.",
+        details: results
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     // 4. Health check endpoint & Cloudflare D1 / Email Engine Diagnostic
