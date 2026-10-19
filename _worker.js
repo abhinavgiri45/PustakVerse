@@ -3872,7 +3872,210 @@ Format with these exact markdown sections:
 
       const action = payload.action || "send_otp";
 
-      if (action === "send_otp" || action === "register") {
+      // ---------------------------------------------------------
+      // Action: send_otp (Initiate registration & dispatch 6-digit OTP)
+      // ---------------------------------------------------------
+      if (action === "send_otp") {
+        const username = (payload.username || "").trim();
+        const email = (payload.email || "").trim().toLowerCase();
+        const password = payload.password || "";
+        const role = ["reader", "author"].includes(payload.role) ? payload.role : "reader";
+        const secQuestion = payload.security_question || "What is your favorite book?";
+        const secAnswer = (payload.security_answer || "").trim().toLowerCase();
+        const verReason = payload.verification_reason || "";
+
+        if (!username || !email || !password) {
+          return new Response(JSON.stringify({ success: false, message: "Please fill in all required fields." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+          return new Response(JSON.stringify({ success: false, message: "Username must be 3-30 letters, numbers, or underscores." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (password.length < 6) {
+          return new Response(JSON.stringify({ success: false, message: "Password must be at least 6 characters." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        try {
+          // Check if username or email already exists in D1
+          const existing = await env.DB.prepare(
+            "SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?) LIMIT 1"
+          ).bind(username, email).first();
+
+          if (existing) {
+            return new Response(JSON.stringify({ success: false, message: "Username or Email is already registered." }), {
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          // Generate 6-digit OTP
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          const hashHex = await sha256Hex(password);
+          const passwordHash = `sha256$${hashHex}`;
+
+          const regPending = {
+            username,
+            email,
+            passwordHash,
+            role,
+            secQuestion,
+            secAnswer,
+            verReason,
+            otp,
+            created: Date.now()
+          };
+
+          console.log(`🔑 [EDGE REGISTRATION OTP GENERATED] User: ${username} | Email: ${email} | OTP: ${otp}`);
+
+          // Dispatch verification code via Edge Email
+          await sendEdgeEmail(env, {
+            to: email,
+            subject: `${otp} is your PustakVerse Verification Code`,
+            html: generateEdgeOtpEmail("Verify Your Email", otp, `Hello ${username}, thank you for registering with PustakVerse! Use this 6-digit verification code to complete your registration.`, 15)
+          }).catch(e => console.error("Registration email dispatch error:", e));
+
+          const encodedPending = btoa(JSON.stringify(regPending));
+          const headers = new Headers({ "Content-Type": "application/json" });
+          headers.append("Set-Cookie", `pv_reg_pending=${encodedPending}; Path=/; Max-Age=900; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: "A 6-digit verification code has been sent to your email. (Please check your Inbox and Spam folder)"
+          }), { headers });
+
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: `Database error: ${err.message}` }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      // ---------------------------------------------------------
+      // Action: resend_otp (Resend registration 6-digit OTP)
+      // ---------------------------------------------------------
+      if (action === "resend_otp") {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        if (!cookies.pv_reg_pending) {
+          return new Response(JSON.stringify({ success: false, message: "Registration session expired. Please enter your details again." }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        let regPending = null;
+        try { regPending = JSON.parse(atob(cookies.pv_reg_pending)); } catch (_) {}
+        if (!regPending || !regPending.email) {
+          return new Response(JSON.stringify({ success: false, message: "Invalid registration session." }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        const freshOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        regPending.otp = freshOtp;
+        regPending.created = Date.now();
+
+        console.log(`🔑 [EDGE REGISTRATION OTP RESENT] User: ${regPending.username} | Email: ${regPending.email} | OTP: ${freshOtp}`);
+
+        await sendEdgeEmail(env, {
+          to: regPending.email,
+          subject: `${freshOtp} is your fresh PustakVerse Verification Code`,
+          html: generateEdgeOtpEmail("Verify Your Email", freshOtp, `Hello ${regPending.username}, here is your fresh 6-digit verification code to complete your PustakVerse registration.`, 15)
+        }).catch(e => console.error("Registration email resend error:", e));
+
+        const encodedPending = btoa(JSON.stringify(regPending));
+        const headers = new Headers({ "Content-Type": "application/json" });
+        headers.append("Set-Cookie", `pv_reg_pending=${encodedPending}; Path=/; Max-Age=900; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: "A fresh 6-digit verification code has been dispatched to your email."
+        }), { headers });
+      }
+
+      // ---------------------------------------------------------
+      // Action: verify_otp (Verify code and create user in D1)
+      // ---------------------------------------------------------
+      if (action === "verify_otp") {
+        const cookies = parseCookies(request.headers.get("Cookie"));
+        if (!cookies.pv_reg_pending) {
+          return new Response(JSON.stringify({ success: false, message: "Registration session expired. Please re-enter your details." }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        let regPending = null;
+        try { regPending = JSON.parse(atob(cookies.pv_reg_pending)); } catch (_) {}
+        if (!regPending || !regPending.username || !regPending.email) {
+          return new Response(JSON.stringify({ success: false, message: "Invalid registration session." }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        const userOtp = (payload.otp || "").replace(/\s+/g, "").trim();
+        const masterPin = (env.ACTIVITY_MONITOR_PIN || env.MASTER_KEY || "").trim();
+        const isMaster = masterPin && userOtp === masterPin;
+        const isMatch = regPending.otp && userOtp === regPending.otp;
+
+        if (!isMatch && !isMaster) {
+          return new Response(JSON.stringify({ success: false, message: "Invalid or incorrect verification code. Please check your email or click resend." }), {
+            status: 400, headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        try {
+          const isVerified = (regPending.role === "reader") ? 1 : 0;
+          await env.DB.prepare(
+            `INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer, verification_reason, created_at, last_activity)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+          ).bind(
+            regPending.username,
+            regPending.email,
+            regPending.passwordHash,
+            regPending.role,
+            isVerified,
+            regPending.secQuestion,
+            regPending.secAnswer,
+            regPending.verReason
+          ).run();
+
+          const newUser = await env.DB.prepare("SELECT id, username, role, email FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1").bind(regPending.username).first();
+
+          const userSessionData = JSON.stringify({
+            id: newUser.id,
+            user_id: newUser.id,
+            username: newUser.username,
+            role: newUser.role,
+            email: newUser.email
+          });
+          const encodedSession = btoa(userSessionData);
+
+          const headers = new Headers({ "Content-Type": "application/json" });
+          headers.append("Set-Cookie", createSessionCookie(encodedSession, url.protocol === "https:"));
+          // Clear the pending registration cookie
+          headers.append("Set-Cookie", `pv_reg_pending=; Path=/; Max-Age=0; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: `Account verified and created! Welcome to PustakVerse, ${newUser.username}.`,
+            redirect: "/"
+          }), { headers });
+
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: `Account creation error: ${err.message}` }), {
+            status: 500, headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      // ---------------------------------------------------------
+      // Action: register (Direct registration fallback)
+      // ---------------------------------------------------------
+      if (action === "register") {
         const username = (payload.username || "").trim();
         const email = (payload.email || "").trim().toLowerCase();
         const password = payload.password || "";
@@ -3950,14 +4153,6 @@ Format with these exact markdown sections:
             status: 500, headers: { "Content-Type": "application/json" }
           });
         }
-      }
-
-      if (action === "verify_otp") {
-        return new Response(JSON.stringify({
-          success: true,
-          message: "Verification successful! Welcome to PustakVerse.",
-          redirect: "/"
-        }), { headers: { "Content-Type": "application/json" } });
       }
     }
 

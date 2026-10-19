@@ -385,7 +385,7 @@
             </p>
             <div id="twoFactorAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
             <form action="/login" method="POST" id="twoFactorForm" onsubmit="handleTwoFactorSubmit(event)">
-                <input type="hidden" name="csrf_token" value="4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1">
+                <input type="hidden" name="csrf_token" value="df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270">
                 <input type="hidden" name="action" value="verify_2fa">
                 <div class="form-group">
                     <label>Verification Code</label>
@@ -411,7 +411,7 @@
                 <h2><span style="font-size: 2.2rem;">📚</span>Welcome Back, Reader</h2>
                 <div id="readerAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="readerLoginForm" onsubmit="handleReaderLogin(event)">
-                    <input type="hidden" name="csrf_token" value="4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1">
+                    <input type="hidden" name="csrf_token" value="df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="reader">
                     <div class="form-group">
@@ -447,7 +447,7 @@
                 <h2><span style="font-size: 2.2rem;">🏛️</span>Author & Staff Portal</h2>
                 <div id="officialAlert" style="display: none; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 18px; text-align: center; font-weight: 500;"></div>
                 <form action="/login" method="POST" id="officialLoginForm" onsubmit="handleOfficialLogin(event)">
-                    <input type="hidden" name="csrf_token" value="4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1">
+                    <input type="hidden" name="csrf_token" value="df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270">
                     <input type="hidden" name="action" value="login">
                     <input type="hidden" name="login_portal" value="author_official">
                     <div class="form-group">
@@ -670,7 +670,7 @@
             timeout = setTimeout(() => {
                 fetch('/check_username', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': '4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': 'df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270' },
                     body: 'username=' + encodeURIComponent(username)
                 })
                 .then(response => response.json())
@@ -734,19 +734,32 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
             
             if (data.success) {
-                sessionStorage.setItem('pustakverse_intro_seen', 'true');
-                localStorage.setItem('pustakverse_onboarded', 'true');
-                btn.textContent = "✓ Account Created! Logging in...";
-                btn.style.background = "#16a34a";
-                setTimeout(() => {
-                    window.location.href = data.redirect || "/";
-                }, 800);
+                // If direct redirect is returned
+                if (data.redirect) {
+                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                    localStorage.setItem('pustakverse_onboarded', 'true');
+                    btn.textContent = "✓ Account Created! Logging in...";
+                    btn.style.background = "#16a34a";
+                    setTimeout(() => {
+                        window.location.href = data.redirect || "/";
+                    }, 800);
+                } else {
+                    // Two-step OTP flow: transition to OTP section
+                    document.getElementById('registrationForm').style.display = 'none';
+                    document.getElementById('otpSection').style.display = 'block';
+                    startOtpTimer();
+                    const otpInput = document.getElementById('reg_otp_input');
+                    if (otpInput) {
+                        otpInput.value = '';
+                        setTimeout(() => otpInput.focus(), 150);
+                    }
+                }
             } else {
                 alert(data.message || "Registration failed. Please try again.");
                 btn.disabled = false;
@@ -769,7 +782,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270' },
                 body: JSON.stringify({ action: 'verify_otp', otp: otpVal })
             });
             const data = await response.json();
@@ -799,7 +812,7 @@
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '4ea40a2ceda8654ae232d680dd7f808d7be7b8fbd76e74a57c45258eaee9c8f1' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'df9716204734ab36a8c6be0ac41df72deab4ab02966054ed727812df8be0f270' },
                 body: JSON.stringify({ action: 'resend_otp' })
             });
             const data = await response.json();

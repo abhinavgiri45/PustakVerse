@@ -3067,12 +3067,67 @@
             });
         }
 
+        let frontRegTimerInterval = null;
+        let frontRegTimeLeft = 900; // 15 mins
+
+        function startFrontRegTimer() {
+            clearInterval(frontRegTimerInterval);
+            frontRegTimeLeft = 900;
+            const resendBtn = document.getElementById('frontRegResendBtn');
+            const timerDisplay = document.getElementById('frontRegTimerDisplay');
+            if (resendBtn) {
+                resendBtn.disabled = true;
+                resendBtn.style.opacity = '0.5';
+            }
+
+            frontRegTimerInterval = setInterval(() => {
+                frontRegTimeLeft--;
+                const minutes = Math.floor(frontRegTimeLeft / 60);
+                const seconds = frontRegTimeLeft % 60;
+                const minStr = minutes < 10 ? '0' + minutes : minutes;
+                const secStr = seconds < 10 ? '0' + seconds : seconds;
+                if (timerDisplay) {
+                    timerDisplay.textContent = `Time remaining: ${minStr}:${secStr}`;
+                }
+
+                if (frontRegTimeLeft <= 840) { // After 60 seconds (900 - 60 = 840)
+                    if (resendBtn) {
+                        resendBtn.disabled = false;
+                        resendBtn.style.opacity = '1';
+                        resendBtn.textContent = 'Resend Code';
+                    }
+                } else if (resendBtn) {
+                    resendBtn.textContent = `Resend Code (wait ${frontRegTimeLeft - 840}s)`;
+                }
+
+                if (frontRegTimeLeft <= 0) {
+                    clearInterval(frontRegTimerInterval);
+                    if (timerDisplay) timerDisplay.textContent = 'Code Expired. Please request a new code.';
+                }
+            }, 1000);
+        }
+
+        function backToFrontRegDetails() {
+            clearInterval(frontRegTimerInterval);
+            const detailsView = document.getElementById('frontRegDetailsView');
+            const otpView = document.getElementById('frontRegOtpView');
+            if (detailsView) detailsView.style.display = 'block';
+            if (otpView) otpView.style.display = 'none';
+            const alertBox = document.getElementById('frontLoginAlert');
+            if (alertBox) alertBox.style.display = 'none';
+            const btn = document.getElementById('frontRegSubmitBtn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Send Verification Code (OTP)';
+            }
+        }
+
         async function handleFrontRegister(e) {
             e.preventDefault();
             const btn = document.getElementById('frontRegSubmitBtn');
             const origText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Creating Account...';
+            btn.textContent = 'Sending Verification Code...';
 
             const username = document.getElementById('frontRegUsername').value.trim();
             const email = document.getElementById('frontRegEmail').value.trim();
@@ -3101,7 +3156,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        action: 'register',
+                        action: 'send_otp',
                         username: username,
                         email: email,
                         password: password,
@@ -3113,22 +3168,104 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
-                    localStorage.setItem('pustakverse_onboarded', 'true');
-                    btn.textContent = '✓ Account Created!';
-                    btn.style.background = '#16a34a';
-                    showFrontLoginAlert('Welcome to PustakVerse! Loading your library...', true);
-                    setTimeout(() => {
-                        window.location.href = data.redirect || '/';
-                    }, 500);
+                    showFrontLoginAlert(data.message || 'Verification code sent to your email! Check Inbox & Spam.', true);
+                    const detailsView = document.getElementById('frontRegDetailsView');
+                    const otpView = document.getElementById('frontRegOtpView');
+                    const emailDisplay = document.getElementById('frontRegEmailDisplay');
+                    if (emailDisplay) emailDisplay.textContent = email;
+                    if (detailsView) detailsView.style.display = 'none';
+                    if (otpView) otpView.style.display = 'block';
+
+                    startFrontRegTimer();
+
+                    const otpInput = document.getElementById('frontRegOtpInput');
+                    if (otpInput) {
+                        otpInput.value = '';
+                        setTimeout(() => otpInput.focus(), 150);
+                    }
                 } else {
                     showFrontLoginAlert(data.message || 'Registration failed. Please check your details.');
                     btn.disabled = false;
                     btn.textContent = origText;
                 }
             } catch (err) {
-                showFrontLoginAlert('Connection error during registration. Redirecting to register page...');
-                setTimeout(() => { window.location.href = '/register'; }, 1000);
+                showFrontLoginAlert('Connection error during registration. Please check your network.');
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        async function handleFrontRegOtpVerify(e) {
+            e.preventDefault();
+            const btn = document.getElementById('frontRegVerifyBtn');
+            const origText = btn.textContent;
+            const otpInput = document.getElementById('frontRegOtpInput');
+            const otpVal = otpInput ? otpInput.value.replace(/\s+/g, '').trim() : '';
+
+            if (!otpVal || otpVal.length < 6) {
+                showFrontLoginAlert('Please enter the full 6-digit verification code.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Verifying Code & Creating Account...';
+
+            try {
+                const res = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'verify_otp',
+                        otp: otpVal
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    clearInterval(frontRegTimerInterval);
+                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                    localStorage.setItem('pustakverse_onboarded', 'true');
+                    btn.textContent = '✓ Account Verified & Created!';
+                    btn.style.background = '#16a34a';
+                    showFrontLoginAlert('Welcome to PustakVerse! Loading your personal library...', true);
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/';
+                    }, 500);
+                } else {
+                    showFrontLoginAlert(data.message || 'Invalid or expired verification code. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            } catch (err) {
+                showFrontLoginAlert('Network error during verification. Please try again.');
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        async function handleFrontRegOtpResend() {
+            const btn = document.getElementById('frontRegResendBtn');
+            btn.disabled = true;
+            btn.textContent = 'Resending Code...';
+
+            try {
+                const res = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'resend_otp' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showFrontLoginAlert(data.message || 'A fresh 6-digit code has been sent! Check your inbox & spam.', true);
+                    startFrontRegTimer();
+                } else {
+                    showFrontLoginAlert(data.message || 'Failed to resend code.');
+                    btn.disabled = false;
+                    btn.textContent = 'Resend Code';
+                }
+            } catch (err) {
+                showFrontLoginAlert('Network error while resending code.');
+                btn.disabled = false;
+                btn.textContent = 'Resend Code';
             }
         }
 
@@ -3277,71 +3414,105 @@
                     </form>
                 </div>
 
-                <!-- Tab 3: Registration -->
+                <!-- Tab 3: Registration with Inline OTP Verification -->
                 <div id="frontTabRegister" class="front-tab-content">
-                    <a href="/login/google?mode=signup" class="front-btn-google" style="margin-bottom: 12px;">
-                        <svg style="width: 20px; height: 20px; margin-right: 10px;" viewBox="0 0 24 24">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                        Sign up with Google (Fast & Verified)
-                    </a>
-                    
-                    <div class="front-divider"><span>or register with details</span></div>
+                    <!-- Step 1: Registration Details Form -->
+                    <div id="frontRegDetailsView">
+                        <a href="/login/google?mode=signup" class="front-btn-google" style="margin-bottom: 12px;">
+                            <svg style="width: 20px; height: 20px; margin-right: 10px;" viewBox="0 0 24 24">
+                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            </svg>
+                            Sign up with Google (Fast & Verified)
+                        </a>
+                        
+                        <div class="front-divider"><span>or register with email</span></div>
 
-                    <form onsubmit="handleFrontRegister(event)" id="frontRegisterForm" autocomplete="on">
-                        <div class="front-form-group">
-                            <label for="frontRegUsername">Username</label>
-                            <input type="text" id="frontRegUsername" name="username" required placeholder="Choose a username (e.g. rahul_reader)" autocomplete="username" pattern="^[a-zA-Z0-9_]{3,30}$" title="3-30 letters, numbers, or underscores">
-                            <div id="frontRegUsernameStatus" style="font-size: 0.78rem; margin-top: 4px; min-height: 16px;"></div>
+                        <form onsubmit="handleFrontRegister(event)" id="frontRegisterForm" autocomplete="on">
+                            <div class="front-form-group">
+                                <label for="frontRegUsername">Username</label>
+                                <input type="text" id="frontRegUsername" name="username" required placeholder="Choose a username (e.g. rahul_reader)" autocomplete="username" pattern="^[a-zA-Z0-9_]{3,30}$" title="3-30 letters, numbers, or underscores">
+                                <div id="frontRegUsernameStatus" style="font-size: 0.78rem; margin-top: 4px; min-height: 16px;"></div>
+                            </div>
+
+                            <div class="front-form-group">
+                                <label for="frontRegEmail">Email Address</label>
+                                <input type="email" id="frontRegEmail" name="email" required placeholder="name@example.com" autocomplete="email">
+                            </div>
+
+                            <div class="front-form-group" style="position: relative;">
+                                <label for="frontRegPassword">Password</label>
+                                <input type="password" id="frontRegPassword" name="password" required minlength="6" placeholder="Create strong password (min 6 chars)" autocomplete="new-password">
+                                <span class="front-pw-toggle" onclick="toggleFrontPassword('frontRegPassword', this)">👁️</span>
+                            </div>
+
+                            <div class="front-form-group">
+                                <label for="frontRegRole">Account Type</label>
+                                <select id="frontRegRole" name="role" onchange="toggleFrontRegAuthorGroup()" style="cursor: pointer;">
+                                    <option value="reader">📖 Reader (Explore & Read All Books)</option>
+                                    <option value="author">✍️ Author (Publish & Manage Books)</option>
+                                </select>
+                            </div>
+
+                            <div class="front-form-group" id="frontRegAuthorGroup" style="display: none; background: rgba(234, 88, 12, 0.05); border: 1px dashed rgba(234, 88, 12, 0.35); padding: 12px; border-radius: 10px;">
+                                <label for="frontRegAuthorReason" style="color: #ea580c; font-size: 0.82rem;">Author Bio / Published Titles</label>
+                                <textarea id="frontRegAuthorReason" name="verification_reason" rows="2" placeholder="Tell us about your writing, publications, or books you plan to publish..." style="width: 100%; resize: vertical;"></textarea>
+                            </div>
+
+                            <div class="front-form-group">
+                                <label for="frontRegSq">Security Question (Account Recovery)</label>
+                                <select id="frontRegSq" name="security_question">
+                                    <option value="What is your favorite book?">What is your favorite book?</option>
+                                    <option value="What city were you born in?">What city were you born in?</option>
+                                    <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                                    <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+                                </select>
+                            </div>
+
+                            <div class="front-form-group">
+                                <label for="frontRegSa">Security Answer</label>
+                                <input type="text" id="frontRegSa" name="security_answer" required placeholder="Your secret recovery answer">
+                            </div>
+
+                            <button type="submit" id="frontRegSubmitBtn" class="front-btn-submit" style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); margin-top: 4px;">Send Verification Code (OTP)</button>
+                        </form>
+                    </div>
+
+                    <!-- Step 2: Inline OTP Verification View (shown after code is sent) -->
+                    <div id="frontRegOtpView" style="display: none; padding-top: 10px;">
+                        <div style="text-align: center; margin-bottom: 16px;">
+                            <div style="width: 56px; height: 56px; background: rgba(234, 88, 12, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 1.8rem;">
+                                📩
+                            </div>
+                            <h3 style="margin: 0 0 6px 0; font-size: 1.25rem; font-weight: 800; color: var(--pv-text, #1e293b);">Verify Your Email</h3>
+                            <p style="font-size: 0.84rem; color: var(--pv-text-muted, #64748b); line-height: 1.45; margin: 0;">
+                                We've sent a 6-digit verification code to <br><strong id="frontRegEmailDisplay" style="color: #ea580c; word-break: break-all;"></strong>.
+                            </p>
                         </div>
 
-                        <div class="front-form-group">
-                            <label for="frontRegEmail">Email Address</label>
-                            <input type="email" id="frontRegEmail" name="email" required placeholder="name@example.com" autocomplete="email">
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 10px 14px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 16px; text-align: center; line-height: 1.4;">
+                            💡 Please check your <strong>Inbox</strong> and <strong>Spam / Junk</strong> folder.
                         </div>
 
-                        <div class="front-form-group" style="position: relative;">
-                            <label for="frontRegPassword">Password</label>
-                            <input type="password" id="frontRegPassword" name="password" required minlength="6" placeholder="Create strong password (min 6 chars)" autocomplete="new-password">
-                            <span class="front-pw-toggle" onclick="toggleFrontPassword('frontRegPassword', this)">👁️</span>
+                        <div id="frontRegTimerDisplay" style="text-align: center; font-weight: 800; color: #e11d48; margin-bottom: 14px; font-size: 1.05rem; letter-spacing: 0.5px;">
+                            Time remaining: 15:00
                         </div>
 
-                        <div class="front-form-group">
-                            <label for="frontRegRole">Account Type</label>
-                            <select id="frontRegRole" name="role" onchange="toggleFrontRegAuthorGroup()" style="cursor: pointer;">
-                                <option value="reader">📖 Reader (Explore & Read All Books)</option>
-                                <option value="author">✍️ Author (Publish & Manage Books)</option>
-                            </select>
+                        <form onsubmit="handleFrontRegOtpVerify(event)" id="frontRegOtpForm">
+                            <div class="front-form-group">
+                                <label for="frontRegOtpInput" style="text-align: center; display: block;">Enter 6-Digit Code</label>
+                                <input type="text" id="frontRegOtpInput" required placeholder="• • • • • •" maxlength="6" autocomplete="one-time-code" style="letter-spacing: 6px; font-size: 1.35rem; text-align: center; font-weight: 800; padding: 12px; border-radius: 10px;">
+                            </div>
+
+                            <button type="submit" id="frontRegVerifyBtn" class="front-btn-submit" style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); margin-top: 6px;">Verify & Complete Registration</button>
+                            <button type="button" id="frontRegResendBtn" onclick="handleFrontRegOtpResend()" class="front-btn-submit" disabled style="background: #64748b; opacity: 0.5; margin-top: 8px;">Resend Code (wait 60s)</button>
+                        </form>
+
+                        <div style="text-align: center; margin-top: 14px;">
+                            <button type="button" onclick="backToFrontRegDetails()" style="background: none; border: none; color: #ea580c; font-size: 0.85rem; font-weight: 700; cursor: pointer;">← Change Details / Re-enter Info</button>
                         </div>
-
-                        <div class="front-form-group" id="frontRegAuthorGroup" style="display: none; background: rgba(234, 88, 12, 0.05); border: 1px dashed rgba(234, 88, 12, 0.35); padding: 12px; border-radius: 10px;">
-                            <label for="frontRegAuthorReason" style="color: #ea580c; font-size: 0.82rem;">Author Bio / Published Titles</label>
-                            <textarea id="frontRegAuthorReason" name="verification_reason" rows="2" placeholder="Tell us about your writing, publications, or books you plan to publish..." style="width: 100%; resize: vertical;"></textarea>
-                        </div>
-
-                        <div class="front-form-group">
-                            <label for="frontRegSq">Security Question (Account Recovery)</label>
-                            <select id="frontRegSq" name="security_question">
-                                <option value="What is your favorite book?">What is your favorite book?</option>
-                                <option value="What city were you born in?">What city were you born in?</option>
-                                <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
-                                <option value="What was the name of your first pet?">What was the name of your first pet?</option>
-                            </select>
-                        </div>
-
-                        <div class="front-form-group">
-                            <label for="frontRegSa">Security Answer</label>
-                            <input type="text" id="frontRegSa" name="security_answer" required placeholder="Your secret recovery answer">
-                        </div>
-
-                        <button type="submit" id="frontRegSubmitBtn" class="front-btn-submit" style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); margin-top: 4px;">Create Free Account</button>
-                    </form>
-
-                    <div style="text-align: center; margin-top: 14px; font-size: 0.82rem; color: var(--pv-text-muted, #64748b);">
-                        Prefer OTP verification? <a href="/register" style="color: #0284c7; text-decoration: none; font-weight: 700;">Full Registration with OTP →</a>
                     </div>
                 </div>
             </div>

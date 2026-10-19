@@ -612,13 +612,26 @@
             const data = await response.json();
             
             if (data.success) {
-                sessionStorage.setItem('pustakverse_intro_seen', 'true');
-                localStorage.setItem('pustakverse_onboarded', 'true');
-                btn.textContent = "✓ Account Created! Logging in...";
-                btn.style.background = "#16a34a";
-                setTimeout(() => {
-                    window.location.href = data.redirect || "/";
-                }, 800);
+                // If direct redirect is returned
+                if (data.redirect) {
+                    sessionStorage.setItem('pustakverse_intro_seen', 'true');
+                    localStorage.setItem('pustakverse_onboarded', 'true');
+                    btn.textContent = "✓ Account Created! Logging in...";
+                    btn.style.background = "#16a34a";
+                    setTimeout(() => {
+                        window.location.href = data.redirect || "/";
+                    }, 800);
+                } else {
+                    // Two-step OTP flow: transition to OTP section
+                    document.getElementById('registrationForm').style.display = 'none';
+                    document.getElementById('otpSection').style.display = 'block';
+                    startOtpTimer();
+                    const otpInput = document.getElementById('reg_otp_input');
+                    if (otpInput) {
+                        otpInput.value = '';
+                        setTimeout(() => otpInput.focus(), 150);
+                    }
+                }
             } else {
                 alert(data.message || "Registration failed. Please try again.");
                 btn.disabled = false;
