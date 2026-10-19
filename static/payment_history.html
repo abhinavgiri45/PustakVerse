@@ -296,6 +296,77 @@
             border-radius: 12px;
             border: 1px dashed var(--border-line);
         }
+
+        /* Mobile Phones & Tablets (< 768px) */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px 10px 40px !important;
+                max-width: 100vw !important;
+                box-sizing: border-box !important;
+            }
+            .header-bar {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 12px !important;
+            }
+            .header-bar h1 {
+                font-size: 1.35rem !important;
+            }
+            .nav-links {
+                width: 100% !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                gap: 8px !important;
+                padding-bottom: 4px !important;
+            }
+            .nav-links::-webkit-scrollbar {
+                display: none !important;
+            }
+            .btn-nav, .theme-toggle {
+                font-size: 0.78rem !important;
+                padding: 6px 12px !important;
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+            .stat-card {
+                padding: 12px 14px !important;
+            }
+            .stat-val {
+                font-size: 1.15rem !important;
+            }
+            .toolbar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            .search-box {
+                min-width: 100% !important;
+            }
+            .filter-pills {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                flex-wrap: nowrap !important;
+                padding-bottom: 4px !important;
+                width: 100% !important;
+            }
+            .filter-pills::-webkit-scrollbar {
+                display: none !important;
+            }
+            .pill-btn {
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
+            }
+            .table-scroll-container table {
+                min-width: 580px !important;
+            }
+        }
     </style>
 </head>
 <body>

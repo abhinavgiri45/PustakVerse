@@ -396,27 +396,48 @@
                 gap: 16px !important;
             } 
             .navbar { 
-                flex-direction: column !important; 
-                padding: 12px 14px !important; 
+                flex-direction: row !important; 
+                padding: 10px 14px !important; 
                 gap: 10px !important; 
                 width: 100% !important;
                 box-sizing: border-box !important;
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 1000 !important;
             } 
+            .navbar-brand {
+                flex-shrink: 0 !important;
+            }
             .navbar-links {
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                gap: 8px 10px !important;
-                width: 100% !important;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                gap: 8px !important;
+                width: auto !important;
+                max-width: calc(100vw - 110px) !important;
+                padding: 4px 2px !important;
+            }
+            .navbar-links::-webkit-scrollbar {
+                display: none !important;
             }
             .navbar-links a, .navbar-links button {
                 font-size: 0.82rem !important;
+                padding: 6px 12px !important;
+                border-radius: 20px !important;
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
             }
             .logo-img {
                 height: 38px !important;
             }
             .dashboard-header {
                 flex-direction: column !important;
-                align-items: flex-start !important;
+                align-items: stretch !important;
                 padding: 16px 14px !important;
                 margin-bottom: 20px !important;
                 gap: 12px !important;
@@ -450,8 +471,8 @@
             }
             #headerAuthorActions, #headerOfficialDevActions {
                 width: 100% !important;
-                flex-direction: column !important;
-                align-items: stretch !important;
+                display: grid !important;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
                 gap: 8px !important;
             }
             #headerAuthorActions a, #headerAuthorActions button,
@@ -459,9 +480,12 @@
                 width: 100% !important;
                 justify-content: center !important;
                 text-align: center !important;
-                font-size: 0.88rem !important;
-                padding: 10px 14px !important;
+                font-size: 0.82rem !important;
+                padding: 9px 12px !important;
+                border-radius: 12px !important;
                 box-sizing: border-box !important;
+                white-space: normal !important;
+                line-height: 1.25 !important;
             }
             .table-scroll-container {
                 width: 100% !important;
@@ -4146,6 +4170,12 @@
                     <div>
                         <strong>⚠️ Maintenance Mode is Currently ACTIVE:</strong> Public visitors and normal readers see the maintenance screen. Developer, CTO, CEO, and technical staff maintain continuous bypass access.
                         <div id="devMaintenanceWindowDisplay" style="margin-top: 4px; font-weight: 600; color: #c2410c;"></div>
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span style="font-weight: 700; color: #166534; font-size: 0.8rem;">🔑 Bypass Link:</span>
+                            <code style="background: rgba(255,255,255,0.85); padding: 3px 8px; border-radius: 6px; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.76rem;" id="devBannerBypassCode">/?bypass_maintenance=1</code>
+                            <button type="button" onclick="navigator.clipboard.writeText(window.location.origin + '/?bypass_maintenance=1'); alert('Bypass link copied to clipboard!');" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.74rem;">📋 Copy Bypass Link</button>
+                            <a href="/bypass_maintenance" target="_blank" style="color: #2563eb; font-weight: 700; font-size: 0.76rem; text-decoration: underline;">Test in New Tab ↗</a>
+                        </div>
                     </div>
                     <div>
                         <button type="button" onclick="endMaintenanceMode()" class="btn-sm btn-green" style="padding: 8px 16px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);">
@@ -4373,16 +4403,49 @@
                     </div>
                 </div>
 
-                <!-- Start and End Time -->
+                <!-- Start and End Time (Text + Native DateTime Picker) -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
-                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Start Time / Date</label>
-                        <input type="text" id="maintStartTime" name="start_time" placeholder="e.g. Today 11:00 PM IST" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label for="maintStartTime" style="font-size: 0.82rem; font-weight: 700; color: #334155; margin: 0;">Start Time / Date</label>
+                            <span style="font-size: 0.72rem; color: #ea580c; font-weight: 600;">(Text or Picker)</span>
+                        </div>
+                        <input type="text" id="maintStartTime" name="start_time" placeholder="e.g. Today 11:00 PM IST" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <input type="datetime-local" id="maintStartTimePicker" onchange="syncMaintTimePicker('start')" style="flex: 1; padding: 6px 10px; font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #334155;">
+                            <button type="button" onclick="setMaintenancePreset('now')" class="btn-sm btn-dark" style="padding: 5px 8px; font-size: 0.72rem; white-space: nowrap;">Now</button>
+                        </div>
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">End Time / Date</label>
-                        <input type="text" id="maintEndTime" name="end_time" placeholder="e.g. Tomorrow 03:00 AM IST" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label for="maintEndTime" style="font-size: 0.82rem; font-weight: 700; color: #334155; margin: 0;">End Time / Date</label>
+                            <span style="font-size: 0.72rem; color: #ea580c; font-weight: 600;">(Text or Picker)</span>
+                        </div>
+                        <input type="text" id="maintEndTime" name="end_time" placeholder="e.g. Tomorrow 03:00 AM IST" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <input type="datetime-local" id="maintEndTimePicker" onchange="syncMaintTimePicker('end')" style="flex: 1; padding: 6px 10px; font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #334155;">
+                            <button type="button" onclick="setMaintenancePreset(2)" class="btn-sm btn-dark" style="padding: 5px 8px; font-size: 0.72rem; white-space: nowrap;">+2h</button>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Developer Direct Bypass Link Card -->
+                <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.82rem; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 6px;">
+                            <span>🔑</span> Developer Maintenance Bypass Link:
+                        </span>
+                        <a href="/bypass_maintenance" target="_blank" style="font-size: 0.75rem; font-weight: 700; color: #15803d; text-decoration: underline;">Test Bypass ↗</a>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <input type="text" id="devBypassLinkInput" readonly value="https://pustakverse.pages.dev/?bypass_maintenance=1" style="flex: 1; padding: 7px 10px; font-size: 0.78rem; font-family: monospace; border: 1px solid #bbf7d0; border-radius: 6px; background: #ffffff; color: #14532d;">
+                        <button type="button" onclick="copyDevBypassLink()" id="copyBypassBtn" class="btn-sm btn-green" style="padding: 7px 12px; font-size: 0.78rem; font-weight: 700; white-space: nowrap;">
+                            📋 Copy
+                        </button>
+                    </div>
+                    <p style="margin: 4px 0 0 0; font-size: 0.72rem; color: #15803d; line-height: 1.4;">
+                        Opening this URL or clicking bypass sets a persistent edge cookie (<code>pv_bypass_maintenance=1</code>), letting developers & leadership test the full platform even during active maintenance.
+                    </p>
                 </div>
 
                 <!-- Reason / Objective -->
@@ -7495,6 +7558,14 @@
         if (!modal) return;
         modal.style.display = 'flex';
 
+        // Prepopulate bypass link with current origin
+        try {
+            const bypassInput = document.getElementById('devBypassLinkInput');
+            if (bypassInput) {
+                bypassInput.value = window.location.origin + '/?bypass_maintenance=1';
+            }
+        } catch (_) {}
+
         // Prepopulate fields if available
         if (!document.getElementById('maintStartTime').value) {
             setMaintenancePreset(2);
@@ -7506,6 +7577,67 @@
         if (modal) modal.style.display = 'none';
     }
 
+    function toLocalISOString(date) {
+        const pad = (n) => String(n).padStart(2, '0');
+        const y = date.getFullYear();
+        const m = pad(date.getMonth() + 1);
+        const d = pad(date.getDate());
+        const h = pad(date.getHours());
+        const min = pad(date.getMinutes());
+        return `${y}-${m}-${d}T${h}:${min}`;
+    }
+
+    function syncMaintTimePicker(type) {
+        const formatTime = (d) => {
+            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' +
+                   d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST';
+        };
+
+        if (type === 'start') {
+            const picker = document.getElementById('maintStartTimePicker');
+            const txt = document.getElementById('maintStartTime');
+            if (picker && picker.value && txt) {
+                const d = new Date(picker.value);
+                if (!isNaN(d.getTime())) {
+                    txt.value = formatTime(d);
+                }
+            }
+        } else if (type === 'end') {
+            const picker = document.getElementById('maintEndTimePicker');
+            const txt = document.getElementById('maintEndTime');
+            if (picker && picker.value && txt) {
+                const d = new Date(picker.value);
+                if (!isNaN(d.getTime())) {
+                    txt.value = formatTime(d);
+                }
+            }
+        }
+    }
+
+    function copyDevBypassLink() {
+        const bypassInput = document.getElementById('devBypassLinkInput');
+        const btn = document.getElementById('copyBypassBtn');
+        if (!bypassInput) return;
+        const text = bypassInput.value;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                if (btn) {
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = '✅ Copied!';
+                    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+                }
+            }).catch(() => {
+                bypassInput.select();
+                document.execCommand('copy');
+                if (btn) btn.innerHTML = '✅ Copied!';
+            });
+        } else {
+            bypassInput.select();
+            document.execCommand('copy');
+            if (btn) btn.innerHTML = '✅ Copied!';
+        }
+    }
+
     function setMaintenancePreset(preset) {
         const now = new Date();
         const formatTime = (d) => {
@@ -7515,7 +7647,15 @@
 
         const startInput = document.getElementById('maintStartTime');
         const endInput = document.getElementById('maintEndTime');
+        const startPicker = document.getElementById('maintStartTimePicker');
+        const endPicker = document.getElementById('maintEndTimePicker');
         const reasonInput = document.getElementById('maintReason');
+
+        if (preset === 'now') {
+            startInput.value = formatTime(now);
+            if (startPicker) startPicker.value = toLocalISOString(now);
+            return;
+        }
 
         if (preset === 'tonight') {
             const tonight11 = new Date();
@@ -7523,12 +7663,16 @@
             const tomorrow3 = new Date(tonight11.getTime() + 4 * 3600 * 1000);
             startInput.value = formatTime(tonight11);
             endInput.value = formatTime(tomorrow3);
+            if (startPicker) startPicker.value = toLocalISOString(tonight11);
+            if (endPicker) endPicker.value = toLocalISOString(tomorrow3);
             if (!reasonInput.value) reasonInput.value = 'Planned core database migration and Girionix AI architecture scale';
         } else {
             const hrs = parseInt(preset, 10) || 1;
             const end = new Date(now.getTime() + hrs * 3600 * 1000);
             startInput.value = formatTime(now);
             endInput.value = formatTime(end);
+            if (startPicker) startPicker.value = toLocalISOString(now);
+            if (endPicker) endPicker.value = toLocalISOString(end);
             if (!reasonInput.value) reasonInput.value = 'Database infrastructure upgrade and Girionix AI computing nodes enhancement';
         }
     }

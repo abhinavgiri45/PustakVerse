@@ -530,8 +530,37 @@
                 grid-template-columns: repeat(2, 1fr) !important;
                 gap: 12px !important;
             }
-            .lib-navbar { padding: 10px 16px; }
-            .lib-nav-links { display: none; }
+            .lib-navbar { 
+                padding: 10px 14px; 
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                gap: 8px !important;
+            }
+            .lib-nav-brand img {
+                height: 34px !important;
+            }
+            .lib-nav-links { 
+                display: flex !important; 
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 6px !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                max-width: calc(100vw - 110px) !important;
+                white-space: nowrap !important;
+            }
+            .lib-nav-links::-webkit-scrollbar {
+                display: none !important;
+            }
+            .lib-nav-links a, .lib-nav-links button {
+                padding: 6px 10px !important;
+                font-size: 0.78rem !important;
+                border-radius: 18px !important;
+                flex-shrink: 0 !important;
+            }
         }
     </style>
 </head>
