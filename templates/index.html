@@ -1548,6 +1548,8 @@
                     </span>
                 </div>
             </div>
+        </div>
+
         <!-- AUTHOR SEARCH RESULTS SHOWCASE (Appears dynamically when an author is searched) -->
         <div id="authorSearchResultContainer" style="display: none; margin-bottom: 28px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px;">
@@ -2166,17 +2168,16 @@
                 if (localStorage.getItem('pv_cached_books_catalog')) {
                     localStorage.removeItem('pv_cached_books_catalog');
                 }
-                const cachedRaw = localStorage.getItem('pv_cached_books_catalog_v2');
+                if (localStorage.getItem('pv_cached_books_catalog_v2')) {
+                    localStorage.removeItem('pv_cached_books_catalog_v2');
+                }
+                const cachedRaw = localStorage.getItem('pv_cached_books_catalog_v3');
                 let initialBooks = null;
                 if (cachedRaw) {
                     try { initialBooks = JSON.parse(cachedRaw); } catch (_) {}
                 }
                 if (!Array.isArray(initialBooks) || initialBooks.length === 0) {
-                    // Check if DOM already has pre-rendered cards
-                    const existingCards = document.querySelectorAll('.book-card');
-                    if (!existingCards.length) {
-                        initialBooks = CANONICAL_STARTER_BOOKS;
-                    }
+                    initialBooks = CANONICAL_STARTER_BOOKS;
                 }
                 if (Array.isArray(initialBooks) && initialBooks.length > 0) {
                     const grid = document.querySelector('.book-grid');
@@ -2226,24 +2227,18 @@
                     .then(books => {
                         if (Array.isArray(books) && books.length > 0) {
                             try {
-                                localStorage.setItem('pv_cached_books_catalog_v2', JSON.stringify(books));
+                                localStorage.setItem('pv_cached_books_catalog_v3', JSON.stringify(books));
                             } catch (_) {}
                             renderBooksIntoGrid(books);
                         } else {
-                            if (!document.querySelectorAll('.book-card').length) {
-                                renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
-                            }
+                            renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
                         }
                     })
                     .catch(() => {
-                        if (!document.querySelectorAll('.book-card').length) {
-                            renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
-                        }
+                        renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
                     });
             } catch (_) {
-                if (!document.querySelectorAll('.book-card').length) {
-                    renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
-                }
+                renderBooksIntoGrid(CANONICAL_STARTER_BOOKS);
             }
         }
 
