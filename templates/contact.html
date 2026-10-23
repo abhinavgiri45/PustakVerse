@@ -639,7 +639,7 @@
 
         <div class="leadership-grid" id="leadershipGrid">
             {% for leader in leaders %}
-            <div class="leader-card {% if leader.is_founder %}founder-card{% endif %}">
+            <div class="leader-card {% if leader.email and leader.email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] %}founder-card{% endif %}">
                 <div class="circle-avatar-wrap">
                     {% if leader.photo and leader.photo.startswith('http') %}
                         <img src="{{ leader.photo }}" alt="{{ leader.name }}" class="circle-avatar" onerror="this.src='/static/PustakVerse.png'">
@@ -651,7 +651,7 @@
                         <img src="{{ url_for('static', filename='PustakVerse.png') }}" alt="{{ leader.name }}" class="circle-avatar" style="padding: 10px; background: #0f172a;">
                     {% endif %}
 
-                    {% if leader.is_founder %}
+                    {% if leader.email and leader.email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] %}
                         <span class="founder-crown" title="Founder">👑</span>
                     {% endif %}
                 </div>
@@ -659,12 +659,12 @@
                 <h3 class="leader-name">{{ leader.name }}</h3>
                 
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
-                    {% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}
+                    {% if leader.email and leader.email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] %}
                     <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em;">
                         👑 Founder
                     </span>
                     {% endif %}
-                    <span class="role-badge {% if leader.is_founder %}founder-badge{% endif %}">
+                    <span class="role-badge {% if leader.email and leader.email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] %}founder-badge{% endif %}">
                         {{ leader.role_title }}
                     </span>
                 </div>
@@ -830,9 +830,7 @@
 
                 let html = '';
                 leaders.forEach(leader => {
-                    const isFounder = Boolean(leader.is_founder) ||
-                        (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) ||
-                        (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+                    const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase()));
 
                     let photoSrc = '/static/PustakVerse.png';
                     if (leader.photo && (leader.photo.startsWith('http://') || leader.photo.startsWith('https://') || leader.photo.startsWith('/'))) {
