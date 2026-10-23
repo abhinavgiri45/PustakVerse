@@ -830,10 +830,9 @@
 
                 let html = '';
                 leaders.forEach(leader => {
-                    const isFounder = Boolean(leader.is_founder) || 
+                    const isFounder = Boolean(leader.is_founder) ||
                         (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) ||
-                        (leader.name && leader.name.toLowerCase().includes('abhinav giri')) ||
-                        (leader.role_title && (leader.role_title.toLowerCase().includes('founder') || leader.role_title.toLowerCase().includes('ceo') || leader.role_title.toLowerCase().includes('cto')));
+                        (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
 
                     let photoSrc = '/static/PustakVerse.png';
                     if (leader.photo && (leader.photo.startsWith('http://') || leader.photo.startsWith('https://') || leader.photo.startsWith('/'))) {

@@ -7378,7 +7378,7 @@ Format with these exact markdown sections:
           await ensureLeadershipTable(env);
           if (offUser) {
             const desLower = designation.toLowerCase();
-            const isF = (desLower.includes("ceo") || desLower.includes("cto") || desLower.includes("founder")) ? 1 : 0;
+            const isF = (offUser.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(offUser.email.toLowerCase())) ? 1 : 0;
             const exLead = await env.DB.prepare("SELECT id FROM leadership_team WHERE email = ? OR name = ?").bind(offUser.email, offUser.username).first();
             if (exLead) {
               await env.DB.prepare("UPDATE leadership_team SET role_title = ?, is_founder = ? WHERE id = ?").bind(designation, isF, exLead.id).run();
@@ -12074,6 +12074,14 @@ async function ensureLeadershipTable(env) {
       }
       await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('seeded', '1')").run();
     }
+
+    // One-time fix: ensure only Abhinav Giri has is_founder = 1
+    const founderFix = await env.DB.prepare("SELECT val FROM leadership_metadata WHERE key = 'founder_fix_v1'").first();
+    if (!founderFix) {
+      await env.DB.prepare("UPDATE leadership_team SET is_founder = 0 WHERE email NOT IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com') AND is_founder = 1").run();
+      await env.DB.prepare("UPDATE leadership_team SET is_founder = 1 WHERE email IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com')").run();
+      await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('founder_fix_v1', '1')").run();
+    }
   } catch (e) {
     console.warn("ensureLeadershipTable warning:", e.message);
   }
@@ -12119,8 +12127,8 @@ async function getUnifiedLeadershipRoster(env) {
       }
 
       const des = off.official_designation || "Official Moderator";
-      const desLower = des.toLowerCase();
-      const isF = (desLower.includes("ceo") || desLower.includes("cto") || desLower.includes("founder")) ? 1 : 0;
+      const offEmailLower = (off.email || "").toLowerCase().trim();
+      const isF = (['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(offEmailLower)) ? 1 : 0;
       roster.push({
         id: `off-${off.id}`,
         name: off.username,
