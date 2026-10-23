@@ -7377,7 +7377,6 @@ Format with these exact markdown sections:
         try {
           await ensureLeadershipTable(env);
           if (offUser) {
-            const desLower = designation.toLowerCase();
             const isF = (offUser.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(offUser.email.toLowerCase())) ? 1 : 0;
             const exLead = await env.DB.prepare("SELECT id FROM leadership_team WHERE email = ? OR name = ?").bind(offUser.email, offUser.username).first();
             if (exLead) {
@@ -12074,14 +12073,6 @@ async function ensureLeadershipTable(env) {
       }
       await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('seeded', '1')").run();
     }
-
-    // One-time fix: ensure only Abhinav Giri has is_founder = 1
-    const founderFix = await env.DB.prepare("SELECT val FROM leadership_metadata WHERE key = 'founder_fix_v1'").first();
-    if (!founderFix) {
-      await env.DB.prepare("UPDATE leadership_team SET is_founder = 0 WHERE email NOT IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com') AND is_founder = 1").run();
-      await env.DB.prepare("UPDATE leadership_team SET is_founder = 1 WHERE email IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com')").run();
-      await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('founder_fix_v1', '1')").run();
-    }
   } catch (e) {
     console.warn("ensureLeadershipTable warning:", e.message);
   }
@@ -12127,8 +12118,7 @@ async function getUnifiedLeadershipRoster(env) {
       }
 
       const des = off.official_designation || "Official Moderator";
-      const offEmailLower = (off.email || "").toLowerCase().trim();
-      const isF = (['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(offEmailLower)) ? 1 : 0;
+      const isF = (off.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(off.email.toLowerCase())) ? 1 : 0;
       roster.push({
         id: `off-${off.id}`,
         name: off.username,
@@ -12424,7 +12414,7 @@ async function ensureAuthorLikesTable(env) {
 function renderContactLeadershipCards(leaders) {
   if (!leaders || leaders.length === 0) return "";
   return leaders.map(leader => {
-    const isFounder = Boolean(leader.is_founder) || (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+    const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase()));
     let photoSrc = "/static/PustakVerse.png";
     if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
       photoSrc = leader.photo;
@@ -13284,7 +13274,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   let leaderRowsHtml = "";
   if (leadershipTeam && leadershipTeam.length > 0) {
     leaderRowsHtml = leadershipTeam.map(leader => {
-      const isFounder = Boolean(leader.is_founder) || (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
+      const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase()));
       let photoSrc = "/static/PustakVerse.png";
       if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
         photoSrc = leader.photo;
