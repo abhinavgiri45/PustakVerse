@@ -660,56 +660,101 @@ function isTechnicalLeadershipUser(user, leadershipTeam = []) {
 function parseMaintenanceTimestamp(str) {
   if (!str || typeof str !== 'string') return null;
   const s = str.trim();
-  if (['immediate', 'in progress', 'tbd', 'shortly', 'now'].includes(s.toLowerCase())) return null;
+  const lower = s.toLowerCase();
+  if (['immediate', 'in progress', 'tbd', 'shortly', 'now', 'until further notice'].includes(lower)) return null;
 
-  // 1. Direct standard parse (ISO with Z or offset, e.g. 2026-10-30T18:30:00Z)
-  let d = new Date(s);
-  if (!isNaN(d.getTime()) && (s.includes('Z') || s.includes('+') || (s.includes('-') && s.length > 19))) {
-    return d.getTime();
+  // Direct ISO with timezone
+  if (s.includes('Z') || s.includes('+05:30') || s.includes('+00:00')) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.getTime();
   }
 
-  // 2. Local ISO format e.g. '2026-10-30T23:30' or '2026-10-30 23:30' -> treat as IST (+05:30)
-  const clean = s.replace(/\s*IST\s*$/i, '').trim();
+  // Handle relative strings like +30m, +1h, +2 hours
+  const relMatch = lower.match(/^\+(\d+(?:\.\d+)?)\s*(m|min|mins|minutes|h|hr|hrs|hours)$/);
+  if (relMatch) {
+    const val = parseFloat(relMatch[1]);
+    const unit = relMatch[2];
+    const ms = unit.startsWith('m') ? val * 60 * 1000 : val * 3600 * 1000;
+    return Date.now() + ms;
+  }
+
+  // Remove trailing IST
+  let clean = s.replace(/\s*IST\s*$/i, '').trim();
+
+  // Handle 'Today ...' and 'Tomorrow ...'
+  const isTomorrow = lower.startsWith('tomorrow');
+  const isToday = lower.startsWith('today');
+  if (isTomorrow || isToday) {
+    clean = clean.replace(/^(today|tomorrow)[,\s]*/i, '').trim();
+  }
+
+  // Handle local ISO '2026-10-30T23:30' or '2026-10-30 23:30'
   const isoMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
   if (isoMatch) {
     const [_, y, m, day, h, min, sec] = isoMatch;
     const sSec = sec || '00';
-    d = new Date(y + '-' + m + '-' + day + 'T' + h + ':' + min + ':' + sSec + '+05:30');
+    const d = new Date(y + '-' + m + '-' + day + 'T' + h + ':' + min + ':' + sSec + '+05:30');
     if (!isNaN(d.getTime())) return d.getTime();
   }
 
-  // 3. Indian format: '30 Oct 2026, 11:30 PM' or '30 Oct, 11:30 PM'
+  // Handle '30 Oct 2026, 11:30 PM' or '30-Oct, 11:30 PM' or '30 Oct, 11:30 PM'
   const currentYear = new Date().getFullYear();
-  const match = clean.match(/^(\d{1,2})\s+([A-Za-z]+)(?:\s+(\d{4}))?,\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (match) {
-    const day = match[1].padStart(2, '0');
-    const monthStr = match[2].toLowerCase().slice(0, 3);
+  const dateMatch = clean.match(/^(\d{1,2})[-\s/]+([A-Za-z]+|\d{1,2})(?:[-\s/]+(\d{4}))?[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([ap]m))?$/i);
+  if (dateMatch) {
+    const day = dateMatch[1].padStart(2, '0');
+    let mPart = dateMatch[2].toLowerCase();
     const months = { jan:'01', feb:'02', mar:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
-    const mNum = months[monthStr] || '01';
-    const year = match[3] || currentYear;
-    let hour = parseInt(match[4], 10);
-    const min = match[5];
-    const ampm = match[6].toUpperCase();
+    let mNum = months[mPart.slice(0, 3)] || mPart.padStart(2, '0');
+    let year = dateMatch[3] || currentYear;
+    let hour = parseInt(dateMatch[4], 10);
+    const min = dateMatch[5];
+    const sec = dateMatch[6] || '00';
+    const ampm = (dateMatch[7] || '').toUpperCase();
     if (ampm === 'PM' && hour < 12) hour += 12;
     if (ampm === 'AM' && hour === 12) hour = 0;
     const sHour = String(hour).padStart(2, '0');
-    d = new Date(year + '-' + mNum + '-' + day + 'T' + sHour + ':' + min + ':00+05:30');
+    const d = new Date(year + '-' + mNum + '-' + day + 'T' + sHour + ':' + min + ':' + sec + '+05:30');
     if (!isNaN(d.getTime())) return d.getTime();
   }
 
-  d = new Date(clean);
-  if (!isNaN(d.getTime())) return d.getTime();
+  // Handle plain time '11:30 PM' or '03:00 AM'
+  const timeMatch = clean.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]m)?$/i);
+  if (timeMatch) {
+    let hour = parseInt(timeMatch[1], 10);
+    const min = timeMatch[2];
+    const sec = timeMatch[3] || '00';
+    const ampm = (timeMatch[4] || '').toUpperCase();
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    
+    // Compute date in IST
+    const now = new Date();
+    const istNow = new Date(now.getTime() + (5.5 * 3600 * 1000));
+    if (isTomorrow) {
+      istNow.setUTCDate(istNow.getUTCDate() + 1);
+    }
+    const y = istNow.getUTCFullYear();
+    const m = String(istNow.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istNow.getUTCDate()).padStart(2, '0');
+    const sHour = String(hour).padStart(2, '0');
+    const d = new Date(y + '-' + m + '-' + day + 'T' + sHour + ':' + min + ':' + sec + '+05:30');
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
   return null;
 }
 
 async function checkAndAutoExpireMaintenance(env, fps, bgTask) {
-  if (!fps || !Boolean(fps.maintenance_mode)) return false;
+  if (!fps || (Number(fps.maintenance_mode) !== 1 && fps.maintenance_mode !== true && fps.maintenance_mode !== "1")) return false;
 
   const nowMs = Date.now();
   const endMs = parseMaintenanceTimestamp(fps.maintenance_end);
 
-  // If a valid end timestamp was configured and current time has reached or passed it:
-  if (endMs && nowMs >= endMs) {
+  // Auto-expire ONLY if:
+  // 1. A valid future endMs was configured
+  // 2. Current time has reached or passed endMs
+  // 3. The time difference is within 4 hours of endMs (prevents ancient/corrupt timestamps from auto-expiring maintenance that was just turned on)
+  if (endMs && nowMs >= endMs && (nowMs - endMs) < (4 * 3600 * 1000)) {
     try {
       await env.DB.prepare("UPDATE front_page_settings SET maintenance_mode = 0 WHERE id = 1").run();
       fps.maintenance_mode = 0;
@@ -2874,7 +2919,7 @@ export default {
               const respHeaders = new Headers(pageResp.headers);
               respHeaders.set("Content-Type", "text/html; charset=utf-8");
               if (!respHeaders.has("Cache-Control")) {
-                respHeaders.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+                respHeaders.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
               }
               return new Response(pageResp.body, {
                 status: pageResp.status,
@@ -2934,9 +2979,22 @@ export default {
         if (action === "enable") newMode = true;
         if (action === "disable") newMode = false;
 
-        const startTime = (payload.start_time || cur.maintenance_start || "Immediate").trim();
-        const endTime = (payload.end_time || cur.maintenance_end || "TBD").trim();
-        const reason = (payload.reason || cur.maintenance_reason || "Scheduled Infrastructure & Girionix AI Architecture Optimization").trim();
+        const startTime = (payload.start_time || "Immediate").trim();
+        let endTime = (payload.end_time || "").trim();
+        if (newMode && (!endTime || parseMaintenanceTimestamp(endTime) === null || parseMaintenanceTimestamp(endTime) <= Date.now())) {
+          const d2h = new Date(Date.now() + 2 * 3600 * 1000);
+          const day = d2h.getDate();
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const m = months[d2h.getMonth()];
+          const y = d2h.getFullYear();
+          let h = d2h.getHours();
+          const min = String(d2h.getMinutes()).padStart(2, '0');
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          h = h % 12 || 12;
+          const sH = String(h).padStart(2, '0');
+          endTime = `${day} ${m} ${y}, ${sH}:${min} ${ampm} IST`;
+        }
+        const reason = (payload.reason || cur.maintenance_reason || "Scheduled Core Infrastructure & Girionix AI Architecture Optimization").trim();
         const notifyUsers = String(payload.notify_users).toLowerCase() === "true" || payload.notify_users === "1" || payload.notify_users === "on";
 
         await env.DB.prepare(`
@@ -11653,7 +11711,7 @@ Format with these exact markdown sections:
           const rHeaders = new Headers(edgeResp.headers);
           rHeaders.set("Content-Type", "text/html; charset=utf-8");
           if (!rHeaders.has("Cache-Control")) {
-            rHeaders.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+            rHeaders.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
           }
           if (hasBypassParam) {
             rHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
@@ -11723,7 +11781,7 @@ Format with these exact markdown sections:
           const body = await rawResp.text();
           const rHeaders = new Headers({
             "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "public, max-age=300"
+            "Cache-Control": "private, no-cache, no-store, must-revalidate"
           });
           if (hasBypassParam) {
             rHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
@@ -11749,7 +11807,7 @@ Format with these exact markdown sections:
         if (rootResp && rootResp.status < 400) {
           const fbHeaders = new Headers(rootResp.headers);
           fbHeaders.set("Content-Type", "text/html; charset=utf-8");
-          fbHeaders.set("Cache-Control", "public, max-age=300");
+          fbHeaders.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
           if (hasBypassParam) {
             fbHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
           }
@@ -11769,7 +11827,7 @@ Format with these exact markdown sections:
         const body = await indexFallback.text();
         const fbHeaders = new Headers({
           "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, max-age=300"
+          "Cache-Control": "private, no-cache, no-store, must-revalidate"
         });
         if (hasBypassParam) {
           fbHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);

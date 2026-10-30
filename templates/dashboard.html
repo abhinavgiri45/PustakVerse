@@ -7650,8 +7650,16 @@
 
     function syncMaintTimePicker(type) {
         const formatTime = (d) => {
-            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' +
-                   d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST';
+            const day = d.getDate();
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const m = months[d.getMonth()];
+            const y = d.getFullYear();
+            let h = d.getHours();
+            const min = String(d.getMinutes()).padStart(2, '0');
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            const sH = String(h).padStart(2, '0');
+            return `${day} ${m} ${y}, ${sH}:${min} ${ampm} IST`;
         };
 
         if (type === 'start') {

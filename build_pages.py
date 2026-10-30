@@ -56,6 +56,14 @@ def build():
         f.write("")
     print("[+] Created .nojekyll")
 
+    # 2B. Write Cloudflare Pages _routes.json so _worker.js intercepts ALL requests including /
+    routes_json_content = '{\n  "version": 1,\n  "include": [\n    "/*"\n  ],\n  "exclude": []\n}\n'
+    with open(os.path.join(SITE_DIR, "_routes.json"), "w", encoding="utf-8") as f:
+        f.write(routes_json_content)
+    with open(os.path.join(os.path.dirname(__file__), "_routes.json"), "w", encoding="utf-8") as f:
+        f.write(routes_json_content)
+    print("[+] Created _routes.json in _site/ and root directory")
+
     # 3. Render routes via Flask test client
     with app.test_client() as client:
         for route, out_file in STATIC_ROUTES:
