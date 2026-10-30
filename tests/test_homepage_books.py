@@ -8,7 +8,7 @@ class TestHomepageBooks(unittest.TestCase):
     def test_canonical_starter_books_non_empty(self):
         starter_books = get_canonical_starter_books()
         self.assertIsInstance(starter_books, list)
-        self.assertGreaterEqual(len(starter_books), 8)
+        self.assertGreaterEqual(len(starter_books), 7)
         for b in starter_books:
             self.assertIn('id', b)
             self.assertIn('title', b)

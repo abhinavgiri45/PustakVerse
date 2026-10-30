@@ -4066,8 +4066,7 @@ Format with these exact markdown sections:
         const book = await env.DB.prepare("SELECT price_paise FROM books WHERE id = ? LIMIT 1").bind(bookId).first();
         if (book && book.price_paise) {
           origPrice = book.price_paise;
-        } else if (bookId === 9999) {
-          origPrice = 100;
+        
         }
 
         const discountPct = Math.max(5, Math.min(99, coupon.discount_percent || 20));
@@ -7866,26 +7865,6 @@ Format with these exact markdown sections:
         month_purchases: 58,
         lifetime_purchases: 240,
         custom_badges: []
-      },
-      {
-        id: 9999,
-        title: "PustakVerse Premium Edition: Test Payment Guide",
-        author_name: "PustakVerse Official",
-        author_id: 1,
-        catalog: "Academic",
-        cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
-        pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
-        is_paid: 1,
-        price_paise: 100,
-        is_featured: 1,
-        is_quarantined: 0,
-        description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).",
-        avg_rating: 5.0,
-        trending_rank: 8,
-        week_purchases: 25,
-        month_purchases: 95,
-        lifetime_purchases: 320,
-        custom_badges: [{ badge_label: "⚡ Premium Test Edition", badge_color: "gold" }]
       }
     ];
 
@@ -7980,42 +7959,9 @@ Format with these exact markdown sections:
             };
           };
 
-          results = results.map(b => {
-            if (b.id === 9999) {
-              return sanitizeBookForApi({
-                ...b,
-                title: "PustakVerse Premium Edition: Test Payment Guide",
-                author_name: (b.author_name && b.author_name !== "Author" && b.author_name !== "PustakVerse Library") ? b.author_name : "PustakVerse Official",
-                catalog: "Academic",
-                price_paise: 100,
-                is_paid: 1,
-                cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80"
-              });
-            }
-            return sanitizeBookForApi(b);
-          });
+          results = results.filter(b => b && b.id !== 9999 && !b.title?.includes('Test Payment Guide')).map(b => sanitizeBookForApi(b));
 
-          if (!results.find(b => b.id === 9999)) {
-            const hasPurchased9999 = sessionUser && (purchasedBookIds.has(9999) || libraryBookIds.has(9999));
-            const canRead9999 = sessionUser && (sessionUser.role === 'developer' || hasPurchased9999);
-            results.unshift({
-              id: 9999,
-              title: "PustakVerse Premium Edition: Test Payment Guide",
-              author_name: "PustakVerse Official",
-              catalog: "Academic",
-              price_paise: 100,
-              is_paid: 1,
-              is_featured: 1,
-              is_quarantined: 0,
-              has_purchased: !!hasPurchased9999,
-              in_library: !!hasPurchased9999,
-              can_read: !!canRead9999,
-              description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).",
-              cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
-              pdf_file: canRead9999 ? "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing" : null,
-              custom_badges: []
-            });
-          }
+
 
           // Robust fallback: if library only has <= 1 book, merge in canonical starter books
           if (results.length <= 1) {
@@ -8391,25 +8337,7 @@ Format with these exact markdown sections:
         }
 
         if (targetBookId === 9999) {
-          if (!book) {
-            book = {
-              id: 9999,
-              title: "PustakVerse Premium Edition: Test Payment Guide",
-              author_name: "PustakVerse Official",
-              catalog: "Academic",
-              cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
-              pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
-              is_paid: 1,
-              price_paise: 100,
-              preview_pages: 5,
-              description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00."
-            };
-          } else {
-            book.id = 9999;
-            book.title = "PustakVerse Premium Edition: Test Payment Guide";
-            book.is_paid = 1;
-            book.price_paise = 100;
-          }
+          return new Response("Book not found", { status: 404 });
         }
 
         if (!book) {
@@ -9531,22 +9459,9 @@ Format with these exact markdown sections:
         }
 
         if (targetBookId === 9999) {
-          if (!book) {
-            book = {
-              id: 9999,
-              title: "PustakVerse Premium Edition: Test Payment Guide",
-              is_paid: 1,
-              price_paise: 100,
-              author_key_id: null,
-              author_key_secret: null,
-              author_name: "PustakVerse Official"
-            };
-          } else {
-            book.id = 9999;
-            book.title = "PustakVerse Premium Edition: Test Payment Guide";
-            book.is_paid = 1;
-            book.price_paise = 100;
-          }
+          return new Response(JSON.stringify({ success: false, error: "Book not found." }), {
+            status: 404, headers: { "Content-Type": "application/json" }
+          });
         }
 
         if (!book) {
@@ -10363,33 +10278,7 @@ Format with these exact markdown sections:
             }
 
             if (bookId === 9999) {
-              if (!book) {
-                book = {
-                  id: 9999,
-                  title: "PustakVerse Premium Edition: Test Payment Guide",
-                  author_name: "PustakVerse Official",
-                  catalog: "Academic",
-                  cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
-                  pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
-                  is_paid: 1,
-                  price_paise: 100,
-                  preview_pages: 5,
-                  is_featured: 1,
-                  description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise)."
-                };
-              } else {
-                book.id = 9999;
-                book.title = "PustakVerse Premium Edition: Test Payment Guide";
-                book.author_name = (book.author_name && book.author_name !== "Author" && book.author_name !== "PustakVerse Library") ? book.author_name : "PustakVerse Official";
-                book.catalog = "Academic";
-                book.cover_image = "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80";
-                book.pdf_file = "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing";
-                book.is_paid = 1;
-                book.price_paise = 100;
-                book.preview_pages = 5;
-                book.is_featured = 1;
-                book.description = "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).";
-              }
+              book = null;
             }
 
             if (book) {
@@ -10428,8 +10317,7 @@ Format with these exact markdown sections:
             { id: 1, title: "As You Thinketh", author_name: "James Allen", catalog: "Philosophy", cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "A timeless masterpiece exploring the power of thought and the architect of one's own destiny and character." },
             { id: 2, title: "Helen Keller: Story of My Life", author_name: "Helen Keller", catalog: "Biography", cover_image: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "The inspiring, triumph-over-adversity autobiography documenting Helen Keller's miraculous journey to literacy and education." },
             { id: 3, title: "Exploration Class-9th", author_name: "Academic Board", catalog: "Academic", cover_image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 0, description: "Structured core curricula and reading explorations designed for Secondary Class 9 academic achievement." },
-            { id: 4, title: "India Of My Dreams", author_name: "Mahatma Gandhi", catalog: "History & Society", cover_image: "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "A seminal collection of Mahatma Gandhi's speeches and essays articulating his vision of an independent, self-reliant India." },
-            { id: 9999, title: "PustakVerse Premium Edition: Test Payment Guide", author_name: "PustakVerse Official", catalog: "Academic", cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80", pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing", is_paid: 1, price_paise: 100, preview_pages: 5, is_featured: 1, description: "Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise)." }
+            { id: 4, title: "India Of My Dreams", author_name: "Mahatma Gandhi", catalog: "History & Society", cover_image: "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=300&auto=format&fit=crop&q=80", pdf_file: "#", is_paid: 0, price_paise: 0, is_featured: 1, description: "A seminal collection of Mahatma Gandhi's speeches and essays articulating his vision of an independent, self-reliant India." }
           ];
           book = fallbackCatalog.find(b => b.id === bookId) || {
             id: bookId,
@@ -11376,16 +11264,8 @@ Format with these exact markdown sections:
           "SELECT id, title, author_id, pdf_file, is_paid, price_paise, cover_image FROM books WHERE id = ? LIMIT 1"
         ).bind(targetBookId).first();
 
-        if (!book && targetBookId === 9999) {
-          book = {
-            id: 9999,
-            title: "PustakVerse Premium Edition: Test Payment Guide",
-            author_id: 1,
-            pdf_file: "https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing",
-            is_paid: 1,
-            price_paise: 100,
-            cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80"
-          };
+        if (targetBookId === 9999) {
+          return new Response("Book not found", { status: 404 });
         }
 
         if (book) {
@@ -12293,83 +12173,11 @@ async function ensureBooksTable(env) {
     `).run();
   } catch (_) {}
 
-  // Ensure official test paid book exists for payment gateway testing & verification
+  // Ensure retired test payment guide 9999 is permanently deleted from D1
   try {
-    const existingTestBook = await env.DB.prepare(
-      "SELECT id FROM books WHERE id = 9999 LIMIT 1"
-    ).first();
-    if (existingTestBook) {
-      await env.DB.prepare(`
-        UPDATE books SET
-          title = 'PustakVerse Premium Edition: Test Payment Guide',
-          catalog = 'Academic',
-          cover_image = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-          pdf_file = 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
-          is_paid = 1,
-          price_paise = 100,
-          preview_pages = 5,
-          rp_verified = 1,
-          description = 'Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).',
-          is_featured = 1,
-          is_quarantined = 0
-        WHERE id = 9999
-      `).run();
-    } else {
-      let authorId = 1;
-      try {
-        const u = await env.DB.prepare("SELECT id FROM users WHERE role = 'developer' OR role = 'official' ORDER BY id ASC LIMIT 1").first();
-        if (u && u.id) authorId = u.id;
-      } catch (_) {}
-
-      try {
-        await env.DB.prepare(`
-          INSERT INTO books (
-            id, title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
-            preview_pages, rp_verified, description, is_featured, is_quarantined, sbin_no, isbn, created_at
-          ) VALUES (
-            9999,
-            'PustakVerse Premium Edition: Test Payment Guide',
-            ?,
-            'Academic',
-            'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-            'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
-            1,
-            100,
-            5,
-            1,
-            'Official test paid publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).',
-            1,
-            0,
-            '978-93-89999-99-8',
-            '978-93-89999-99-8',
-            datetime('now')
-          )
-        `).bind(authorId).run();
-      } catch (fallbackInsertErr) {
-        await env.DB.prepare(`
-          INSERT INTO books (
-            title, author_id, catalog, cover_image, pdf_file, is_paid, price_paise,
-            preview_pages, rp_verified, description, is_featured, is_quarantined, sbin_no, isbn, created_at
-          ) VALUES (
-            'PustakVerse Premium Edition: Test Payment Guide',
-            ?,
-            'Academic',
-            'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-            'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
-            1,
-            100,
-            5,
-            1,
-            'Official test paid publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).',
-            1,
-            0,
-            '978-93-89999-99-8',
-            '978-93-89999-99-8',
-            datetime('now')
-          )
-        `).bind(authorId).run();
-      }
-    }
+    await env.DB.prepare("DELETE FROM books WHERE id = 9999 OR title LIKE '%Test Payment Guide%'").run();
+    await env.DB.prepare("DELETE FROM purchases WHERE book_id = 9999").run();
+    await env.DB.prepare("DELETE FROM personal_library WHERE book_id = 9999").run();
   } catch (_) {}
 
   // Auto-seed canonical library books into D1 if library catalog has <= 1 book

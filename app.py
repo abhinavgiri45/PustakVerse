@@ -5444,27 +5444,6 @@ def get_canonical_starter_books():
             'month_purchases': 58,
             'lifetime_purchases': 240,
             'custom_badges': []
-        },
-        {
-            'id': 9999,
-            'title': 'PustakVerse Premium Edition: Test Payment Guide',
-            'author_name': 'PustakVerse Official',
-            'author_id': 1,
-            'author_role': 'developer',
-            'catalog': 'Academic',
-            'cover_image': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-            'pdf_file': 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
-            'is_paid': 1,
-            'price_paise': 100,
-            'private_pdf': 0,
-            'description': 'Official test publication for verifying Razorpay payment gateway integration, sandbox simulation, instant digital unlocking, and reader library delivery. Price: ₹1.00 (100 paise).',
-            'avg_rating': 5.0,
-            'is_featured': 1,
-            'trending_rank': 8,
-            'week_purchases': 25,
-            'month_purchases': 95,
-            'lifetime_purchases': 320,
-            'custom_badges': [{'badge_label': '⚡ Premium Test Edition', 'badge_color': 'gold'}]
         }
     ]
 
