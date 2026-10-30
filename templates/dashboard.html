@@ -4465,12 +4465,13 @@
             <form id="maintenanceScheduleForm" onsubmit="submitMaintenanceSchedule(event)">
                 <!-- Quick Window Presets -->
                 <div style="margin-bottom: 14px;">
-                    <label style="display: block; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.04em; margin-bottom: 6px;">Quick Time Presets:</label>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.04em; margin-bottom: 6px;">⚡ Quick Window Presets:</label>
                     <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" onclick="setMaintenancePreset(0.5)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+30 Mins</button>
                         <button type="button" onclick="setMaintenancePreset(1)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+1 Hour</button>
                         <button type="button" onclick="setMaintenancePreset(2)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+2 Hours</button>
                         <button type="button" onclick="setMaintenancePreset(4)" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">+4 Hours</button>
-                        <button type="button" onclick="setMaintenancePreset('tonight')" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">Tonight (11 PM - 3 AM)</button>
+                        <button type="button" onclick="setMaintenancePreset('tonight')" class="btn-sm btn-dark" style="padding: 4px 10px; font-size: 0.78rem;">🌙 Tonight (11 PM - 3 AM)</button>
                     </div>
                 </div>
 
@@ -4519,9 +4520,17 @@
                     </p>
                 </div>
 
-                <!-- Reason / Objective -->
+                <!-- Reason / Objective with Quick Templates -->
                 <div style="margin-bottom: 14px;">
-                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Maintenance Objective / Headline</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="font-size: 0.82rem; font-weight: 700; color: #334155; margin: 0;">Maintenance Objective / Headline</label>
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Quick Reason:</span>
+                    </div>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px;">
+                        <button type="button" onclick="setMaintReasonPreset('ai')" class="btn-sm" style="background: #f1f5f9; color: #334155; font-size: 0.7rem; padding: 3px 8px; border: 1px solid #cbd5e1;">🤖 Girionix AI Scaling</button>
+                        <button type="button" onclick="setMaintReasonPreset('db')" class="btn-sm" style="background: #f1f5f9; color: #334155; font-size: 0.7rem; padding: 3px 8px; border: 1px solid #cbd5e1;">💾 Database Optimization</button>
+                        <button type="button" onclick="setMaintReasonPreset('security')" class="btn-sm" style="background: #f1f5f9; color: #334155; font-size: 0.7rem; padding: 3px 8px; border: 1px solid #cbd5e1;">🛡️ Security & Performance</button>
+                    </div>
                     <input type="text" id="maintReason" name="reason" placeholder="e.g. Database cluster migration and Girionix AI architecture enhancement" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
                 </div>
 
@@ -7697,6 +7706,18 @@
         }
     }
 
+    function setMaintReasonPreset(type) {
+        const rInput = document.getElementById('maintReason');
+        if (!rInput) return;
+        if (type === 'ai') {
+            rInput.value = 'Girionix AI computing cluster expansion and intelligent reading assistant neural model acceleration';
+        } else if (type === 'db') {
+            rInput.value = 'Core high-concurrency database index optimization, cache warming, and multi-region replication sync';
+        } else if (type === 'security') {
+            rInput.value = 'Essential security hardening, edge WAF rule tuning, and Cloudflare distributed network maintenance';
+        }
+    }
+
     function setMaintenancePreset(preset) {
         const now = new Date();
         const formatTime = (d) => {
@@ -7726,8 +7747,8 @@
             if (endPicker) endPicker.value = toLocalISOString(tomorrow3);
             if (!reasonInput.value) reasonInput.value = 'Planned core database migration and Girionix AI architecture scale';
         } else {
-            const hrs = parseInt(preset, 10) || 1;
-            const end = new Date(now.getTime() + hrs * 3600 * 1000);
+            const hrs = parseFloat(preset) || 1;
+            const end = new Date(now.getTime() + Math.round(hrs * 3600 * 1000));
             startInput.value = formatTime(now);
             endInput.value = formatTime(end);
             if (startPicker) startPicker.value = toLocalISOString(now);

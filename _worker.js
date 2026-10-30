@@ -672,7 +672,7 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             --amber-accent: #f59e0b;
             --dark-navy: #0f172a;
             --slate-border: #334155;
-            --card-bg: rgba(15, 23, 42, 0.85);
+            --card-bg: rgba(15, 23, 42, 0.88);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -697,8 +697,8 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         }
         .glow-orb {
             position: absolute;
-            width: 480px;
-            height: 480px;
+            width: 520px;
+            height: 520px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(234, 88, 12, 0.22) 0%, rgba(245, 158, 11, 0.05) 50%, transparent 70%);
             filter: blur(40px);
@@ -714,11 +714,11 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         }
         .container {
             width: 100%;
-            max-width: 720px;
+            max-width: 740px;
             background: var(--card-bg);
             border: 1px solid var(--slate-border);
             border-radius: 28px;
-            padding: 44px 36px;
+            padding: 42px 34px;
             box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(234, 88, 12, 0.12);
             backdrop-filter: blur(20px);
             position: relative;
@@ -727,15 +727,15 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         }
         .gear-container {
             position: relative;
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 24px;
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .gear-icon {
-            font-size: 4rem;
+            font-size: 3.8rem;
             display: inline-block;
             animation: rotateGear 14s linear infinite;
             filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6));
@@ -744,7 +744,7 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             position: absolute;
             bottom: 0px;
             right: 0px;
-            font-size: 2.2rem;
+            font-size: 2rem;
             animation: rotateGearRev 10s linear infinite;
             filter: drop-shadow(0 0 12px rgba(234, 88, 12, 0.7));
         }
@@ -769,30 +769,30 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             font-weight: 800;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
         h1 {
-            font-size: 2.3rem;
+            font-size: 2.2rem;
             font-weight: 900;
-            line-height: 1.2;
-            margin-bottom: 14px;
+            line-height: 1.25;
+            margin-bottom: 10px;
             background: linear-gradient(135deg, #ffffff 30%, #fde047 70%, #ea580c 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.02em;
         }
         .subtitle {
-            font-size: 1.05rem;
+            font-size: 0.98rem;
             color: #94a3b8;
             line-height: 1.6;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
         .schedule-card {
             background: rgba(30, 41, 59, 0.7);
             border: 1.5px dashed rgba(245, 158, 11, 0.5);
             border-radius: 18px;
             padding: 22px 20px;
-            margin-bottom: 26px;
+            margin-bottom: 22px;
             text-align: center;
         }
         .window-grid {
@@ -811,31 +811,89 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             min-width: 170px;
         }
         .time-box .val {
-            font-size: 1.05rem;
+            font-size: 1.02rem;
             font-weight: 800;
             color: #fef08a;
             font-family: 'JetBrains Mono', monospace;
+        }
+        .countdown-container {
+            margin-top: 18px;
+            padding: 14px 18px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .countdown-title {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #fbbf24;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .countdown-grid {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .countdown-unit {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 5px 10px;
+            min-width: 48px;
+            text-align: center;
+        }
+        .countdown-num {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #38bdf8;
+            display: block;
+            line-height: 1.1;
+        }
+        .countdown-label {
+            font-size: 0.64rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            display: block;
+            margin-top: 2px;
         }
         .security-badge {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             background: rgba(34, 197, 94, 0.1);
             border: 1px solid rgba(34, 197, 94, 0.3);
             border-radius: 14px;
             padding: 14px 18px;
-            margin-bottom: 26px;
+            margin-bottom: 22px;
             text-align: left;
+        }
+        .auto-refresh-notice {
+            font-size: 0.76rem;
+            color: #94a3b8;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
         .leadership-box {
             border-top: 1px solid var(--slate-border);
-            padding-top: 20px;
-            margin-top: 14px;
+            padding-top: 18px;
+            margin-top: 10px;
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            font-size: 0.85rem;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.82rem;
             color: #94a3b8;
         }
         .leadership-link {
@@ -844,8 +902,8 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
             font-weight: 800;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
+            gap: 6px;
+            padding: 6px 14px;
             background: rgba(251, 146, 60, 0.12);
             border: 1px solid rgba(251, 146, 60, 0.35);
             border-radius: 10px;
@@ -868,30 +926,50 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
         </div>
         <div class="brand-badge"><span>⚡</span> Scheduled System Maintenance</div>
         <h1>PustakVerse is Upgrading</h1>
-        <div class="schedule-card" style="margin-top: 20px;">
+        <p class="subtitle">
+            Our engineering team is executing core platform optimizations and Girionix AI architecture upgrades to deliver an even faster, richer digital literary ecosystem.
+        </p>
+
+        <div class="schedule-card">
             <div style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
                 ⏰ Scheduled Maintenance Window
             </div>
             <div class="window-grid">
                 <div class="time-box">
                     <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">From</div>
-                    <div class="val">${escapeHtml(start)}</div>
+                    <div class="val" id="maintStartDisplay">${escapeHtml(start)}</div>
                 </div>
                 <div style="color: #f59e0b; font-size: 1.4rem;">➜</div>
                 <div class="time-box">
-                    <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">To</div>
-                    <div class="val">${escapeHtml(end)}</div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">To (Estimated)</div>
+                    <div class="val" id="maintEndDisplay">${escapeHtml(end)}</div>
                 </div>
             </div>
-            <div style="margin-top: 18px; padding: 18px 22px; background: rgba(15, 23, 42, 0.95); border-radius: 14px; border: 2px solid #f59e0b; text-align: left; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);">
-                <div style="font-size: 0.85rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+
+            <!-- Dynamic Live Countdown -->
+            <div class="countdown-container" id="countdownBox">
+                <span class="countdown-title">⏳ Estimated Remaining:</span>
+                <div class="countdown-grid" id="countdownUnits">
+                    <div class="countdown-unit"><span class="countdown-num" id="cdHours">00</span><span class="countdown-label">Hours</span></div>
+                    <span style="color: #f59e0b; font-weight: 800;">:</span>
+                    <div class="countdown-unit"><span class="countdown-num" id="cdMinutes">00</span><span class="countdown-label">Mins</span></div>
+                    <span style="color: #f59e0b; font-weight: 800;">:</span>
+                    <div class="countdown-unit"><span class="countdown-num" id="cdSeconds">00</span><span class="countdown-label">Secs</span></div>
+                </div>
+                <span id="countdownStatus" style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; display: none;"></span>
+            </div>
+
+            <!-- Dynamic Reason & Objective -->
+            <div style="margin-top: 18px; padding: 16px 20px; background: rgba(15, 23, 42, 0.95); border-radius: 14px; border: 2px solid #f59e0b; text-align: left; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);">
+                <div style="font-size: 0.82rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
                     <span>🎯</span> Reason &amp; Objective:
                 </div>
-                <div style="font-size: 1.15rem; font-weight: 700; color: #ffffff; line-height: 1.6;">
-                    We are performing essential scheduled architectural upgrades and expanding our Girionix AI computing nodes to elevate your digital learning experience.
+                <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; line-height: 1.55;" id="maintReasonDisplay">
+                    ${escapeHtml(reason)}
                 </div>
             </div>
         </div>
+
         <div class="security-badge">
             <span style="font-size: 1.6rem;">🔒</span>
             <div>
@@ -901,10 +979,95 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
                 </span>
             </div>
         </div>
+
+        <div class="auto-refresh-notice">
+            <span>🔄</span> Platform will automatically reload as soon as maintenance completes. Checking edge status...
+        </div>
+
         <div class="leadership-box">
             <span>Engineering Status: <strong style="color: #38bdf8;">Cluster Sync In Progress</strong></span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <a href="/login" class="leadership-link">
+                    <span>🔑</span> Staff / Leadership Bypass
+                </a>
+            </div>
         </div>
     </div>
+
+    <script>
+    (function() {
+        const rawEnd = "${escapeJavaScript(end)}";
+        let targetDate = null;
+
+        if (rawEnd && rawEnd !== 'TBD' && rawEnd !== 'Shortly') {
+            const parsed = new Date(rawEnd);
+            if (!isNaN(parsed.getTime())) {
+                targetDate = parsed;
+            } else {
+                const clean = rawEnd.replace(/\s*IST\s*$/i, '').trim();
+                const attempt = new Date(clean);
+                if (!isNaN(attempt.getTime())) {
+                    targetDate = attempt;
+                }
+            }
+        }
+
+        const cdUnits = document.getElementById('countdownUnits');
+        const cdStatus = document.getElementById('countdownStatus');
+        const hEl = document.getElementById('cdHours');
+        const mEl = document.getElementById('cdMinutes');
+        const sEl = document.getElementById('cdSeconds');
+
+        function updateCountdown() {
+            if (!targetDate) {
+                if (cdUnits) cdUnits.style.display = 'none';
+                if (cdStatus) {
+                    cdStatus.textContent = 'Cluster synchronization underway • Auto-reopening soon';
+                    cdStatus.style.display = 'inline-block';
+                }
+                return;
+            }
+
+            const now = new Date();
+            const diff = targetDate.getTime() - now.getTime();
+
+            if (diff <= 0) {
+                if (cdUnits) cdUnits.style.display = 'none';
+                if (cdStatus) {
+                    cdStatus.textContent = 'Maintenance window finalizing • Restoring public access...';
+                    cdStatus.style.display = 'inline-block';
+                    cdStatus.style.color = '#4ade80';
+                }
+                return;
+            }
+
+            const totalSecs = Math.floor(diff / 1000);
+            const hours = Math.floor(totalSecs / 3600);
+            const mins = Math.floor((totalSecs % 3600) / 60);
+            const secs = totalSecs % 60;
+
+            const pad = (n) => String(n).padStart(2, '0');
+            if (hEl) hEl.textContent = pad(hours);
+            if (mEl) mEl.textContent = pad(mins);
+            if (sEl) sEl.textContent = pad(secs);
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/edge-health?t=' + Date.now(), { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json().catch(() => null);
+                    if (data && data.maintenance === false) {
+                        window.location.reload();
+                    }
+                }
+            } catch (_) {}
+        }, 15000);
+    })();
+    </script>
 </body>
 </html>`;
 }
