@@ -10932,6 +10932,35 @@ Format with these exact markdown sections:
       return Response.redirect(`${url.origin}/dashboard?cache_purged=1`, 302);
     }
 
+    // Check Username Availability API: GET /api/check_username?u=...
+    if (url.pathname === "/api/check_username") {
+      const queryUser = (url.searchParams.get("u") || "").trim();
+      if (!queryUser || queryUser.length < 3 || queryUser.length > 30 || !/^[a-zA-Z0-9_]+$/.test(queryUser)) {
+        return new Response(JSON.stringify({ available: false, message: "Must be 3–30 alphanumeric/underscore characters." }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      const sessionUser = getSessionUser(request);
+      if (sessionUser && sessionUser.username && queryUser.toLowerCase() === sessionUser.username.toLowerCase()) {
+        return new Response(JSON.stringify({ available: false, message: "This is your current username." }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      if (env.DB) {
+        try {
+          const existing = await env.DB.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?").bind(queryUser, sessionUser?.id || 0).first();
+          if (existing) {
+            return new Response(JSON.stringify({ available: false, message: "Username already taken." }), {
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        } catch (_) {}
+      }
+      return new Response(JSON.stringify({ available: true, message: "Username is available!" }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     // Change Username: POST /change_username
     if (url.pathname === "/change_username" && request.method === "POST" && env.DB) {
       const cookies = parseCookies(request.headers.get("Cookie"));
@@ -10940,10 +10969,24 @@ Format with these exact markdown sections:
 
       const formData = await request.formData().catch(() => new FormData());
       const newUsername = (formData.get("new_username") || "").toString().trim();
+      const currentPassword = (formData.get("current_password") || "").toString().trim();
       const reason = (formData.get("reason") || "").toString().trim();
+
+      if (!currentPassword) {
+        return Response.redirect(`${url.origin}/dashboard?username_error=invalid_password`, 302);
+      }
+
+      const dbUser = await env.DB.prepare("SELECT password_hash, security_answer FROM users WHERE id = ?").bind(user.id).first();
+      if (!dbUser || !(await verifyPassword(currentPassword, dbUser.password_hash, dbUser.security_answer, user))) {
+        return Response.redirect(`${url.origin}/dashboard?username_error=invalid_password`, 302);
+      }
 
       if (!newUsername || newUsername.length < 3 || newUsername.length > 30 || !/^[a-zA-Z0-9_]+$/.test(newUsername)) {
         return Response.redirect(`${url.origin}/dashboard?username_error=invalid`, 302);
+      }
+
+      if (newUsername.toLowerCase() === (user.username || "").toLowerCase()) {
+        return Response.redirect(`${url.origin}/dashboard?username_error=same`, 302);
       }
 
       const existing = await env.DB.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?").bind(newUsername, user.id).first();
@@ -10960,6 +11003,9 @@ Format with these exact markdown sections:
         return Response.redirect(`${url.origin}/dashboard?req_submitted=1`, 302);
       } else {
         await env.DB.prepare("UPDATE users SET username = ? WHERE id = ?").bind(newUsername, user.id).run();
+        await env.DB.prepare("UPDATE books SET author_name = ? WHERE author_id = ?").bind(newUsername, user.id).run().catch(() => {});
+        await env.DB.prepare("UPDATE leadership_team SET name = ? WHERE email = ?").bind(newUsername, user.email).run().catch(() => {});
+
         const sessionPayload = btoa(JSON.stringify({
           user_id: user.id,
           username: newUsername,
@@ -13053,6 +13099,9 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   // 1. Personalized User & Role in Header
   out = out.replace(/Welcome,\s*(?:\{\{\s*session\.username\s*\}\}|[A-Za-z0-9_]+)/g, `Welcome, <span id="dashUsernameDisplay">${escapeHtml(username)}</span>`);
   out = out.replace(/Your Role:\s*<strong[^>]*>[\s\S]*?<\/strong>/gi, `Your Role: <strong id="dashRoleDisplay" style="color: var(--primary-orange); text-transform: capitalize;">${escapeHtml(role)}</strong>`);
+  out = out.replace(/Current Email:\s*<strong[^>]*>[^<]*<\/strong>/gi, `Current Email: <strong id="dashCurrentEmail">${escapeHtml(email)}</strong>`);
+  out = out.replace(/Current Username:\s*<strong[^>]*>[^<]*<\/strong>/gi, `Current Username: <strong id="dashCurrentUsername">@${escapeHtml(username)}</strong>`);
+
 
   // Flash message for query params
   if (url) {
@@ -13094,6 +13143,15 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     } else if (url.searchParams.get("username_changed") === "1") {
       const banner = `<div style="background: #dcfce7; border: 1.5px solid #22c55e; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">✨</span><div>Username successfully updated and active across your session!</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("username_error") === "invalid_password") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">🔒</span><div>Incorrect account password. Please enter your valid current password to confirm username update.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("username_error") === "same") {
+      const banner = `<div style="background: #e0f2fe; border: 1.5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">ℹ️</span><div>New username must be different from your current username.</div></div>`;
+      out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
+    } else if (url.searchParams.get("username_error") === "invalid") {
+      const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚠️</span><div>Username must be 3–30 characters and contain only letters, numbers, and underscores.</div></div>`;
       out = out.replace(/(<div class="container"[^>]*>)/i, `$1\n${banner}`);
     } else if (url.searchParams.get("username_error") === "taken") {
       const banner = `<div style="background: #fee2e2; border: 1.5px solid #ef4444; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 10px;"><span style="font-size: 1.4rem;">⚠️</span><div>That username is already taken. Please choose another username.</div></div>`;

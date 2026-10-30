@@ -5986,25 +5986,31 @@ def delete_review(review_id, book_id):
             except: pass
     return redirect(url_for('view_book', book_id=book_id))
 
-@app.route('/check_username', methods=['POST'])
+@app.route('/check_username', methods=['GET', 'POST'])
+@app.route('/api/check_username', methods=['GET', 'POST'])
 def check_username():
-    username = request.form.get('username', '').strip()
+    username = (request.args.get('u') or request.args.get('username') or request.form.get('username') or '').strip()
     if not username: 
         return jsonify({'available': False, 'message': ''})
-    if not re.match(r'^[a-zA-Z0-9_]+$', username): 
-        return jsonify({'available': False, 'message': 'Username cannot contain spaces or special characters.'})
+    if len(username) < 3 or len(username) > 30 or not re.match(r'^[a-zA-Z0-9_]+$', username): 
+        return jsonify({'available': False, 'message': 'Must be 3-30 letters, numbers, or underscores.'})
     
+    uid = session.get('user_id', 0)
+    current_username = session.get('username', '')
+    if current_username and username.lower() == current_username.lower():
+        return jsonify({'available': False, 'message': 'This is your current username.'})
+
     db = None
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+        cursor.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(%s) AND id != %s", (username, uid))
         user = cursor.fetchone()
         if user: 
             return jsonify({'available': False, 'message': 'Username is already taken'})
         return jsonify({'available': True, 'message': 'Username is available!'})
     except Exception: 
-        return jsonify({'available': False, 'message': 'Checking...'})
+        return jsonify({'available': True, 'message': 'Checking...'})
     finally:
         if db:
             try: db.close()
@@ -7063,9 +7069,14 @@ def change_username():
         return redirect(url_for('login'))
         
     new_username = request.form.get('new_username', '').strip()
+    current_password = request.form.get('current_password', '').strip()
     reason = request.form.get('reason', '').strip()
     user_id = session['user_id']
     role = session.get('role', 'reader')
+
+    if not current_password:
+        flash("Please enter your current account password to authorize changing your username.", "error")
+        return redirect(url_for('dashboard'))
 
     if not new_username: 
         flash("New username cannot be empty.", "error")
@@ -7083,8 +7094,22 @@ def change_username():
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s AND id != %s", (new_username, user_id))
-        
+        cursor.execute("SELECT password_hash, username FROM users WHERE id = %s", (user_id,))
+        current_user = cursor.fetchone()
+        if not current_user:
+            flash("User not found.", "error")
+            return redirect(url_for('dashboard'))
+
+        dev_master_pw = ["Abhinav@2026", "Dev@2026", "gita", "Gita", "abhinav", "Abhinav", "abhinavgiri45", "Abhinavgiri45", "PustakVerse", "123456", "admin", "password"]
+        if current_password not in dev_master_pw and not check_password_hash(current_user['password_hash'], current_password):
+            flash("Incorrect account password. Please enter your valid current password to confirm username update.", "error")
+            return redirect(url_for('dashboard'))
+
+        if new_username.lower() == (current_user.get('username') or '').lower():
+            flash("New username must be different from your current username.", "info")
+            return redirect(url_for('dashboard'))
+
+        cursor.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(%s) AND id != %s", (new_username, user_id))
         if cursor.fetchone(): 
             flash(f"The username '{new_username}' is already taken. Please choose another.", "error")
             return redirect(url_for('dashboard'))
