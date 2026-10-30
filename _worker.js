@@ -219,6 +219,18 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+function escapeJavaScript(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\"/g, '\\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/</g, "\\x3c")
+    .replace(/>/g, "\\x3e");
+}
+
 async function isHumanVerified(cookies, secret) {
   if (!cookies || !cookies.pv_cf_verified) return false;
   try {
@@ -1134,7 +1146,7 @@ function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = 
 
     <script>
     (function() {
-        const rawEnd = "${escapeJavaScript(end)}";
+        const rawEnd = ${JSON.stringify(String(end || ""))};
         let targetDate = null;
 
         if (rawEnd && rawEnd !== 'TBD' && rawEnd !== 'Shortly') {
@@ -2713,14 +2725,30 @@ export default {
               });
             }
 
-            return new Response(renderEdgeMaintenanceHtml({
-              start: startWindow,
-              end: endWindow,
-              reason: maintReason
-            }), {
-              status: 503,
-              headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "300" }
-            });
+            try {
+              return new Response(renderEdgeMaintenanceHtml({
+                start: startWindow,
+                end: endWindow,
+                reason: maintReason
+              }), {
+                status: 503,
+                headers: {
+                  "Content-Type": "text/html; charset=utf-8",
+                  "Retry-After": "300",
+                  "Cache-Control": "private, no-cache, no-store, must-revalidate"
+                }
+              });
+            } catch (renderErr) {
+              console.error("renderEdgeMaintenanceHtml failed:", renderErr);
+              return new Response(`<!DOCTYPE html><html><head><title>Under Maintenance</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="background:#090d16;color:#fff;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px;text-align:center;"><div><h1 style="color:#f59e0b;">PustakVerse is Under Maintenance</h1><p>Our engineering team is currently performing scheduled system upgrades.</p><p style="margin-top:12px;color:#94a3b8;"><strong>Reason:</strong> ${escapeHtml(maintReason)}</p><p style="color:#94a3b8;"><strong>Window:</strong> ${escapeHtml(startWindow)} &rarr; ${escapeHtml(endWindow)}</p></div></body></html>`, {
+                status: 503,
+                headers: {
+                  "Content-Type": "text/html; charset=utf-8",
+                  "Retry-After": "300",
+                  "Cache-Control": "private, no-cache, no-store, must-revalidate"
+                }
+              });
+            }
           }
         }
       } catch (mErr) {
