@@ -679,7 +679,10 @@
                             </td>
                             <td>
                                 <div style="font-family: monospace; font-size: 0.82rem; color: var(--text-dark); font-weight: 600;">${escapeHtml(p.razorpay_order_id)}</div>
-                                ${p.razorpay_payment_id ? `<div style="font-family: monospace; font-size: 0.74rem; color: #059669; margin-top: 2px;">Ref: ${escapeHtml(p.razorpay_payment_id)}</div>` : ''}
+                                ${p.razorpay_payment_id ? `<div style="font-family: monospace; font-size: 0.74rem; color: #059669; margin-top: 2px; display: flex; align-items: center; gap: 4px;">
+                                    ${(p.payment_method === 'upi' || p.razorpay_payment_id.startsWith('upi_')) ? '<span style="background: #ecfdf5; color: #059669; padding: 1px 5px; border-radius: 4px; font-weight: 800; font-size: 0.68rem;">⚡ UPI</span>' : '<span style="background: #eff6ff; color: #2563eb; padding: 1px 5px; border-radius: 4px; font-weight: 800; font-size: 0.68rem;">💳 Card/Netbanking</span>'}
+                                    <span>Ref: ${escapeHtml(p.razorpay_payment_id)}</span>
+                                </div>` : ''}
                             </td>
                             <td>
                                 <div style="font-weight: 800; color: #166534; font-size: 0.98rem;">${displayAmount}</div>

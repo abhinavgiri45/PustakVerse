@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
     <script>
@@ -391,6 +392,159 @@
         .terms-note a:hover {
             text-decoration: underline;
         }
+
+        /* Direct UPI Gateway Option & Modal */
+        .payment-choice-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .btn-pay-upi {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+            border: none;
+            padding: 13px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-pay-upi:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4);
+        }
+        .btn-pay-upi:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        .payment-separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin: 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .payment-separator::before, .payment-separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-line);
+        }
+        .payment-separator:not(:empty)::before {
+            margin-right: .75em;
+        }
+        .payment-separator:not(:empty)::after {
+            margin-left: .75em;
+        }
+
+        /* UPI Modal */
+        .upi-modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(6px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .upi-modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-line);
+            border-radius: 16px;
+            max-width: 440px;
+            width: 100%;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: pvSlideUp 0.25s ease-out;
+            text-align: center;
+            position: relative;
+        }
+        .upi-qr-box {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 12px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin: 14px 0;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+        }
+        .upi-app-badges {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .upi-badge-pill {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-dark);
+        }
+        .utr-input-group {
+            margin-top: 14px;
+            text-align: left;
+        }
+        .utr-input-group label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .utr-input-group input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border-line);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: monospace;
+            background: var(--stat-bg);
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+        .btn-confirm-utr {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+        .btn-confirm-utr:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -472,10 +626,74 @@
             </div>
         </div>
 
-        <!-- SINGLE ONE-TIME PAYMENT BUTTON -->
-        <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
-            <span>🔒 Pay <span id="payBtnAmount">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span> Securely</span>
+        <!-- DIRECT UPI PAYMENT GATEWAY & RAZORPAY HYBRID -->
+        <button id="payUpiButton" class="btn-pay-upi" onclick="initiateUpiPayment()">
+            <span>⚡ Pay <span id="payUpiBtnAmount">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span> via Direct UPI (QR / Apps)</span>
         </button>
+
+        <div class="payment-separator">or pay with cards / netbanking</div>
+
+        <!-- RAZORPAY GATEWAY BUTTON -->
+        <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
+            <span>🔒 Pay <span id="payBtnAmount">₹{{ "%.2f"|format((base_price + (default_donation_inr or 10)*100)/100 if checkout_donation_active else base_price/100) }}</span> with Razorpay</span>
+        </button>
+
+        <!-- SECURE DIRECT UPI PAYMENT MODAL (Inspired by upi-pg) -->
+        <div id="upiModal" class="upi-modal-backdrop">
+            <div class="upi-modal-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-dark); display: flex; align-items: center; gap: 6px;">
+                        <span>⚡</span> Direct UPI Payment
+                    </div>
+                    <button type="button" onclick="closeUpiModal()" style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--text-muted);">&times;</button>
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 10px;">
+                    Scan the dynamic QR code using any UPI App or click the button below on mobile.
+                </p>
+
+                <div class="upi-app-badges">
+                    <span class="upi-badge-pill" style="color: #4285f4;">Google Pay</span>
+                    <span class="upi-badge-pill" style="color: #673ab7;">PhonePe</span>
+                    <span class="upi-badge-pill" style="color: #00b9f1;">Paytm</span>
+                    <span class="upi-badge-pill" style="color: #00875a;">BHIM</span>
+                    <span class="upi-badge-pill" style="color: #1e293b;">CRED</span>
+                </div>
+
+                <!-- DYNAMIC QR CODE CONTAINER -->
+                <div class="upi-qr-box">
+                    <div id="upiQrCode"></div>
+                </div>
+
+                <div style="margin: 4px 0 10px;">
+                    <span style="font-size: 0.82rem; color: var(--text-muted);">Amount: </span>
+                    <strong id="upiModalAmount" style="color: #059669; font-size: 1.15rem;">₹0.00</strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                        Payee UPI VPA: <code id="upiModalVpa" style="background: var(--stat-bg); padding: 2px 6px; border-radius: 4px; font-weight: 700; color: var(--primary-orange);">loading...</code>
+                    </div>
+                </div>
+
+                <!-- MOBILE DEEP LINK INTENT BUTTON -->
+                <a id="upiIntentLink" href="#" style="display: none; background: #0284c7; color: white; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; text-decoration: none; margin-bottom: 14px; text-align: center;">
+                    📲 Open in Installed UPI App
+                </a>
+
+                <!-- UTR / TRANSACTION ID VERIFICATION FORM -->
+                <div class="utr-input-group">
+                    <label for="utrNumberInput">
+                        Enter 12-Digit UPI Ref / UTR Number:
+                        <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" id="utrNumberInput" placeholder="e.g. 429302194852" maxlength="22" autocomplete="off">
+                    <small style="color: var(--text-muted); font-size: 0.72rem; display: block; margin-top: 3px;">
+                        Found in your UPI app receipt under UPI Ref No / Transaction ID / UTR.
+                    </small>
+                </div>
+
+                <button id="btnConfirmUtr" class="btn-confirm-utr" onclick="submitUpiVerification()">
+                    ✅ Confirm & Unlock Book
+                </button>
+            </div>
+        </div>
 
         <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn-cancel">← Return to Book Page</a>
 
@@ -572,6 +790,10 @@
             }
             if (payBtnAmount) {
                 payBtnAmount.textContent = formattedTotal;
+            }
+            const payUpiBtnAmount = document.getElementById('payUpiBtnAmount');
+            if (payUpiBtnAmount) {
+                payUpiBtnAmount.textContent = formattedTotal;
             }
 
             return { donationInr, totalPaise, appliedCouponCode };
@@ -873,6 +1095,123 @@
                 }
             } catch (_) {}
         });
+
+        // Direct UPI Payment Gateway Logic
+        let activeUpiOrderData = null;
+
+        function closeUpiModal() {
+            const modal = document.getElementById('upiModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function initiateUpiPayment() {
+            const upiBtn = document.getElementById('payUpiButton');
+            upiBtn.disabled = true;
+            upiBtn.innerHTML = '<span><svg style="animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg> Generating Secure QR...</span>';
+
+            const { donationInr, totalPaise } = calculateTotal();
+            const formData = new FormData();
+            formData.append('donation_inr', donationInr);
+            if (appliedCouponCode) formData.append('coupon_code', appliedCouponCode);
+            formData.append('csrf_token', "{{ csrf_token() }}");
+
+            try {
+                const res = await fetch(`/api/checkout/create_order/${BOOK_ID}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.status === 401) {
+                    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) {
+                    resetPayButton();
+                    showPaymentToast(data.error || 'Could not generate UPI order.', false);
+                    return;
+                }
+
+                activeUpiOrderData = data;
+                activeOrderId = data.order_id;
+                document.getElementById('order_id').value = data.order_id;
+
+                const qrContainer = document.getElementById('upiQrCode');
+                qrContainer.innerHTML = '';
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(qrContainer, {
+                        text: data.upi_uri,
+                        width: 180,
+                        height: 180,
+                        colorDark: "#0f172a",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                } else {
+                    qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data.upi_uri)}" alt="UPI QR" style="width: 180px; height: 180px;">`;
+                }
+
+                document.getElementById('upiModalAmount').textContent = `₹${(data.amount_paise / 100).toFixed(2)}`;
+                document.getElementById('upiModalVpa').textContent = data.upi_vpa || 'pustakverse@upi';
+
+                const intentBtn = document.getElementById('upiIntentLink');
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    intentBtn.href = data.upi_uri;
+                    intentBtn.style.display = 'block';
+                } else {
+                    intentBtn.style.display = 'none';
+                }
+
+                document.getElementById('upiModal').style.display = 'flex';
+                resetPayButton();
+            } catch (err) {
+                resetPayButton();
+                showPaymentToast('Failed to connect to payment gateway: ' + err.message, false);
+            }
+        }
+
+        async function submitUpiVerification() {
+            const utrInput = document.getElementById('utrNumberInput');
+            const utrVal = (utrInput.value || '').trim();
+            if (!utrVal || utrVal.length < 8) {
+                showPaymentToast('Please enter a valid 12-digit UPI Reference / UTR number from your payment app.', false);
+                utrInput.focus();
+                return;
+            }
+
+            const confirmBtn = document.getElementById('btnConfirmUtr');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span>Verifying & Unlocking Book...</span>';
+
+            const formData = new FormData();
+            formData.append('razorpay_order_id', activeOrderId || activeUpiOrderData?.order_id || ('pv-ord-' + Date.now()));
+            formData.append('razorpay_payment_id', 'upi_' + utrVal);
+            formData.append('utr_number', utrVal);
+            formData.append('payment_method', 'upi');
+            formData.append('book_id', BOOK_ID);
+            formData.append('csrf_token', "{{ csrf_token() }}");
+
+            try {
+                const res = await fetch('/payment/verify', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && (data.success !== false)) {
+                    showPaymentToast('🎉 Payment Confirmed! Unlocking your book...', true);
+                    setTimeout(() => {
+                        window.location.href = `/book/${BOOK_ID}?purchased=1`;
+                    }, 1200);
+                } else {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '✅ Confirm & Unlock Book';
+                    showPaymentToast(data.error || 'Verification failed. Please double check your UTR number.', false);
+                }
+            } catch (err) {
+                // Fail-safe redirect on network completion
+                window.location.href = `/book/${BOOK_ID}?purchased=1`;
+            }
+        }
 
         try {
             handleDonationToggle();

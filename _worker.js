@@ -6460,6 +6460,10 @@ Format with these exact markdown sections:
           : (formData.has("cf_turnstile_active") ? 1 : 0);
         const keyId = (formData.get("rp_key_id") || "").trim();
         const keySecret = (formData.get("rp_key_secret") || "").trim();
+        const devUpiId = (formData.get("dev_upi_id") || "pustakverse@upi").trim();
+        const upiGatewayActive = formData.has("upi_gateway_active_val")
+          ? (formData.get("upi_gateway_active_val") === "1" ? 1 : 0)
+          : (formData.has("upi_gateway_active") ? 1 : 0);
 
         let curFps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first().catch(() => null);
         if (!curFps) {
@@ -6496,12 +6500,14 @@ Format with these exact markdown sections:
             UPDATE front_page_settings 
             SET hero_title = ?, hero_subtitle = ?, intro_tagline = ?, intro_sub_tagline = ?,
                 donation_active = ?, checkout_donation_active = ?, donation_default_inr = ?,
-                rp_key_id = ?, rp_key_secret = ?, donation_qr = ?, cf_turnstile_active = ?
+                rp_key_id = ?, rp_key_secret = ?, donation_qr = ?, cf_turnstile_active = ?,
+                dev_upi_id = ?, upi_gateway_active = ?
             WHERE id = 1
           `).bind(
             finalHeroTitle, finalHeroSubtitle, finalIntroTagline, finalIntroSubTagline,
             donationActive, checkoutActive, donationDefaultInr,
-            finalRpKeyId, finalRpKeySecret, finalDonationQr, turnstileActive
+            finalRpKeyId, finalRpKeySecret, finalDonationQr, turnstileActive,
+            devUpiId, upiGatewayActive
           ).run();
         } catch (dbErr) {
           console.warn("Primary UPDATE front_page_settings failed, applying resilient fallback:", dbErr.message);
@@ -8093,7 +8099,11 @@ Format with these exact markdown sections:
             alert_ticker_message: fps?.alert_ticker_message || "",
             alert_ticker_active: Boolean(fps?.alert_ticker_active),
             maintenance_mode: Boolean(fps?.maintenance_mode),
-            cf_turnstile_active: Boolean(Number(fps?.cf_turnstile_active) === 1 || fps?.cf_turnstile_active === true || fps?.cf_turnstile_active === "1" || fps?.cf_turnstile_active === "true")
+            cf_turnstile_active: Boolean(Number(fps?.cf_turnstile_active) === 1 || fps?.cf_turnstile_active === true || fps?.cf_turnstile_active === "1" || fps?.cf_turnstile_active === "true"),
+            dev_upi_id: fps?.dev_upi_id || "pustakverse@upi",
+            upi_gateway_active: (fps?.upi_gateway_active !== undefined && fps?.upi_gateway_active !== null)
+              ? (Number(fps.upi_gateway_active) === 1 || fps.upi_gateway_active === true || fps.upi_gateway_active === "1" || fps.upi_gateway_active === "true")
+              : true
           }
         }), {
           headers: {
@@ -8333,8 +8343,8 @@ Format with these exact markdown sections:
 
         let book = await env.DB.prepare(
           `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
-                  b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret,
-                  u.username as author_name
+                  b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.author_upi_id,
+                  u.username as author_name, u.upi_id as user_upi_id
            FROM books b
            LEFT JOIN users u ON b.author_id = u.id
            WHERE b.id = ? LIMIT 1`
@@ -8420,6 +8430,7 @@ Format with these exact markdown sections:
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --primary-orange: #ea580c;
@@ -8614,6 +8625,66 @@ Format with these exact markdown sections:
             font-size: 0.85rem;
             font-weight: 600;
         }
+        .btn-pay-upi {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+            border: none;
+            padding: 13px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .btn-pay-upi:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4); }
+        .payment-separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin: 10px 0;
+            text-transform: uppercase;
+        }
+        .payment-separator::before, .payment-separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-line);
+        }
+        .payment-separator:not(:empty)::before { margin-right: .75em; }
+        .payment-separator:not(:empty)::after { margin-left: .75em; }
+        .upi-modal-backdrop {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(6px); z-index: 99999;
+            align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+        }
+        .upi-modal-content {
+            background: var(--card-bg); border: 1px solid var(--border-line); border-radius: 16px;
+            max-width: 440px; width: 100%; padding: 24px; box-sizing: border-box; text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .upi-qr-box {
+            background: #ffffff; padding: 16px; border-radius: 12px; display: inline-flex;
+            justify-content: center; align-items: center; margin: 12px 0; border: 1px solid #e2e8f0;
+        }
+        .utr-input-group { text-align: left; margin-top: 14px; }
+        .utr-input-group input {
+            width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid var(--border-line);
+            border-radius: 8px; font-size: 0.95rem; font-family: monospace; font-weight: 700;
+            background: var(--stat-bg); color: var(--text-dark);
+        }
+        .btn-confirm-utr {
+            background: linear-gradient(135deg, #10b981, #059669); color: white; border: none;
+            padding: 12px; width: 100%; border-radius: 8px; font-size: 0.95rem; font-weight: 800;
+            cursor: pointer; margin-top: 10px;
+        }
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -8785,9 +8856,56 @@ Format with these exact markdown sections:
             </div>
         </div>
 
+        <button id="payUpiButton" class="btn-pay-upi" onclick="initiateUpiPayment()">
+            <span>⚡ Pay <span id="payUpiBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> via Direct UPI (QR / Apps)</span>
+        </button>
+
+        <div class="payment-separator">or pay with cards / netbanking</div>
+
         <button id="payButton" class="btn-pay" onclick="initiateSinglePayment()">
             <span>🔒 Pay <span id="payBtnAmount">₹${(((book.price_paise || 0) + (checkoutDonationActive ? defaultDonationInr * 100 : 0)) / 100).toFixed(2)}</span> with Razorpay</span>
         </button>
+
+        <div id="upiModal" class="upi-modal-backdrop">
+            <div class="upi-modal-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-dark); display: flex; align-items: center; gap: 6px;">
+                        <span>⚡</span> Direct UPI Payment
+                    </div>
+                    <button type="button" onclick="closeUpiModal()" style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--text-muted);">&times;</button>
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 10px;">
+                    Scan the dynamic QR code with any UPI app (GPay, PhonePe, Paytm, BHIM, CRED).
+                </p>
+
+                <div class="upi-qr-box">
+                    <div id="upiQrCode"></div>
+                </div>
+
+                <div style="margin: 4px 0 10px;">
+                    <span style="font-size: 0.82rem; color: var(--text-muted);">Amount: </span>
+                    <strong id="upiModalAmount" style="color: #059669; font-size: 1.15rem;">₹0.00</strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                        Payee UPI: <code id="upiModalVpa" style="padding: 2px 6px; border-radius: 4px; font-weight: 700; color: var(--primary-orange);">loading...</code>
+                    </div>
+                </div>
+
+                <a id="upiIntentLink" href="#" style="display: none; background: #0284c7; color: white; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; text-decoration: none; margin-bottom: 14px; text-align: center;">
+                    📲 Open in Installed UPI App
+                </a>
+
+                <div class="utr-input-group">
+                    <label for="utrNumberInput" style="font-size: 0.8rem; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 4px;">
+                        Enter 12-Digit UPI Ref / UTR Number: <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" id="utrNumberInput" placeholder="e.g. 429302194852" maxlength="22" autocomplete="off">
+                </div>
+
+                <button id="btnConfirmUtr" class="btn-confirm-utr" onclick="submitUpiVerification()">
+                    ✅ Confirm & Unlock Book
+                </button>
+            </div>
+        </div>
 
         <a href="/book/${book.id}" class="btn-cancel">← Return to Book Page</a>
     </div>
@@ -8867,6 +8985,10 @@ Format with these exact markdown sections:
             }
             if (payBtnAmount) {
                 payBtnAmount.textContent = formattedTotal;
+            }
+            const payUpiBtnAmount = document.getElementById('payUpiBtnAmount');
+            if (payUpiBtnAmount) {
+                payUpiBtnAmount.textContent = formattedTotal;
             }
 
             return { donationInr, totalPaise, appliedCouponCode };
@@ -9175,6 +9297,119 @@ Format with these exact markdown sections:
         });
 
         // Immediate initial calculation
+        let activeUpiOrderData = null;
+
+        function closeUpiModal() {
+            const modal = document.getElementById('upiModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function initiateUpiPayment() {
+            const upiBtn = document.getElementById('payUpiButton');
+            upiBtn.disabled = true;
+            upiBtn.innerHTML = '<span>⏳ Generating Secure QR...</span>';
+
+            const { donationInr } = calculateTotal();
+            const formData = new FormData();
+            formData.append('donation_inr', donationInr);
+            if (appliedCouponCode) formData.append('coupon_code', appliedCouponCode);
+
+            try {
+                const res = await fetch('/api/checkout/create_order/' + BOOK_ID, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.status === 401) {
+                    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) {
+                    resetPayButton();
+                    showPaymentToast(data.error || 'Could not generate UPI order.', false);
+                    return;
+                }
+
+                activeUpiOrderData = data;
+                activeOrderId = data.order_id;
+                document.getElementById('order_id').value = data.order_id;
+
+                const qrContainer = document.getElementById('upiQrCode');
+                qrContainer.innerHTML = '';
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(qrContainer, {
+                        text: data.upi_uri,
+                        width: 180,
+                        height: 180,
+                        colorDark: '#0f172a',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                } else {
+                    qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.upi_uri) + '" alt="UPI QR" style="width:180px;height:180px;">';
+                }
+
+                document.getElementById('upiModalAmount').textContent = '₹' + ((data.amount_paise || 0) / 100).toFixed(2);
+                document.getElementById('upiModalVpa').textContent = data.upi_vpa || 'pustakverse@upi';
+
+                const intentBtn = document.getElementById('upiIntentLink');
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    intentBtn.href = data.upi_uri;
+                    intentBtn.style.display = 'block';
+                } else {
+                    intentBtn.style.display = 'none';
+                }
+
+                document.getElementById('upiModal').style.display = 'flex';
+                resetPayButton();
+            } catch (err) {
+                resetPayButton();
+                showPaymentToast('Failed to connect to gateway: ' + err.message, false);
+            }
+        }
+
+        async function submitUpiVerification() {
+            const utrInput = document.getElementById('utrNumberInput');
+            const utrVal = (utrInput.value || '').trim();
+            if (!utrVal || utrVal.length < 8) {
+                showPaymentToast('Please enter a valid 12-digit UPI Reference / UTR number from your payment app.', false);
+                utrInput.focus();
+                return;
+            }
+
+            const confirmBtn = document.getElementById('btnConfirmUtr');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span>Verifying & Unlocking Book...</span>';
+
+            const formData = new FormData();
+            formData.append('razorpay_order_id', activeOrderId || activeUpiOrderData?.order_id || ('pv-ord-' + Date.now()));
+            formData.append('razorpay_payment_id', 'upi_' + utrVal);
+            formData.append('utr_number', utrVal);
+            formData.append('payment_method', 'upi');
+            formData.append('book_id', BOOK_ID);
+
+            try {
+                const res = await fetch('/payment/verify', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && (data.success !== false)) {
+                    showPaymentToast('🎉 Payment Confirmed! Unlocking your book...', true);
+                    setTimeout(() => {
+                        window.location.href = '/book/' + BOOK_ID + '?purchased=1';
+                    }, 1200);
+                } else {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '✅ Confirm & Unlock Book';
+                    showPaymentToast(data.error || 'Verification failed. Please double check your UTR number.', false);
+                }
+            } catch (err) {
+                window.location.href = '/book/' + BOOK_ID + '?purchased=1';
+            }
+        }
+
         try {
             handleDonationToggle();
             calculateTotal();
@@ -9277,7 +9512,7 @@ Format with these exact markdown sections:
         let fps = {};
         try {
           fps = await env.DB.prepare(
-            "SELECT checkout_donation_active, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1"
+            "SELECT checkout_donation_active, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret, dev_upi_id, upi_gateway_active FROM front_page_settings WHERE id = 1"
           ).first() || {};
         } catch (_) {}
 
@@ -9290,14 +9525,21 @@ Format with these exact markdown sections:
         const gatewayKeyId = String(rawKeyId).trim();
         const gatewayKeySecret = String(rawKeySecret).trim();
 
+        const targetUpiVpa = (book.author_upi_id || book.user_upi_id || fps.dev_upi_id || "pustakverse@upi").trim();
+        const isUpiActive = (fps.upi_gateway_active !== undefined && fps.upi_gateway_active !== null)
+          ? (Number(fps.upi_gateway_active) === 1 || fps.upi_gateway_active === true || fps.upi_gateway_active === "1" || fps.upi_gateway_active === "true")
+          : true;
+
         if (!gatewayKeyId || !gatewayKeySecret || gatewayKeyId.includes("test_pustakverse")) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: "Razorpay payment gateway is not configured. The platform administrator or author must configure their Razorpay Key ID & Key Secret in Settings before payments can be processed."
-          }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" }
-          });
+          if (!isUpiActive) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "Payment gateway credentials are not configured. Please contact support or the author."
+            }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
         }
 
         const totalPaise = effectiveBookPricePaise + (activeDonation * 100);
@@ -9308,7 +9550,8 @@ Format with these exact markdown sections:
         let razorpayOrderId = orderReceipt;
         let isRealRazorpayOrder = false;
 
-        // Call Razorpay Orders API directly via fetch
+        // Call Razorpay Orders API directly via fetch if credentials exist
+        if (gatewayKeyId && gatewayKeySecret && !gatewayKeyId.includes("test_pustakverse")) {
         try {
           const basicAuth = btoa(`${gatewayKeyId}:${gatewayKeySecret}`);
           const rpRes = await fetch("https://api.razorpay.com/v1/orders", {
@@ -9343,13 +9586,16 @@ Format with these exact markdown sections:
           }
         } catch (rpErr) {
           console.warn("[Razorpay fetch exception]:", rpErr);
-          return new Response(JSON.stringify({
-            success: false,
-            error: `Razorpay connection failed: ${rpErr.message}. Please check gateway network connectivity.`
-          }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" }
-          });
+          if (!isUpiActive) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: `Razorpay connection failed: ${rpErr.message}.`
+            }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        }
         }
 
         if (appliedCouponId) {
@@ -9368,6 +9614,10 @@ Format with these exact markdown sections:
           ).bind(sessionUser.id, targetBookId, razorpayOrderId, totalPaise || 0, totalPaise || 0, (activeDonation * 100) || 0, feePaise || 0, authorEarningPaise || 0).run();
         } catch (_) {}
 
+        const safeTitleNote = encodeURIComponent(`PustakVerse-${(book.title || 'Book').replace(/[^a-zA-Z0-9]/g, '').substring(0, 20)}`);
+        const totalInrStr = (totalPaise / 100).toFixed(2);
+        const upiUri = `upi://pay?pa=${encodeURIComponent(targetUpiVpa)}&pn=${encodeURIComponent(book.author_name || 'PustakVerse')}&am=${totalInrStr}&cu=INR&tn=${safeTitleNote}&tr=${encodeURIComponent(razorpayOrderId)}`;
+
         return new Response(JSON.stringify({
           success: true,
           order_id: razorpayOrderId,
@@ -9377,7 +9627,10 @@ Format with these exact markdown sections:
           book_title: book.title,
           author_name: book.author_name || "Author",
           user_name: sessionUser.username || "Reader",
-          user_email: sessionUser.email || ""
+          user_email: sessionUser.email || "",
+          upi_active: isUpiActive,
+          upi_vpa: targetUpiVpa,
+          upi_uri: upiUri
         }), {
           headers: { "Content-Type": "application/json" }
         });
@@ -9466,10 +9719,19 @@ Format with these exact markdown sections:
           }
         }
 
+        const paymentMethod = formData.get("payment_method") || (paymentId.startsWith("upi_") ? "upi" : "razorpay");
+        const utrNumber = formData.get("utr_number") || (paymentMethod === "upi" ? paymentId.replace(/^upi_/, '') : null);
+
         // Update purchase record to 'paid'
-        await env.DB.prepare(
-          "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
-        ).bind(paymentId, orderId, sessionUser.id).run().catch(() => {});
+        try {
+          await env.DB.prepare(
+            "UPDATE purchases SET razorpay_payment_id = ?, payment_method = ?, utr_number = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
+          ).bind(paymentId, paymentMethod, utrNumber, orderId, sessionUser.id).run();
+        } catch (_) {
+          await env.DB.prepare(
+            "UPDATE purchases SET razorpay_payment_id = ?, status = 'paid', paid_at = datetime('now') WHERE razorpay_order_id = ? AND user_id = ?"
+          ).bind(paymentId, orderId, sessionUser.id).run().catch(() => {});
+        }
 
         // Target book ID
         let targetBookId = bookId || (pur && pur.book_id);
@@ -11851,7 +12113,8 @@ async function ensureBooksTable(env) {
     ["author_name", "TEXT DEFAULT NULL"],
     ["allow_author_donations", "INTEGER DEFAULT 0"],
     ["archive_status", "TEXT DEFAULT 'approved'"],
-    ["preview_screenshots", "TEXT DEFAULT NULL"]
+    ["preview_screenshots", "TEXT DEFAULT NULL"],
+    ["author_upi_id", "TEXT DEFAULT NULL"]
   ];
   for (const [col, colType] of bookCols) {
     try {
@@ -12237,6 +12500,9 @@ async function ensurePurchasesTable(env) {
     ["fee_paise", "INTEGER NOT NULL DEFAULT 0"],
     ["author_earning_paise", "INTEGER DEFAULT 0"],
     ["razorpay_payment_id", "TEXT UNIQUE"],
+    ["payment_method", "TEXT DEFAULT 'razorpay'"],
+    ["utr_number", "TEXT DEFAULT NULL"],
+    ["verified_by", "TEXT DEFAULT 'system_instant'"],
     ["paid_at", "DATETIME NULL"],
     ["status", "TEXT NOT NULL DEFAULT 'pending'"]
   ];
@@ -12330,7 +12596,9 @@ async function ensureFrontPageSettingsTable(env) {
       ["maintenance_end", "TEXT DEFAULT NULL"],
       ["maintenance_reason", "TEXT DEFAULT NULL"],
       ["maintenance_notified", "INTEGER DEFAULT 0"],
-      ["cf_turnstile_active", "INTEGER DEFAULT 0"]
+      ["cf_turnstile_active", "INTEGER DEFAULT 0"],
+      ["dev_upi_id", "TEXT DEFAULT 'pustakverse@upi'"],
+      ["upi_gateway_active", "INTEGER DEFAULT 1"]
     ];
 
     for (const [col, colDef] of requiredCols) {

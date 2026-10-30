@@ -1157,6 +1157,9 @@
                                     <input type="text" name="rp_key_id" id="rp_key_id_input" placeholder="Your Live Key ID (rzp_live_...)" style="margin-bottom: 10px; border-color: #bbf7d0;">
                                     <input type="password" name="rp_key_secret" id="rp_key_secret_input" placeholder="Your Secret Key" style="margin-bottom: 10px; border-color: #bbf7d0;">
                                     
+                                    <label style="color: #166534; font-size: 0.85rem; font-weight: bold; margin-top: 6px; display: block;">Author's Direct UPI ID (Zero Fee Payments & Tips)</label>
+                                    <input type="text" name="author_upi_id" id="author_upi_id_input" placeholder="e.g. author@okaxis or 9876543210@paytm" style="margin-bottom: 10px; border-color: #bbf7d0; width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; font-size: 0.9rem;">
+                                    
                                     <button type="button" class="btn-sm btn-dark" onclick="verifyRazorpayKeys('publish')">Test / Verify Keys</button>
                                     <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #166534; cursor: pointer; margin-top: 10px;">
                                         <input type="checkbox" name="allow_author_donations" value="1" checked>
@@ -2632,10 +2635,20 @@
                                 <input type="text" name="rp_key_id" id="setting_rp_key_id" value="rzp_live_key" placeholder="rzp_live_... or rzp_test_..." style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
                             </div>
 
-                            <div style="margin-bottom: 0;">
+                            <div style="margin-bottom: 14px;">
                                 <label style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 4px;">Developer Razorpay Key Secret</label>
                                 <input type="password" name="rp_key_secret" id="setting_rp_key_secret" value="rzp_live_secret" placeholder="Paste Razorpay Secret..." style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
                             </div>
+
+                            <div style="margin-bottom: 14px;">
+                                <label style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 4px;">⚡ Platform Direct UPI ID (VPA for QR & App Payments)</label>
+                                <input type="text" name="dev_upi_id" id="setting_dev_upi_id" value="pustakverse@upi" placeholder="e.g. pustakverse@upi or author@paytm" style="padding: 10px 14px; font-size: 0.92rem; width: 100%; border: 1.5px solid #334155; border-radius: 8px; box-sizing: border-box; background: #1e293b; color: #f8fafc;">
+                            </div>
+
+                            <label style="display: flex; align-items: center; gap: 10px; font-weight: 700; color: #f1f5f9; margin-bottom: 14px; cursor: pointer; user-select: none;">
+                                <input type="checkbox" name="upi_gateway_active" id="setting_upi_gateway_active" checked style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                                Enable Direct UPI Payment Gateway at Checkout (Zero Commission)
+                            </label>
 
                             <!-- LIVE ACCOUNT & PAYMENT ROUTING ARCHITECTURE AUDIT -->
                             <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px dashed #0284c7; border-radius: 8px; padding: 14px; margin-top: 16px; font-size: 0.82rem; line-height: 1.55; color: #cbd5e1;">
@@ -7978,7 +7991,12 @@
                 if (s.intro_tagline) setVal('setting_intro_tagline', s.intro_tagline);
                 if (s.intro_sub_tagline) setVal('setting_intro_sub_tagline', s.intro_sub_tagline);
                 if (s.rp_key_id) setVal('setting_rp_key_id', s.rp_key_id);
+                if (s.dev_upi_id) setVal('setting_dev_upi_id', s.dev_upi_id);
                 if (s.donation_default_inr) setVal('setting_donation_default_inr', s.donation_default_inr);
+                const upiEl = document.getElementById('setting_upi_gateway_active');
+                if (upiEl && s.upi_gateway_active !== undefined) {
+                    upiEl.checked = (s.upi_gateway_active === true || s.upi_gateway_active === 1 || s.upi_gateway_active === '1' || s.upi_gateway_active === 'true');
+                }
                 
                 const donEl = document.getElementById('setting_donation_active');
                 if (donEl && s.donation_active !== undefined) {

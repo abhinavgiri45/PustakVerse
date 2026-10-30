@@ -4305,6 +4305,12 @@ def ensure_payment_schema():
         except Exception: pass
 
         try:
+            cursor.execute("SHOW COLUMNS FROM books LIKE 'author_upi_id'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE books ADD COLUMN author_upi_id VARCHAR(150) DEFAULT NULL")
+        except Exception: pass
+
+        try:
             cursor.execute("SHOW COLUMNS FROM books LIKE 'rp_key_id'")
             if not cursor.fetchone():
                 cursor.execute("ALTER TABLE books ADD COLUMN rp_key_id VARCHAR(255) DEFAULT NULL")
@@ -4446,6 +4452,21 @@ def ensure_payment_schema():
         except Exception: pass
 
         cursor.execute("CREATE TABLE IF NOT EXISTS purchases (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NOT NULL, razorpay_order_id VARCHAR(100) NOT NULL UNIQUE, razorpay_payment_id VARCHAR(100) NULL UNIQUE, amount_paise INT NOT NULL, fee_paise INT NOT NULL DEFAULT 0, status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, paid_at TIMESTAMP NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE)")
+        try:
+            cursor.execute("SHOW COLUMNS FROM purchases LIKE 'payment_method'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE purchases ADD COLUMN payment_method VARCHAR(50) DEFAULT 'razorpay'")
+        except Exception: pass
+        try:
+            cursor.execute("SHOW COLUMNS FROM purchases LIKE 'utr_number'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE purchases ADD COLUMN utr_number VARCHAR(100) DEFAULT NULL")
+        except Exception: pass
+        try:
+            cursor.execute("SHOW COLUMNS FROM purchases LIKE 'verified_by'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE purchases ADD COLUMN verified_by VARCHAR(100) DEFAULT 'system_instant'")
+        except Exception: pass
         cursor.execute("CREATE TABLE IF NOT EXISTS official_activities (id INT AUTO_INCREMENT PRIMARY KEY, official_id INT NOT NULL, action VARCHAR(255) NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (official_id) REFERENCES users(id) ON DELETE CASCADE)")
         cursor.execute("CREATE TABLE IF NOT EXISTS ai_chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, book_id INT NULL, role ENUM('user', 'assistant') NOT NULL, message_text TEXT NOT NULL, screenshot VARCHAR(255) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE, INDEX idx_ai_chat_user_book (user_id, book_id, id))")
         
@@ -4800,7 +4821,9 @@ def ensure_payment_schema():
             ("ip_blacklist", "TEXT DEFAULT NULL"),
             ("rbac_permissions_json", "TEXT DEFAULT NULL"),
             ("alert_ticker_message", "TEXT DEFAULT NULL"),
-            ("alert_ticker_active", "BOOLEAN DEFAULT FALSE")
+            ("alert_ticker_active", "BOOLEAN DEFAULT FALSE"),
+            ("dev_upi_id", "VARCHAR(150) DEFAULT 'pustakverse@upi'"),
+            ("upi_gateway_active", "BOOLEAN DEFAULT TRUE")
         ]:
             try:
                 cursor.execute(f"SHOW COLUMNS FROM front_page_settings LIKE '{col_def[0]}'")
@@ -8054,7 +8077,7 @@ def api_checkout_create_order(book_id):
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
             SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, 
-                   u.username as author_name, u.rp_key_id as user_key_id, u.rp_key_secret as user_key_secret
+                   b.author_upi_id, u.username as author_name, u.rp_key_id as user_key_id, u.rp_key_secret as user_key_secret, u.payout_details as user_upi_id
             FROM books b 
             JOIN users u ON b.author_id = u.id
             WHERE b.id = %s
@@ -8064,7 +8087,7 @@ def api_checkout_create_order(book_id):
         if not book:
             return jsonify({'success': False, 'error': 'Book not found.'}), 404
 
-        cursor.execute("SELECT checkout_donation_active, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret FROM front_page_settings WHERE id = 1")
+        cursor.execute("SELECT checkout_donation_active, rp_key_id as dev_key_id, rp_key_secret as dev_key_secret, dev_upi_id, upi_gateway_active FROM front_page_settings WHERE id = 1")
         fps = cursor.fetchone() or {}
 
         checkout_donation_active = bool(fps.get('checkout_donation_active') if fps.get('checkout_donation_active') is not None else True)
@@ -8117,11 +8140,17 @@ def api_checkout_create_order(book_id):
         order_id = order_receipt
         is_real_razorpay_order = False
 
+        dev_upi = str(fps.get('dev_upi_id') or 'pustakverse@upi').strip()
+        author_upi = str(book.get('author_upi_id') or book.get('user_upi_id') or '').strip()
+        target_upi_vpa = author_upi if author_upi else dev_upi
+        upi_active = bool(fps.get('upi_gateway_active') if fps.get('upi_gateway_active') is not None else True)
+
         if not gateway_key_id or not gateway_key_secret:
-            return jsonify({
-                'success': False,
-                'error': 'Razorpay payment gateway is not configured. The platform administrator or author must configure their Razorpay Key ID & Key Secret in Settings before payments can be processed.'
-            }), 400
+            if not upi_active:
+                return jsonify({
+                    'success': False,
+                    'error': 'Payment gateway credentials are not configured.'
+                }), 400
 
         if gateway_key_id and gateway_key_secret and razorpay:
             try:
@@ -8148,6 +8177,11 @@ def api_checkout_create_order(book_id):
         """, (session['user_id'], book_id, order_id, total_paise, donation_paise, convenience_fee_paise, author_earning_paise))
         db.commit()
 
+        total_inr_str = f"{(total_paise / 100):.2f}"
+        import urllib.parse
+        safe_note = urllib.parse.quote(f"PustakVerse-Book{book_id}")
+        upi_uri = f"upi://pay?pa={urllib.parse.quote(target_upi_vpa)}&pn={urllib.parse.quote(book.get('author_name') or 'PustakVerse')}&am={total_inr_str}&cu=INR&tn={safe_note}&tr={urllib.parse.quote(order_id)}"
+
         return jsonify({
             'success': True,
             'order_id': order_id,
@@ -8155,8 +8189,12 @@ def api_checkout_create_order(book_id):
             'amount_paise': total_paise,
             'razorpay_key': gateway_key_id,
             'book_title': book['title'],
+            'author_name': book.get('author_name') or 'Author',
             'user_name': session.get('username') or 'Reader',
-            'user_email': session.get('email') or ''
+            'user_email': session.get('email') or '',
+            'upi_active': upi_active,
+            'upi_vpa': target_upi_vpa,
+            'upi_uri': upi_uri
         })
     except Exception as e:
         logging.error(f"Error creating unified checkout order: {e}")
@@ -8227,7 +8265,12 @@ def verify_payment():
                 except Exception as sig_err:
                     logging.warning(f"Signature verify exception: {sig_err}")
                 
-            cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
+            payment_method = request.form.get('payment_method', '') or (request.json.get('payment_method') if request.is_json else '') or ('upi' if payment_id.startswith('upi_') else 'razorpay')
+            utr_number = request.form.get('utr_number', '') or (request.json.get('utr_number') if request.is_json else '') or (payment_id.replace('upi_', '') if payment_method == 'upi' else None)
+            try:
+                cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, payment_method = %s, utr_number = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, payment_method, utr_number, purchase['id']))
+            except Exception:
+                cursor.execute("UPDATE purchases SET razorpay_payment_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = %s", (payment_id, purchase['id']))
             cursor.execute('INSERT IGNORE INTO personal_library (user_id, book_id) VALUES (%s, %s)', (session['user_id'], purchase['book_id']))
             db.commit()
 
@@ -9802,6 +9845,11 @@ def update_front_page():
     donation_qr_file = request.files.get('donation_qr')
     rp_key_id = request.form.get('rp_key_id', '').strip()
     rp_key_secret = request.form.get('rp_key_secret', '').strip()
+    dev_upi_id = request.form.get('dev_upi_id', 'pustakverse@upi').strip()
+    if 'upi_gateway_active_val' in request.form:
+        upi_gateway_active = request.form.get('upi_gateway_active_val') == '1'
+    else:
+        upi_gateway_active = request.form.get('upi_gateway_active') == 'on'
     
     # Capture intro texts
     intro_tagline = request.form.get('intro_tagline', '').strip()
@@ -9831,14 +9879,20 @@ def update_front_page():
         # Save everything to the database
         try:
             cursor.execute(
-                "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s, cf_turnstile_active=%s WHERE id=1", 
-                (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline, cf_turnstile_active)
+                "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s, cf_turnstile_active=%s, dev_upi_id=%s, upi_gateway_active=%s WHERE id=1", 
+                (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline, cf_turnstile_active, dev_upi_id, upi_gateway_active)
             )
         except Exception:
-            cursor.execute(
-                "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
-                (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
-            )
+            try:
+                cursor.execute(
+                    "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s, cf_turnstile_active=%s WHERE id=1", 
+                    (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline, cf_turnstile_active)
+                )
+            except Exception:
+                cursor.execute(
+                    "UPDATE front_page_settings SET hero_title=%s, hero_subtitle=%s, font_color=%s, logo_image=%s, donation_active=%s, checkout_donation_active=%s, donation_default_inr=%s, donation_qr=%s, rp_key_id=%s, rp_key_secret=%s, intro_tagline=%s, intro_sub_tagline=%s WHERE id=1", 
+                    (title, subtitle, font_color, final_logo, donation_active, checkout_donation_active, donation_default_inr, final_qr, final_rp_id, final_rp_secret, intro_tagline, intro_sub_tagline)
+                )
         db.commit()
         invalidate_cache()
         fast_cache.delete('site_settings')
