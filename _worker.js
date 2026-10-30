@@ -654,6 +654,99 @@ function isTechnicalLeadershipUser(user, leadershipTeam = []) {
   return false;
 }
 
+// ============================================================================
+// SCHEDULED MAINTENANCE TIMER & PARSING ENGINE
+// ============================================================================
+function parseMaintenanceTimestamp(str) {
+  if (!str || typeof str !== 'string') return null;
+  const s = str.trim();
+  if (['immediate', 'in progress', 'tbd', 'shortly', 'now'].includes(s.toLowerCase())) return null;
+
+  // 1. Direct standard parse (ISO with Z or offset, e.g. 2026-10-30T18:30:00Z)
+  let d = new Date(s);
+  if (!isNaN(d.getTime()) && (s.includes('Z') || s.includes('+') || (s.includes('-') && s.length > 19))) {
+    return d.getTime();
+  }
+
+  // 2. Local ISO format e.g. '2026-10-30T23:30' or '2026-10-30 23:30' -> treat as IST (+05:30)
+  const clean = s.replace(/\s*IST\s*$/i, '').trim();
+  const isoMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (isoMatch) {
+    const [_, y, m, day, h, min, sec] = isoMatch;
+    const sSec = sec || '00';
+    d = new Date(y + '-' + m + '-' + day + 'T' + h + ':' + min + ':' + sSec + '+05:30');
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // 3. Indian format: '30 Oct 2026, 11:30 PM' or '30 Oct, 11:30 PM'
+  const currentYear = new Date().getFullYear();
+  const match = clean.match(/^(\d{1,2})\s+([A-Za-z]+)(?:\s+(\d{4}))?,\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const monthStr = match[2].toLowerCase().slice(0, 3);
+    const months = { jan:'01', feb:'02', mar:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
+    const mNum = months[monthStr] || '01';
+    const year = match[3] || currentYear;
+    let hour = parseInt(match[4], 10);
+    const min = match[5];
+    const ampm = match[6].toUpperCase();
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    const sHour = String(hour).padStart(2, '0');
+    d = new Date(year + '-' + mNum + '-' + day + 'T' + sHour + ':' + min + ':00+05:30');
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  d = new Date(clean);
+  if (!isNaN(d.getTime())) return d.getTime();
+  return null;
+}
+
+async function checkAndAutoExpireMaintenance(env, fps, bgTask) {
+  if (!fps || !Boolean(fps.maintenance_mode)) return false;
+
+  const nowMs = Date.now();
+  const endMs = parseMaintenanceTimestamp(fps.maintenance_end);
+
+  // If a valid end timestamp was configured and current time has reached or passed it:
+  if (endMs && nowMs >= endMs) {
+    try {
+      await env.DB.prepare("UPDATE front_page_settings SET maintenance_mode = 0 WHERE id = 1").run();
+      fps.maintenance_mode = 0;
+
+      // Broadcast completion email to all users if they were notified at start
+      if (fps.maintenance_notified === 1) {
+        if (typeof bgTask === 'function') {
+          bgTask((async () => {
+            try {
+              const uRes = await env.DB.prepare("SELECT DISTINCT email, username FROM users WHERE email IS NOT NULL AND email != ''").all();
+              const allUsers = uRes.results || [];
+              const subject = "✅ [PustakVerse Notice] Scheduled Maintenance Completed - Platform Fully Operational";
+              const batchSize = 5;
+              for (let i = 0; i < allUsers.length; i += batchSize) {
+                const batch = allUsers.slice(i, i + batchSize);
+                await Promise.allSettled(batch.map(async (u) => {
+                  if (!u.email || !u.email.includes("@")) return;
+                  const html = generateMaintenanceCompletedEmail(u.username || 'Reader');
+                  return sendEdgeEmail(env, { to: u.email, subject, html });
+                }));
+              }
+              await env.DB.prepare("UPDATE front_page_settings SET maintenance_notified = 0 WHERE id = 1").run().catch(() => {});
+              console.log(`✓ [MAINTENANCE AUTO-EXPIRED & BROADCAST SENT] Dispatched to ${allUsers.length} users`);
+            } catch (err) {
+              console.warn("Auto-expire broadcast error:", err.message);
+            }
+          })());
+        }
+      }
+      return true; // Successfully auto-expired!
+    } catch (e) {
+      console.warn("Error in checkAndAutoExpireMaintenance:", e.message);
+    }
+  }
+  return false;
+}
+
 function renderEdgeMaintenanceHtml({ start = "Immediate", end = "TBD", reason = "Scheduled Infrastructure & Girionix AI Architecture Optimization" }) {
   const currentYear = new Date().getFullYear();
   return `<!DOCTYPE html>
@@ -2743,9 +2836,17 @@ export default {
         let fps = null;
         try {
           fps = await env.DB.prepare(
-            "SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason FROM front_page_settings WHERE id = 1"
+            "SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason, maintenance_notified FROM front_page_settings WHERE id = 1"
           ).first();
         } catch (_) {}
+
+        // Precision Auto-Expiration Check: check if custom end timestamp has elapsed
+        if (fps && Boolean(fps.maintenance_mode)) {
+          const expired = await checkAndAutoExpireMaintenance(env, fps, bgTask);
+          if (expired) {
+            fps.maintenance_mode = 0;
+          }
+        }
 
         if (fps && Boolean(fps.maintenance_mode)) {
           const cookies = rawCookies;
@@ -3156,6 +3257,11 @@ export default {
       let d1Status = "Not bound";
       let userCount = 0;
       let bookCount = 0;
+      let isMaintActive = false;
+      let mStart = "";
+      let mEnd = "";
+      let mReason = "";
+
       if (env.DB) {
         try {
           const uRes = await env.DB.prepare("SELECT count(*) as count FROM users").first();
@@ -3163,6 +3269,20 @@ export default {
           const bRes = await env.DB.prepare("SELECT count(*) as count FROM books").first();
           bookCount = bRes?.count ?? 0;
           d1Status = `Connected (Users: ${userCount}, Books: ${bookCount})`;
+          
+          let fps = await env.DB.prepare("SELECT * FROM front_page_settings WHERE id = 1").first().catch(() => null);
+          if (fps && Boolean(fps.maintenance_mode)) {
+            const expired = await checkAndAutoExpireMaintenance(env, fps, bgTask);
+            if (expired) {
+              fps.maintenance_mode = 0;
+            }
+          }
+          if (fps) {
+            isMaintActive = Boolean(fps.maintenance_mode);
+            mStart = fps.maintenance_start || "";
+            mEnd = fps.maintenance_end || "";
+            mReason = fps.maintenance_reason || "";
+          }
         } catch (e) {
           d1Status = `Connected (Error querying tables: ${e.message})`;
         }
@@ -3177,6 +3297,10 @@ export default {
       return new Response(JSON.stringify({
         status: "online",
         platform: "Cloudflare Pages Edge",
+        maintenance: isMaintActive,
+        maintenance_start: mStart,
+        maintenance_end: mEnd,
+        maintenance_reason: mReason,
         database: d1Status,
         users_count: userCount,
         books_count: bookCount,

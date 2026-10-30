@@ -5024,6 +5024,111 @@ def is_technical_leadership_user():
         return True
     return False
 
+
+def parse_maintenance_timestamp_py(ts_str):
+    if not ts_str or not isinstance(ts_str, str):
+        return None
+    s = ts_str.strip()
+    if s.lower() in ['immediate', 'in progress', 'tbd', 'shortly', 'now']:
+        return None
+
+    # Handle ISO formats
+    clean = re.sub(r'\s*IST\s*$', '', s, flags=re.IGNORECASE).strip()
+    iso_match = re.match(r'^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$', clean)
+    if iso_match:
+        y, m, d, h, mn = iso_match.group(1), iso_match.group(2), iso_match.group(3), iso_match.group(4), iso_match.group(5)
+        sec = iso_match.group(6) or '00'
+        # Parse as IST (+05:30)
+        from datetime import timezone, timedelta
+        tz_ist = timezone(timedelta(hours=5, minutes=30))
+        try:
+            return datetime(int(y), int(m), int(d), int(h), int(mn), int(sec), tzinfo=tz_ist)
+        except Exception:
+            pass
+
+    # Handle Indian formats e.g. '30 Oct 2026, 11:30 PM' or '30 Oct, 11:30 PM'
+    match = re.match(r'^(\d{1,2})\s+([A-Za-z]+)(?:\s+(\d{4}))?,\s*(\d{1,2}):(\d{2})\s*(AM|PM)$', clean, flags=re.IGNORECASE)
+    if match:
+        day = int(match.group(1))
+        month_str = match.group(2).lower()[:3]
+        months = {'jan':1, 'feb':2, 'mar':3, 'apr':4, 'may':5, 'jun':6, 'jul':7, 'aug':8, 'sep':9, 'oct':10, 'nov':11, 'dec':12}
+        m_num = months.get(month_str, 1)
+        year = int(match.group(3)) if match.group(3) else datetime.now().year
+        hour = int(match.group(4))
+        mn = int(match.group(5))
+        ampm = match.group(6).upper()
+        if ampm == 'PM' and hour < 12:
+            hour += 12
+        elif ampm == 'AM' and hour == 12:
+            hour = 0
+        from datetime import timezone, timedelta
+        tz_ist = timezone(timedelta(hours=5, minutes=30))
+        try:
+            return datetime(year, m_num, day, hour, mn, 0, tzinfo=tz_ist)
+        except Exception:
+            pass
+    return None
+
+def broadcast_maintenance_completed_to_users():
+    db = None
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT DISTINCT email, username FROM users WHERE email IS NOT NULL AND email != ''")
+        users = cursor.fetchall() or []
+        subject = "✅ [PustakVerse Notice] Scheduled Maintenance Completed - Platform Fully Operational"
+        for u in users:
+            u_email = u.get('email')
+            u_name = u.get('username') or 'Reader'
+            if not u_email or '@' not in u_email:
+                continue
+            html = f"""<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+    <div style="background: linear-gradient(135deg, #15803d, #166534); padding: 28px 24px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 1.5rem; letter-spacing: 0.05em; color: #ffffff;">✅ PustakVerse Live</h1>
+      <p style="margin: 6px 0 0 0; font-size: 0.85rem; color: #bbf7d0;">Scheduled Maintenance Successfully Completed</p>
+    </div>
+    <div style="padding: 28px 24px;">
+      <h2 style="color: #0f172a; font-size: 1.25rem; margin-top: 0;">Dear {u_name},</h2>
+      <p style="font-size: 0.95rem; line-height: 1.6; color: #475569;">
+        We are pleased to inform you that our scheduled system maintenance has been <strong>successfully completed</strong>. All core platform systems, personal libraries, reading bookmarks, and book reading services are fully live and operational.
+      </p>
+      <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 18px; margin: 20px 0; text-align: center;">
+        <div style="font-size: 0.78rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em;">🟢 All Systems Operational</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: #14532d; margin-top: 6px;">
+          PustakVerse is 100% Live &amp; Ready
+        </div>
+      </div>
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="https://pustakverse.pages.dev" style="background: #ea580c; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.95rem; display: inline-block;">
+          Open PustakVerse ↗
+        </a>
+      </div>
+      <p style="font-size: 0.9rem; line-height: 1.6; color: #475569; margin-bottom: 0;">
+        Thank you for your patience and support as we continue elevating global digital education.<br><br>
+        Warm regards,<br>
+        <strong>PustakVerse Executive Leadership &amp; Engineering Team</strong>
+      </p>
+    </div>
+    <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      PustakVerse • Every Book. Every Mind. Free. • pustakverse.org@gmail.com
+    </div>
+  </div>
+</body>
+</html>"""
+            try:
+                send_email_wrapper(u_email, subject, html)
+            except Exception:
+                pass
+    except Exception as e:
+        logging.error(f"Error broadcasting maintenance completed notice: {e}")
+    finally:
+        if db:
+            try: db.close()
+            except: pass
+
 def broadcast_maintenance_notice_to_users(start_time, end_time, reason):
     db = None
     try:
@@ -5119,6 +5224,30 @@ def check_system_maintenance():
     try:
         fps = get_front_page_settings()
         if fps and fps.get('maintenance_mode'):
+            # Precision auto-expiration: check if scheduled window has elapsed
+            end_time_raw = fps.get('maintenance_end')
+            end_dt = parse_maintenance_timestamp_py(end_time_raw)
+            if end_dt:
+                from datetime import timezone, timedelta
+                tz_ist = timezone(timedelta(hours=5, minutes=30))
+                now_dt = datetime.now(tz_ist)
+                if now_dt >= end_dt:
+                    try:
+                        db = get_db_connection()
+                        cursor = db.cursor()
+                        cursor.execute("UPDATE front_page_settings SET maintenance_mode = 0 WHERE id = 1")
+                        db.commit()
+                        if fps.get('maintenance_notified'):
+                            cursor.execute("UPDATE front_page_settings SET maintenance_notified = 0 WHERE id = 1")
+                            db.commit()
+                            threading.Thread(target=broadcast_maintenance_completed_to_users, daemon=True).start()
+                        db.close()
+                        fps['maintenance_mode'] = 0
+                        invalidate_cache()
+                        return None
+                    except Exception as auto_ex:
+                        logging.warning(f"Auto-expire maintenance error: {auto_ex}")
+
             # Developer, CTO, CEO, and other technical posts BYPASS maintenance completely!
             if is_technical_leadership_user():
                 return None
