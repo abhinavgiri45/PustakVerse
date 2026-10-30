@@ -2864,6 +2864,12 @@ export default {
             if (!pageResp || pageResp.status >= 400) {
               pageResp = await env.ASSETS.fetch(new Request(`${url.origin}/${staticHtmlFile}`, request));
             }
+            if (!pageResp || pageResp.status >= 400) {
+              pageResp = await env.ASSETS.fetch(new Request(`${url.origin}/static/${staticHtmlFile}`, request));
+            }
+            if (!pageResp || pageResp.status >= 400) {
+              pageResp = await env.ASSETS.fetch(new Request(`${url.origin}/_site/${staticHtmlFile}`, request));
+            }
             if (pageResp && pageResp.status < 400) {
               const respHeaders = new Headers(pageResp.headers);
               respHeaders.set("Content-Type", "text/html; charset=utf-8");
@@ -8562,7 +8568,7 @@ Format with these exact markdown sections:
           book = await env.DB.prepare(
             `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
                     b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.author_upi_id,
-                    u.username as author_name, u.upi_id as user_upi_id
+                    u.username as author_name
              FROM books b
              LEFT JOIN users u ON b.author_id = u.id
              WHERE b.id = ? LIMIT 1`
@@ -9694,7 +9700,7 @@ Format with these exact markdown sections:
             `SELECT b.id, b.title, b.is_paid, b.price_paise, b.author_upi_id,
                     COALESCE(b.rp_key_id, u.rp_key_id) as author_key_id,
                     COALESCE(b.rp_key_secret, u.rp_key_secret) as author_key_secret,
-                    u.username as author_name, u.upi_id as user_upi_id
+                    u.username as author_name
              FROM books b 
              LEFT JOIN users u ON b.author_id = u.id 
              WHERE b.id = ? LIMIT 1`
@@ -11630,9 +11636,37 @@ Format with these exact markdown sections:
       } catch (_) {}
     }
 
-    // 7B. Route to GitHub Pages or configured BACKEND_URL
+    // 7A. High-speed local edge asset fast path (<2ms)
     const cleanPath = url.pathname.replace(/\/+$/, "") || "/";
     const mappedHtmlFile = HTML_ROUTE_MAP[cleanPath] || HTML_ROUTE_MAP[url.pathname];
+
+    if (env.ASSETS && mappedHtmlFile) {
+      try {
+        let edgeResp = await env.ASSETS.fetch(new Request(`${url.origin}/static/${mappedHtmlFile}`, request));
+        if (!edgeResp || edgeResp.status >= 400) {
+          edgeResp = await env.ASSETS.fetch(new Request(`${url.origin}/${mappedHtmlFile}`, request));
+        }
+        if (!edgeResp || edgeResp.status >= 400) {
+          edgeResp = await env.ASSETS.fetch(new Request(`${url.origin}/_site/${mappedHtmlFile}`, request));
+        }
+        if (edgeResp && edgeResp.status < 400) {
+          const rHeaders = new Headers(edgeResp.headers);
+          rHeaders.set("Content-Type", "text/html; charset=utf-8");
+          if (!rHeaders.has("Cache-Control")) {
+            rHeaders.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+          }
+          if (hasBypassParam) {
+            rHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+          }
+          return new Response(edgeResp.body, {
+            status: edgeResp.status,
+            headers: rHeaders
+          });
+        }
+      } catch (_) {}
+    }
+
+    // 7B. Route to GitHub Pages or configured BACKEND_URL
 
     const backendBase = env.BACKEND_URL || "https://abhinavgiri45.github.io";
     let targetPath = url.pathname;
@@ -11703,6 +11737,30 @@ Format with these exact markdown sections:
     }
 
     // 9. Root fallback to index.html if subpath wasn't found
+    if (env.ASSETS) {
+      try {
+        let rootResp = await env.ASSETS.fetch(new Request(`${url.origin}/static/index.html`, request));
+        if (!rootResp || rootResp.status >= 400) {
+          rootResp = await env.ASSETS.fetch(new Request(`${url.origin}/index.html`, request));
+        }
+        if (!rootResp || rootResp.status >= 400) {
+          rootResp = await env.ASSETS.fetch(new Request(`${url.origin}/_site/index.html`, request));
+        }
+        if (rootResp && rootResp.status < 400) {
+          const fbHeaders = new Headers(rootResp.headers);
+          fbHeaders.set("Content-Type", "text/html; charset=utf-8");
+          fbHeaders.set("Cache-Control", "public, max-age=300");
+          if (hasBypassParam) {
+            fbHeaders.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
+          }
+          return new Response(rootResp.body, {
+            status: 200,
+            headers: fbHeaders
+          });
+        }
+      } catch (_) {}
+    }
+
     try {
       const indexFallback = await fetch(`${RAW_GITHUB_STATIC_BASE}/index.html`, {
         headers: { "User-Agent": "PustakVerse-Edge-Proxy" }

@@ -90,7 +90,10 @@ def build():
                 static_index_path = os.path.join(static_src, "index.html")
                 with open(static_index_path, "wb") as f_static:
                     f_static.write(content)
-                print("[+] Also updated static/index.html with pre-rendered book catalog!")
+                root_index_path = os.path.join(os.path.dirname(__file__), "index.html")
+                with open(root_index_path, "wb") as f_root:
+                    f_root.write(content)
+                print("[+] Also updated static/index.html and ./index.html with pre-rendered book catalog!")
 
         # 4. Generate custom 404 page for GitHub Pages
         print("[+] Generating 404.html...")
@@ -285,8 +288,13 @@ def build():
         for src_rel, dst_name in static_html_map:
             src_f = os.path.join(SITE_DIR, src_rel)
             dst_f = os.path.join(static_src, dst_name)
+            root_f = os.path.join(os.path.dirname(__file__), dst_name)
             if os.path.exists(src_f):
                 shutil.copy(src_f, dst_f)
+                try:
+                    shutil.copy(src_f, root_f)
+                except Exception:
+                    pass
 
         # 4C. Render master authentic my_library from templates/my_library.html
         print("[+] Rendering authentic my_library from templates/my_library.html...")
