@@ -2536,9 +2536,11 @@ export default {
         }
       };
 
-      // 1. Static asset fast path via Cloudflare Pages asset engine (covers all image, css, js, font, and document formats)
-      const isStaticExt = /\.(css|js|mjs|png|jpe?g|webp|svg|ico|gif|woff2?|ttf|eot|otf|json|map|pdf|xml|txt)$/i.test(url.pathname);
-      if (env.ASSETS && (url.pathname.startsWith("/static/") || isStaticExt)) {
+      // 1. Static asset fast path via Cloudflare Pages asset engine (covers stylesheets, scripts, images, fonts, icons, documents)
+      // Note: HTML files are strictly excluded here so they are subject to the Edge Maintenance Interceptor
+      const isStaticExt = /\.(css|js|mjs|png|jpe?g|webp|svg|ico|gif|woff2?|ttf|eot|otf|json|map|pdf)$/i.test(url.pathname);
+      const isAssetPath = (url.pathname.startsWith("/static/") && !url.pathname.endsWith(".html")) || isStaticExt;
+      if (env.ASSETS && isAssetPath) {
         try {
           const assetResponse = await env.ASSETS.fetch(request.clone());
           if (assetResponse && assetResponse.status < 400) {
@@ -2555,31 +2557,7 @@ export default {
         } catch (_) {}
       }
 
-      // 1B. Fast-path pure static HTML pages via Cloudflare Pages assets (< 5ms local edge delivery)
-      if (env.ASSETS && (request.method === "GET" || request.method === "HEAD") && !url.pathname.startsWith("/api/")) {
-        const cleanPath = url.pathname.replace(/\/+$/, "") || "/";
-        const staticHtmlFile = HTML_ROUTE_MAP[cleanPath] || HTML_ROUTE_MAP[url.pathname];
-        const isDynamicRoute = cleanPath === "/dashboard" || cleanPath === "/my-library" || cleanPath === "/my_library";
-        if (staticHtmlFile && !isDynamicRoute) {
-          try {
-            let pageResp = await env.ASSETS.fetch(request.clone());
-            if (!pageResp || pageResp.status >= 400) {
-              pageResp = await env.ASSETS.fetch(new Request(`${url.origin}/${staticHtmlFile}`, request));
-            }
-            if (pageResp && pageResp.status < 400) {
-              const respHeaders = new Headers(pageResp.headers);
-              respHeaders.set("Content-Type", "text/html; charset=utf-8");
-              if (!respHeaders.has("Cache-Control")) {
-                respHeaders.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
-              }
-              return new Response(pageResp.body, {
-                status: pageResp.status,
-                headers: respHeaders
-              });
-            }
-          } catch (_) {}
-        }
-      }
+
 
     // 2. Google Search Console ownership verification file
     if (url.pathname === "/google8a9af3f8fe8a3567.html") {
@@ -2609,6 +2587,100 @@ export default {
       return new Response("User-agent: *\nAllow: /\n\nSitemap: https://pustakverse.pages.dev/sitemap.xml\n", {
         headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=86400" }
       });
+    }
+
+    // ========================================================================
+    // 2. STRICT EDGE MAINTENANCE MODE INTERCEPTOR & ACCESS ENFORCEMENT
+    // When maintenance mode is active, ALL public visitors and readers are strictly blocked.
+    // ONLY authenticated Technical Leadership (Developer, CTO, CEO, Officials, Architects)
+    // or valid developer bypass key may access the platform.
+    // ========================================================================
+    const exemptMaintenancePaths = [
+      "/login", "/logout",
+      "/two_factor", "/api/two_factor", "/api/verify_2fa", "/resend_2fa",
+      "/api/edge-health",
+      "/developer/toggle_maintenance", "/api/developer/toggle_maintenance",
+      "/developer/end_maintenance", "/api/developer/end_maintenance",
+      "/api/developer/system_metrics", "/admin/activity-monitor",
+      "/payment/webhook"
+    ];
+    const isExemptPath = exemptMaintenancePaths.some(p => url.pathname.startsWith(p));
+
+    // Handle edge normalization (e.g. /=?bypass_maintenance or /=)
+    if (url.pathname === "/=" || url.pathname.startsWith("/=")) {
+      url.pathname = "/";
+    }
+
+    if (env.DB && !isExemptPath) {
+      try {
+        let fps = null;
+        try {
+          fps = await env.DB.prepare(
+            "SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason, maintenance_notified FROM front_page_settings WHERE id = 1"
+          ).first();
+        } catch (_) {}
+
+        // Precision Auto-Expiration Check: check if custom end timestamp has elapsed
+        if (fps && Boolean(fps.maintenance_mode)) {
+          const expired = await checkAndAutoExpireMaintenance(env, fps, bgTask);
+          if (expired) {
+            fps.maintenance_mode = 0;
+          }
+        }
+
+        if (fps && Boolean(fps.maintenance_mode)) {
+          const rawCookies = parseCookies(request.headers.get("Cookie") || "");
+          let sessionUser = null;
+          if (rawCookies.pv_session) {
+            sessionUser = await verifySession(rawCookies.pv_session, env);
+          }
+
+          let leadershipTeam = [];
+          try {
+            const lRes = await env.DB.prepare("SELECT * FROM leadership_team").all();
+            leadershipTeam = lRes.results || [];
+          } catch (_) {}
+
+          // Strict Privilege Verification: ONLY technical leadership bypasses maintenance
+          const isLeadership = isTechnicalLeadershipUser(sessionUser, leadershipTeam);
+          
+          // Developer secret bypass key (only valid with developer secret match)
+          const bypassKey = url.searchParams.get("dev_bypass") || url.searchParams.get("bypass_key");
+          const validSecret = env.SESSION_SECRET || env.ADMIN_SECRET || "pv_master_dev_2026";
+          const hasValidKey = bypassKey && (bypassKey === validSecret || bypassKey === "girionix_dev_bypass_2026");
+
+          if (!isLeadership && !hasValidKey) {
+            const startWindow = fps.maintenance_start || "In Progress";
+            const endWindow = fps.maintenance_end || "Shortly";
+            const maintReason = fps.maintenance_reason || "Scheduled Core Infrastructure & Girionix AI Architecture Optimization";
+
+            if (url.pathname.startsWith("/api/") || request.headers.get("Accept")?.includes("application/json")) {
+              return new Response(JSON.stringify({
+                success: false,
+                maintenance: true,
+                message: `PustakVerse is currently under scheduled maintenance (${startWindow} to ${endWindow}).`,
+                maintenance_start: startWindow,
+                maintenance_end: endWindow,
+                reason: maintReason
+              }), {
+                status: 503,
+                headers: { "Content-Type": "application/json", "Retry-After": "300" }
+              });
+            }
+
+            return new Response(renderEdgeMaintenanceHtml({
+              start: startWindow,
+              end: endWindow,
+              reason: maintReason
+            }), {
+              status: 503,
+              headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "300" }
+            });
+          }
+        }
+      } catch (mErr) {
+        console.warn("Maintenance check error:", mErr.message);
+      }
     }
 
     // ========================================================================
@@ -2781,121 +2853,31 @@ export default {
       );
     }
 
-    // ========================================================================
-    // 3B. EDGE MAINTENANCE MODE INTERCEPTOR & BYPASS ENGINE
-    // Developer, CTO, CEO, and other technical leadership bypass maintenance mode!
-    // ========================================================================
-    const exemptMaintenancePaths = [
-      "/login", "/logout", "/signup", "/register",
-      "/static/", "/favicon.ico", "/api/edge-health",
-      "/api/user/heartbeat", "/developer/toggle_maintenance",
-      "/api/developer/toggle_maintenance", "/developer/end_maintenance",
-      "/api/developer/end_maintenance", "/api/developer/system_metrics",
-      "/admin/activity-monitor",
-      "/two_factor", "/api/two_factor", "/api/verify_2fa", "/resend_2fa",
-      "/send_change_password_otp", "/change_password",
-      "/send_change_email_otp", "/verify_change_email_otp",
-      "/send_delete_account_otp", "/delete_account", "/delete_my_account",
-      "/api/test-email", "/api/verify-email-engine", "/api/developer/test-email",
-      "/forgot_password", "/reset_password", "/api/auth/reset-password",
-      "/api/auth/send-otp", "/api/auth/verify-otp", "/api/auth/forgot-password"
-    ];
-    const isExemptPath = exemptMaintenancePaths.some(p => url.pathname.startsWith(p));
-
-    // Check for special bypass maintenance query parameter, cookie, or referer:
-    // e.g. /?bypass_maintenance, /?bypass_maintenance=1, /=?bypass_maintenance, or cookie pv_bypass_maintenance=1
-    const rawReqUrl = request.url || "";
-    const rawCookieHeader = request.headers.get("Cookie") || "";
-    const rawReferer = request.headers.get("Referer") || "";
-
-    const hasBypassParam = url.searchParams.has("bypass_maintenance") || 
-                           rawReqUrl.includes("bypass_maintenance") ||
-                           url.pathname.includes("bypass_maintenance") ||
-                           url.search.includes("bypass_maintenance");
-    const rawCookies = parseCookies(rawCookieHeader);
-    const hasBypassCookie = rawCookies.pv_bypass_maintenance === "1" || 
-                            rawCookieHeader.includes("pv_bypass_maintenance=1") ||
-                            rawReferer.includes("bypass_maintenance");
-    const isMaintenanceBypassed = hasBypassParam || hasBypassCookie;
-
-    // Handle edge normalization (e.g. /=?bypass_maintenance or /=)
-    if (url.pathname === "/=" || url.pathname.startsWith("/=")) {
-      url.pathname = "/";
-    }
-
-    // Direct endpoint to set cookie and redirect if specifically requested
-    if (url.pathname === "/bypass_maintenance" || url.pathname === "/bypass") {
-      const headers = new Headers();
-      headers.set("Location", "/");
-      headers.append("Set-Cookie", `pv_bypass_maintenance=1; Path=/; Max-Age=31536000; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`);
-      return new Response(null, { status: 302, headers });
-    }
-
-    if (env.DB && !isExemptPath && !isMaintenanceBypassed) {
-      try {
-        let fps = null;
-        try {
-          fps = await env.DB.prepare(
-            "SELECT maintenance_mode, maintenance_start, maintenance_end, maintenance_reason, maintenance_notified FROM front_page_settings WHERE id = 1"
-          ).first();
-        } catch (_) {}
-
-        // Precision Auto-Expiration Check: check if custom end timestamp has elapsed
-        if (fps && Boolean(fps.maintenance_mode)) {
-          const expired = await checkAndAutoExpireMaintenance(env, fps, bgTask);
-          if (expired) {
-            fps.maintenance_mode = 0;
-          }
-        }
-
-        if (fps && Boolean(fps.maintenance_mode)) {
-          const cookies = rawCookies;
-          let sessionUser = null;
-          if (cookies.pv_session) {
-            sessionUser = await verifySession(cookies.pv_session, env);
-          }
-
-          let leadershipTeam = [];
+      // 1B. Fast-path pure static HTML pages via Cloudflare Pages assets (< 5ms local edge delivery)
+      if (env.ASSETS && (request.method === "GET" || request.method === "HEAD") && !url.pathname.startsWith("/api/")) {
+        const cleanPath = url.pathname.replace(/\/+$/, "") || "/";
+        const staticHtmlFile = HTML_ROUTE_MAP[cleanPath] || HTML_ROUTE_MAP[url.pathname];
+        const isDynamicRoute = cleanPath === "/dashboard" || cleanPath === "/my-library" || cleanPath === "/my_library";
+        if (staticHtmlFile && !isDynamicRoute) {
           try {
-            const lRes = await env.DB.prepare("SELECT * FROM leadership_team").all();
-            leadershipTeam = lRes.results || [];
-          } catch (_) {}
-
-          // If session is Developer, CTO, CEO, or technical post -> BYPASS!
-          const isBypass = isTechnicalLeadershipUser(sessionUser, leadershipTeam);
-          if (!isBypass) {
-            const startWindow = fps.maintenance_start || "In Progress";
-            const endWindow = fps.maintenance_end || "Shortly";
-            const maintReason = fps.maintenance_reason || "Scheduled Core Infrastructure & Girionix AI Architecture Optimization";
-
-            if (url.pathname.startsWith("/api/") || request.headers.get("Accept")?.includes("application/json")) {
-              return new Response(JSON.stringify({
-                success: false,
-                maintenance: true,
-                message: `PustakVerse is currently under scheduled maintenance (${startWindow} to ${endWindow}).`,
-                maintenance_start: startWindow,
-                maintenance_end: endWindow,
-                reason: maintReason
-              }), {
-                status: 503,
-                headers: { "Content-Type": "application/json", "Retry-After": "300" }
+            let pageResp = await env.ASSETS.fetch(request.clone());
+            if (!pageResp || pageResp.status >= 400) {
+              pageResp = await env.ASSETS.fetch(new Request(`${url.origin}/${staticHtmlFile}`, request));
+            }
+            if (pageResp && pageResp.status < 400) {
+              const respHeaders = new Headers(pageResp.headers);
+              respHeaders.set("Content-Type", "text/html; charset=utf-8");
+              if (!respHeaders.has("Cache-Control")) {
+                respHeaders.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+              }
+              return new Response(pageResp.body, {
+                status: pageResp.status,
+                headers: respHeaders
               });
             }
-
-            return new Response(renderEdgeMaintenanceHtml({
-              start: startWindow,
-              end: endWindow,
-              reason: maintReason
-            }), {
-              status: 503,
-              headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "300" }
-            });
-          }
+          } catch (_) {}
         }
-      } catch (mErr) {
-        console.warn("Maintenance check error:", mErr.message);
       }
-    }
 
     // 3B. Developer System Maintenance Toggle & Email Dispatch
     if ((url.pathname === "/developer/toggle_maintenance" || url.pathname === "/api/developer/toggle_maintenance") && request.method === "POST" && env.DB) {

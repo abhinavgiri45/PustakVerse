@@ -5197,29 +5197,16 @@ def broadcast_maintenance_notice_to_users(start_time, end_time, reason):
 @app.before_request
 def check_system_maintenance():
     exempt_paths = [
-        '/login', '/logout', '/signup', '/register',
+        '/login', '/logout',
         '/static', '/favicon.ico', '/payment/webhook',
         '/api/user/heartbeat', '/developer/toggle_maintenance',
         '/api/developer/toggle_maintenance', '/developer/end_maintenance',
         '/api/developer/end_maintenance', '/admin/activity-monitor',
-        '/two_factor', '/api/two_factor', '/api/verify_2fa', '/resend_2fa',
-        '/send_change_password_otp', '/change_password',
-        '/send_change_email_otp', '/verify_change_email_otp',
-        '/send_delete_account_otp', '/delete_account', '/delete_my_account',
-        '/api/test-email', '/api/verify-email-engine', '/api/developer/test-email',
-        '/forgot_password', '/reset_password', '/api/auth/reset-password',
-        '/api/auth/send-otp', '/api/auth/verify-otp'
+        '/two_factor', '/api/two_factor', '/api/verify_2fa', '/resend_2fa'
     ]
     for p in exempt_paths:
         if request.path.startswith(p):
             return None
-
-    # Support special bypass_maintenance query parameter or session flag
-    if 'bypass_maintenance' in request.args or request.cookies.get('pv_bypass_maintenance') == '1':
-        session['maintenance_bypass'] = True
-
-    if session.get('maintenance_bypass'):
-        return None
 
     try:
         fps = get_front_page_settings()
