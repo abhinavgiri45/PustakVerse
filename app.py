@@ -3655,7 +3655,8 @@ def generate_html_email(title, content):
         f'<div style="color: #334155; font-size: 15px; line-height: 1.7;">{content}</div>'
         f'<div style="color: #94a3b8; font-size: 12px; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px; text-align: center; line-height: 1.5;">'
         f'✦ सा विद्या या विमुक्तये • PustakVerse<br>'
-        f'This is an automated notification from PustakVerse Global Knowledge Library.'
+        f'This is an automated notification sent from noreply.pustakverse@gmail.com.<br>'
+        f'Need assistance? Contact our official help desk at <a href="mailto:pustakverse.org@gmail.com" style="color: #ea580c; text-decoration: none; font-weight: 600;">pustakverse.org@gmail.com</a>.'
         f'</div>'
         f'</div>'
         f'</body></html>'
@@ -3687,7 +3688,7 @@ def get_smtp_credentials():
         os.environ.get('EMAIL_FROM') or 
         os.environ.get('MAIL_FROM') or 
         os.environ.get('MAIL_DEFAULT_SENDER') or 
-        smtp_username or 'noreply@pustakverse.com'
+        smtp_username or 'noreply.pustakverse@gmail.com'
     ).strip()
     
     raw_password = (
@@ -3790,7 +3791,7 @@ def send_email_wrapper(to_email, subject, body_html, plain_text=None):
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = f"PustakVerse <{sender_header}>"
-        msg['Reply-To'] = sender_header
+        msg['Reply-To'] = 'pustakverse.org@gmail.com'
         msg['To'] = to_email
         msg['Date'] = formatdate(localtime=True)
         msg['Message-ID'] = make_msgid(domain='pustakverse.com')
@@ -4190,7 +4191,7 @@ def send_password_changed_security_email(to_email, username, client_ip=''):
         f"{ip_html}"
         f"🔒 <strong>Status:</strong> Password Successfully Updated"
         f"</div>"
-        f"<p style='color: #b91c1c; font-size: 14px; font-weight: 600;'>If you did NOT perform this change, please reset your password immediately and contact support@pustakverse.org.</p>"
+        f"<p style='color: #b91c1c; font-size: 14px; font-weight: 600;'>If you did NOT perform this change, please reset your password immediately and contact pustakverse.org@gmail.com.</p>"
     )
     return send_email_wrapper(to_email, '🔒 Security Alert: Your PustakVerse Password Was Changed', generate_html_email("Security Alert", content))
 
@@ -5066,7 +5067,7 @@ def broadcast_maintenance_notice_to_users(start_time, end_time, reason):
       </p>
     </div>
     <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-      PustakVerse • Every Book. Every Mind. Free. • support@pustakverse.com
+      PustakVerse • Every Book. Every Mind. Free. • pustakverse.org@gmail.com
     </div>
   </div>
 </body>

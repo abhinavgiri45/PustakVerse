@@ -1462,7 +1462,7 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
   if (!to || !to.includes("@")) return { success: false, error: "Invalid recipient email" };
   const cleanTo = to.trim();
   const plainText = text || (html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "");
-  const fromEmail = env.EMAIL_FROM || "PustakVerse <support@pustakverse.org>";
+  const fromEmail = env.EMAIL_FROM || "PustakVerse <noreply.pustakverse@gmail.com>";
   const providerErrors = [];
 
   // 1. Google Gmail REST API (HTTPS Port 443 via OAuth2 / Refresh Token)
@@ -1521,7 +1521,7 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
 
       if (accessToken) {
         const fromHeader = senderEmail ? `PustakVerse <${senderEmail}>` : "PustakVerse <me>";
-        const replyToHeader = senderEmail || "support@pustakverse.org";
+        const replyToHeader = "pustakverse.org@gmail.com";
 
         // Construct standard RFC 2822 / RFC 2045 compliant MIME message
         const base64Body = chunkBase64(utf8ToBase64(html || plainText || ""), 76);
@@ -1638,7 +1638,7 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          sender: { name: "PustakVerse", email: env.BREVO_SENDER || "noreply@pustakverse.org" },
+          sender: { name: "PustakVerse", email: env.BREVO_SENDER || "noreply.pustakverse@gmail.com" },
           to: [{ email: cleanTo }],
           subject: subject,
           htmlContent: html,
@@ -1671,7 +1671,7 @@ async function sendEdgeEmail(env, { to, subject, html, text }) {
         },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: cleanTo }] }],
-          from: { email: env.SENDGRID_FROM || "noreply@pustakverse.org", name: "PustakVerse" },
+          from: { email: env.SENDGRID_FROM || "noreply.pustakverse@gmail.com", name: "PustakVerse" },
           subject: subject,
           content: [
             { type: "text/plain", value: plainText },
@@ -1826,7 +1826,7 @@ function generateMaintenanceCompletedEmail(username) {
       </p>
     </div>
     <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-      PustakVerse • Every Book. Every Mind. Free. • support@pustakverse.org
+      PustakVerse • Every Book. Every Mind. Free. • pustakverse.org@gmail.com
     </div>
   </div>
 </body>
@@ -2743,7 +2743,7 @@ export default {
       </p>
     </div>
     <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-      PustakVerse • Every Book. Every Mind. Free. • support@pustakverse.org
+      PustakVerse • Every Book. Every Mind. Free. • pustakverse.org@gmail.com
     </div>
   </div>
 </body>
@@ -3132,7 +3132,7 @@ export default {
       </p>
     </div>
     <div style="background: #f8fafc; padding: 14px 24px; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-      PustakVerse • Every Book. Every Mind. Free. • support@pustakverse.org
+      PustakVerse • Every Book. Every Mind. Free. • pustakverse.org@gmail.com
     </div>
   </div>
 </body>
