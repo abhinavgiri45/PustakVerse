@@ -6767,7 +6767,7 @@ Format with these exact markdown sections:
       const li = (formData.get("linkedin_id") || "").trim();
       const gh = (formData.get("github_id") || "").trim();
       const web = (formData.get("website_url") || "").trim();
-      const isFounder = formData.get("is_founder") === "on" || formData.get("is_founder") === "1" || formData.get("is_founder") === "true";
+      const isFounder = ((leaderEmail && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leaderEmail.toLowerCase())) || leaderName.toLowerCase().includes("abhinav giri")) ? 1 : 0;
       const displayOrder = parseInt(formData.get("display_order") || "10", 10) || 10;
 
       if (leaderName && leaderEmail) {
@@ -6807,7 +6807,7 @@ Format with these exact markdown sections:
       const li = (formData.get("linkedin_id") || "").trim();
       const gh = (formData.get("github_id") || "").trim();
       const web = (formData.get("website_url") || "").trim();
-      const isFounder = formData.get("is_founder") === "on" || formData.get("is_founder") === "1" || formData.get("is_founder") === "true";
+      const isFounder = ((leaderEmail && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leaderEmail.toLowerCase())) || leaderName.toLowerCase().includes("abhinav giri")) ? 1 : 0;
       const displayOrder = parseInt(formData.get("display_order") || "10", 10) || 10;
 
       if (leaderName && leaderEmail) {
@@ -8341,14 +8341,54 @@ Format with these exact markdown sections:
         await ensurePersonalLibraryTable(env);
         await ensureFrontPageSettingsTable(env);
 
-        let book = await env.DB.prepare(
-          `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
-                  b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.author_upi_id,
-                  u.username as author_name, u.upi_id as user_upi_id
-           FROM books b
-           LEFT JOIN users u ON b.author_id = u.id
-           WHERE b.id = ? LIMIT 1`
-        ).bind(targetBookId).first();
+        await ensureUsersTable(env);
+        let book = null;
+        try {
+          book = await env.DB.prepare(
+            `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
+                    b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.author_upi_id,
+                    u.username as author_name, u.upi_id as user_upi_id
+             FROM books b
+             LEFT JOIN users u ON b.author_id = u.id
+             WHERE b.id = ? LIMIT 1`
+          ).bind(targetBookId).first();
+        } catch (_) {
+          try {
+            book = await env.DB.prepare(
+              `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
+                      b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, b.author_upi_id,
+                      u.username as author_name
+               FROM books b
+               LEFT JOIN users u ON b.author_id = u.id
+               WHERE b.id = ? LIMIT 1`
+            ).bind(targetBookId).first();
+          } catch (_) {
+            try {
+              book = await env.DB.prepare(
+                `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
+                        b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret,
+                        u.username as author_name
+                 FROM books b
+                 LEFT JOIN users u ON b.author_id = u.id
+                 WHERE b.id = ? LIMIT 1`
+              ).bind(targetBookId).first();
+            } catch (_) {
+              book = await env.DB.prepare(
+                `SELECT b.id, b.title, b.is_paid, b.price_paise, b.cover_image, b.pdf_file, b.catalog,
+                        u.username as author_name
+                 FROM books b
+                 LEFT JOIN users u ON b.author_id = u.id
+                 WHERE b.id = ? LIMIT 1`
+              ).bind(targetBookId).first();
+            }
+          }
+        }
+        if (book && !book.user_upi_id && book.author_id) {
+          try {
+            const uRow = await env.DB.prepare("SELECT upi_id FROM users WHERE id = ?").bind(book.author_id).first();
+            if (uRow && uRow.upi_id) book.user_upi_id = uRow.upi_id;
+          } catch (_) {}
+        }
 
         if (targetBookId === 9999) {
           if (!book) {
@@ -9450,15 +9490,45 @@ Format with these exact markdown sections:
         const donationInr = Math.max(0, Math.min(5000, parseInt(formData.get("donation_inr") || "0", 10) || 0));
         const couponCode = (formData.get("coupon_code") || "").trim().toUpperCase();
 
-        let book = await env.DB.prepare(
-          `SELECT b.id, b.title, b.is_paid, b.price_paise,
-                  COALESCE(b.rp_key_id, u.rp_key_id) as author_key_id,
-                  COALESCE(b.rp_key_secret, u.rp_key_secret) as author_key_secret,
-                  u.username as author_name
-           FROM books b 
-           LEFT JOIN users u ON b.author_id = u.id 
-           WHERE b.id = ? LIMIT 1`
-        ).bind(targetBookId).first();
+        await ensureUsersTable(env);
+        let book = null;
+        try {
+          book = await env.DB.prepare(
+            `SELECT b.id, b.title, b.is_paid, b.price_paise, b.author_upi_id,
+                    COALESCE(b.rp_key_id, u.rp_key_id) as author_key_id,
+                    COALESCE(b.rp_key_secret, u.rp_key_secret) as author_key_secret,
+                    u.username as author_name, u.upi_id as user_upi_id
+             FROM books b 
+             LEFT JOIN users u ON b.author_id = u.id 
+             WHERE b.id = ? LIMIT 1`
+          ).bind(targetBookId).first();
+        } catch (_) {
+          try {
+            book = await env.DB.prepare(
+              `SELECT b.id, b.title, b.is_paid, b.price_paise,
+                      COALESCE(b.rp_key_id, u.rp_key_id) as author_key_id,
+                      COALESCE(b.rp_key_secret, u.rp_key_secret) as author_key_secret,
+                      u.username as author_name
+               FROM books b 
+               LEFT JOIN users u ON b.author_id = u.id 
+               WHERE b.id = ? LIMIT 1`
+            ).bind(targetBookId).first();
+          } catch (_) {
+            book = await env.DB.prepare(
+              `SELECT b.id, b.title, b.is_paid, b.price_paise,
+                      u.username as author_name
+               FROM books b 
+               LEFT JOIN users u ON b.author_id = u.id 
+               WHERE b.id = ? LIMIT 1`
+            ).bind(targetBookId).first();
+          }
+        }
+        if (book && !book.user_upi_id && book.author_id) {
+          try {
+            const uRow = await env.DB.prepare("SELECT upi_id FROM users WHERE id = ?").bind(book.author_id).first();
+            if (uRow && uRow.upi_id) book.user_upi_id = uRow.upi_id;
+          } catch (_) {}
+        }
 
         if (targetBookId === 9999) {
           if (!book) {
@@ -12061,9 +12131,70 @@ function renderTwoFactorHtml(email) {
 
 const _ensuredTables = new Set();
 
+async function ensureUsersTable(env) {
+  if (!env || !env.DB) return;
+  if (_ensuredTables.has("users")) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT DEFAULT 'reader',
+        is_verified INTEGER DEFAULT 0,
+        security_question TEXT DEFAULT 'Dev',
+        security_answer TEXT DEFAULT 'Dev',
+        verification_reason TEXT,
+        payout_details TEXT DEFAULT NULL,
+        upi_id TEXT DEFAULT NULL,
+        phone TEXT DEFAULT NULL,
+        address TEXT DEFAULT NULL,
+        bio TEXT DEFAULT NULL,
+        avatar_url TEXT DEFAULT NULL,
+        official_designation TEXT DEFAULT NULL,
+        can_publish INTEGER DEFAULT 0,
+        allow_author_donations INTEGER DEFAULT 0,
+        rp_key_id TEXT DEFAULT NULL,
+        rp_key_secret TEXT DEFAULT NULL,
+        two_factor_enabled INTEGER DEFAULT 0,
+        sbin_wallet_address TEXT DEFAULT NULL,
+        wallet_balance_inr REAL DEFAULT 0,
+        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run().catch(() => {});
+  } catch (_) {}
+
+  const userCols = [
+    ["payout_details", "TEXT DEFAULT NULL"],
+    ["upi_id", "TEXT DEFAULT NULL"],
+    ["phone", "TEXT DEFAULT NULL"],
+    ["address", "TEXT DEFAULT NULL"],
+    ["bio", "TEXT DEFAULT NULL"],
+    ["avatar_url", "TEXT DEFAULT NULL"],
+    ["official_designation", "TEXT DEFAULT NULL"],
+    ["can_publish", "INTEGER DEFAULT 0"],
+    ["allow_author_donations", "INTEGER DEFAULT 0"],
+    ["rp_key_id", "TEXT DEFAULT NULL"],
+    ["rp_key_secret", "TEXT DEFAULT NULL"],
+    ["two_factor_enabled", "INTEGER DEFAULT 0"],
+    ["sbin_wallet_address", "TEXT DEFAULT NULL"],
+    ["wallet_balance_inr", "REAL DEFAULT 0"],
+    ["last_activity", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"]
+  ];
+  for (const [col, colType] of userCols) {
+    try {
+      await env.DB.prepare(`ALTER TABLE users ADD COLUMN ${col} ${colType}`).run();
+    } catch (_) {}
+  }
+  _ensuredTables.add("users");
+}
+
 async function ensureBooksTable(env) {
   if (!env || !env.DB) return;
   if (_ensuredTables.has("books")) return;
+  await ensureUsersTable(env);
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS books (
@@ -12124,6 +12255,15 @@ async function ensureBooksTable(env) {
 
   try {
     await env.DB.prepare("ALTER TABLE users ADD COLUMN can_publish INTEGER DEFAULT 0").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN upi_id TEXT DEFAULT NULL").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN payout_details TEXT DEFAULT NULL").run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare("ALTER TABLE books ADD COLUMN author_upi_id TEXT DEFAULT NULL").run();
   } catch (_) {}
   try {
     await env.DB.prepare("ALTER TABLE users ADD COLUMN allow_author_donations INTEGER DEFAULT 0").run();
@@ -12336,6 +12476,14 @@ async function ensureLeadershipTable(env) {
       }
       await env.DB.prepare("INSERT OR REPLACE INTO leadership_metadata (key, val) VALUES ('seeded', '1')").run();
     }
+    try {
+      await env.DB.prepare(`
+        UPDATE leadership_team 
+        SET is_founder = 0 
+        WHERE email NOT IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com') 
+          AND LOWER(name) NOT LIKE '%abhinav giri%'
+      `).run();
+    } catch (_) {}
   } catch (e) {
     console.warn("ensureLeadershipTable warning:", e.message);
   }
@@ -12398,6 +12546,11 @@ async function getUnifiedLeadershipRoster(env) {
     }
   } catch (e) {
     console.warn("Could not merge officials into roster:", e.message);
+  }
+
+  for (const leader of roster) {
+    const isActuallyFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase().trim())) || (leader.name && leader.name.toLowerCase().trim().includes('abhinav giri'));
+    leader.is_founder = isActuallyFounder ? 1 : 0;
   }
 
   roster.sort((a, b) => {
@@ -12682,7 +12835,7 @@ async function ensureAuthorLikesTable(env) {
 function renderContactLeadershipCards(leaders) {
   if (!leaders || leaders.length === 0) return "";
   return leaders.map(leader => {
-    const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase()));
+    const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
     let photoSrc = "/static/PustakVerse.png";
     if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
       photoSrc = leader.photo;
@@ -13542,7 +13695,7 @@ function renderFullEdgeDashboardHtml(html, user, liveCatalogs = [], myBooks = []
   let leaderRowsHtml = "";
   if (leadershipTeam && leadershipTeam.length > 0) {
     leaderRowsHtml = leadershipTeam.map(leader => {
-      const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase()));
+      const isFounder = (leader.email && ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'].includes(leader.email.toLowerCase())) || (leader.name && leader.name.toLowerCase().includes('abhinav giri'));
       let photoSrc = "/static/PustakVerse.png";
       if (leader.photo && (leader.photo.startsWith("http://") || leader.photo.startsWith("https://") || leader.photo.startsWith("/"))) {
         photoSrc = leader.photo;

@@ -4522,6 +4522,12 @@ def ensure_payment_schema():
                 WHERE email IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com') 
                    OR name LIKE '%Abhinav Giri%'
             """)
+            cursor.execute("""
+                UPDATE leadership_team 
+                SET is_founder = FALSE 
+                WHERE email NOT IN ('abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com') 
+                  AND name NOT LIKE '%Abhinav Giri%'
+            """)
         except Exception: pass
 
         # ---> MAKE PHONE AND ADDRESS OPTIONAL/NULLABLE IN LEADERSHIP_TEAM <---
@@ -6033,7 +6039,10 @@ def contact():
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM leadership_team WHERE is_active = TRUE ORDER BY is_founder DESC, display_order ASC, id ASC")
-        leaders = cursor.fetchall() or []
+        leaders = cursor.fetchall()
+        for leader in leaders:
+            is_f = bool((leader.get('email') and leader['email'].lower().strip() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com']) or ('abhinav giri' in (leader.get('name') or '').lower()))
+            leader['is_founder'] = 1 if is_f else 0 or []
         
         # Merge officials from users
         try:
@@ -8076,14 +8085,24 @@ def api_checkout_create_order(book_id):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, 
-                   b.author_upi_id, u.username as author_name, u.rp_key_id as user_key_id, u.rp_key_secret as user_key_secret, u.payout_details as user_upi_id
-            FROM books b 
-            JOIN users u ON b.author_id = u.id
-            WHERE b.id = %s
-        """, (book_id,))
-        book = cursor.fetchone()
+        try:
+            cursor.execute("""
+                SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, 
+                       b.author_upi_id, u.username as author_name, u.rp_key_id as user_key_id, u.rp_key_secret as user_key_secret, u.payout_details as user_upi_id
+                FROM books b 
+                JOIN users u ON b.author_id = u.id
+                WHERE b.id = %s
+            """, (book_id,))
+            book = cursor.fetchone()
+        except Exception:
+            cursor.execute("""
+                SELECT b.id, b.title, b.is_paid, b.price_paise, b.rp_key_id as author_key_id, b.rp_key_secret as author_key_secret, 
+                       u.username as author_name, u.rp_key_id as user_key_id, u.rp_key_secret as user_key_secret, u.payout_details as user_upi_id
+                FROM books b 
+                JOIN users u ON b.author_id = u.id
+                WHERE b.id = %s
+            """, (book_id,))
+            book = cursor.fetchone()
 
         if not book:
             return jsonify({'success': False, 'error': 'Book not found.'}), 404
@@ -9973,7 +9992,10 @@ def api_leadership():
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM leadership_team WHERE is_active = 1 OR is_active IS NULL ORDER BY is_founder DESC, display_order ASC, id ASC")
-        leaders = cursor.fetchall() or []
+        leaders = cursor.fetchall()
+        for leader in leaders:
+            is_f = bool((leader.get('email') and leader['email'].lower().strip() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com']) or ('abhinav giri' in (leader.get('name') or '').lower()))
+            leader['is_founder'] = 1 if is_f else 0 or []
 
         try:
             cursor.execute("SELECT id, username, email, official_designation, avatar_url, phone, address, bio FROM users WHERE role = 'official' OR (role = 'developer' AND official_designation IS NOT NULL)")
@@ -12312,7 +12334,7 @@ def developer_add_leadership():
     website_url = request.form.get('website_url', '').strip() or None
     photo_url = request.form.get('photo_url', '').strip()
     photo_file = request.files.get('photo_file')
-    is_founder = request.form.get('is_founder') == 'on'
+    is_founder = bool(email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in name.lower())
     
     try:
         display_order = int(request.form.get('display_order', 10) or 10)
@@ -12379,7 +12401,7 @@ def developer_edit_leadership(leader_id):
     website_url = request.form.get('website_url', '').strip() or None
     photo_url = request.form.get('photo_url', '').strip()
     photo_file = request.files.get('photo_file')
-    is_founder = request.form.get('is_founder') == 'on'
+    is_founder = bool(email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in name.lower())
 
     try:
         display_order = int(request.form.get('display_order', 10) or 10)
@@ -12627,7 +12649,7 @@ def developer_assign_official_post(official_id):
         # Auto-sync to leadership_team so they immediately show on public Contact page and Leadership directory
         try:
             des_lower = designation.lower()
-            is_founder_flag = 1 if ('ceo' in des_lower or 'cto' in des_lower or 'founder' in des_lower) else 0
+            is_founder_flag = 1 if (official.get('email', '').lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in official.get('username', '').lower()) else 0
             cursor.execute("SELECT id FROM leadership_team WHERE email = %s OR name = %s", (official['email'], official['username']))
             existing_lead = cursor.fetchone()
             if existing_lead:

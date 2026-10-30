@@ -2316,7 +2316,7 @@
                                     <td>
                                         <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
                                             {{ leader.name }}
-                                            {% if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() %}
+                                            {% if (leader.email and leader.email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com']) or (leader.name and 'abhinav giri' in leader.name.lower()) %}
                                                 <span style="font-size: 0.72rem; background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; margin-left: 4px; font-weight: 800; border: 1px solid #fed7aa;">👑 Founder</span>
                                             {% endif %}
                                         </div>
@@ -2349,7 +2349,7 @@
                                                 ✏️ Edit
                                             </button>
 
-                                            <form action="{{ url_for('developer_delete_leadership', leader_id=leader.id) }}" method="POST" onsubmit="event.preventDefault(); deleteLeader('{{ leader.id }}', '{{ leader.name | escape }}', {{ 'true' if leader.is_founder or leader.email in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com'] or 'abhinav giri' in leader.name.lower() else 'false' }}, this.querySelector('button'));" style="display: inline;">
+                                            <form action="{{ url_for('developer_delete_leadership', leader_id=leader.id) }}" method="POST" onsubmit="event.preventDefault(); deleteLeader('{{ leader.id }}', '{{ leader.name | escape }}', {{ 'true' if (leader.email and leader.email.lower() in ['abhinavgiri370@gmail.com', 'abhnavgiri370@gmail.com']) or (leader.name and 'abhinav giri' in leader.name.lower()) else 'false' }}, this.querySelector('button'));" style="display: inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn-sm btn-red" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🗑️ Remove</button>
                                             </form>
@@ -6664,9 +6664,7 @@
                     <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Display Priority Order</label>
                     <input type="number" name="display_order" value="10" min="1" max="99" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
                 </div>
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; margin-top: 18px; cursor: pointer;">
-                    <input type="checkbox" name="is_founder" style="width: auto;"> Is Co-Founder
-                </label>
+                <!-- Founder designation is reserved exclusively for platform Founder Abhinav Giri -->
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -6762,9 +6760,7 @@
                     <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 4px;">Display Priority Order</label>
                     <input type="number" id="editLeaderOrder" name="display_order" min="1" max="99" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
                 </div>
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; margin-top: 18px; cursor: pointer;">
-                    <input type="checkbox" id="editLeaderFounder" name="is_founder" style="width: auto;"> Is Founder / Co-Founder
-                </label>
+                <!-- Founder designation is reserved exclusively for platform Founder Abhinav Giri -->
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
