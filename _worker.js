@@ -15342,83 +15342,174 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
   const pricePaise = book.price_paise || 0;
   const priceFormatted = (pricePaise / 100).toFixed(2);
   const isPaid = !!book.is_paid && pricePaise > 0;
+  const bookTitleEscaped = escapeHtml(book.title || "Book");
+  const authorNameEscaped = escapeHtml(book.author_name || "Author");
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading: ${escapeHtml(book.title || "Book")} - PustakVerse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#0f172a">
+    <title>Reading: ${bookTitleEscaped} - PustakVerse</title>
+    <link rel="icon" type="image/png" href="/static/PustakVerse.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
-        body, html {
+        :root {
+            --primary-orange: #ea580c;
+            --primary-hover: #c2410c;
+            --amber-accent: #f59e0b;
+            --dark-navy: #0f172a;
+            --card-navy: #1e293b;
+            --border-slate: #334155;
+            --text-slate: #94a3b8;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            height: 100%;
-            overflow: hidden; /* Prevents scrolling outside the iframe */
-            background-color: #333;
+            -webkit-tap-highlight-color: transparent;
         }
+
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0f19;
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- Dimmer Night Shield (Screen Dimming below device minimum) --- */
+        #readerDimmerOverlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 99999;
+            transition: opacity 0.25s ease;
+        }
+
+        /* --- Top Header Navigation Bar --- */
         .header {
-            background-color: #1a1a1a;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: white;
-            padding: 10px 20px;
+            padding: 10px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-family: sans-serif;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+            z-index: 1000;
+            position: relative;
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
-        
-        .header-left {
+
+        .header-left, .header-right {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
+            flex-wrap: nowrap;
         }
 
-        .header a {
-            color: #e67e22;
-            text-decoration: none;
-            font-weight: bold;
-            transition: color 0.2s;
-        }
-        
-        .header a:hover {
-            color: #f39c12;
-        }
-
-        /* --- Responsive Header & View Controls --- */
-        .view-controls, .page-nav-controls {
-            display: flex;
+        .brand-link {
+            display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #2c3e50;
-            padding: 4px 8px;
-            border-radius: 6px;
+            color: #ea580c;
+            font-weight: 800;
+            font-size: 0.92rem;
+            text-decoration: none;
+            transition: color 0.2s;
+            white-space: nowrap;
         }
-        .page-jump-box {
+        .brand-link:hover {
+            color: #f97316;
+        }
+
+        .book-title-header {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        /* Control Button Clusters */
+        .view-controls {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            background: #1e293b;
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid #475569;
+            background: rgba(30, 41, 59, 0.85);
+            padding: 3px 6px;
+            border-radius: 8px;
+            border: 1px solid #334155;
         }
-        .page-label {
-            font-size: 0.78rem;
-            color: #94a3b8;
-            font-weight: 700;
-            user-select: none;
+
+        .view-btn {
+            background: transparent;
+            color: #cbd5e1;
+            border: 1px solid transparent;
+            padding: 5px 9px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .view-btn:hover {
+            background: #334155;
+            color: #ffffff;
+            border-color: #475569;
+        }
+        .view-btn:active {
+            transform: scale(0.96);
+            background: #ea580c;
+            color: white;
+        }
+        .view-btn.active {
+            background: #ea580c;
+            color: white;
+            border-color: #f97316;
+        }
+
+        /* Quick Page Nav Box */
+        .page-jump-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #0f172a;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #334155;
         }
         .page-input {
-            width: 48px;
-            padding: 2px 4px;
-            border: 1px solid #64748b;
-            border-radius: 3px;
-            background: #0f172a;
+            width: 44px;
+            padding: 3px 4px;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            background: #1e293b;
             color: #f8fafc;
             font-weight: 700;
             font-size: 0.85rem;
             text-align: center;
+            font-family: 'JetBrains Mono', monospace;
             -moz-appearance: textfield;
         }
         .page-input::-webkit-outer-spin-button,
@@ -15426,144 +15517,14 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             -webkit-appearance: none;
             margin: 0;
         }
-        .view-btn {
-            background: transparent;
-            color: #ecf0f1;
-            border: 1px solid transparent;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1.2;
-        }
-        .view-btn:hover {
-            background: #34495e;
-            border-color: #7f8c8d;
-        }
-        .view-btn:active {
-            background: #e67e22;
-            color: white;
-        }
-        .page-go-btn {
-            background: #e67e22 !important;
-            color: white !important;
-            padding: 2px 8px !important;
-            font-size: 0.78rem !important;
-            border-radius: 3px !important;
-        }
-        .page-go-btn:hover {
-            background: #d35400 !important;
-        }
-        .quick-jump-btn {
-            background: linear-gradient(135deg, #e67e22, #d35400) !important;
-            color: white !important;
-            font-weight: 700 !important;
-            box-shadow: 0 2px 6px rgba(230, 126, 34, 0.4);
-        }
 
-        /* Keypad phones & Accessibility: High contrast D-pad focus indicators */
-        .view-btn:focus, 
-        .page-input:focus, 
-        .header a:focus,
-        button:focus {
-            outline: 2px solid #e67e22 !important;
-            outline-offset: 2px !important;
-        }
-
-        .book-title-header {
-            max-width: 320px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        iframe {
-            width: 100%;
-            height: calc(100vh - 48px);
-            border: none;
-            display: block;
-        }
-
-        /* Mobile & Keypad Phone Responsive Styles */
-        @media (max-width: 768px) {
-            .header {
-                padding: 8px 12px;
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-            .header-left, .header > div:last-child {
-                width: 100%;
-                justify-content: space-between;
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-            .book-title-header {
-                max-width: 220px;
-                font-size: 0.88rem;
-            }
-            .view-controls, .page-nav-controls {
-                gap: 4px;
-                padding: 3px 6px;
-            }
-            .view-btn {
-                padding: 4px 7px;
-                font-size: 0.78rem;
-            }
-            iframe {
-                height: calc(100vh - 86px);
-            }
-        }
-
-        @media (max-width: 380px) {
-            /* Keypad phones (e.g. JioPhone / KaiOS 240x320, 320x240) */
-            .header {
-                padding: 4px 6px;
-                gap: 5px;
-            }
-            .book-title-header {
-                max-width: 150px;
-                font-size: 0.8rem;
-            }
-            .view-btn {
-                padding: 3px 5px;
-                font-size: 0.72rem;
-            }
-            .page-input {
-                width: 36px;
-                font-size: 0.78rem;
-                padding: 1px 2px;
-            }
-            iframe {
-                height: calc(100vh - 100px);
-            }
-        }
-        
-        /* Overlay to block transparent clicks */
-        #protection-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            pointer-events: none;
-        }
-
-        /* Reading Progress Bar */
+        /* Reading Progress Top Bar */
         .reader-progress-track {
             width: 100%;
-            height: 3px;
+            height: 4px;
             background: #0f172a;
             position: relative;
-            z-index: 100;
+            z-index: 999;
         }
         .reader-progress-bar {
             height: 100%;
@@ -15572,289 +15533,873 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             transition: width 0.3s ease;
         }
 
-        /* Reader Color Modes & Themes */
-        body.theme-sepia .iframe-container {
-            background: #fbf0d9;
-        }
-        body.theme-sepia iframe {
-            filter: sepia(0.42) contrast(0.96) brightness(0.96) !important;
-        }
-        body.theme-dark .iframe-container {
-            background: #111827;
-        }
-        body.theme-dark iframe {
-            filter: invert(0.88) hue-rotate(180deg) contrast(1.05) !important;
-        }
-        body.theme-paper .iframe-container {
-            background: #2b2b2b;
-        }
-        body.theme-paper iframe {
-            filter: none !important;
-        }
-
-        /* Iframe Container & Smooth Zoom */
+        /* Main Reading Area & Iframe */
         .iframe-container {
             width: 100%;
-            height: calc(100vh - 51px);
+            height: calc(100vh - 56px);
             overflow: auto;
             position: relative;
             display: flex;
             justify-content: center;
-            background: #2b2b2b;
+            background: #1e293b;
+            transition: background 0.3s ease;
         }
+
         iframe {
             width: 100%;
             height: 100%;
             border: none;
             display: block;
-            transition: transform 0.2s ease, filter 0.2s ease;
+            transition: transform 0.2s ease, filter 0.3s ease;
             transform-origin: top center;
         }
 
-        /* Forensic Digital DRM Watermark Overlay */
-        .drm-watermark-overlay {
+        /* --- Themes & Eye Care Filters --- */
+        body.theme-paper .iframe-container { background: #fdfbf7; }
+        body.theme-paper iframe { filter: none !important; }
+
+        body.theme-sepia .iframe-container { background: #f6ecdc; }
+        body.theme-sepia iframe { filter: sepia(0.46) contrast(0.95) brightness(0.96) !important; }
+
+        body.theme-dark .iframe-container { background: #0b1120; }
+        body.theme-dark iframe { filter: invert(0.90) hue-rotate(180deg) contrast(1.08) brightness(0.95) !important; }
+
+        body.theme-oled .iframe-container { background: #000000; }
+        body.theme-oled iframe { filter: invert(0.96) hue-rotate(180deg) contrast(1.18) brightness(0.92) !important; }
+
+        /* --- Touch Gestures Tap Zones (Mobile Left/Right Invisible Wings) --- */
+        .touch-zone-left, .touch-zone-right {
+            position: absolute;
+            top: 60px;
+            bottom: 70px;
+            width: 18%;
+            z-index: 900;
+            pointer-events: auto;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .touch-zone-left { left: 0; }
+        .touch-zone-right { right: 0; }
+
+        /* --- Floating Mobile Thumb Action Bar (Thumb-Zone Optimized) --- */
+        .mobile-bottom-bar {
+            display: none;
             position: fixed;
-            top: 51px;
+            bottom: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 9998;
-            overflow: hidden;
-            opacity: 0.10;
-            user-select: none;
-            -webkit-user-select: none;
-            display: flex;
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(51, 65, 85, 0.8);
+            padding: 8px 12px calc(8px + var(--safe-bottom));
+            z-index: 1000;
+            justify-content: space-around;
             align-items: center;
-            justify-content: center;
-        }
-        .drm-watermark-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 130px;
-            transform: rotate(-24deg) scale(1.15);
-            width: 150%;
-            text-align: center;
-        }
-        .drm-watermark-item {
-            font-size: 1.05rem;
-            font-weight: 800;
-            font-family: 'Courier New', monospace;
-            color: #94a3b8;
-            letter-spacing: 2px;
-            white-space: nowrap;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
 
-        /* Mandatory Sign-in / Premium Lock Modal */
-        .gate-modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            z-index: 10000;
+        .m-action-btn {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            box-sizing: border-box;
+            gap: 3px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            min-width: 50px;
         }
-        .gate-modal-card {
-            background: #ffffff;
-            color: #0f172a;
-            max-width: 460px;
-            width: 100%;
-            border-radius: 18px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-            padding: 32px 28px;
-            text-align: center;
-            font-family: system-ui, -apple-system, sans-serif;
-            position: relative;
+        .m-action-btn .icon {
+            font-size: 1.25rem;
+            line-height: 1;
         }
-        .gate-modal-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 16px;
+        .m-action-btn:active {
+            transform: scale(0.92);
+            color: #ea580c;
+        }
+        .m-action-btn.active {
+            color: #ea580c;
+        }
+
+        /* Mobile Prev / Next Big Touch Controls */
+        .m-page-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #1e293b;
+            padding: 4px 8px;
+            border-radius: 24px;
+            border: 1px solid #334155;
+        }
+        .m-page-btn {
+            background: #ea580c;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-        }
-        .gate-modal-title {
-            font-size: 1.35rem;
+            font-size: 1rem;
             font-weight: 800;
-            margin-bottom: 8px;
-            color: #0f172a;
+            cursor: pointer;
+            transition: transform 0.15s;
         }
-        .gate-modal-desc {
-            font-size: 0.92rem;
-            color: #64748b;
-            line-height: 1.5;
-            margin-bottom: 24px;
+        .m-page-btn:active {
+            transform: scale(0.88);
+            background: #c2410c;
         }
-        .gate-btn-group {
+        .m-page-info {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #f8fafc;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0 6px;
+        }
+
+        /* --- Slide-Out Drawers & Modals --- */
+        .drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 10001;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .drawer-backdrop.open {
+            display: block;
+            opacity: 1;
+        }
+
+        .drawer-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 80vh;
+            background: #0f172a;
+            border-top: 2px solid #ea580c;
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px calc(24px + var(--safe-bottom));
+            z-index: 10002;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
+            color: #f8fafc;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+        }
+        .drawer-backdrop.open .drawer-panel {
+            transform: translateY(0);
+        }
+
+        /* Desktop Modal Centering for Larger Screens */
+        @media (min-width: 769px) {
+            .drawer-panel {
+                bottom: auto;
+                top: 50%;
+                left: 50%;
+                right: auto;
+                width: 90%;
+                max-width: 520px;
+                transform: translate(-50%, -50%) scale(0.95);
+                border-radius: 18px;
+                border: 1px solid #334155;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+                transition: transform 0.25s ease, opacity 0.25s ease;
+            }
+            .drawer-backdrop.open .drawer-panel {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .drawer-header {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #1e293b;
         }
-        .gate-btn {
+        .drawer-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .drawer-close-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            font-size: 1.2rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        .drawer-close-btn:hover {
+            color: #ffffff;
+            background: #334155;
+        }
+
+        /* Settings Grid Form Controls */
+        .settings-section {
+            margin-bottom: 20px;
+        }
+        .settings-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .theme-select-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
-            padding: 14px 20px;
+        }
+        .theme-card-btn {
+            border: 2px solid #334155;
             border-radius: 10px;
-            font-weight: 800;
-            font-size: 0.98rem;
-            text-decoration: none;
+            padding: 10px 6px;
+            background: #1e293b;
+            color: #f8fafc;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 700;
             transition: all 0.2s;
-            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .theme-card-btn:hover {
+            border-color: #ea580c;
+        }
+        .theme-card-btn.active {
+            border-color: #ea580c;
+            background: rgba(234, 88, 12, 0.15);
+            color: #ea580c;
+        }
+
+        /* Slider Controls */
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #1e293b;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+        }
+        .slider-input {
+            flex: 1;
+            accent-color: #ea580c;
+            height: 6px;
+            border-radius: 3px;
             cursor: pointer;
         }
-        .gate-btn-primary {
-            background: linear-gradient(135deg, #ea580c, #c2410c);
-            color: white;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+        .slider-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: #ea580c;
+            min-width: 44px;
+            text-align: right;
+            font-size: 0.9rem;
         }
-        .gate-btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+
+        /* Bookmarks List */
+        .bookmarks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 280px;
+            overflow-y: auto;
         }
-        .gate-btn-secondary {
-            background: #f1f5f9;
-            color: #334155;
+        .bookmark-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
         }
-        .gate-btn-secondary:hover {
-            background: #e2e8f0;
+        .bookmark-item:hover {
+            background: #253347;
+            border-color: #ea580c;
+        }
+        .bookmark-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #f1f5f9;
+        }
+        .bookmark-del {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .bookmark-del:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Ambient Sounds Selector */
+        .sound-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .sound-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .sound-btn:hover {
+            border-color: #ea580c;
+            color: #ffffff;
+        }
+        .sound-btn.playing {
+            background: rgba(234, 88, 12, 0.2);
+            border-color: #ea580c;
+            color: #ea580c;
+            animation: soundPulse 1.8s infinite alternate;
+        }
+        @keyframes soundPulse {
+            0% { box-shadow: 0 0 4px rgba(234, 88, 12, 0.3); }
+            100% { box-shadow: 0 0 16px rgba(234, 88, 12, 0.6); }
+        }
+
+        /* Zen Mode (Distraction-Free Reading) */
+        body.zen-active .header,
+        body.zen-active .mobile-bottom-bar,
+        body.zen-active .reader-progress-track {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        body.zen-active .mobile-bottom-bar {
+            transform: translateY(100%);
+        }
+        body.zen-active .iframe-container {
+            height: 100vh;
+        }
+        .zen-exit-pill {
+            display: none;
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid #ea580c;
+            color: #f8fafc;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 10005;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            animation: fadeIn 0.3s ease;
+        }
+        body.zen-active .zen-exit-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Eye Rest Notification Banner */
+        .eye-rest-banner {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120%);
+            background: #10b981;
+            color: #064e3b;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.92rem;
+            z-index: 10006;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .eye-rest-banner.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 900px) {
+            .hide-on-mobile {
+                display: none !important;
+            }
+            .mobile-bottom-bar {
+                display: flex;
+            }
+            .iframe-container {
+                height: calc(100vh - 56px - 64px);
+            }
+            .book-title-header {
+                max-width: 180px;
+                font-size: 0.85rem;
+            }
+            .header {
+                padding: 8px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .book-title-header {
+                max-width: 140px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Mandatory Gate Modal (Unpaid or Unauthenticated) */
+        .gate-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10010;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .gate-modal-card {
+            background: #ffffff;
+            color: #0f172a;
+            max-width: 440px;
+            width: 100%;
+            border-radius: 18px;
+            padding: 32px 24px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
         .gate-btn-pay {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, #ea580c, #c2410c);
             color: white;
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-        }
-        .gate-btn-pay:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 800;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 12px;
         }
     </style>
 </head>
 <body oncontextmenu="return false;" class="theme-paper">
 
-    <div class="header">
-        <div class="header-left">
-            <span class="book-title-header" title="${escapeHtml(book.title || "Book")}">📖 Reading: <strong>${escapeHtml(book.title || "Book")}</strong></span>
-            
-            ${canRead ? `
-            <div class="view-controls" title="Reading Color Mode">
-                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('paper')" id="themeBtn_paper" title="Paper Light Mode">☀️ Light</button>
-                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('sepia')" id="themeBtn_sepia" title="Sepia Eye-Care Mode">📜 Sepia</button>
-                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('dark')" id="themeBtn_dark" title="Dark Night Mode">🌙 Dark</button>
-            </div>
+    <!-- Dimmer Overlay for Extra-Low Night Brightness -->
+    <div id="readerDimmerOverlay"></div>
 
-            <div class="view-controls" title="Fullscreen">
-                <button type="button" class="view-btn" onclick="toggleReaderFullscreen()" id="fullscreenBtn" title="Toggle Fullscreen">⛶ Fullscreen</button>
-            </div>
-            ` : ""}
+    <!-- Exit Zen Mode Floating Pill -->
+    <button type="button" class="zen-exit-pill" onclick="toggleZenMode()">
+        <span>✕</span> Exit Zen Mode <span style="opacity: 0.6; font-size: 0.75rem;">(Esc)</span>
+    </button>
 
-            ${(!isHttp && canRead) ? `
-            <div class="view-controls">
-                <button class="view-btn" onclick="changeView('FitH')" title="Fit to screen width">Fit Width</button>
-                <button class="view-btn" onclick="changeView('Fit')" title="Show entire page">Fit Page</button>
-                <button class="view-btn" onclick="changeView('FitV')" title="Fit to screen height">Fit Height</button>
-            </div>
-            ` : ""}
-        </div>
-        
-        <div style="display: flex; align-items: center; gap: 14px;">
-            ${(isPaid && !canRead) ? `
-            <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                ⚡ Buy Now (₹${priceFormatted}) <span style="text-decoration: line-through; opacity: 0.8; font-size: 0.8em; margin-left: 3px;">₹${(pricePaise * 1.4 / 100).toFixed(2)}</span>
-            </a>
-            ` : ""}
-            <a href="/">← Back to Library</a>
-        </div>
+    <!-- Eye Rest Pomodoro Notification -->
+    <div id="eyeRestBanner" class="eye-rest-banner">
+        <span>👀</span>
+        <span>20-20-20 Eye Care: Look 20 feet away for 20 seconds!</span>
+        <button type="button" onclick="dismissEyeRest()" style="background:transparent;border:none;color:#064e3b;font-weight:800;cursor:pointer;margin-left:8px;">✕</button>
     </div>
+
+    <!-- Top Header Navigation Bar (PC & Tablet Full Controls) -->
+    <header class="header" id="readerHeader">
+        <div class="header-left">
+            <a href="/" class="brand-link" title="Return to PustakVerse Library">
+                <span>📚</span> <span class="hide-on-mobile">PustakVerse</span>
+            </a>
+            <span class="book-title-header" title="${bookTitleEscaped} by ${authorNameEscaped}">
+                📖 <strong>${bookTitleEscaped}</strong>
+            </span>
+
+            ${canRead ? `
+            <!-- Desktop Page Stepper -->
+            <div class="view-controls hide-on-mobile" title="Page Navigation">
+                <button type="button" class="view-btn" onclick="prevPage()" title="Previous Page (Left Arrow or A)">◀</button>
+                <div class="page-jump-box">
+                    <span style="font-size:0.75rem;color:#94a3b8;font-weight:700;">PG</span>
+                    <input type="number" id="jumpPageInput" class="page-input" value="1" min="1" onchange="jumpToPage(this.value)">
+                </div>
+                <button type="button" class="view-btn" onclick="nextPage()" title="Next Page (Right Arrow or D)">▶</button>
+            </div>
+
+            <!-- Reading Themes Quick Toggle -->
+            <div class="view-controls hide-on-mobile" title="Eye-Care Themes">
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('paper')" id="themeBtn_paper" title="Paper Light">☀️</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('sepia')" id="themeBtn_sepia" title="Sepia Eye-Care">📜</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('dark')" id="themeBtn_dark" title="Dark Night">🌙</button>
+                <button type="button" class="view-btn theme-btn" onclick="setReaderTheme('oled')" id="themeBtn_oled" title="OLED Pure Black">🖤</button>
+            </div>
+
+            <!-- Zoom Stepper Controls -->
+            <div class="view-controls hide-on-mobile" title="Zoom & Fit Controls">
+                <button type="button" class="view-btn" onclick="zoomReader(-0.15)" title="Zoom Out (-)">−</button>
+                <span id="zoomLevelDisplay" style="font-size:0.75rem;font-weight:800;color:#f8fafc;font-family:'JetBrains Mono',monospace;padding:0 4px;">100%</span>
+                <button type="button" class="view-btn" onclick="zoomReader(0.15)" title="Zoom In (+)">+</button>
+                <button type="button" class="view-btn" onclick="changeView('FitH')" title="Fit Width">Fit W</button>
+                <button type="button" class="view-btn" onclick="changeView('Fit')" title="Fit Entire Page">Fit</button>
+            </div>
+            ` : ""}
+        </div>
+
+        <div class="header-right">
+            ${canRead ? `
+            <!-- Session Reading Timer -->
+            <span id="sessionTimerBadge" class="hide-on-mobile" style="font-size:0.78rem;font-weight:700;color:#94a3b8;display:inline-flex;align-items:center;gap:4px;">
+                <span>⏱️</span> <span id="sessionTimeText">1m read</span>
+            </span>
+
+            <!-- Quick Action Triggers -->
+            <button type="button" class="view-btn hide-on-mobile" onclick="toggleBookmarkCurrentPage()" title="Bookmark Page (B)">
+                <span id="desktopBookmarkIcon">🔖</span>
+            </button>
+
+            <button type="button" class="view-btn" onclick="openDrawer('soundsDrawer')" title="Ambient Focus Sounds">
+                <span>🎵</span> <span class="hide-on-mobile">Sounds</span>
+            </button>
+
+            <button type="button" class="view-btn" onclick="openDrawer('settingsDrawer')" title="Reading Settings">
+                <span>⚙️</span> <span class="hide-on-mobile">Settings</span>
+            </button>
+
+            <button type="button" class="view-btn hide-on-mobile" onclick="toggleZenMode()" title="Zen / Focus Mode (Z)">
+                <span>🧘</span> Zen
+            </button>
+
+            <button type="button" class="view-btn hide-on-mobile" onclick="toggleReaderFullscreen()" id="fullscreenBtn" title="Fullscreen (F)">
+                <span>⛶</span>
+            </button>
+
+            <button type="button" class="view-btn hide-on-mobile" onclick="openDrawer('shortcutsDrawer')" title="Keyboard Shortcuts (?)">
+                <span>⌨️</span>
+            </button>
+            ` : ""}
+
+            <a href="/" class="view-btn" style="color: #94a3b8; text-decoration: none;" title="Back to Library">
+                <span>✕</span> <span class="hide-on-mobile">Close</span>
+            </a>
+        </div>
+    </header>
 
     <!-- Reading Progress Indicator -->
     <div class="reader-progress-track" title="Reading Progress Indicator">
         <div id="readerProgressBar" class="reader-progress-bar" style="width: 2%;"></div>
     </div>
 
-    <!-- Embed Document Container -->
+    <!-- Main Document Embed Container -->
     <div class="iframe-container" id="iframeContainer">
+        <!-- Invisible Touch Turn Wings for Mobile (Left 15% / Right 15%) -->
+        <div class="touch-zone-left" onclick="prevPage()" title="Previous Page"></div>
+        <div class="touch-zone-right" onclick="nextPage()" title="Next Page"></div>
+
         <iframe id="pdf-frame" 
                 src="${escapeHtml(iframeSrc)}" 
                 sandbox="allow-scripts allow-same-origin">
         </iframe>
     </div>
 
-    <div id="protection-overlay"></div>
+    <!-- Mobile Thumb Action Bar (Thumb-Zone Optimized for Smartphones) -->
+    <nav class="mobile-bottom-bar" id="mobileBottomBar">
+        <div class="m-page-btn-group">
+            <button type="button" class="m-page-btn" onclick="prevPage()" title="Previous Page">◀</button>
+            <div class="m-page-info" onclick="promptJumpToPage()" title="Tap to Jump">
+                <span id="mPageCurrent">1</span>
+            </div>
+            <button type="button" class="m-page-btn" onclick="nextPage()" title="Next Page">▶</button>
+        </div>
 
-    <!-- FORENSIC DRM WATERMARK OVERLAY -->
-    ${(canRead && currentUser) ? `
-    <div class="drm-watermark-overlay" id="drmWatermarkLayer" aria-hidden="true">
-        <div class="drm-watermark-grid">
-            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
-            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
-            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
-            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
-            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
-            <div class="drm-watermark-item">Licensed to ${escapeHtml(currentUser.username || 'Reader')} (${escapeHtml(currentUser.email || 'Reader ID #' + (currentUser.id || '0'))}) · PV-LIC-${escapeHtml(String(book.id || '0'))}-${escapeHtml(String(currentUser.id || '0'))} · Digital DRM Protected</div>
+        <button type="button" class="m-action-btn" onclick="toggleBookmarkCurrentPage()">
+            <span class="icon" id="mobileBookmarkIcon">🔖</span>
+            <span>Mark</span>
+        </button>
+
+        <button type="button" class="m-action-btn" onclick="openDrawer('soundsDrawer')">
+            <span class="icon">🎵</span>
+            <span>Sounds</span>
+        </button>
+
+        <button type="button" class="m-action-btn" onclick="openDrawer('settingsDrawer')">
+            <span class="icon">⚙️</span>
+            <span>Settings</span>
+        </button>
+
+        <button type="button" class="m-action-btn" onclick="toggleZenMode()">
+            <span class="icon">🧘</span>
+            <span>Zen</span>
+        </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- DRAWERS & MODALS: Settings, Bookmarks, Sounds, Shortcuts              -->
+    <!-- ===================================================================== -->
+
+    <!-- Settings Drawer -->
+    <div class="drawer-backdrop" id="settingsDrawer" onclick="closeDrawerOnBackdrop(event, 'settingsDrawer')">
+        <div class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-title"><span>⚙️</span> Reading Preferences</div>
+                <button type="button" class="drawer-close-btn" onclick="closeDrawer('settingsDrawer')">✕</button>
+            </div>
+
+            <!-- Theme Selector -->
+            <div class="settings-section">
+                <div class="settings-label">Color Theme &amp; Eye Care</div>
+                <div class="theme-select-grid">
+                    <button type="button" class="theme-card-btn active" id="mTheme_paper" onclick="setReaderTheme('paper')">
+                        <span style="font-size: 1.3rem;">☀️</span>
+                        <span>Paper</span>
+                    </button>
+                    <button type="button" class="theme-card-btn" id="mTheme_sepia" onclick="setReaderTheme('sepia')">
+                        <span style="font-size: 1.3rem;">📜</span>
+                        <span>Sepia</span>
+                    </button>
+                    <button type="button" class="theme-card-btn" id="mTheme_dark" onclick="setReaderTheme('dark')">
+                        <span style="font-size: 1.3rem;">🌙</span>
+                        <span>Night</span>
+                    </button>
+                    <button type="button" class="theme-card-btn" id="mTheme_oled" onclick="setReaderTheme('oled')">
+                        <span style="font-size: 1.3rem;">🖤</span>
+                        <span>OLED</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Night Screen Dimmer Slider -->
+            <div class="settings-section">
+                <div class="settings-label">
+                    <span>Night Screen Dimmer</span>
+                    <span id="dimmerPercentText" style="color: #ea580c; font-family:'JetBrains Mono',monospace;">100% Bright</span>
+                </div>
+                <div class="slider-row">
+                    <span>🌙</span>
+                    <input type="range" min="20" max="100" value="100" class="slider-input" id="dimmerSlider" oninput="setNightDimmer(this.value)">
+                    <span>☀️</span>
+                </div>
+            </div>
+
+            <!-- Page Rotation -->
+            <div class="settings-section">
+                <div class="settings-label">Page Orientation &amp; Rotate</div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="view-btn" style="flex:1; padding: 10px; background:#1e293b; border-color:#334155;" onclick="rotateReaderPage(90)">
+                        <span>🔄</span> Rotate 90°
+                    </button>
+                    <button type="button" class="view-btn" style="flex:1; padding: 10px; background:#1e293b; border-color:#334155;" onclick="resetReaderRotation()">
+                        <span>↺</span> Reset Angle
+                    </button>
+                </div>
+            </div>
+
+            <!-- Zoom & Fit -->
+            <div class="settings-section">
+                <div class="settings-label">Page Scaling &amp; Zoom</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="view-btn" style="flex:1; padding: 8px;" onclick="zoomReader(-0.2)">Zoom −</button>
+                    <button type="button" class="view-btn" style="flex:1; padding: 8px;" onclick="resetReaderZoom()">100%</button>
+                    <button type="button" class="view-btn" style="flex:1; padding: 8px;" onclick="zoomReader(0.2)">Zoom +</button>
+                    <button type="button" class="view-btn" style="flex:1; padding: 8px;" onclick="changeView('FitH')">Fit Width</button>
+                    <button type="button" class="view-btn" style="flex:1; padding: 8px;" onclick="changeView('Fit')">Fit Page</button>
+                </div>
+            </div>
+
+            <!-- 20-20-20 Eye Care Timer Toggle -->
+            <div class="settings-section">
+                <div class="settings-label">
+                    <span>20-20-20 Eye Break Reminders</span>
+                    <input type="checkbox" id="eyeCareToggle" onchange="toggleEyeCareTimer(this.checked)" style="accent-color:#ea580c; width:18px; height:18px; cursor:pointer;">
+                </div>
+                <p style="font-size: 0.78rem; color: #64748b; line-height: 1.4;">
+                    Reminds you every 20 minutes to rest your eyes by looking at an object 20 feet away for 20 seconds.
+                </p>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <button type="button" class="view-btn" style="width: 100%; padding: 12px; background: #ea580c; color: white; justify-content: center; font-weight: 800; border-radius: 10px;" onclick="closeDrawer('settingsDrawer')">
+                    Save &amp; Continue Reading
+                </button>
+            </div>
         </div>
     </div>
-    ` : ""}
 
-    <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL (ONLY FOR PREMIUM PAID UNPURCHASED TITLES) -->
+    <!-- Ambient Focus Sounds Drawer -->
+    <div class="drawer-backdrop" id="soundsDrawer" onclick="closeDrawerOnBackdrop(event, 'soundsDrawer')">
+        <div class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-title"><span>🎵</span> Ambient Focus Soundscapes</div>
+                <button type="button" class="drawer-close-btn" onclick="closeDrawer('soundsDrawer')">✕</button>
+            </div>
+            <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 16px;">
+                Built-in procedural soothing audio to mask distractions and deepen reading immersion. Works 100% offline.
+            </p>
+
+            <div class="sound-grid">
+                <button type="button" class="sound-btn" id="soundBtn_rain" onclick="toggleAmbientSound('rain')">
+                    <span>🌧️</span> <span>Gentle Rain</span>
+                </button>
+                <button type="button" class="sound-btn" id="soundBtn_ocean" onclick="toggleAmbientSound('ocean')">
+                    <span>🌊</span> <span>Ocean Waves</span>
+                </button>
+                <button type="button" class="sound-btn" id="soundBtn_fire" onclick="toggleAmbientSound('fire')">
+                    <span>🪵</span> <span>Warm Hearth</span>
+                </button>
+                <button type="button" class="sound-btn" id="soundBtn_white" onclick="toggleAmbientSound('white')">
+                    <span>🍃</span> <span>White Noise</span>
+                </button>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-label">
+                    <span>Ambient Volume</span>
+                    <span id="soundVolumeText" style="color: #ea580c; font-family:'JetBrains Mono',monospace;">40%</span>
+                </div>
+                <div class="slider-row">
+                    <span>🔈</span>
+                    <input type="range" min="0" max="100" value="40" class="slider-input" id="soundVolumeSlider" oninput="setAmbientVolume(this.value)">
+                    <span>🔊</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="view-btn" style="flex: 1; padding: 10px; background: #334155; color: white; justify-content: center;" onclick="stopAmbientSound()">
+                    <span>⏹️</span> Stop Audio
+                </button>
+                <button type="button" class="view-btn" style="flex: 1; padding: 10px; background: #ea580c; color: white; justify-content: center;" onclick="closeDrawer('soundsDrawer')">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bookmarks Drawer -->
+    <div class="drawer-backdrop" id="bookmarksDrawer" onclick="closeDrawerOnBackdrop(event, 'bookmarksDrawer')">
+        <div class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-title"><span>🔖</span> Saved Bookmarks</div>
+                <button type="button" class="drawer-close-btn" onclick="closeDrawer('bookmarksDrawer')">✕</button>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <button type="button" class="view-btn" style="width: 100%; padding: 10px; background: #ea580c; color: white; justify-content: center; font-weight: 700; border-radius: 8px;" onclick="addCurrentPageBookmark()">
+                    <span>+</span> Bookmark Current Page (<span id="bmCurrentPageNum">1</span>)
+                </button>
+            </div>
+
+            <div class="bookmarks-list" id="bookmarksListContainer">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal (PC) -->
+    <div class="drawer-backdrop" id="shortcutsDrawer" onclick="closeDrawerOnBackdrop(event, 'shortcutsDrawer')">
+        <div class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-title"><span>⌨️</span> PC Keyboard Shortcuts</div>
+                <button type="button" class="drawer-close-btn" onclick="closeDrawer('shortcutsDrawer')">✕</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem; margin-bottom: 16px;">
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>→ / D / Space</strong>: Next Page</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>← / A / Shift+Space</strong>: Prev Page</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>+ / =</strong>: Zoom In (+15%)</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>−</strong>: Zoom Out (-15%)</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>0</strong>: Reset Zoom</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>F</strong>: Toggle Fullscreen</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>Z</strong>: Zen Mode (Distraction-Free)</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>T</strong>: Cycle Themes</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>B</strong>: Toggle Bookmark</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>R</strong>: Rotate Page 90°</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>G</strong>: Jump to Page Dialog</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>?</strong>: Show this Cheatsheet</div>
+            </div>
+
+            <button type="button" class="view-btn" style="width:100%;padding:10px;background:#334155;color:white;justify-content:center;" onclick="closeDrawer('shortcutsDrawer')">
+                Got It
+            </button>
+        </div>
+    </div>
+
+    <!-- MANDATORY SIGN-IN / PURCHASE GATING MODAL (ONLY FOR PREMIUM TITLES) -->
     ${(!canRead) ? `
-    <div class="gate-modal-backdrop" id="${!currentUser ? 'authGateModal' : 'purchaseGateModal'}">
+    <div class="gate-modal-backdrop">
         <div class="gate-modal-card">
-            ${!currentUser ? `
-            <div class="gate-modal-icon" style="background: #fff7ed; color: #ea580c;">🔐</div>
-            <h2 class="gate-modal-title">Sign In to Access Premium Book</h2>
-            <p class="gate-modal-desc">
-                Welcome to PustakVerse! <strong>"${escapeHtml(book.title || "this book")}"</strong> is a premium publication priced at <strong>₹${priceFormatted}</strong> (MRP ₹${(pricePaise * 1.4 / 100).toFixed(2)} · 30% OFF). Please sign in or create an account to access or purchase it.
+            <div style="font-size: 2.4rem; margin-bottom: 12px;">🔐</div>
+            <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 8px;">Reader Verification Required</h2>
+            <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+                ${isPaid ? '"' + bookTitleEscaped + '" is a premium author edition priced at ₹' + priceFormatted + '. Please complete your purchase to read.' : 'Please sign in to read "' + bookTitleEscaped + '". All registered readers enjoy unlimited free access.'}
             </p>
-            <div class="gate-btn-group">
-                <a href="/login?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-primary">
-                    <span>🔑 Sign In to Read</span>
-                </a>
-                <a href="/register?next=${encodeURIComponent(`/read_book/${book.id || ''}`)}" class="gate-btn gate-btn-secondary">
-                    <span>✨ Create Reader Account</span>
-                </a>
-                <a href="/" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none; margin-top: 6px;">
-                    Return to Library
-                </a>
+            <a href="${isPaid ? '/buy_book/' + (book.id || '') : '/login?next=' + encodeURIComponent('/read_book/' + (book.id || ''))}" class="gate-btn-pay">
+                ${isPaid ? '⚡ Buy Now (₹' + priceFormatted + ')' : '🔑 Sign In to Read'}
+            </a>
+            <div style="margin-top: 14px;">
+                <a href="/" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none;">← Return to Library</a>
             </div>
-            ` : `
-            <div class="gate-modal-icon" style="background: #ecfdf5; color: #059669;">💳</div>
-            <h2 class="gate-modal-title">Premium Author Publication</h2>
-            <p class="gate-modal-desc">
-                This title is priced at <strong style="color: #16a34a; font-size: 1.15rem;">₹${priceFormatted}</strong> <span style="text-decoration: line-through; color: #94a3b8; margin-left: 6px;">MRP ₹${(pricePaise * 1.4 / 100).toFixed(2)}</span> <span style="background: #fee2e2; color: #dc2626; font-size: 0.75rem; font-weight: 800; padding: 2px 6px; border-radius: 8px; margin-left: 4px;">30% OFF</span>. 100% of reader payments directly support the author via Razorpay.
-            </p>
-            <div class="gate-btn-group">
-                <a href="/buy_book/${book.id || ''}" class="gate-btn gate-btn-pay">
-                    <span>⚡ Buy Now with Razorpay (₹${priceFormatted})</span>
-                </a>
-                <a href="/" class="gate-btn gate-btn-secondary">
-                    <span>Browse Free Books Instead</span>
-                </a>
-            </div>
-            `}
         </div>
     </div>
     ` : ""}
 
-    <!-- Advanced Protection, Themes & View Scripts -->
+    <!-- Comprehensive Client-Side Engine for Touch, Audio, Drawers, Zoom & Hotkeys -->
     <script>
+    (function() {
+        const BOOK_ID = "${book.id || 0}";
         let currentViewMode = "FitH";
         let currentPage = 1;
         let currentZoom = 1.0;
+        let currentRotation = 0;
         let currentTheme = 'paper';
+        let readingSeconds = 0;
+        let activeAmbientType = null;
+        let audioCtx = null;
+        let ambientSource = null;
+        let ambientGain = null;
+        let eyeCareTimerId = null;
 
         function getCleanPdfUrl() {
             const raw = "${escapeHtml(pdfUrl)}";
@@ -15862,52 +16407,124 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             return raw.split('#')[0];
         }
 
-        function setReaderTheme(theme) {
-            currentTheme = theme;
-            document.body.classList.remove('theme-paper', 'theme-sepia', 'theme-dark');
-            document.body.classList.add('theme-' + theme);
-            document.querySelectorAll('.theme-btn').forEach(b => b.style.opacity = '0.65');
-            const activeBtn = document.getElementById('themeBtn_' + theme);
-            if (activeBtn) activeBtn.style.opacity = '1';
-            try { localStorage.setItem('pv_reader_theme', theme); } catch (_) {}
+        // --- Haptic Feedback for Mobile ---
+        function triggerHaptic(ms = 12) {
+            try {
+                if (navigator.vibrate) navigator.vibrate(ms);
+            } catch (_) {}
         }
 
-        function zoomReader(delta) {
-            currentZoom = Math.min(2.0, Math.max(0.6, Math.round((currentZoom + delta) * 10) / 10));
-            const frame = document.getElementById('pdf-frame');
-            if (frame) frame.style.transform = 'scale(' + currentZoom + ')';
+        // --- Theme Engine ---
+        window.setReaderTheme = function(theme) {
+            currentTheme = theme;
+            document.body.classList.remove('theme-paper', 'theme-sepia', 'theme-dark', 'theme-oled');
+            document.body.classList.add('theme-' + theme);
+
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            const activeDesktop = document.getElementById('themeBtn_' + theme);
+            if (activeDesktop) activeDesktop.classList.add('active');
+
+            document.querySelectorAll('.theme-card-btn').forEach(b => b.classList.remove('active'));
+            const activeMobile = document.getElementById('mTheme_' + theme);
+            if (activeMobile) activeMobile.classList.add('active');
+
+            try { localStorage.setItem('pv_reader_theme', theme); } catch (_) {}
+            triggerHaptic(8);
+        };
+
+        // --- Night Screen Dimmer ---
+        window.setNightDimmer = function(percent) {
+            const overlay = document.getElementById('readerDimmerOverlay');
+            const label = document.getElementById('dimmerPercentText');
+            const val = parseInt(percent, 10) || 100;
+            const darkOpacity = ((100 - val) / 100) * 0.75;
+            if (overlay) overlay.style.opacity = darkOpacity;
+            if (label) label.textContent = val + '% Bright';
+            try { localStorage.setItem('pv_reader_dimmer', val); } catch (_) {}
+        };
+
+        // --- Zoom Engine ---
+        window.zoomReader = function(delta) {
+            currentZoom = Math.min(2.5, Math.max(0.6, Math.round((currentZoom + delta) * 10) / 10));
+            applyFrameTransform();
             const disp = document.getElementById('zoomLevelDisplay');
             if (disp) disp.innerText = Math.round(currentZoom * 100) + '%';
-        }
+            triggerHaptic(8);
+        };
 
-        function resetReaderZoom() {
+        window.resetReaderZoom = function() {
             currentZoom = 1.0;
-            const frame = document.getElementById('pdf-frame');
-            if (frame) frame.style.transform = 'scale(1)';
+            applyFrameTransform();
             const disp = document.getElementById('zoomLevelDisplay');
             if (disp) disp.innerText = '100%';
-        }
+            triggerHaptic(8);
+        };
 
-        function toggleReaderFullscreen() {
-            const btn = document.getElementById('fullscreenBtn');
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().then(() => {
-                    if (btn) btn.innerText = '⤢ Exit';
-                }).catch(() => {});
-            } else {
-                document.exitFullscreen().then(() => {
-                    if (btn) btn.innerText = '⛶ Fullscreen';
-                }).catch(() => {});
+        // --- Page Rotation Engine ---
+        window.rotateReaderPage = function(deg = 90) {
+            currentRotation = (currentRotation + deg) % 360;
+            applyFrameTransform();
+            triggerHaptic(12);
+        };
+
+        window.resetReaderRotation = function() {
+            currentRotation = 0;
+            applyFrameTransform();
+            triggerHaptic(8);
+        };
+
+        function applyFrameTransform() {
+            const frame = document.getElementById('pdf-frame');
+            if (frame) {
+                frame.style.transform = 'scale(' + currentZoom + ') rotate(' + currentRotation + 'deg)';
             }
         }
 
-        function updateReadingProgress(pageNo) {
-            const prog = Math.min(100, Math.max(3, pageNo * 4));
-            const bar = document.getElementById('readerProgressBar');
-            if (bar) bar.style.width = prog + '%';
-        }
+        // --- Fullscreen Engine ---
+        window.toggleReaderFullscreen = function() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (btn) btn.innerHTML = '<span>⤢</span>';
+                }).catch(() => {});
+            } else {
+                document.exitFullscreen().then(() => {
+                    if (btn) btn.innerHTML = '<span>⛶</span>';
+                }).catch(() => {});
+            }
+            triggerHaptic(10);
+        };
 
-        function jumpToPage(pageNo) {
+        // --- Zen / Focus Mode ---
+        window.toggleZenMode = function() {
+            document.body.classList.toggle('zen-active');
+            triggerHaptic(15);
+        };
+
+        // --- Drawers (Modals) Engine ---
+        window.openDrawer = function(id) {
+            const drawer = document.getElementById(id);
+            if (drawer) {
+                drawer.classList.add('open');
+                if (id === 'bookmarksDrawer') renderBookmarksList();
+            }
+            triggerHaptic(10);
+        };
+
+        window.closeDrawer = function(id) {
+            const drawer = document.getElementById(id);
+            if (drawer) drawer.classList.remove('open');
+            triggerHaptic(8);
+        };
+
+        window.closeDrawerOnBackdrop = function(e, id) {
+            if (e.target.id === id) {
+                closeDrawer(id);
+            }
+        };
+
+        // --- Page Navigation & Sync ---
+        window.jumpToPage = function(pageNo) {
             const base = getCleanPdfUrl();
             if (!base) return;
 
@@ -15924,7 +16541,16 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             const input = document.getElementById('jumpPageInput');
             if (input) input.value = pageNo;
 
-            updateReadingProgress(pageNo);
+            const mCurr = document.getElementById('mPageCurrent');
+            if (mCurr) mCurr.textContent = pageNo;
+
+            const bmNum = document.getElementById('bmCurrentPageNum');
+            if (bmNum) bmNum.textContent = pageNo;
+
+            // Reading Progress Bar update
+            const prog = Math.min(100, Math.max(3, pageNo * 4));
+            const bar = document.getElementById('readerProgressBar');
+            if (bar) bar.style.width = prog + '%';
 
             const frame = document.getElementById('pdf-frame');
             if (!frame) return;
@@ -15936,87 +16562,303 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             }
 
             try {
-                const bookKey = 'pv_page_${book.id || 0}';
-                localStorage.setItem(bookKey, pageNo);
+                localStorage.setItem('pv_page_' + BOOK_ID, pageNo);
             } catch (_) {}
-        }
 
-        function promptJumpToPage() {
-            const requested = prompt('Enter page number to open instantly:', currentPage);
+            updateBookmarkIconState();
+            triggerHaptic(12);
+        };
+
+        window.prevPage = function() {
+            if (currentPage > 1) {
+                jumpToPage(currentPage - 1);
+            }
+        };
+
+        window.nextPage = function() {
+            jumpToPage(currentPage + 1);
+        };
+
+        window.promptJumpToPage = function() {
+            const requested = prompt('Enter page number to jump directly:', currentPage);
             if (requested !== null && requested.trim() !== '') {
                 const parsed = parseInt(requested.trim(), 10);
                 if (!isNaN(parsed) && parsed >= 1) {
                     jumpToPage(parsed);
-                } else {
-                    alert('Please enter a valid page number (1 or higher).');
                 }
             }
-        }
+        };
 
-        function prevPage() {
-            if (currentPage > 1) {
-                jumpToPage(currentPage - 1);
-            }
-        }
-
-        function nextPage() {
-            jumpToPage(currentPage + 1);
-        }
-
-        function changeView(viewMode) {
+        window.changeView = function(viewMode) {
             currentViewMode = viewMode;
             jumpToPage(currentPage);
+        };
+
+        // --- Bookmarks Engine ---
+        function getBookmarks() {
+            try {
+                const raw = localStorage.getItem('pv_bms_' + BOOK_ID);
+                return raw ? JSON.parse(raw) : [];
+            } catch (_) { return []; }
         }
 
-        window.addEventListener('DOMContentLoaded', function() {
+        function saveBookmarks(list) {
             try {
-                const savedTheme = localStorage.getItem('pv_reader_theme');
-                if (savedTheme) setReaderTheme(savedTheme);
-                else setReaderTheme('paper');
+                localStorage.setItem('pv_bms_' + BOOK_ID, JSON.stringify(list));
             } catch (_) {}
+            updateBookmarkIconState();
+        }
 
-            try {
-                const bookKey = 'pv_page_${book.id || 0}';
-                const saved = localStorage.getItem(bookKey);
-                if (saved) {
-                    const p = parseInt(saved, 10);
-                    if (!isNaN(p) && p > 1) {
-                        jumpToPage(p);
+        window.toggleBookmarkCurrentPage = function() {
+            let list = getBookmarks();
+            const idx = list.indexOf(currentPage);
+            if (idx >= 0) {
+                list.splice(idx, 1);
+            } else {
+                list.push(currentPage);
+                list.sort((a,b) => a - b);
+            }
+            saveBookmarks(list);
+            triggerHaptic(15);
+        };
+
+        window.addCurrentPageBookmark = function() {
+            let list = getBookmarks();
+            if (!list.includes(currentPage)) {
+                list.push(currentPage);
+                list.sort((a,b) => a - b);
+                saveBookmarks(list);
+            }
+            renderBookmarksList();
+            triggerHaptic(12);
+        };
+
+        window.removeBookmark = function(pageNo) {
+            let list = getBookmarks();
+            list = list.filter(p => p !== pageNo);
+            saveBookmarks(list);
+            renderBookmarksList();
+            triggerHaptic(10);
+        };
+
+        function updateBookmarkIconState() {
+            const list = getBookmarks();
+            const isBookmarked = list.includes(currentPage);
+            const dIcon = document.getElementById('desktopBookmarkIcon');
+            const mIcon = document.getElementById('mobileBookmarkIcon');
+            const iconStr = isBookmarked ? '🔖' : '🏷️';
+            if (dIcon) dIcon.textContent = iconStr;
+            if (mIcon) mIcon.textContent = iconStr;
+        }
+
+        function renderBookmarksList() {
+            const container = document.getElementById('bookmarksListContainer');
+            if (!container) return;
+            const list = getBookmarks();
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;font-size:0.88rem;">No bookmarks saved yet.<br>Click "Bookmark Current Page" to save your spot!</div>';
+                return;
+            }
+            container.innerHTML = list.map(function(p) {
+                return '<div class="bookmark-item" onclick="jumpToPage(' + p + '); closeDrawer(\'bookmarksDrawer\');">' +
+                    '<div class="bookmark-info"><span>🔖</span><span>Page ' + p + '</span></div>' +
+                    '<button type="button" class="bookmark-del" onclick="event.stopPropagation(); removeBookmark(' + p + ');" title="Delete Bookmark">✕</button>' +
+                '</div>';
+            }).join('');
+        }
+
+        // --- Ambient Soundscape Generator (Web Audio API - Zero External Files) ---
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                audioCtx = new AudioContext();
+                ambientGain = audioCtx.createGain();
+                ambientGain.gain.value = 0.4;
+                ambientGain.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        window.toggleAmbientSound = function(type) {
+            if (activeAmbientType === type) {
+                stopAmbientSound();
+                return;
+            }
+            playAmbientSound(type);
+        };
+
+        window.playAmbientSound = function(type) {
+            initAudio();
+            if (!audioCtx) return;
+            stopAmbientSound();
+
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            if (type === 'white') {
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * 0.25;
+                }
+            } else if (type === 'rain') {
+                let b0 = 0, b1 = 0, b2 = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555;
+                    b1 = 0.99332 * b1 + white * 0.0750;
+                    b2 = 0.96900 * b2 + white * 0.1538;
+                    data[i] = (b0 + b1 + b2) * 0.12;
+                }
+            } else if (type === 'ocean') {
+                let last = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    last = (last + (0.02 * white)) / 1.02;
+                    data[i] = last * 2.8;
+                }
+            } else if (type === 'fire') {
+                for (let i = 0; i < bufferSize; i++) {
+                    if (Math.random() < 0.004) {
+                        data[i] = (Math.random() * 2 - 1) * 0.65;
+                    } else {
+                        data[i] = (Math.random() * 2 - 1) * 0.05;
                     }
                 }
-            } catch (_) {}
+            }
 
-            const input = document.getElementById('jumpPageInput');
-            if (input) {
-                input.addEventListener('keydown', function(ev) {
-                    if (ev.key === 'Enter') {
-                        ev.preventDefault();
-                        jumpToPage();
-                        input.blur();
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            noise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            if (type === 'rain') {
+                filter.type = 'lowpass';
+                filter.frequency.value = 1100;
+            } else if (type === 'ocean') {
+                filter.type = 'bandpass';
+                filter.frequency.value = 350;
+            } else if (type === 'fire') {
+                filter.type = 'lowpass';
+                filter.frequency.value = 2200;
+            } else {
+                filter.type = 'lowpass';
+                filter.frequency.value = 3500;
+            }
+
+            noise.connect(filter);
+            filter.connect(ambientGain);
+            noise.start();
+            ambientSource = noise;
+            activeAmbientType = type;
+
+            document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('playing'));
+            const activeBtn = document.getElementById('soundBtn_' + type);
+            if (activeBtn) activeBtn.classList.add('playing');
+            triggerHaptic(15);
+        };
+
+        window.stopAmbientSound = function() {
+            if (ambientSource) {
+                try { ambientSource.stop(); } catch (_) {}
+                ambientSource = null;
+            }
+            activeAmbientType = null;
+            document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('playing'));
+            triggerHaptic(8);
+        };
+
+        window.setAmbientVolume = function(val) {
+            initAudio();
+            const pct = parseInt(val, 10) || 0;
+            if (ambientGain) ambientGain.gain.value = pct / 100;
+            const text = document.getElementById('soundVolumeText');
+            if (text) text.textContent = pct + '%';
+        };
+
+        // --- 20-20-20 Eye Care Reminders ---
+        window.toggleEyeCareTimer = function(enabled) {
+            if (eyeCareTimerId) {
+                clearInterval(eyeCareTimerId);
+                eyeCareTimerId = null;
+            }
+            if (enabled) {
+                eyeCareTimerId = setInterval(() => {
+                    const banner = document.getElementById('eyeRestBanner');
+                    if (banner) {
+                        banner.classList.add('show');
+                        triggerHaptic([30, 80, 30]);
                     }
-                });
+                }, 20 * 60 * 1000); // 20 minutes
             }
-        });
+            try { localStorage.setItem('pv_eye_care', enabled ? '1' : '0'); } catch (_) {}
+        };
 
-        // Anti-theft window defocus blur shield
-        window.addEventListener('blur', function() {
-            const frame = document.getElementById('pdf-frame');
-            if (frame) frame.style.filter = 'blur(14px)';
-        });
+        window.dismissEyeRest = function() {
+            const banner = document.getElementById('eyeRestBanner');
+            if (banner) banner.classList.remove('show');
+            triggerHaptic(8);
+        };
 
-        window.addEventListener('focus', function() {
-            const frame = document.getElementById('pdf-frame');
-            if (frame) {
-                frame.style.filter = '';
-                setReaderTheme(currentTheme);
+        // --- Mobile Touch Gestures (Swipe Left / Swipe Right) ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let lastTapTime = 0;
+
+        window.addEventListener('touchstart', function(e) {
+            if (e.touches && e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
             }
-        });
+        }, { passive: true });
 
+        window.addEventListener('touchend', function(e) {
+            if (!touchStartX || !e.changedTouches || e.changedTouches.length === 0) return;
+            const diffX = e.changedTouches[0].clientX - touchStartX;
+            const diffY = e.changedTouches[0].clientY - touchStartY;
+
+            // Horizontal Swipe: must be > 60px and predominantly horizontal
+            if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+                if (diffX < 0) {
+                    nextPage(); // Swiped Left ➔ Next
+                } else {
+                    prevPage(); // Swiped Right ➔ Prev
+                }
+            }
+
+            // Double Tap to toggle Zoom / Fit
+            const now = Date.now();
+            if (now - lastTapTime < 300 && Math.abs(diffX) < 15 && Math.abs(diffY) < 15) {
+                if (currentZoom > 1.05) {
+                    resetReaderZoom();
+                } else {
+                    zoomReader(0.3);
+                }
+            }
+            lastTapTime = now;
+            touchStartX = 0;
+            touchStartY = 0;
+        }, { passive: true });
+
+        // --- Session Reading Timer ---
+        setInterval(() => {
+            readingSeconds += 1;
+            const mins = Math.floor(readingSeconds / 60);
+            const badge = document.getElementById('sessionTimeText');
+            if (badge) {
+                badge.textContent = (mins < 1 ? 'Just started' : mins + 'm read');
+            }
+        }, 1000);
+
+        // --- PC Keyboard Navigation ---
         document.addEventListener('keydown', function(e) {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
                 return;
             }
 
+            // Anti-theft & download restrictions
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -16028,21 +16870,99 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 return false;
             }
 
-            if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            // Reader Keyboard Shortcuts
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'h' || e.key === 'H') {
                 e.preventDefault();
                 prevPage();
-            } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.key === 'l' || e.key === 'L') {
                 e.preventDefault();
                 nextPage();
+            } else if (e.key === ' ' || e.key === 'PageDown') {
+                e.preventDefault();
+                if (e.shiftKey) prevPage();
+                else nextPage();
+            } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                prevPage();
+            } else if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                zoomReader(0.15);
+            } else if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                zoomReader(-0.15);
+            } else if (e.key === '0') {
+                e.preventDefault();
+                resetReaderZoom();
+            } else if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                toggleReaderFullscreen();
+            } else if (e.key === 'z' || e.key === 'Z') {
+                e.preventDefault();
+                toggleZenMode();
+            } else if (e.key === 'b' || e.key === 'B') {
+                e.preventDefault();
+                toggleBookmarkCurrentPage();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                rotateReaderPage(90);
+            } else if (e.key === 't' || e.key === 'T') {
+                e.preventDefault();
+                const themes = ['paper', 'sepia', 'dark', 'oled'];
+                const nextIdx = (themes.indexOf(currentTheme) + 1) % themes.length;
+                setReaderTheme(themes[nextIdx]);
             } else if (e.key === 'g' || e.key === 'G') {
                 e.preventDefault();
                 promptJumpToPage();
+            } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                e.preventDefault();
+                openDrawer('shortcutsDrawer');
+            } else if (e.key === 'Escape') {
+                if (document.body.classList.contains('zen-active')) {
+                    toggleZenMode();
+                } else {
+                    document.querySelectorAll('.drawer-backdrop.open').forEach(d => d.classList.remove('open'));
+                }
             }
         });
 
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', function() {
+            try {
+                const savedTheme = localStorage.getItem('pv_reader_theme') || 'paper';
+                setReaderTheme(savedTheme);
+            } catch (_) {}
+
+            try {
+                const savedDimmer = localStorage.getItem('pv_reader_dimmer');
+                if (savedDimmer) {
+                    const slider = document.getElementById('dimmerSlider');
+                    if (slider) slider.value = savedDimmer;
+                    setNightDimmer(savedDimmer);
+                }
+            } catch (_) {}
+
+            try {
+                const eyeCareSaved = localStorage.getItem('pv_eye_care');
+                if (eyeCareSaved === '1') {
+                    const toggle = document.getElementById('eyeCareToggle');
+                    if (toggle) toggle.checked = true;
+                    toggleEyeCareTimer(true);
+                }
+            } catch (_) {}
+
+            try {
+                const savedPage = localStorage.getItem('pv_page_' + BOOK_ID);
+                if (savedPage) {
+                    const p = parseInt(savedPage, 10);
+                    if (!isNaN(p) && p > 1) {
+                        jumpToPage(p);
+                    }
+                }
+            } catch (_) {}
+
+            updateBookmarkIconState();
         });
+    })();
     </script>
 </body>
 </html>`;
