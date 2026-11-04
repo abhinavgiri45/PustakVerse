@@ -10254,6 +10254,192 @@ Format with these exact markdown sections:
       }
     }
 
+    
+    // 6A-6. Unified Reader Feature Synchronization & Reading Progress API (Edge + Mobile + PC)
+    if (url.pathname === "/api/reading_progress" && env.DB) {
+      const sessionUser = getSessionUser(request);
+
+      if (request.method === "GET") {
+        const bookId = parseInt(url.searchParams.get("book_id"), 10);
+        if (!bookId) {
+          return new Response(JSON.stringify({ success: false, message: "Missing book_id" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        if (!sessionUser || !sessionUser.id) {
+          return new Response(JSON.stringify({
+            success: true,
+            logged_in: false,
+            current_page: 1,
+            max_page_reached: 1,
+            total_pages: 1,
+            percent_completed: 0.0,
+            reading_seconds: 0,
+            is_completed: false,
+            reader_theme: "paper",
+            dimmer_level: 100,
+            bookmarks: []
+          }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        try {
+          await ensureReadingProgressTable(env);
+          await ensureUserBookmarksTable(env);
+
+          const [prog, bookmarksRes] = await Promise.all([
+            env.DB.prepare(
+              "SELECT current_page, max_page_reached, total_pages, percent_completed, reading_seconds, is_completed, reader_theme, dimmer_level FROM reading_progress WHERE user_id = ? AND book_id = ? LIMIT 1"
+            ).bind(sessionUser.id, bookId).first(),
+            env.DB.prepare(
+              "SELECT page_number FROM user_bookmarks WHERE user_id = ? AND book_id = ? ORDER BY page_number ASC"
+            ).bind(sessionUser.id, bookId).all().catch(() => ({ results: [] }))
+          ]);
+
+          const bookmarks = (bookmarksRes && bookmarksRes.results) ? bookmarksRes.results.map(r => r.page_number) : [];
+
+          if (prog) {
+            return new Response(JSON.stringify({
+              success: true,
+              logged_in: true,
+              current_page: prog.current_page || 1,
+              max_page_reached: prog.max_page_reached || 1,
+              total_pages: prog.total_pages || 1,
+              percent_completed: prog.percent_completed || 0.0,
+              reading_seconds: prog.reading_seconds || 0,
+              is_completed: Boolean(prog.is_completed),
+              reader_theme: prog.reader_theme || "paper",
+              dimmer_level: prog.dimmer_level != null ? prog.dimmer_level : 100,
+              bookmarks
+            }), {
+              headers: { "Content-Type": "application/json" }
+            });
+          } else {
+            return new Response(JSON.stringify({
+              success: true,
+              logged_in: true,
+              current_page: 1,
+              max_page_reached: 1,
+              total_pages: 1,
+              percent_completed: 0.0,
+              reading_seconds: 0,
+              is_completed: false,
+              reader_theme: "paper",
+              dimmer_level: 100,
+              bookmarks: []
+            }), {
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      if (request.method === "POST") {
+        if (!sessionUser || !sessionUser.id) {
+          return new Response(JSON.stringify({ success: true, logged_in: false, message: "Unauthenticated; client local storage active." }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        try {
+          const body = await request.json().catch(() => ({}));
+          const bookId = parseInt(body.book_id, 10);
+          if (!bookId) {
+            return new Response(JSON.stringify({ success: false, message: "Missing book_id" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          const currentPage = Math.max(1, parseInt(body.current_page || 1, 10));
+          const totalPages = Math.max(1, parseInt(body.total_pages || 1, 10));
+          const addedSeconds = Math.max(0, Math.min(180, parseInt(body.time_spent_seconds || 0, 10)));
+          const readerTheme = ["paper", "sepia", "dark", "oled"].includes(body.reader_theme) ? body.reader_theme : "paper";
+          const dimmerLevel = Math.max(20, Math.min(100, parseInt(body.dimmer_level || 100, 10)));
+
+          await ensureReadingProgressTable(env);
+          await ensureUserBookmarksTable(env);
+
+          const existing = await env.DB.prepare(
+            "SELECT id, max_page_reached, total_pages, reading_seconds, is_completed FROM reading_progress WHERE user_id = ? AND book_id = ? LIMIT 1"
+          ).bind(sessionUser.id, bookId).first();
+
+          let newMaxPage = currentPage;
+          let newSeconds = addedSeconds;
+          let newTotal = totalPages;
+          let newPct = Math.min(100.0, Math.round((currentPage / totalPages) * 1000) / 10);
+          let isComp = 0;
+
+          if (existing) {
+            newMaxPage = Math.max(existing.max_page_reached || 1, currentPage);
+            newSeconds = (existing.reading_seconds || 0) + addedSeconds;
+            newTotal = Math.max(existing.total_pages || 1, totalPages);
+            newPct = Math.min(100.0, Math.round((newMaxPage / newTotal) * 1000) / 10);
+            const shouldComplete = (newMaxPage >= newTotal || newPct >= 90.0) && newSeconds >= 30;
+            isComp = (existing.is_completed || shouldComplete) ? 1 : 0;
+
+            await env.DB.prepare(`
+              UPDATE reading_progress
+              SET current_page = ?, max_page_reached = ?, total_pages = ?,
+                  percent_completed = ?, reading_seconds = ?, is_completed = ?,
+                  reader_theme = ?, dimmer_level = ?, last_read_at = CURRENT_TIMESTAMP
+              WHERE user_id = ? AND book_id = ?
+            `).bind(
+              currentPage, newMaxPage, newTotal,
+              newPct, newSeconds, isComp,
+              readerTheme, dimmerLevel,
+              sessionUser.id, bookId
+            ).run();
+          } else {
+            const shouldComplete = (currentPage >= totalPages || newPct >= 90.0) && addedSeconds >= 30;
+            isComp = shouldComplete ? 1 : 0;
+
+            await env.DB.prepare(`
+              INSERT INTO reading_progress
+              (user_id, book_id, current_page, max_page_reached, total_pages, percent_completed, reading_seconds, is_completed, reader_theme, dimmer_level, last_read_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            `).bind(
+              sessionUser.id, bookId, currentPage, currentPage, totalPages,
+              newPct, addedSeconds, isComp, readerTheme, dimmerLevel
+            ).run();
+          }
+
+          if (Array.isArray(body.bookmarks)) {
+            await env.DB.prepare("DELETE FROM user_bookmarks WHERE user_id = ? AND book_id = ?").bind(sessionUser.id, bookId).run();
+            const validBookmarks = [...new Set(body.bookmarks.map(p => parseInt(p, 10)).filter(p => !isNaN(p) && p >= 1))].slice(0, 50);
+            for (const bmPage of validBookmarks) {
+              await env.DB.prepare(
+                "INSERT INTO user_bookmarks (user_id, book_id, title, page_number) VALUES (?, ?, ?, ?)"
+              ).bind(sessionUser.id, bookId, "Page " + bmPage, bmPage).run().catch(() => {});
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            logged_in: true,
+            current_page: currentPage,
+            percent_completed: newPct,
+            is_completed: Boolean(isComp)
+          }), {
+            headers: { "Content-Type": "application/json" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, message: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+    }
+
     // 6A-5. User Saved & Purchased Books API: GET /api/user/saved_books
     if (url.pathname === "/api/user/saved_books" && env.DB) {
       const sessionUser = getSessionUser(request);
@@ -12962,6 +13148,56 @@ async function ensurePersonalLibraryTable(env) {
   _ensuredTables.add("library");
 }
 
+async function ensureReadingProgressTable(env) {
+  if (!env || !env.DB) return;
+  if (_ensuredTables.has("reading_progress")) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS reading_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        book_id INTEGER NOT NULL,
+        current_page INTEGER DEFAULT 1,
+        max_page_reached INTEGER DEFAULT 1,
+        total_pages INTEGER DEFAULT 1,
+        percent_completed REAL DEFAULT 0.0,
+        reading_seconds INTEGER DEFAULT 0,
+        is_completed INTEGER DEFAULT 0,
+        completed_at DATETIME NULL,
+        last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        reader_theme TEXT DEFAULT 'paper',
+        dimmer_level INTEGER DEFAULT 100,
+        UNIQUE(user_id, book_id)
+      )
+    `).run();
+  } catch (_) {}
+
+  try { await env.DB.prepare("ALTER TABLE reading_progress ADD COLUMN reader_theme TEXT DEFAULT 'paper'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE reading_progress ADD COLUMN dimmer_level INTEGER DEFAULT 100").run(); } catch (_) {}
+  try { await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_reading_progress_user ON reading_progress(user_id, book_id)").run(); } catch (_) {}
+  _ensuredTables.add("reading_progress");
+}
+
+async function ensureUserBookmarksTable(env) {
+  if (!env || !env.DB) return;
+  if (_ensuredTables.has("user_bookmarks")) return;
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS user_bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        book_id INTEGER NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        page_number INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (_) {}
+  try { await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_user_bookmarks_user ON user_bookmarks(user_id, book_id)").run(); } catch (_) {}
+  _ensuredTables.add("user_bookmarks");
+}
+
+
 async function ensureFrontPageSettingsTable(env) {
   if (!env || !env.DB) return;
   if (_ensuredTables.has("fps")) return;
@@ -15416,7 +15652,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         .header-left, .header-right {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: nowrap;
         }
 
@@ -15436,12 +15672,12 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         }
 
         .book-title-header {
-            max-width: 300px;
+            max-width: 260px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             display: inline-block;
-            font-size: 0.92rem;
+            font-size: 0.90rem;
             font-weight: 700;
             color: #f1f5f9;
         }
@@ -15545,7 +15781,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             transition: background 0.3s ease;
         }
 
-        iframe {
+        #pdf-frame {
             width: 100%;
             height: 100%;
             border: none;
@@ -15554,18 +15790,189 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             transform-origin: top center;
         }
 
+        /* --- PC-Only Physical Book View (2-Page Spread) --- */
+        .book-spread-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            max-width: 1680px;
+            margin: 0 auto;
+            padding: 10px 18px;
+            justify-content: center;
+            align-items: stretch;
+            box-sizing: border-box;
+            perspective: 2000px;
+        }
+
+        body.book-view-mode #pdf-frame {
+            display: none !important;
+        }
+
+        body.book-view-mode .book-spread-container {
+            display: flex !important;
+        }
+
+        .book-page-wrapper {
+            flex: 1;
+            height: 100%;
+            min-width: 0;
+            background: #ffffff;
+            color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .book-page-left {
+            border-radius: 8px 0 0 8px;
+            box-shadow: -12px 14px 28px rgba(0, 0, 0, 0.45), inset -24px 0 32px -10px rgba(0, 0, 0, 0.35);
+            border-right: 1px solid rgba(0, 0, 0, 0.15);
+        }
+
+        .book-page-right {
+            border-radius: 0 8px 8px 0;
+            box-shadow: 12px 14px 28px rgba(0, 0, 0, 0.45), inset 24px 0 32px -10px rgba(0, 0, 0, 0.35);
+            border-left: 1px solid rgba(0, 0, 0, 0.15);
+        }
+
+        .book-page-wrapper:hover {
+            filter: brightness(1.02);
+        }
+
+        .book-page-header {
+            padding: 6px 14px;
+            background: rgba(241, 245, 249, 0.9);
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #475569;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .book-page-tag {
+            background: #ea580c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .book-page-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+
+        .book-page-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        .book-page-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            background: transparent;
+            transition: filter 0.3s ease;
+        }
+
+        .book-spine-crease-left {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 32px;
+            background: linear-gradient(to left, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.08) 60%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .book-spine-crease-right {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 32px;
+            background: linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.08) 60%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .book-page-footer {
+            padding: 4px 14px;
+            background: rgba(241, 245, 249, 0.9);
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .book-center-spine {
+            width: 20px;
+            position: relative;
+            background: linear-gradient(90deg, #1e293b 0%, #0b0f19 50%, #1e293b 100%);
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.85);
+            z-index: 5;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .spine-crease-shadow {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 18px, rgba(255,255,255,0.06) 19px, transparent 20px);
+            pointer-events: none;
+        }
+
+        .spine-ribbon {
+            position: absolute;
+            top: 0;
+            width: 6px;
+            height: 65px;
+            background: linear-gradient(180deg, #ea580c, #c2410c);
+            border-radius: 0 0 3px 3px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
         /* --- Themes & Eye Care Filters --- */
         body.theme-paper .iframe-container { background: #fdfbf7; }
         body.theme-paper iframe { filter: none !important; }
+        body.theme-paper .book-page-wrapper { background: #fdfbf7; color: #1e293b; }
+        body.theme-paper .book-page-header, body.theme-paper .book-page-footer { background: #f4eee3; border-color: #e6dcce; color: #574c3d; }
 
         body.theme-sepia .iframe-container { background: #f6ecdc; }
         body.theme-sepia iframe { filter: sepia(0.46) contrast(0.95) brightness(0.96) !important; }
+        body.theme-sepia .book-page-wrapper { background: #f6ecdc; color: #2d241c; }
+        body.theme-sepia .book-page-header, body.theme-sepia .book-page-footer { background: #ece0cd; border-color: #dfd1bd; color: #4b3b2c; }
 
         body.theme-dark .iframe-container { background: #0b1120; }
         body.theme-dark iframe { filter: invert(0.90) hue-rotate(180deg) contrast(1.08) brightness(0.95) !important; }
+        body.theme-dark .book-page-wrapper { background: #151f32; color: #f8fafc; }
+        body.theme-dark .book-page-header, body.theme-dark .book-page-footer { background: #0f172a; border-color: #1e293b; color: #94a3b8; }
 
         body.theme-oled .iframe-container { background: #000000; }
         body.theme-oled iframe { filter: invert(0.96) hue-rotate(180deg) contrast(1.18) brightness(0.92) !important; }
+        body.theme-oled .book-page-wrapper { background: #080c14; color: #f8fafc; }
+        body.theme-oled .book-page-header, body.theme-oled .book-page-footer { background: #000000; border-color: #1e293b; color: #64748b; }
 
         /* --- Touch Gestures Tap Zones (Mobile Left/Right Invisible Wings) --- */
         .touch-zone-left, .touch-zone-right {
@@ -15970,10 +16377,16 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Responsive Breakpoints */
+        /* Responsive Breakpoints & PC-Only Gating */
         @media (max-width: 900px) {
-            .hide-on-mobile {
+            .hide-on-mobile,
+            .book-view-toggle,
+            #bookViewBtn,
+            .book-spread-container {
                 display: none !important;
+            }
+            body.book-view-mode #pdf-frame {
+                display: block !important;
             }
             .mobile-bottom-bar {
                 display: flex;
@@ -15982,7 +16395,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 height: calc(100vh - 56px - 64px);
             }
             .book-title-header {
-                max-width: 180px;
+                max-width: 170px;
                 font-size: 0.85rem;
             }
             .header {
@@ -15992,7 +16405,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
         @media (max-width: 480px) {
             .book-title-header {
-                max-width: 140px;
+                max-width: 130px;
                 font-size: 0.8rem;
             }
         }
@@ -16086,11 +16499,23 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 <button type="button" class="view-btn" onclick="changeView('FitH')" title="Fit Width">Fit W</button>
                 <button type="button" class="view-btn" onclick="changeView('Fit')" title="Fit Entire Page">Fit</button>
             </div>
+
+            <!-- PC-ONLY PHYSICAL BOOK SPREAD TOGGLE -->
+            <div class="view-controls hide-on-mobile" title="Book View: Read side-by-side like an authentic physical open book (PC Only)">
+                <button type="button" class="view-btn book-view-toggle" id="bookViewBtn" onclick="toggleBookView()" title="Toggle 2-Page Book Spread [Hotkey: V]">
+                    <span id="bookViewIcon">📖</span> <span id="bookViewLabel">Book View</span>
+                </button>
+            </div>
             ` : ""}
         </div>
 
         <div class="header-right">
             ${canRead ? `
+            <!-- Cross-Device Cloud Sync Status Pill -->
+            <span id="syncIndicator" style="font-size: 0.74rem; font-weight: 700; color: #10b981; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); transition: all 0.3s ease;" title="Reading progress, page position, bookmarks & themes automatically sync across all your devices">
+                <span id="syncIcon">☁️</span> <span id="syncStatusText">Synced</span>
+            </span>
+
             <!-- Session Reading Timer -->
             <span id="sessionTimerBadge" class="hide-on-mobile" style="font-size:0.78rem;font-weight:700;color:#94a3b8;display:inline-flex;align-items:center;gap:4px;">
                 <span>⏱️</span> <span id="sessionTimeText">1m read</span>
@@ -16139,10 +16564,51 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         <div class="touch-zone-left" onclick="prevPage()" title="Previous Page"></div>
         <div class="touch-zone-right" onclick="nextPage()" title="Next Page"></div>
 
+        <!-- Single Page Frame (Mobile & Standard Single Page Mode) -->
         <iframe id="pdf-frame" 
                 src="${escapeHtml(iframeSrc)}" 
                 sandbox="allow-scripts allow-same-origin">
         </iframe>
+
+        <!-- PC-ONLY Dual-Page Physical Book Spread ("View like a book") -->
+        <div class="book-spread-container" id="bookSpreadContainer">
+            <!-- Left Book Page Panel -->
+            <div class="book-page-wrapper book-page-left" id="bookPageLeftWrapper" onclick="onBookSpreadClick('left')" title="Click left page or press ← / A to turn back">
+                <div class="book-page-header">
+                    <span class="book-page-tag" id="leftPageTag">Page 1</span>
+                    <span class="book-page-title">${bookTitleEscaped}</span>
+                </div>
+                <div class="book-page-content">
+                    <iframe id="pdf-frame-left" class="book-page-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+                <div class="book-spine-crease-left"></div>
+                <div class="book-page-footer">
+                    <span class="book-page-num" id="leftPageNumDisplay">Page 1</span>
+                </div>
+            </div>
+
+            <!-- Realistic Book Spine Crease, Binding & Silk Ribbon Marker -->
+            <div class="book-center-spine">
+                <div class="spine-line"></div>
+                <div class="spine-crease-shadow"></div>
+                <div class="spine-ribbon" title="Book Ribbon Marker"></div>
+            </div>
+
+            <!-- Right Book Page Panel -->
+            <div class="book-page-wrapper book-page-right" id="bookPageRightWrapper" onclick="onBookSpreadClick('right')" title="Click right page or press → / D to turn forward">
+                <div class="book-page-header">
+                    <span class="book-page-title">${authorNameEscaped}</span>
+                    <span class="book-page-tag" id="rightPageTag">Page 2</span>
+                </div>
+                <div class="book-page-content">
+                    <iframe id="pdf-frame-right" class="book-page-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+                <div class="book-spine-crease-right"></div>
+                <div class="book-page-footer">
+                    <span class="book-page-num" id="rightPageNumDisplay">Page 2</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Mobile Thumb Action Bar (Thumb-Zone Optimized for Smartphones) -->
@@ -16175,10 +16641,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             <span>Zen</span>
         </button>
     </nav>
-
-    <!-- ===================================================================== -->
-    <!-- DRAWERS & MODALS: Settings, Bookmarks, Sounds, Shortcuts              -->
-    <!-- ===================================================================== -->
 
     <!-- Settings Drawer -->
     <div class="drawer-backdrop" id="settingsDrawer" onclick="closeDrawerOnBackdrop(event, 'settingsDrawer')">
@@ -16346,8 +16808,9 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem; margin-bottom: 16px;">
-                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>→ / D / Space</strong>: Next Page</div>
-                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>← / A / Shift+Space</strong>: Prev Page</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>→ / D / Space</strong>: Next Page (+2 in Book View)</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>← / A / Shift+Space</strong>: Prev Page (-2 in Book View)</div>
+                <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>V</strong>: Toggle Book Spread View (PC)</div>
                 <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>+ / =</strong>: Zoom In (+15%)</div>
                 <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>−</strong>: Zoom Out (-15%)</div>
                 <div style="background:#1e293b;padding:8px 12px;border-radius:6px;"><strong>0</strong>: Reset Zoom</div>
@@ -16385,55 +16848,205 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
     </div>
     ` : ""}
 
-    <!-- Comprehensive Client-Side Engine for Touch, Audio, Drawers, Zoom & Hotkeys -->
+    <!-- Comprehensive Client-Side Engine for Touch, Audio, Drawers, Zoom, Book View & Cross-Device Sync -->
     <script>
     (function() {
-        const BOOK_ID = "${book.id || 0}";
+        const BOOK_ID = ${book.id || 0};
         let currentViewMode = "FitH";
         let currentPage = 1;
         let currentZoom = 1.0;
         let currentRotation = 0;
         let currentTheme = 'paper';
         let readingSeconds = 0;
+        let pendingHeartbeatSeconds = 0;
+        let isBookView = false;
         let activeAmbientType = null;
         let audioCtx = null;
         let ambientSource = null;
         let ambientGain = null;
         let eyeCareTimerId = null;
+        let cloudSyncTimer = null;
 
         function getCleanPdfUrl() {
-            const raw = "${escapeHtml(pdfUrl)}";
+            const raw = ${escapeHtml(pdfUrl)};
             if (!raw || raw === 'about:blank') return '';
             return raw.split('#')[0];
         }
 
         // --- Haptic Feedback for Mobile ---
-        function triggerHaptic(ms = 12) {
+        function triggerHaptic(ms) {
+            ms = ms || 12;
             try {
                 if (navigator.vibrate) navigator.vibrate(ms);
             } catch (_) {}
         }
 
+        // --- Cross-Device Cloud Sync Status Indicator ---
+        function setSyncStatus(state) {
+            const ind = document.getElementById('syncIndicator');
+            const txt = document.getElementById('syncStatusText');
+            const icn = document.getElementById('syncIcon');
+            if (!ind || !txt || !icn) return;
+            if (state === 'syncing') {
+                txt.textContent = 'Syncing...';
+                icn.textContent = '🔄';
+                ind.style.color = '#f59e0b';
+                ind.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                ind.style.background = 'rgba(245, 158, 11, 0.12)';
+            } else if (state === 'synced') {
+                txt.textContent = 'Synced';
+                icn.textContent = '☁️';
+                ind.style.color = '#10b981';
+                ind.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+                ind.style.background = 'rgba(16, 185, 129, 0.12)';
+            } else if (state === 'offline') {
+                txt.textContent = 'Local';
+                icn.textContent = '💾';
+                ind.style.color = '#94a3b8';
+                ind.style.borderColor = 'rgba(148, 163, 184, 0.35)';
+                ind.style.background = 'rgba(148, 163, 184, 0.12)';
+            }
+        }
+
+        function queueCloudSync() {
+            setSyncStatus('syncing');
+            if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+            cloudSyncTimer = setTimeout(function() {
+                performCloudSync();
+            }, 1500);
+        }
+
+        function performCloudSync(isBeacon) {
+            if (!BOOK_ID || BOOK_ID === '0') return;
+            const payload = {
+                book_id: parseInt(BOOK_ID, 10),
+                current_page: currentPage,
+                total_pages: 100,
+                time_spent_seconds: pendingHeartbeatSeconds,
+                reader_theme: currentTheme,
+                dimmer_level: parseInt(localStorage.getItem('pv_reader_dimmer') || '100', 10),
+                bookmarks: getBookmarks()
+            };
+            pendingHeartbeatSeconds = 0;
+
+            if (isBeacon && navigator.sendBeacon) {
+                try {
+                    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                    navigator.sendBeacon('/api/reading_progress', blob);
+                    return;
+                } catch (_) {}
+            }
+
+            fetch('/api/reading_progress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data && data.success) {
+                    setSyncStatus(data.logged_in ? 'synced' : 'offline');
+                }
+            }).catch(function() {
+                setSyncStatus('offline');
+            });
+        }
+
+        function fetchCloudProgress() {
+            if (!BOOK_ID || BOOK_ID === '0') return;
+            fetch('/api/reading_progress?book_id=' + BOOK_ID)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.success && data.logged_in) {
+                        setSyncStatus('synced');
+                        if (data.reader_theme && ['paper', 'sepia', 'dark', 'oled'].includes(data.reader_theme)) {
+                            setReaderTheme(data.reader_theme, false);
+                        }
+                        if (data.dimmer_level != null) {
+                            setNightDimmer(data.dimmer_level, false);
+                            const slider = document.getElementById('dimmerSlider');
+                            if (slider) slider.value = data.dimmer_level;
+                        }
+                        if (Array.isArray(data.bookmarks) && data.bookmarks.length > 0) {
+                            saveBookmarks(data.bookmarks, false);
+                        }
+                        if (data.current_page && data.current_page > 1) {
+                            const localSaved = parseInt(localStorage.getItem('pv_page_' + BOOK_ID) || '1', 10);
+                            const resumePage = Math.max(localSaved, data.current_page);
+                            jumpToPage(resumePage, false);
+                        }
+                    } else {
+                        setSyncStatus('offline');
+                    }
+                })
+                .catch(function() {
+                    setSyncStatus('offline');
+                });
+        }
+
+        // --- PC-Only Physical Book Spread View Engine ---
+        window.toggleBookView = function() {
+            if (window.innerWidth <= 900) {
+                alert('Book View is designed exclusively for PC / desktop displays for side-by-side reading.');
+                return;
+            }
+            isBookView = !isBookView;
+            try {
+                localStorage.setItem('pv_book_view', isBookView ? '1' : '0');
+            } catch (_) {}
+            applyBookViewUI();
+            jumpToPage(currentPage);
+            triggerHaptic(15);
+        };
+
+        function applyBookViewUI() {
+            const btn = document.getElementById('bookViewBtn');
+            const icon = document.getElementById('bookViewIcon');
+            const label = document.getElementById('bookViewLabel');
+
+            if (isBookView && window.innerWidth > 900) {
+                document.body.classList.add('book-view-mode');
+                if (btn) btn.classList.add('active');
+                if (icon) icon.textContent = '📄';
+                if (label) label.textContent = 'Single Page';
+            } else {
+                document.body.classList.remove('book-view-mode');
+                if (btn) btn.classList.remove('active');
+                if (icon) icon.textContent = '📖';
+                if (label) label.textContent = 'Book View';
+            }
+        }
+
+        window.onBookSpreadClick = function(side) {
+            if (!isBookView || window.innerWidth <= 900) return;
+            if (side === 'right') {
+                nextPage();
+            } else if (side === 'left') {
+                prevPage();
+            }
+        };
+
         // --- Theme Engine ---
-        window.setReaderTheme = function(theme) {
+        window.setReaderTheme = function(theme, shouldSync) {
+            if (typeof shouldSync === 'undefined') shouldSync = true;
             currentTheme = theme;
             document.body.classList.remove('theme-paper', 'theme-sepia', 'theme-dark', 'theme-oled');
             document.body.classList.add('theme-' + theme);
 
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.theme-btn').forEach(function(b) { b.classList.remove('active'); });
             const activeDesktop = document.getElementById('themeBtn_' + theme);
             if (activeDesktop) activeDesktop.classList.add('active');
 
-            document.querySelectorAll('.theme-card-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.theme-card-btn').forEach(function(b) { b.classList.remove('active'); });
             const activeMobile = document.getElementById('mTheme_' + theme);
             if (activeMobile) activeMobile.classList.add('active');
 
             try { localStorage.setItem('pv_reader_theme', theme); } catch (_) {}
+            if (shouldSync) queueCloudSync();
             triggerHaptic(8);
         };
 
         // --- Night Screen Dimmer ---
-        window.setNightDimmer = function(percent) {
+        window.setNightDimmer = function(percent, shouldSync) {
+            if (typeof shouldSync === 'undefined') shouldSync = true;
             const overlay = document.getElementById('readerDimmerOverlay');
             const label = document.getElementById('dimmerPercentText');
             const val = parseInt(percent, 10) || 100;
@@ -16441,6 +17054,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             if (overlay) overlay.style.opacity = darkOpacity;
             if (label) label.textContent = val + '% Bright';
             try { localStorage.setItem('pv_reader_dimmer', val); } catch (_) {}
+            if (shouldSync) queueCloudSync();
         };
 
         // --- Zoom Engine ---
@@ -16461,7 +17075,8 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         };
 
         // --- Page Rotation Engine ---
-        window.rotateReaderPage = function(deg = 90) {
+        window.rotateReaderPage = function(deg) {
+            deg = deg || 90;
             currentRotation = (currentRotation + deg) % 360;
             applyFrameTransform();
             triggerHaptic(12);
@@ -16484,13 +17099,13 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         window.toggleReaderFullscreen = function() {
             const btn = document.getElementById('fullscreenBtn');
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().then(() => {
+                document.documentElement.requestFullscreen().then(function() {
                     if (btn) btn.innerHTML = '<span>⤢</span>';
-                }).catch(() => {});
+                }).catch(function() {});
             } else {
-                document.exitFullscreen().then(() => {
+                document.exitFullscreen().then(function() {
                     if (btn) btn.innerHTML = '<span>⛶</span>';
-                }).catch(() => {});
+                }).catch(function() {});
             }
             triggerHaptic(10);
         };
@@ -16523,8 +17138,9 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             }
         };
 
-        // --- Page Navigation & Sync ---
-        window.jumpToPage = function(pageNo) {
+        // --- Page Navigation & Synchronization Engine ---
+        window.jumpToPage = function(pageNo, shouldSync) {
+            if (typeof shouldSync === 'undefined') shouldSync = true;
             const base = getCleanPdfUrl();
             if (!base) return;
 
@@ -16547,18 +17163,46 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             const bmNum = document.getElementById('bmCurrentPageNum');
             if (bmNum) bmNum.textContent = pageNo;
 
-            // Reading Progress Bar update
             const prog = Math.min(100, Math.max(3, pageNo * 4));
             const bar = document.getElementById('readerProgressBar');
             if (bar) bar.style.width = prog + '%';
 
-            const frame = document.getElementById('pdf-frame');
-            if (!frame) return;
+            // Check if Book View spread is active on PC
+            if (isBookView && window.innerWidth > 900) {
+                let leftPage = (currentPage % 2 === 0) ? currentPage : Math.max(1, currentPage - 1);
+                if (currentPage === 1) leftPage = 1;
+                const rightPage = leftPage + 1;
 
-            if (base.includes('drive.google.com')) {
-                frame.src = base + '#page=' + pageNo;
+                const frameLeft = document.getElementById('pdf-frame-left');
+                const frameRight = document.getElementById('pdf-frame-right');
+
+                if (frameLeft) {
+                    frameLeft.src = base.includes('drive.google.com')
+                        ? base + '#page=' + leftPage
+                        : base + '#page=' + leftPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
+                }
+                if (frameRight) {
+                    frameRight.src = base.includes('drive.google.com')
+                        ? base + '#page=' + rightPage
+                        : base + '#page=' + rightPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
+                }
+
+                const lTag = document.getElementById('leftPageTag');
+                const lNum = document.getElementById('leftPageNumDisplay');
+                const rTag = document.getElementById('rightPageTag');
+                const rNum = document.getElementById('rightPageNumDisplay');
+
+                if (lTag) lTag.textContent = 'Page ' + leftPage;
+                if (lNum) lNum.textContent = 'Page ' + leftPage;
+                if (rTag) rTag.textContent = 'Page ' + rightPage;
+                if (rNum) rNum.textContent = 'Page ' + rightPage;
             } else {
-                frame.src = base + '#page=' + pageNo + '&toolbar=0&navpanes=0&scrollbar=0&view=' + currentViewMode;
+                const frame = document.getElementById('pdf-frame');
+                if (frame) {
+                    frame.src = base.includes('drive.google.com')
+                        ? base + '#page=' + pageNo
+                        : base + '#page=' + pageNo + '&toolbar=0&navpanes=0&scrollbar=0&view=' + currentViewMode;
+                }
             }
 
             try {
@@ -16566,17 +17210,20 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             } catch (_) {}
 
             updateBookmarkIconState();
+            if (shouldSync) queueCloudSync();
             triggerHaptic(12);
         };
 
         window.prevPage = function() {
             if (currentPage > 1) {
-                jumpToPage(currentPage - 1);
+                const step = (isBookView && window.innerWidth > 900) ? 2 : 1;
+                jumpToPage(Math.max(1, currentPage - step));
             }
         };
 
         window.nextPage = function() {
-            jumpToPage(currentPage + 1);
+            const step = (isBookView && window.innerWidth > 900) ? 2 : 1;
+            jumpToPage(currentPage + step);
         };
 
         window.promptJumpToPage = function() {
@@ -16602,11 +17249,13 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             } catch (_) { return []; }
         }
 
-        function saveBookmarks(list) {
+        function saveBookmarks(list, shouldSync) {
+            if (typeof shouldSync === 'undefined') shouldSync = true;
             try {
                 localStorage.setItem('pv_bms_' + BOOK_ID, JSON.stringify(list));
             } catch (_) {}
             updateBookmarkIconState();
+            if (shouldSync) queueCloudSync();
         }
 
         window.toggleBookmarkCurrentPage = function() {
@@ -16616,9 +17265,9 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 list.splice(idx, 1);
             } else {
                 list.push(currentPage);
-                list.sort((a,b) => a - b);
+                list.sort(function(a,b) { return a - b; });
             }
-            saveBookmarks(list);
+            saveBookmarks(list, true);
             triggerHaptic(15);
         };
 
@@ -16626,8 +17275,8 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             let list = getBookmarks();
             if (!list.includes(currentPage)) {
                 list.push(currentPage);
-                list.sort((a,b) => a - b);
-                saveBookmarks(list);
+                list.sort(function(a,b) { return a - b; });
+                saveBookmarks(list, true);
             }
             renderBookmarksList();
             triggerHaptic(12);
@@ -16635,8 +17284,8 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
 
         window.removeBookmark = function(pageNo) {
             let list = getBookmarks();
-            list = list.filter(p => p !== pageNo);
-            saveBookmarks(list);
+            list = list.filter(function(p) { return p !== pageNo; });
+            saveBookmarks(list, true);
             renderBookmarksList();
             triggerHaptic(10);
         };
@@ -16754,7 +17403,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             ambientSource = noise;
             activeAmbientType = type;
 
-            document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('playing'));
+            document.querySelectorAll('.sound-btn').forEach(function(b) { b.classList.remove('playing'); });
             const activeBtn = document.getElementById('soundBtn_' + type);
             if (activeBtn) activeBtn.classList.add('playing');
             triggerHaptic(15);
@@ -16766,7 +17415,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 ambientSource = null;
             }
             activeAmbientType = null;
-            document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('playing'));
+            document.querySelectorAll('.sound-btn').forEach(function(b) { b.classList.remove('playing'); });
             triggerHaptic(8);
         };
 
@@ -16785,13 +17434,13 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 eyeCareTimerId = null;
             }
             if (enabled) {
-                eyeCareTimerId = setInterval(() => {
+                eyeCareTimerId = setInterval(function() {
                     const banner = document.getElementById('eyeRestBanner');
                     if (banner) {
                         banner.classList.add('show');
                         triggerHaptic([30, 80, 30]);
                     }
-                }, 20 * 60 * 1000); // 20 minutes
+                }, 20 * 60 * 1000);
             }
             try { localStorage.setItem('pv_eye_care', enabled ? '1' : '0'); } catch (_) {}
         };
@@ -16819,16 +17468,14 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             const diffX = e.changedTouches[0].clientX - touchStartX;
             const diffY = e.changedTouches[0].clientY - touchStartY;
 
-            // Horizontal Swipe: must be > 60px and predominantly horizontal
             if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
                 if (diffX < 0) {
-                    nextPage(); // Swiped Left ➔ Next
+                    nextPage();
                 } else {
-                    prevPage(); // Swiped Right ➔ Prev
+                    prevPage();
                 }
             }
 
-            // Double Tap to toggle Zoom / Fit
             const now = Date.now();
             if (now - lastTapTime < 300 && Math.abs(diffX) < 15 && Math.abs(diffY) < 15) {
                 if (currentZoom > 1.05) {
@@ -16842,13 +17489,17 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             touchStartY = 0;
         }, { passive: true });
 
-        // --- Session Reading Timer ---
-        setInterval(() => {
+        // --- Active Session Reading Timer & Cloud Heartbeat ---
+        setInterval(function() {
             readingSeconds += 1;
+            pendingHeartbeatSeconds += 1;
             const mins = Math.floor(readingSeconds / 60);
             const badge = document.getElementById('sessionTimeText');
             if (badge) {
                 badge.textContent = (mins < 1 ? 'Just started' : mins + 'm read');
+            }
+            if (pendingHeartbeatSeconds >= 20) {
+                performCloudSync();
             }
         }, 1000);
 
@@ -16858,7 +17509,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 return;
             }
 
-            // Anti-theft & download restrictions
             if ((e.ctrlKey && e.key === 's') || 
                 (e.ctrlKey && e.key === 'p') || 
                 (e.key === 'F12') || 
@@ -16870,7 +17520,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 return false;
             }
 
-            // Reader Keyboard Shortcuts
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'h' || e.key === 'H') {
                 e.preventDefault();
                 prevPage();
@@ -16896,6 +17545,9 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             } else if (e.key === 'f' || e.key === 'F') {
                 e.preventDefault();
                 toggleReaderFullscreen();
+            } else if (e.key === 'v' || e.key === 'V') {
+                e.preventDefault();
+                toggleBookView();
             } else if (e.key === 'z' || e.key === 'Z') {
                 e.preventDefault();
                 toggleZenMode();
@@ -16920,16 +17572,20 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 if (document.body.classList.contains('zen-active')) {
                     toggleZenMode();
                 } else {
-                    document.querySelectorAll('.drawer-backdrop.open').forEach(d => d.classList.remove('open'));
+                    document.querySelectorAll('.drawer-backdrop.open').forEach(function(d) { d.classList.remove('open'); });
                 }
             }
         });
+
+        // --- Save on Unload / Tab Switch ---
+        window.addEventListener('beforeunload', function() { performCloudSync(true); });
+        window.addEventListener('pagehide', function() { performCloudSync(true); });
 
         // --- Initialization ---
         window.addEventListener('DOMContentLoaded', function() {
             try {
                 const savedTheme = localStorage.getItem('pv_reader_theme') || 'paper';
-                setReaderTheme(savedTheme);
+                setReaderTheme(savedTheme, false);
             } catch (_) {}
 
             try {
@@ -16937,7 +17593,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 if (savedDimmer) {
                     const slider = document.getElementById('dimmerSlider');
                     if (slider) slider.value = savedDimmer;
-                    setNightDimmer(savedDimmer);
+                    setNightDimmer(savedDimmer, false);
                 }
             } catch (_) {}
 
@@ -16950,23 +17606,32 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 }
             } catch (_) {}
 
+            if (window.innerWidth > 900) {
+                try {
+                    isBookView = (localStorage.getItem('pv_book_view') === '1');
+                    applyBookViewUI();
+                } catch (_) {}
+            }
+
             try {
                 const savedPage = localStorage.getItem('pv_page_' + BOOK_ID);
                 if (savedPage) {
                     const p = parseInt(savedPage, 10);
                     if (!isNaN(p) && p > 1) {
-                        jumpToPage(p);
+                        jumpToPage(p, false);
                     }
                 }
             } catch (_) {}
 
             updateBookmarkIconState();
+            fetchCloudProgress();
         });
     })();
     </script>
 </body>
 </html>`;
 }
+
 
 function renderActivityMonitorEdgeHtml({
   pin_verified = false,

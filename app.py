@@ -10850,7 +10850,20 @@ def api_user_shelves():
 @app.route('/api/reading_progress', methods=['GET', 'POST'])
 def api_reading_progress():
     if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+        return jsonify({
+            'success': True,
+            'logged_in': False,
+            'message': 'Unauthenticated; client local storage active.',
+            'current_page': 1,
+            'max_page_reached': 1,
+            'total_pages': 1,
+            'percent_completed': 0.0,
+            'reading_seconds': 0,
+            'is_completed': False,
+            'reader_theme': 'paper',
+            'dimmer_level': 100,
+            'bookmarks': []
+        })
         
     user_id = session['user_id']
     db = None
@@ -10864,33 +10877,53 @@ def api_reading_progress():
                 return jsonify({'success': False, 'message': 'Missing book_id'}), 400
             cursor.execute("SELECT * FROM reading_progress WHERE user_id = %s AND book_id = %s", (user_id, book_id))
             row = cursor.fetchone()
+
+            bookmarks = []
+            try:
+                cursor.execute("SELECT page_number FROM user_bookmarks WHERE user_id = %s AND book_id = %s ORDER BY page_number ASC", (user_id, book_id))
+                bookmarks = [b['page_number'] for b in cursor.fetchall()]
+            except Exception:
+                pass
+
             if row:
                 return jsonify({
                     'success': True,
-                    'current_page': row['current_page'],
-                    'max_page_reached': row['max_page_reached'],
-                    'total_pages': row['total_pages'],
-                    'percent_completed': row['percent_completed'],
-                    'reading_seconds': row['reading_seconds'],
-                    'is_completed': bool(row['is_completed'])
+                    'logged_in': True,
+                    'current_page': row.get('current_page', 1),
+                    'max_page_reached': row.get('max_page_reached', 1),
+                    'total_pages': row.get('total_pages', 1),
+                    'percent_completed': row.get('percent_completed', 0.0),
+                    'reading_seconds': row.get('reading_seconds', 0),
+                    'is_completed': bool(row.get('is_completed')),
+                    'reader_theme': row.get('reader_theme', 'paper'),
+                    'dimmer_level': row.get('dimmer_level', 100),
+                    'bookmarks': bookmarks
                 })
             else:
                 return jsonify({
                     'success': True,
+                    'logged_in': True,
                     'current_page': 1,
                     'max_page_reached': 1,
                     'total_pages': 1,
                     'percent_completed': 0.0,
                     'reading_seconds': 0,
-                    'is_completed': False
+                    'is_completed': False,
+                    'reader_theme': 'paper',
+                    'dimmer_level': 100,
+                    'bookmarks': bookmarks
                 })
                 
-        # POST - Track reading heartbeat & page progress
+        # POST - Track reading heartbeat, page progress & bookmarks
         data = request.get_json(silent=True) or {}
         book_id = data.get('book_id')
         current_page = max(1, int(data.get('current_page', 1)))
         total_pages = max(1, int(data.get('total_pages', 1)))
-        added_seconds = max(0, min(120, int(data.get('time_spent_seconds', 0))))
+        added_seconds = max(0, min(180, int(data.get('time_spent_seconds', 0))))
+        reader_theme = data.get('reader_theme', 'paper')
+        if reader_theme not in ['paper', 'sepia', 'dark', 'oled']:
+            reader_theme = 'paper'
+        dimmer_level = max(20, min(100, int(data.get('dimmer_level', 100))))
         
         if not book_id:
             return jsonify({'success': False, 'message': 'Missing book_id'}), 400
@@ -10904,33 +10937,69 @@ def api_reading_progress():
             new_total = max(existing['total_pages'], total_pages)
             new_pct = min(100.0, round((new_max_page / new_total) * 100.0, 1))
             
-            # Genuine completion: reached >= 90% or last page AND spent at least 30s actively reading
             should_complete = (new_max_page >= new_total or new_pct >= 90.0) and new_seconds >= 30
             is_comp = bool(existing['is_completed'] or should_complete)
             comp_at = existing['completed_at'] if existing['is_completed'] else (datetime.now() if should_complete else None)
             
-            cursor.execute("""
-                UPDATE reading_progress 
-                SET current_page = %s, max_page_reached = %s, total_pages = %s, 
-                    percent_completed = %s, reading_seconds = %s, is_completed = %s, completed_at = %s
-                WHERE user_id = %s AND book_id = %s
-            """, (current_page, new_max_page, new_total, new_pct, new_seconds, is_comp, comp_at, user_id, book_id))
+            try:
+                cursor.execute('''
+                    UPDATE reading_progress 
+                    SET current_page = %s, max_page_reached = %s, total_pages = %s, 
+                        percent_completed = %s, reading_seconds = %s, is_completed = %s, completed_at = %s,
+                        reader_theme = %s, dimmer_level = %s, last_read_at = CURRENT_TIMESTAMP
+                    WHERE user_id = %s AND book_id = %s
+                ''', (current_page, new_max_page, new_total, new_pct, new_seconds, is_comp, comp_at, reader_theme, dimmer_level, user_id, book_id))
+            except Exception:
+                cursor.execute('''
+                    UPDATE reading_progress 
+                    SET current_page = %s, max_page_reached = %s, total_pages = %s, 
+                        percent_completed = %s, reading_seconds = %s, is_completed = %s, completed_at = %s
+                    WHERE user_id = %s AND book_id = %s
+                ''', (current_page, new_max_page, new_total, new_pct, new_seconds, is_comp, comp_at, user_id, book_id))
         else:
             new_pct = min(100.0, round((current_page / total_pages) * 100.0, 1))
             should_complete = (current_page >= total_pages or new_pct >= 90.0) and added_seconds >= 30
             comp_at = datetime.now() if should_complete else None
             
-            cursor.execute("""
-                INSERT INTO reading_progress 
-                (user_id, book_id, current_page, max_page_reached, total_pages, percent_completed, reading_seconds, is_completed, completed_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (user_id, book_id, current_page, current_page, total_pages, new_pct, added_seconds, should_complete, comp_at))
+            try:
+                cursor.execute('''
+                    INSERT INTO reading_progress 
+                    (user_id, book_id, current_page, max_page_reached, total_pages, percent_completed, reading_seconds, is_completed, completed_at, reader_theme, dimmer_level)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (user_id, book_id, current_page, current_page, total_pages, new_pct, added_seconds, should_complete, comp_at, reader_theme, dimmer_level))
+            except Exception:
+                cursor.execute('''
+                    INSERT INTO reading_progress 
+                    (user_id, book_id, current_page, max_page_reached, total_pages, percent_completed, reading_seconds, is_completed, completed_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (user_id, book_id, current_page, current_page, total_pages, new_pct, added_seconds, should_complete, comp_at))
             is_comp = should_complete
+
+        # Sync bookmarks if provided
+        bookmarks_data = data.get('bookmarks')
+        if isinstance(bookmarks_data, list):
+            try:
+                cursor.execute("DELETE FROM user_bookmarks WHERE user_id = %s AND book_id = %s", (user_id, book_id))
+                clean_pages = set()
+                for p in bookmarks_data:
+                    try:
+                        pn = int(p)
+                        if pn >= 1:
+                            clean_pages.add(pn)
+                    except Exception:
+                        pass
+                for bm_page in sorted(list(clean_pages))[:50]:
+                    cursor.execute("INSERT INTO user_bookmarks (user_id, book_id, title, page_number) VALUES (%s, %s, %s, %s)",
+                                   (user_id, book_id, f"Page {bm_page}", bm_page))
+            except Exception:
+                pass
             
         db.commit()
         return jsonify({
             'success': True,
+            'logged_in': True,
             'is_completed': is_comp,
+            'current_page': current_page,
             'percent_completed': new_pct,
             'cert_unlocked': is_comp
         })
