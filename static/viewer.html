@@ -89,7 +89,7 @@
         }
 
         .book-title-header {
-            max-width: 260px;
+            max-width: 280px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -186,7 +186,7 @@
             transition: width 0.3s ease;
         }
 
-        /* Main Reading Area & Iframe */
+        /* Main Reading Area & Container */
         .iframe-container {
             width: 100%;
             height: calc(100vh - 56px);
@@ -207,28 +207,44 @@
             transform-origin: top center;
         }
 
-        /* --- PC-Only Physical Book View (2-Page Spread) --- */
-        .book-spread-container {
+        /* --- 3D Physical Open Book Spread Layout (PC ONLY) --- */
+        .book-spread-outer {
             display: none;
             width: 100%;
             height: 100%;
-            max-width: 1680px;
+            max-width: 1720px;
             margin: 0 auto;
-            padding: 10px 18px;
-            justify-content: center;
-            align-items: stretch;
+            padding: 10px 16px;
             box-sizing: border-box;
-            perspective: 2000px;
+            justify-content: center;
+            align-items: center;
+            perspective: 2600px;
         }
 
         body.book-view-mode #pdf-frame {
             display: none !important;
         }
 
-        body.book-view-mode .book-spread-container {
+        body.book-view-mode .book-spread-outer {
             display: flex !important;
         }
 
+        /* Hardcover Leather Desk Mat Backing */
+        .book-hardcover-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #090d16;
+            border-radius: 14px;
+            padding: 10px;
+            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.8), 0 0 0 2px #1e293b, inset 0 0 25px rgba(0, 0, 0, 0.9);
+            align-items: stretch;
+            box-sizing: border-box;
+            transform-style: preserve-3d;
+        }
+
+        /* Page Panels with 3D Transforms */
         .book-page-wrapper {
             flex: 1;
             height: 100%;
@@ -238,26 +254,111 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+            transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.25, 1), box-shadow 0.45s ease, filter 0.3s ease;
         }
 
+        /* Left Page Stacked Paper Block */
         .book-page-left {
-            border-radius: 8px 0 0 8px;
-            box-shadow: -12px 14px 28px rgba(0, 0, 0, 0.45), inset -24px 0 32px -10px rgba(0, 0, 0, 0.35);
+            border-radius: 6px 0 0 6px;
+            box-shadow: -4px 0 0 #e2e8f0, -8px 0 0 #cbd5e1, -12px 4px 16px rgba(0,0,0,0.4), inset -28px 0 36px -10px rgba(0, 0, 0, 0.38);
             border-right: 1px solid rgba(0, 0, 0, 0.15);
+            transform-origin: right center;
         }
 
+        /* Right Page Stacked Paper Block */
         .book-page-right {
-            border-radius: 0 8px 8px 0;
-            box-shadow: 12px 14px 28px rgba(0, 0, 0, 0.45), inset 24px 0 32px -10px rgba(0, 0, 0, 0.35);
+            border-radius: 0 6px 6px 0;
+            box-shadow: 4px 0 0 #e2e8f0, 8px 0 0 #cbd5e1, 12px 4px 16px rgba(0,0,0,0.4), inset 28px 0 36px -10px rgba(0, 0, 0, 0.38);
             border-left: 1px solid rgba(0, 0, 0, 0.15);
+            transform-origin: left center;
         }
 
-        .book-page-wrapper:hover {
-            filter: brightness(1.02);
+        /* Book Opening Animation Keyframes */
+        @keyframes bookOpenLeftAnim {
+            0% {
+                transform: rotateY(85deg) scale(0.92);
+                opacity: 0.2;
+                box-shadow: inset -60px 0 80px rgba(0, 0, 0, 0.9);
+            }
+            60% {
+                transform: rotateY(-4deg) scale(1.008);
+                box-shadow: inset -32px 0 45px rgba(0, 0, 0, 0.5);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                opacity: 1;
+                box-shadow: -4px 0 0 #e2e8f0, -8px 0 0 #cbd5e1, -12px 4px 16px rgba(0,0,0,0.4), inset -28px 0 36px -10px rgba(0, 0, 0, 0.38);
+            }
+        }
+
+        @keyframes bookOpenRightAnim {
+            0% {
+                transform: rotateY(-85deg) scale(0.92);
+                opacity: 0.2;
+                box-shadow: inset 60px 0 80px rgba(0, 0, 0, 0.9);
+            }
+            60% {
+                transform: rotateY(4deg) scale(1.008);
+                box-shadow: inset 32px 0 45px rgba(0, 0, 0, 0.5);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                opacity: 1;
+                box-shadow: 4px 0 0 #e2e8f0, 8px 0 0 #cbd5e1, 12px 4px 16px rgba(0,0,0,0.4), inset 28px 0 36px -10px rgba(0, 0, 0, 0.38);
+            }
+        }
+
+        .book-hardcover-wrapper.is-opening .book-page-left {
+            animation: bookOpenLeftAnim 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+        }
+
+        .book-hardcover-wrapper.is-opening .book-page-right {
+            animation: bookOpenRightAnim 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+        }
+
+        /* Page Flip Turn Animations */
+        @keyframes pageTurnForward {
+            0% {
+                transform: rotateY(0deg);
+                filter: brightness(1);
+            }
+            45% {
+                transform: rotateY(-42deg) scale(0.98);
+                filter: brightness(0.88);
+                box-shadow: -25px 20px 45px rgba(0,0,0,0.65);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                filter: brightness(1);
+            }
+        }
+
+        @keyframes pageTurnBackward {
+            0% {
+                transform: rotateY(0deg);
+                filter: brightness(1);
+            }
+            45% {
+                transform: rotateY(42deg) scale(0.98);
+                filter: brightness(0.88);
+                box-shadow: 25px 20px 45px rgba(0,0,0,0.65);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                filter: brightness(1);
+            }
+        }
+
+        .book-page-right.turn-flip-next {
+            animation: pageTurnForward 0.42s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .book-page-left.turn-flip-prev {
+            animation: pageTurnBackward 0.42s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .book-page-header {
@@ -307,13 +408,33 @@
             transition: filter 0.3s ease;
         }
 
+        /* Decorative Cover Flyleaf (when on page 1) */
+        .book-cover-flyleaf {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 30px;
+            text-align: center;
+            background: radial-gradient(circle at center, #faf8f3 0%, #f0eadc 100%);
+            color: #475569;
+            border: 2px dashed #cbd5e1;
+            margin: 12px;
+            border-radius: 6px;
+        }
+        .book-cover-flyleaf.active {
+            display: flex;
+        }
+
+        /* Deep Center Gutter Crease Shadows */
         .book-spine-crease-left {
             position: absolute;
             top: 0;
             bottom: 0;
             right: 0;
-            width: 32px;
-            background: linear-gradient(to left, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.08) 60%, transparent 100%);
+            width: 36px;
+            background: linear-gradient(to left, rgba(0,0,0,0.36) 0%, rgba(0,0,0,0.12) 60%, transparent 100%);
             pointer-events: none;
         }
 
@@ -322,8 +443,8 @@
             top: 0;
             bottom: 0;
             left: 0;
-            width: 32px;
-            background: linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.08) 60%, transparent 100%);
+            width: 36px;
+            background: linear-gradient(to right, rgba(0,0,0,0.36) 0%, rgba(0,0,0,0.12) 60%, transparent 100%);
             pointer-events: none;
         }
 
@@ -340,11 +461,12 @@
             flex-shrink: 0;
         }
 
+        /* Center Binding Spine with Silk Bookmark Ribbon */
         .book-center-spine {
-            width: 20px;
+            width: 22px;
             position: relative;
-            background: linear-gradient(90deg, #1e293b 0%, #0b0f19 50%, #1e293b 100%);
-            box-shadow: inset 0 0 12px rgba(0,0,0,0.85);
+            background: linear-gradient(90deg, #1e293b 0%, #060911 50%, #1e293b 100%);
+            box-shadow: inset 0 0 14px rgba(0,0,0,0.9);
             z-index: 5;
             flex-shrink: 0;
             display: flex;
@@ -361,35 +483,45 @@
 
         .spine-ribbon {
             position: absolute;
-            top: 0;
-            width: 6px;
-            height: 65px;
+            top: -4px;
+            width: 7px;
+            height: 74px;
             background: linear-gradient(180deg, #ea580c, #c2410c);
             border-radius: 0 0 3px 3px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.6);
             pointer-events: none;
+            transform-origin: top center;
+            transition: transform 0.3s ease;
         }
 
-        /* --- Themes & Eye Care Filters --- */
+        .book-hardcover-wrapper:hover .spine-ribbon {
+            transform: rotate(2.5deg);
+        }
+
+        /* --- Eye-Care Themes for Single & Book Spread --- */
         body.theme-paper .iframe-container { background: #fdfbf7; }
         body.theme-paper iframe { filter: none !important; }
         body.theme-paper .book-page-wrapper { background: #fdfbf7; color: #1e293b; }
         body.theme-paper .book-page-header, body.theme-paper .book-page-footer { background: #f4eee3; border-color: #e6dcce; color: #574c3d; }
+        body.theme-paper .book-cover-flyleaf { background: radial-gradient(circle at center, #faf8f3 0%, #f0eadc 100%); color: #475569; }
 
         body.theme-sepia .iframe-container { background: #f6ecdc; }
         body.theme-sepia iframe { filter: sepia(0.46) contrast(0.95) brightness(0.96) !important; }
         body.theme-sepia .book-page-wrapper { background: #f6ecdc; color: #2d241c; }
         body.theme-sepia .book-page-header, body.theme-sepia .book-page-footer { background: #ece0cd; border-color: #dfd1bd; color: #4b3b2c; }
+        body.theme-sepia .book-cover-flyleaf { background: radial-gradient(circle at center, #f5ecd9 0%, #e8dcbf 100%); color: #3b2b1a; border-color: #cbb896; }
 
         body.theme-dark .iframe-container { background: #0b1120; }
         body.theme-dark iframe { filter: invert(0.90) hue-rotate(180deg) contrast(1.08) brightness(0.95) !important; }
         body.theme-dark .book-page-wrapper { background: #151f32; color: #f8fafc; }
         body.theme-dark .book-page-header, body.theme-dark .book-page-footer { background: #0f172a; border-color: #1e293b; color: #94a3b8; }
+        body.theme-dark .book-cover-flyleaf { background: radial-gradient(circle at center, #1b263b 0%, #0f172a 100%); color: #94a3b8; border-color: #334155; }
 
         body.theme-oled .iframe-container { background: #000000; }
         body.theme-oled iframe { filter: invert(0.96) hue-rotate(180deg) contrast(1.18) brightness(0.92) !important; }
         body.theme-oled .book-page-wrapper { background: #080c14; color: #f8fafc; }
         body.theme-oled .book-page-header, body.theme-oled .book-page-footer { background: #000000; border-color: #1e293b; color: #64748b; }
+        body.theme-oled .book-cover-flyleaf { background: #000000; color: #64748b; border-color: #1e293b; }
 
         /* --- Touch Gestures Tap Zones (Mobile Left/Right Invisible Wings) --- */
         .touch-zone-left, .touch-zone-right {
@@ -528,7 +660,6 @@
             transform: translateY(0);
         }
 
-        /* Desktop Modal Centering for Larger Screens */
         @media (min-width: 769px) {
             .drawer-panel {
                 bottom: auto;
@@ -627,7 +758,6 @@
             color: #ea580c;
         }
 
-        /* Slider Controls */
         .slider-row {
             display: flex;
             align-items: center;
@@ -653,7 +783,6 @@
             font-size: 0.9rem;
         }
 
-        /* Bookmarks List */
         .bookmarks-list {
             display: flex;
             flex-direction: column;
@@ -697,7 +826,6 @@
             background: rgba(239, 68, 68, 0.2);
         }
 
-        /* Ambient Sounds Selector */
         .sound-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -771,7 +899,6 @@
             gap: 6px;
         }
 
-        /* Eye Rest Notification Banner */
         .eye-rest-banner {
             position: fixed;
             top: 20px;
@@ -794,12 +921,12 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Responsive Breakpoints & PC-Only Gating */
+        /* Strict PC-Only Restriction */
         @media (max-width: 900px) {
             .hide-on-mobile,
             .book-view-toggle,
             #bookViewBtn,
-            .book-spread-container {
+            .book-spread-outer {
                 display: none !important;
             }
             body.book-view-mode #pdf-frame {
@@ -827,7 +954,6 @@
             }
         }
 
-        /* Mandatory Gate Modal (Unpaid or Unauthenticated) */
         .gate-modal-backdrop {
             position: fixed;
             inset: 0;
@@ -917,7 +1043,7 @@
             </div>
 
             <!-- PC-ONLY PHYSICAL BOOK SPREAD TOGGLE -->
-            <div class="view-controls hide-on-mobile" title="Book View: Read side-by-side like an authentic physical open book (PC Only)">
+            <div class="view-controls hide-on-mobile" title="Book View: Open side-by-side like an authentic physical book (PC Only) [Hotkey: V]">
                 <button type="button" class="view-btn book-view-toggle" id="bookViewBtn" onclick="toggleBookView()" title="Toggle 2-Page Book Spread [Hotkey: V]">
                     <span id="bookViewIcon">📖</span> <span id="bookViewLabel">Book View</span>
                 </button>
@@ -925,11 +1051,6 @@
         </div>
 
         <div class="header-right">
-            <!-- Cross-Device Cloud Sync Status Pill -->
-            <span id="syncIndicator" style="font-size: 0.74rem; font-weight: 700; color: #10b981; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); transition: all 0.3s ease;" title="Reading progress, page position, bookmarks & themes automatically sync across all your devices">
-                <span id="syncIcon">☁️</span> <span id="syncStatusText">Synced</span>
-            </span>
-
             <!-- Session Reading Timer -->
             <span id="sessionTimerBadge" class="hide-on-mobile" style="font-size:0.78rem;font-weight:700;color:#94a3b8;display:inline-flex;align-items:center;gap:4px;">
                 <span>⏱️</span> <span id="sessionTimeText">1m read</span>
@@ -971,7 +1092,7 @@
         <div id="readerProgressBar" class="reader-progress-bar" style="width: 2%;"></div>
     </div>
 
-    <!-- Main Document Embed Container -->
+    <!-- Main Reading Container -->
     <div class="iframe-container" id="iframeContainer">
         <!-- Invisible Touch Turn Wings for Mobile (Left 15% / Right 15%) -->
         <div class="touch-zone-left" onclick="prevPage()" title="Previous Page"></div>
@@ -983,42 +1104,53 @@
                 sandbox="allow-scripts allow-same-origin">
         </iframe>
 
-        <!-- PC-ONLY Dual-Page Physical Book Spread ("View like a book") -->
-        <div class="book-spread-container" id="bookSpreadContainer">
-            <!-- Left Book Page Panel -->
-            <div class="book-page-wrapper book-page-left" id="bookPageLeftWrapper" onclick="onBookSpreadClick('left')" title="Click left page or press ← / A to turn back">
-                <div class="book-page-header">
-                    <span class="book-page-tag" id="leftPageTag">Page 1</span>
-                    <span class="book-page-title" id="leftPageTitle">Book</span>
+        <!-- PC-ONLY Dual-Page Physical Open Book Spread with 3D Opening Animation -->
+        <div class="book-spread-outer" id="bookSpreadOuter">
+            <div class="book-hardcover-wrapper" id="bookHardcoverWrapper">
+                <!-- Left Page Panel -->
+                <div class="book-page-wrapper book-page-left" id="bookPageLeftWrapper" onclick="onBookSpreadClick('left')" title="Click left page or press ← / A to turn back">
+                    <div class="book-page-header">
+                        <span class="book-page-tag" id="leftPageTag">Inside Cover</span>
+                        <span class="book-page-title" id="leftPageTitle">Book</span>
+                    </div>
+                    <div class="book-page-content">
+                        <!-- Decorative First Flyleaf when on Cover / Page 1 -->
+                        <div class="book-cover-flyleaf active" id="bookFlyleafLeft">
+                            <div style="font-size: 2.2rem; margin-bottom: 8px;">📖</div>
+                            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 6px; color: #1e293b;">PustakVerse</h3>
+                            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 14px;">Digital Library Edition</p>
+                            <div style="display: inline-block; padding: 4px 12px; background: rgba(234, 88, 12, 0.12); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.3); border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                Verified Digital Manuscript
+                            </div>
+                        </div>
+                        <iframe id="pdf-frame-left" class="book-page-frame" style="display: none;" sandbox="allow-scripts allow-same-origin"></iframe>
+                    </div>
+                    <div class="book-spine-crease-left"></div>
+                    <div class="book-page-footer">
+                        <span class="book-page-num" id="leftPageNumDisplay">PustakVerse Library Edition</span>
+                    </div>
                 </div>
-                <div class="book-page-content">
-                    <iframe id="pdf-frame-left" class="book-page-frame" sandbox="allow-scripts allow-same-origin"></iframe>
-                </div>
-                <div class="book-spine-crease-left"></div>
-                <div class="book-page-footer">
-                    <span class="book-page-num" id="leftPageNumDisplay">Page 1</span>
-                </div>
-            </div>
 
-            <!-- Realistic Book Spine Crease, Binding & Silk Ribbon Marker -->
-            <div class="book-center-spine">
-                <div class="spine-line"></div>
-                <div class="spine-crease-shadow"></div>
-                <div class="spine-ribbon" title="Book Ribbon Marker"></div>
-            </div>
+                <!-- Realistic Book Spine Binding with Silk Ribbon Marker -->
+                <div class="book-center-spine">
+                    <div class="spine-line"></div>
+                    <div class="spine-crease-shadow"></div>
+                    <div class="spine-ribbon" title="Book Ribbon Marker"></div>
+                </div>
 
-            <!-- Right Book Page Panel -->
-            <div class="book-page-wrapper book-page-right" id="bookPageRightWrapper" onclick="onBookSpreadClick('right')" title="Click right page or press → / D to turn forward">
-                <div class="book-page-header">
-                    <span class="book-page-title" id="rightPageAuthor">Author</span>
-                    <span class="book-page-tag" id="rightPageTag">Page 2</span>
-                </div>
-                <div class="book-page-content">
-                    <iframe id="pdf-frame-right" class="book-page-frame" sandbox="allow-scripts allow-same-origin"></iframe>
-                </div>
-                <div class="book-spine-crease-right"></div>
-                <div class="book-page-footer">
-                    <span class="book-page-num" id="rightPageNumDisplay">Page 2</span>
+                <!-- Right Page Panel -->
+                <div class="book-page-wrapper book-page-right" id="bookPageRightWrapper" onclick="onBookSpreadClick('right')" title="Click right page or press → / D to turn forward">
+                    <div class="book-page-header">
+                        <span class="book-page-title" id="rightPageAuthor">Author</span>
+                        <span class="book-page-tag" id="rightPageTag">Cover (Page 1)</span>
+                    </div>
+                    <div class="book-page-content">
+                        <iframe id="pdf-frame-right" class="book-page-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                    </div>
+                    <div class="book-spine-crease-right"></div>
+                    <div class="book-page-footer">
+                        <span class="book-page-num" id="rightPageNumDisplay">Page 1</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1279,7 +1411,6 @@
             return raw.split('#')[0];
         }
 
-        // --- Haptic Feedback for Mobile ---
         function triggerHaptic(ms) {
             ms = ms || 12;
             try {
@@ -1287,39 +1418,46 @@
             } catch (_) {}
         }
 
-        // --- Cross-Device Cloud Sync Status Indicator ---
-        function setSyncStatus(state) {
-            const ind = document.getElementById('syncIndicator');
-            const txt = document.getElementById('syncStatusText');
-            const icn = document.getElementById('syncIcon');
-            if (!ind || !txt || !icn) return;
-            if (state === 'syncing') {
-                txt.textContent = 'Syncing...';
-                icn.textContent = '🔄';
-                ind.style.color = '#f59e0b';
-                ind.style.borderColor = 'rgba(245, 158, 11, 0.35)';
-                ind.style.background = 'rgba(245, 158, 11, 0.12)';
-            } else if (state === 'synced') {
-                txt.textContent = 'Synced';
-                icn.textContent = '☁️';
-                ind.style.color = '#10b981';
-                ind.style.borderColor = 'rgba(16, 185, 129, 0.35)';
-                ind.style.background = 'rgba(16, 185, 129, 0.12)';
-            } else if (state === 'offline') {
-                txt.textContent = 'Local';
-                icn.textContent = '💾';
-                ind.style.color = '#94a3b8';
-                ind.style.borderColor = 'rgba(148, 163, 184, 0.35)';
-                ind.style.background = 'rgba(148, 163, 184, 0.12)';
-            }
+        // --- Realistic Procedural Paper Page Turn Sound (Web Audio API) ---
+        function playPageTurnSound() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                if (!audioCtx) audioCtx = new AudioCtx();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                const bufferSize = audioCtx.sampleRate * 0.18;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1400, now);
+                filter.frequency.exponentialRampToValueAtTime(450, now + 0.15);
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start(now);
+            } catch (_) {}
         }
 
+        // --- Silent Cross-Device Cloud Synchronization Engine ---
         function queueCloudSync() {
-            setSyncStatus('syncing');
             if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
             cloudSyncTimer = setTimeout(function() {
                 performCloudSync();
-            }, 1500);
+            }, 1200);
         }
 
         function performCloudSync(isBeacon) {
@@ -1347,13 +1485,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            }).then(function(r) { return r.json(); }).then(function(data) {
-                if (data && data.success) {
-                    setSyncStatus(data.logged_in ? 'synced' : 'offline');
-                }
-            }).catch(function() {
-                setSyncStatus('offline');
-            });
+            }).catch(function() {});
         }
 
         function fetchCloudProgress() {
@@ -1362,7 +1494,6 @@
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data && data.success && data.logged_in) {
-                        setSyncStatus('synced');
                         if (data.reader_theme && ['paper', 'sepia', 'dark', 'oled'].includes(data.reader_theme)) {
                             setReaderTheme(data.reader_theme, false);
                         }
@@ -1379,16 +1510,12 @@
                             const resumePage = Math.max(localSaved, data.current_page);
                             jumpToPage(resumePage, false);
                         }
-                    } else {
-                        setSyncStatus('offline');
                     }
                 })
-                .catch(function() {
-                    setSyncStatus('offline');
-                });
+                .catch(function() {});
         }
 
-        // --- PC-Only Physical Book Spread View Engine ---
+        // --- PC-Only Physical Book Spread View & Opening Animation Engine ---
         window.toggleBookView = function() {
             if (window.innerWidth <= 900) {
                 alert('Book View is designed exclusively for PC / desktop displays for side-by-side reading.');
@@ -1398,21 +1525,32 @@
             try {
                 localStorage.setItem('pv_book_view', isBookView ? '1' : '0');
             } catch (_) {}
-            applyBookViewUI();
+            applyBookViewUI(true);
             jumpToPage(currentPage);
+            playPageTurnSound();
             triggerHaptic(15);
         };
 
-        function applyBookViewUI() {
+        function applyBookViewUI(shouldAnimateOpening) {
             const btn = document.getElementById('bookViewBtn');
             const icon = document.getElementById('bookViewIcon');
             const label = document.getElementById('bookViewLabel');
+            const wrapper = document.getElementById('bookHardcoverWrapper');
 
             if (isBookView && window.innerWidth > 900) {
                 document.body.classList.add('book-view-mode');
                 if (btn) btn.classList.add('active');
                 if (icon) icon.textContent = '📄';
                 if (label) label.textContent = 'Single Page';
+
+                if (shouldAnimateOpening && wrapper) {
+                    wrapper.classList.remove('is-opening');
+                    void wrapper.offsetWidth;
+                    wrapper.classList.add('is-opening');
+                    setTimeout(function() {
+                        wrapper.classList.remove('is-opening');
+                    }, 800);
+                }
             } else {
                 document.body.classList.remove('book-view-mode');
                 if (btn) btn.classList.remove('active');
@@ -1480,7 +1618,6 @@
             triggerHaptic(8);
         };
 
-        // --- Page Rotation Engine ---
         window.rotateReaderPage = function(deg) {
             deg = deg || 90;
             currentRotation = (currentRotation + deg) % 360;
@@ -1501,7 +1638,6 @@
             }
         }
 
-        // --- Fullscreen Engine ---
         window.toggleReaderFullscreen = function() {
             const btn = document.getElementById('fullscreenBtn');
             if (!document.fullscreenElement) {
@@ -1516,13 +1652,11 @@
             triggerHaptic(10);
         };
 
-        // --- Zen / Focus Mode ---
         window.toggleZenMode = function() {
             document.body.classList.toggle('zen-active');
             triggerHaptic(15);
         };
 
-        // --- Drawers (Modals) Engine ---
         window.openDrawer = function(id) {
             const drawer = document.getElementById(id);
             if (drawer) {
@@ -1544,7 +1678,7 @@
             }
         };
 
-        // --- Page Navigation & Synchronization Engine ---
+        // --- Page Navigation & Dual-Page Animation Engine ---
         window.jumpToPage = function(pageNo, shouldSync) {
             if (typeof shouldSync === 'undefined') shouldSync = true;
             const base = getCleanPdfUrl();
@@ -1575,33 +1709,61 @@
 
             // Check if Book View spread is active on PC
             if (isBookView && window.innerWidth > 900) {
-                let leftPage = (currentPage % 2 === 0) ? currentPage : Math.max(1, currentPage - 1);
-                if (currentPage === 1) leftPage = 1;
-                const rightPage = leftPage + 1;
-
+                const flyleaf = document.getElementById('bookFlyleafLeft');
                 const frameLeft = document.getElementById('pdf-frame-left');
                 const frameRight = document.getElementById('pdf-frame-right');
 
-                if (frameLeft) {
-                    frameLeft.src = base.includes('drive.google.com')
-                        ? base + '#page=' + leftPage
-                        : base + '#page=' + leftPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
-                }
-                if (frameRight) {
-                    frameRight.src = base.includes('drive.google.com')
-                        ? base + '#page=' + rightPage
-                        : base + '#page=' + rightPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
-                }
+                let leftPage = 1;
+                let rightPage = 2;
 
-                const lTag = document.getElementById('leftPageTag');
-                const lNum = document.getElementById('leftPageNumDisplay');
-                const rTag = document.getElementById('rightPageTag');
-                const rNum = document.getElementById('rightPageNumDisplay');
+                if (currentPage === 1) {
+                    // Front Cover presentation: Left has decorative edition flyleaf, Right has Cover (Page 1)
+                    if (flyleaf) flyleaf.classList.add('active');
+                    if (frameLeft) frameLeft.style.display = 'none';
 
-                if (lTag) lTag.textContent = 'Page ' + leftPage;
-                if (lNum) lNum.textContent = 'Page ' + leftPage;
-                if (rTag) rTag.textContent = 'Page ' + rightPage;
-                if (rNum) rNum.textContent = 'Page ' + rightPage;
+                    if (frameRight) {
+                        frameRight.src = base.includes('drive.google.com')
+                            ? base + '#page=1'
+                            : base + '#page=1&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
+                    }
+
+                    const lTag = document.getElementById('leftPageTag');
+                    const lNum = document.getElementById('leftPageNumDisplay');
+                    const rTag = document.getElementById('rightPageTag');
+                    const rNum = document.getElementById('rightPageNumDisplay');
+
+                    if (lTag) lTag.textContent = 'Inside Cover';
+                    if (lNum) lNum.textContent = 'PustakVerse Library Edition';
+                    if (rTag) rTag.textContent = 'Cover (Page 1)';
+                    if (rNum) rNum.textContent = 'Page 1';
+                } else {
+                    if (flyleaf) flyleaf.classList.remove('active');
+                    if (frameLeft) frameLeft.style.display = 'block';
+
+                    leftPage = (currentPage % 2 === 0) ? currentPage : (currentPage - 1);
+                    rightPage = leftPage + 1;
+
+                    if (frameLeft) {
+                        frameLeft.src = base.includes('drive.google.com')
+                            ? base + '#page=' + leftPage
+                            : base + '#page=' + leftPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
+                    }
+                    if (frameRight) {
+                        frameRight.src = base.includes('drive.google.com')
+                            ? base + '#page=' + rightPage
+                            : base + '#page=' + rightPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
+                    }
+
+                    const lTag = document.getElementById('leftPageTag');
+                    const lNum = document.getElementById('leftPageNumDisplay');
+                    const rTag = document.getElementById('rightPageTag');
+                    const rNum = document.getElementById('rightPageNumDisplay');
+
+                    if (lTag) lTag.textContent = 'Page ' + leftPage;
+                    if (lNum) lNum.textContent = 'Page ' + leftPage;
+                    if (rTag) rTag.textContent = 'Page ' + rightPage;
+                    if (rNum) rNum.textContent = 'Page ' + rightPage;
+                }
             } else {
                 const frame = document.getElementById('pdf-frame');
                 if (frame) {
@@ -1622,14 +1784,38 @@
 
         window.prevPage = function() {
             if (currentPage > 1) {
-                const step = (isBookView && window.innerWidth > 900) ? 2 : 1;
-                jumpToPage(Math.max(1, currentPage - step));
+                if (isBookView && window.innerWidth > 900) {
+                    const lPageEl = document.getElementById('bookPageLeftWrapper');
+                    if (lPageEl) {
+                        lPageEl.classList.remove('turn-flip-prev');
+                        void lPageEl.offsetWidth;
+                        lPageEl.classList.add('turn-flip-prev');
+                        setTimeout(function() { lPageEl.classList.remove('turn-flip-prev'); }, 420);
+                    }
+                    playPageTurnSound();
+                    const step = (currentPage === 2 || currentPage === 3) ? 2 : 2;
+                    jumpToPage(Math.max(1, currentPage - step));
+                } else {
+                    jumpToPage(Math.max(1, currentPage - 1));
+                }
             }
         };
 
         window.nextPage = function() {
-            const step = (isBookView && window.innerWidth > 900) ? 2 : 1;
-            jumpToPage(currentPage + step);
+            if (isBookView && window.innerWidth > 900) {
+                const rPageEl = document.getElementById('bookPageRightWrapper');
+                if (rPageEl) {
+                    rPageEl.classList.remove('turn-flip-next');
+                    void rPageEl.offsetWidth;
+                    rPageEl.classList.add('turn-flip-next');
+                    setTimeout(function() { rPageEl.classList.remove('turn-flip-next'); }, 420);
+                }
+                playPageTurnSound();
+                const step = (currentPage === 1) ? 1 : 2;
+                jumpToPage(currentPage + step);
+            } else {
+                jumpToPage(currentPage + 1);
+            }
         };
 
         window.promptJumpToPage = function() {
@@ -1722,7 +1908,7 @@
             }).join('');
         }
 
-        // --- Ambient Soundscape Generator (Web Audio API - Zero External Files) ---
+        // --- Ambient Soundscape Generator ---
         function initAudio() {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1857,7 +2043,7 @@
             triggerHaptic(8);
         };
 
-        // --- Mobile Touch Gestures (Swipe Left / Swipe Right) ---
+        // --- Mobile Touch Gestures ---
         let touchStartX = 0;
         let touchStartY = 0;
         let lastTapTime = 0;
@@ -1895,7 +2081,7 @@
             touchStartY = 0;
         }, { passive: true });
 
-        // --- Active Session Reading Timer & Cloud Heartbeat ---
+        // --- Session Reading Timer & Cloud Heartbeat ---
         setInterval(function() {
             readingSeconds += 1;
             pendingHeartbeatSeconds += 1;
@@ -1983,7 +2169,7 @@
             }
         });
 
-        // --- Save on Unload / Tab Switch ---
+        // --- Save on Exit / Tab Switch ---
         window.addEventListener('beforeunload', function() { performCloudSync(true); });
         window.addEventListener('pagehide', function() { performCloudSync(true); });
 
@@ -2015,7 +2201,7 @@
             if (window.innerWidth > 900) {
                 try {
                     isBookView = (localStorage.getItem('pv_book_view') === '1');
-                    applyBookViewUI();
+                    applyBookViewUI(isBookView);
                 } catch (_) {}
             }
 
