@@ -54,7 +54,17 @@ const HTML_ROUTE_MAP = {
   "/management/self_published_books": "manage_self_published_books.html",
   "/management/self_published_books/": "manage_self_published_books.html",
   "/management_self_published_books": "manage_self_published_books.html",
-  "/management_self_published_books/": "manage_self_published_books.html"
+  "/management_self_published_books/": "manage_self_published_books.html",
+  "/books": "index.html",
+  "/books/": "index.html",
+  "/catalog": "index.html",
+  "/catalog/": "index.html",
+  "/search": "index.html",
+  "/search/": "index.html",
+  "/admin": "dashboard.html",
+  "/admin/": "dashboard.html",
+  "/404": "404.html",
+  "/404.html": "404.html"
 };
 
 // ============================================================================
@@ -2583,6 +2593,11 @@ export default {
   async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
+      const hasBypassParam = url.searchParams.has("bypass_maintenance") || 
+                             url.searchParams.has("dev_bypass") || 
+                             url.searchParams.has("bypass_key") ||
+                             url.searchParams.has("bypass_cf") ||
+                             url.searchParams.has("cf_bypass");
 
       // Background task executor (non-blocking)
       const bgTask = (p) => {
@@ -10598,7 +10613,7 @@ Format with these exact markdown sections:
     }
 
     // 6A. Dedicated Book Details & Reviews Route: /book/:id, /view_book/:id (with or without trailing slash)
-    const bookDetailsMatch = url.pathname.match(/^\/(?:book|view_book)\/(\d+)\/?$/);
+    const bookDetailsMatch = url.pathname.match(/^\/(?:book|books|view_book)\/(\d+)\/?$/);
     if (bookDetailsMatch) {
       const bookId = parseInt(bookDetailsMatch[1], 10);
       try {
@@ -11867,38 +11882,24 @@ Format with these exact markdown sections:
       }
     } catch (_) {}
 
-    // 10. Graceful startup banner if network is completely unreachable
-    return new Response(
-      `<!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>PustakVerse · Digital Library</title>
-        <meta http-equiv="refresh" content="4">
-        <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-          .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 48px 32px; max-width: 480px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-          .spinner { width: 44px; height: 44px; border: 4px solid #334155; border-top-color: #6366f1; border-radius: 50%; margin: 24px auto; animation: spin 0.9s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-          h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; color: #fff; }
-          p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px; }
-          .btn { display: inline-block; background: #6366f1; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.2s; }
-          .btn:hover { background: #4f46e5; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <h2>PustakVerse is Loading</h2>
-          <div class="spinner"></div>
-          <p>Syncing library catalog with Cloudflare Edge. This page will automatically refresh in a moment...</p>
-          <a href="/" class="btn" onclick="location.reload(); return false;">Reload Now</a>
-        </div>
-      </body>
-      </html>`,
-      { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
-    );
+    // 10. Resilient 404 / Homepage Fallback: Never display an infinite 503 reload loop to visitors
+    if (env.ASSETS) {
+      try {
+        let notFoundResp = await env.ASSETS.fetch(new Request(`${url.origin}/404.html`, request));
+        if (!notFoundResp || notFoundResp.status >= 400) {
+          notFoundResp = await env.ASSETS.fetch(new Request(`${url.origin}/_site/404.html`, request));
+        }
+        if (notFoundResp && notFoundResp.status < 400) {
+          const nfHeaders = new Headers(notFoundResp.headers);
+          nfHeaders.set("Content-Type", "text/html; charset=utf-8");
+          nfHeaders.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
+          return new Response(notFoundResp.body, { status: 404, headers: nfHeaders });
+        }
+      } catch (_) {}
+    }
+
+    // Redirect any remaining unresolved route cleanly to the homepage
+    return Response.redirect(`${url.origin}/`, 302);
     } catch (unhandledError) {
       console.error("Cloudflare Worker Exception caught:", unhandledError);
       return new Response(
