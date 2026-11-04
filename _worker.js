@@ -15797,11 +15797,13 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             height: 100%;
             max-width: 1720px;
             margin: 0 auto;
-            padding: 10px 16px;
+            padding: 12px 18px;
             box-sizing: border-box;
             justify-content: center;
             align-items: center;
             perspective: 2600px;
+            perspective-origin: 50% 50%;
+            overflow: hidden;
         }
 
         body.book-view-mode #pdf-frame {
@@ -15821,10 +15823,179 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             background: #090d16;
             border-radius: 14px;
             padding: 10px;
-            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.8), 0 0 0 2px #1e293b, inset 0 0 25px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 35px 80px -15px rgba(0, 0, 0, 0.85), 0 0 0 2px #1e293b, inset 0 0 30px rgba(0, 0, 0, 0.95);
             align-items: stretch;
             box-sizing: border-box;
             transform-style: preserve-3d;
+        }
+
+        /* 3D Realistic Opening Cover (Swings open 180deg from right to left around center spine) */
+        .book-3d-cover {
+            position: absolute;
+            top: 10px;
+            bottom: 10px;
+            right: 10px;
+            width: calc(50% - 10px);
+            z-index: 60;
+            transform-style: preserve-3d;
+            transform-origin: 0% 50%;
+            pointer-events: none;
+            display: none;
+        }
+
+        .book-hardcover-wrapper.is-opening-3d .book-3d-cover {
+            display: block;
+            animation: bookCoverOpen3d 0.88s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .book-hardcover-wrapper.is-closing-3d .book-3d-cover {
+            display: block;
+            animation: bookCoverClose3d 0.68s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes bookCoverOpen3d {
+            0% {
+                transform: rotateY(0deg);
+                box-shadow: -15px 15px 40px rgba(0,0,0,0.8);
+            }
+            40% {
+                transform: rotateY(-80deg) scale(1.02);
+                box-shadow: -35px 25px 65px rgba(0,0,0,0.9);
+            }
+            100% {
+                transform: rotateY(-180deg) scale(1);
+                box-shadow: 0 0 0 transparent;
+            }
+        }
+
+        @keyframes bookCoverClose3d {
+            0% {
+                transform: rotateY(-180deg);
+                box-shadow: 0 0 0 transparent;
+            }
+            50% {
+                transform: rotateY(-90deg) scale(1.02);
+                box-shadow: -35px 25px 65px rgba(0,0,0,0.9);
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                box-shadow: -15px 15px 40px rgba(0,0,0,0.8);
+            }
+        }
+
+        .book-cover-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            border-radius: 0 8px 8px 0;
+            box-sizing: border-box;
+        }
+
+        .book-cover-front {
+            background: linear-gradient(135deg, #1b1815 0%, #29231c 50%, #141210 100%);
+            border: 2px solid #5a4a3a;
+            box-shadow: inset 0 0 45px rgba(0,0,0,0.85), inset 0 0 0 6px #241e19;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #f5eedb;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .book-cover-front::before {
+            content: '';
+            position: absolute;
+            inset: 12px;
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .book-cover-corner {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-color: #d4af37;
+            border-style: solid;
+            pointer-events: none;
+        }
+        .book-cover-corner.tl { top: 16px; left: 16px; border-width: 2px 0 0 2px; }
+        .book-cover-corner.tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; }
+        .book-cover-corner.bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; }
+        .book-cover-corner.br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
+
+        .book-cover-seal {
+            font-size: 2.6rem;
+            margin-bottom: 14px;
+            filter: drop-shadow(0 4px 10px rgba(212, 175, 55, 0.3));
+        }
+
+        .book-cover-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #fdf8eb;
+            margin: 0 0 10px 0;
+            letter-spacing: 0.5px;
+            line-height: 1.35;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .book-cover-author-line {
+            font-size: 0.92rem;
+            color: #d4af37;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            margin-bottom: 22px;
+        }
+
+        .book-cover-badge {
+            display: inline-block;
+            padding: 5px 14px;
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #f4d068;
+        }
+
+        .book-cover-back {
+            transform: rotateY(180deg);
+            background: radial-gradient(circle at center, #f5ebd7 0%, #ded1b4 100%);
+            border-radius: 8px 0 0 8px;
+            box-shadow: inset 18px 0 35px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .book-marbled-endpaper {
+            width: 100%;
+            height: 100%;
+            border: 2px dashed rgba(120, 95, 60, 0.35);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .book-endpaper-motif {
+            font-size: 0.85rem;
+            color: #785f3c;
+            font-style: italic;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         /* Page Panels with 3D Transforms */
@@ -15860,16 +16031,15 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             transform-origin: left center;
         }
 
-        /* Book Opening Animation Keyframes */
-        @keyframes bookOpenLeftAnim {
+        /* Page Unfolding Animation Keyframes */
+        @keyframes bookPageLeftUnfold {
             0% {
-                transform: rotateY(85deg) scale(0.92);
-                opacity: 0.2;
-                box-shadow: inset -60px 0 80px rgba(0, 0, 0, 0.9);
+                transform: rotateY(32deg) scale(0.96);
+                opacity: 0.6;
+                box-shadow: inset -45px 0 60px rgba(0, 0, 0, 0.7);
             }
             60% {
-                transform: rotateY(-4deg) scale(1.008);
-                box-shadow: inset -32px 0 45px rgba(0, 0, 0, 0.5);
+                transform: rotateY(-3deg) scale(1.006);
             }
             100% {
                 transform: rotateY(0deg) scale(1);
@@ -15878,15 +16048,14 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             }
         }
 
-        @keyframes bookOpenRightAnim {
+        @keyframes bookPageRightUnfold {
             0% {
-                transform: rotateY(-85deg) scale(0.92);
-                opacity: 0.2;
-                box-shadow: inset 60px 0 80px rgba(0, 0, 0, 0.9);
+                transform: rotateY(-32deg) scale(0.96);
+                opacity: 0.6;
+                box-shadow: inset 45px 0 60px rgba(0, 0, 0, 0.7);
             }
             60% {
-                transform: rotateY(4deg) scale(1.008);
-                box-shadow: inset 32px 0 45px rgba(0, 0, 0, 0.5);
+                transform: rotateY(3deg) scale(1.006);
             }
             100% {
                 transform: rotateY(0deg) scale(1);
@@ -15895,12 +16064,12 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             }
         }
 
-        .book-hardcover-wrapper.is-opening .book-page-left {
-            animation: bookOpenLeftAnim 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+        .book-hardcover-wrapper.is-opening-3d .book-page-left {
+            animation: bookPageLeftUnfold 0.88s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
-        .book-hardcover-wrapper.is-opening .book-page-right {
-            animation: bookOpenRightAnim 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+        .book-hardcover-wrapper.is-opening-3d .book-page-right {
+            animation: bookPageRightUnfold 0.88s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
         /* Page Flip Turn Animations */
@@ -15945,8 +16114,8 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         }
 
         .book-page-header {
-            padding: 6px 14px;
-            background: rgba(241, 245, 249, 0.9);
+            padding: 8px 16px;
+            background: rgba(241, 245, 249, 0.92);
             border-bottom: 1px solid #e2e8f0;
             display: flex;
             align-items: center;
@@ -15961,7 +16130,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         .book-page-tag {
             background: #ea580c;
             color: white;
-            padding: 2px 8px;
+            padding: 2px 9px;
             border-radius: 10px;
             font-size: 0.72rem;
             font-weight: 800;
@@ -15972,7 +16141,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 220px;
+            max-width: 240px;
         }
 
         .book-page-content {
@@ -15991,23 +16160,173 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             transition: filter 0.3s ease;
         }
 
-        /* Decorative Cover Flyleaf (when on page 1) */
-        .book-cover-flyleaf {
-            display: none;
+        /* Companion Plate on Left Page */
+        .book-companion-plate {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 24px 28px;
+            box-sizing: border-box;
+            background: radial-gradient(circle at center, #faf8f3 0%, #f1ead8 100%);
+            color: #334155;
+            overflow-y: auto;
+        }
+
+        .companion-crest {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .companion-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.35;
+        }
+
+        .companion-author {
+            font-size: 0.86rem;
+            color: #64748b;
+            margin: 0 0 18px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .companion-stats-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .cstat-item {
+            display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100%;
-            padding: 30px;
             text-align: center;
-            background: radial-gradient(circle at center, #faf8f3 0%, #f0eadc 100%);
-            color: #475569;
-            border: 2px dashed #cbd5e1;
-            margin: 12px;
-            border-radius: 6px;
         }
-        .book-cover-flyleaf.active {
+
+        .cstat-val {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cstat-lbl {
+            font-size: 0.68rem;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-top: 2px;
+        }
+
+        .companion-progress-bar-wrap {
+            height: 6px;
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .companion-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ea580c, #f59e0b);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .companion-bookmarks-section {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
             display: flex;
+            flex-direction: column;
+            min-height: 110px;
+        }
+
+        .companion-section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+
+        .companion-add-bm-btn {
+            background: #ea580c;
+            color: white;
+            border: none;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .companion-add-bm-btn:hover {
+            background: #c2410c;
+        }
+
+        .companion-bookmarks-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            overflow-y: auto;
+            max-height: 120px;
+        }
+
+        .companion-bm-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 4px 10px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .companion-bm-pill:hover, .companion-bm-pill.active {
+            background: #ea580c;
+            color: white;
+            border-color: #ea580c;
+        }
+
+        .companion-empty-bm {
+            font-size: 0.76rem;
+            color: #94a3b8;
+            font-style: italic;
+            text-align: center;
+            padding: 14px 6px;
+            width: 100%;
+        }
+
+        .companion-nav-hint {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 600;
+            padding-top: 4px;
         }
 
         /* Deep Center Gutter Crease Shadows */
@@ -16032,16 +16351,27 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         }
 
         .book-page-footer {
-            padding: 4px 14px;
-            background: rgba(241, 245, 249, 0.9);
+            padding: 6px 16px;
+            background: rgba(241, 245, 249, 0.92);
             border-top: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.74rem;
             font-weight: 800;
             color: #64748b;
             font-family: 'JetBrains Mono', monospace;
             user-select: none;
             flex-shrink: 0;
+        }
+
+        .book-page-footer-note {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #94a3b8;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Center Binding Spine with Silk Bookmark Ribbon */
@@ -16080,7 +16410,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         .book-hardcover-wrapper:hover .spine-ribbon {
             transform: rotate(2.5deg);
         }
-
         /* --- Eye-Care Themes for Single & Book Spread --- */
         body.theme-paper .iframe-container { background: #fdfbf7; }
         body.theme-paper iframe { filter: none !important; }
@@ -16694,56 +17023,109 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
         <!-- PC-ONLY Dual-Page Physical Open Book Spread with 3D Opening Animation -->
         <div class="book-spread-outer" id="bookSpreadOuter">
             <div class="book-hardcover-wrapper" id="bookHardcoverWrapper">
-                <!-- Left Page Panel -->
-                <div class="book-page-wrapper book-page-left" id="bookPageLeftWrapper" onclick="onBookSpreadClick('left')" title="Click left page or press ← / A to turn back">
-                    <div class="book-page-header">
-                        <span class="book-page-tag" id="leftPageTag">Inside Cover</span>
-                        <span class="book-page-title">${bookTitleEscaped}</span>
+                <!-- 3D Flipping Front Hardcover (Animates Open from Right to Left 180deg around center spine) -->
+                <div class="book-3d-cover" id="book3dCover" aria-hidden="true">
+                    <div class="book-cover-face book-cover-front">
+                        <div class="book-cover-corner tl"></div>
+                        <div class="book-cover-corner tr"></div>
+                        <div class="book-cover-corner bl"></div>
+                        <div class="book-cover-corner br"></div>
+                        <div class="book-cover-seal">📖</div>
+                        <h2 class="book-cover-title">${bookTitleEscaped}</h2>
+                        <div class="book-cover-author-line">by ${authorNameEscaped}</div>
+                        <div class="book-cover-badge">PUSTAKVERSE · OFFICIAL EDITION</div>
                     </div>
-                    <div class="book-page-content">
-                        <!-- Decorative First Flyleaf when on Cover / Page 1 -->
-                        <div class="book-cover-flyleaf active" id="bookFlyleafLeft">
-                            <div style="font-size: 2.2rem; margin-bottom: 8px;">📖</div>
-                            <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 6px; color: #1e293b;">${bookTitleEscaped}</h3>
-                            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 14px;">by ${authorNameEscaped}</p>
-                            <div style="display: inline-block; padding: 4px 12px; background: rgba(234, 88, 12, 0.12); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.3); border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                PustakVerse Library Edition
-                            </div>
+                    <div class="book-cover-face book-cover-back">
+                        <div class="book-marbled-endpaper">
+                            <div class="book-endpaper-motif">PustakVerse Digital Library · Established 2026</div>
                         </div>
-                        <iframe id="pdf-frame-left" class="book-page-frame" style="display: none;" sandbox="allow-scripts allow-same-origin"></iframe>
-                    </div>
-                    <div class="book-spine-crease-left"></div>
-                    <div class="book-page-footer">
-                        <span class="book-page-num" id="leftPageNumDisplay">PustakVerse Library Edition</span>
                     </div>
                 </div>
 
-                <!-- Realistic Book Spine Binding with Silk Ribbon Marker -->
-                <div class="book-center-spine">
+                <!-- Left Page Panel: Companion & Archival Plate -->
+                <div class="book-page-wrapper book-page-left" id="bookPageLeftWrapper" onclick="onBookSpreadClick('left')" title="Click left page or press ← / A to flip back">
+                    <div class="book-page-header">
+                        <span class="book-page-tag" id="leftPageTag">Inside Cover</span>
+                        <span class="book-page-title" id="leftPageTitleDisplay">${bookTitleEscaped}</span>
+                    </div>
+                    <div class="book-page-content" id="bookLeftPageContent">
+                        <!-- Archival Plate & Reader Companion Leaf -->
+                        <div class="book-companion-plate" id="bookCompanionPlate">
+                            <div class="companion-crest">📖</div>
+                            <h3 class="companion-title">${bookTitleEscaped}</h3>
+                            <p class="companion-author">by ${authorNameEscaped}</p>
+                            
+                            <div class="companion-stats-box">
+                                <div class="cstat-item">
+                                    <span class="cstat-val" id="companionPageDisplay">Page 1</span>
+                                    <span class="cstat-lbl">Current Position</span>
+                                </div>
+                                <div class="cstat-item">
+                                    <span class="cstat-val" id="companionTimerDisplay">1m</span>
+                                    <span class="cstat-lbl">Time Read</span>
+                                </div>
+                                <div class="cstat-item">
+                                    <span class="cstat-val" id="companionBookmarkCount">0</span>
+                                    <span class="cstat-lbl">Bookmarks</span>
+                                </div>
+                            </div>
+
+                            <div class="companion-progress-bar-wrap">
+                                <div class="companion-progress-bar" id="companionProgressBar" style="width: 5%;"></div>
+                            </div>
+
+                            <!-- Interactive Reading Jump & Quick Bookmarks -->
+                            <div class="companion-bookmarks-section">
+                                <div class="companion-section-title">
+                                    <span>🔖 Saved Bookmarks</span>
+                                    <button type="button" class="companion-add-bm-btn" onclick="toggleBookmarkCurrentPage(); event.stopPropagation();">+ Mark Page</button>
+                                </div>
+                                <div class="companion-bookmarks-list" id="companionBookmarksList">
+                                    <div class="companion-empty-bm">No bookmarks yet. Tap 🔖 to mark your favorite pages.</div>
+                                </div>
+                            </div>
+
+                            <div class="companion-nav-hint">
+                                <span>← / A: Prev Page</span> &bull; <span>→ / D: Next Page</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="book-spine-crease-left"></div>
+                    <div class="book-page-footer">
+                        <span class="book-page-num" id="leftPageNumDisplay">Inside Cover</span>
+                        <span class="book-page-footer-note">PustakVerse Archival Spread</span>
+                    </div>
+                </div>
+
+                <!-- Realistic 3D Center Spine Binding with Silk Ribbon Marker -->
+                <div class="book-center-spine" id="bookCenterSpine">
                     <div class="spine-line"></div>
                     <div class="spine-crease-shadow"></div>
                     <div class="spine-ribbon" title="Book Ribbon Marker"></div>
                 </div>
 
-                <!-- Right Page Panel -->
-                <div class="book-page-wrapper book-page-right" id="bookPageRightWrapper" onclick="onBookSpreadClick('right')" title="Click right page or press → / D to turn forward">
+                <!-- Right Page Panel: Document Reading Viewport -->
+                <div class="book-page-wrapper book-page-right" id="bookPageRightWrapper" onclick="onBookSpreadClick('right')" title="Click right page or press → / D to flip forward">
                     <div class="book-page-header">
                         <span class="book-page-title">${authorNameEscaped}</span>
-                        <span class="book-page-tag" id="rightPageTag">Cover (Page 1)</span>
+                        <span class="book-page-tag" id="rightPageTag">Page 1</span>
                     </div>
                     <div class="book-page-content">
-                        <iframe id="pdf-frame-right" class="book-page-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                        <iframe id="pdf-frame-right" class="book-page-frame" 
+                                src="${iframeSrc}" 
+                                sandbox="allow-scripts allow-same-origin">
+                        </iframe>
                     </div>
                     <div class="book-spine-crease-right"></div>
                     <div class="book-page-footer">
+                        <span class="book-page-footer-note">PustakVerse Reader</span>
                         <span class="book-page-num" id="rightPageNumDisplay">Page 1</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Mobile Thumb Action Bar (Thumb-Zone Optimized for Smartphones) -->
+<!-- Mobile Thumb Action Bar (Thumb-Zone Optimized for Smartphones) -->
     <nav class="mobile-bottom-bar" id="mobileBottomBar">
         <div class="m-page-btn-group">
             <button type="button" class="m-page-btn" onclick="prevPage()" title="Previous Page">◀</button>
@@ -17012,7 +17394,55 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             } catch (_) {}
         }
 
-        // --- Realistic Procedural Paper Page Turn Sound (Web Audio API) ---
+        // --- Realistic Procedural Paper Page Turn & Book Open Sounds (Web Audio API) ---
+        function playBookOpenSound() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                if (!audioCtx) audioCtx = new AudioCtx();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                // Stage 1: Soft antique leather hinge resonance
+                const osc = audioCtx.createOscillator();
+                const oscGain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(130, now);
+                osc.frequency.exponentialRampToValueAtTime(70, now + 0.32);
+                oscGain.gain.setValueAtTime(0.035, now);
+                oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                osc.connect(oscGain);
+                oscGain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.33);
+
+                // Stage 2: Crisp paper rustle as front cover and pages swing open
+                const bufferSize = audioCtx.sampleRate * 0.42;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.45));
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1550, now + 0.04);
+                filter.frequency.exponentialRampToValueAtTime(480, now + 0.38);
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(0.18, now + 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.005, now + 0.4);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start(now + 0.04);
+            } catch (_) {}
+        }
+
         function playPageTurnSound() {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -17045,7 +17475,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 noise.start(now);
             } catch (_) {}
         }
-
         // --- Silent Cross-Device Cloud Synchronization Engine ---
         function queueCloudSync() {
             if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
@@ -17120,8 +17549,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 localStorage.setItem('pv_book_view', isBookView ? '1' : '0');
             } catch (_) {}
             applyBookViewUI(true);
-            jumpToPage(currentPage);
-            playPageTurnSound();
             triggerHaptic(15);
         };
 
@@ -17137,16 +17564,38 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                 if (icon) icon.textContent = '📄';
                 if (label) label.textContent = 'Single Page';
 
-                if (shouldAnimateOpening && wrapper) {
-                    wrapper.classList.remove('is-opening');
-                    void wrapper.offsetWidth;
-                    wrapper.classList.add('is-opening');
-                    setTimeout(function() {
-                        wrapper.classList.remove('is-opening');
-                    }, 800);
+                // Ensure right page reader has valid source from main frame
+                const rFrame = document.getElementById('pdf-frame-right');
+                const mainFrame = document.getElementById('pdf-frame');
+                if (rFrame && mainFrame && (!rFrame.src || rFrame.src === 'about:blank' || rFrame.src.endsWith('/about:blank'))) {
+                    rFrame.src = mainFrame.src;
                 }
+
+                if (shouldAnimateOpening && wrapper) {
+                    wrapper.classList.remove('is-closing-3d');
+                    wrapper.classList.remove('is-opening-3d');
+                    void wrapper.offsetWidth;
+                    wrapper.classList.add('is-opening-3d');
+                    playBookOpenSound();
+                    setTimeout(function() {
+                        wrapper.classList.remove('is-opening-3d');
+                    }, 880);
+                }
+                updateCompanionLeaf();
             } else {
-                document.body.classList.remove('book-view-mode');
+                if (shouldAnimateOpening && wrapper && document.body.classList.contains('book-view-mode')) {
+                    wrapper.classList.remove('is-opening-3d');
+                    wrapper.classList.remove('is-closing-3d');
+                    void wrapper.offsetWidth;
+                    wrapper.classList.add('is-closing-3d');
+                    playPageTurnSound();
+                    setTimeout(function() {
+                        wrapper.classList.remove('is-closing-3d');
+                        document.body.classList.remove('book-view-mode');
+                    }, 680);
+                } else {
+                    document.body.classList.remove('book-view-mode');
+                }
                 if (btn) btn.classList.remove('active');
                 if (icon) icon.textContent = '📖';
                 if (label) label.textContent = 'Book View';
@@ -17162,6 +17611,59 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             }
         };
 
+        function updateCompanionLeaf() {
+            const compPage = document.getElementById('companionPageDisplay');
+            if (compPage) compPage.textContent = 'Page ' + currentPage;
+            const compTimer = document.getElementById('companionTimerDisplay');
+            if (compTimer) compTimer.textContent = formatReadingTime(readingTimeSeconds);
+            const compCount = document.getElementById('companionBookmarkCount');
+            if (compCount) compCount.textContent = bookmarkedPages.length;
+            const prog = Math.min(100, Math.max(4, currentPage * 3));
+            const compProg = document.getElementById('companionProgressBar');
+            if (compProg) compProg.style.width = prog + '%';
+
+            // Left page header / footer tags
+            const lTag = document.getElementById('leftPageTag');
+            const lNum = document.getElementById('leftPageNumDisplay');
+            const rTag = document.getElementById('rightPageTag');
+            const rNum = document.getElementById('rightPageNumDisplay');
+
+            if (currentPage <= 1) {
+                if (lTag) lTag.textContent = 'Inside Cover';
+                if (lNum) lNum.textContent = 'Inside Cover';
+                if (rTag) rTag.textContent = 'Cover (Page 1)';
+                if (rNum) rNum.textContent = 'Page 1';
+            } else {
+                if (lTag) lTag.textContent = 'Companion';
+                if (lNum) lNum.textContent = 'Page ' + (currentPage - 1);
+                if (rTag) rTag.textContent = 'Page ' + currentPage;
+                if (rNum) rNum.textContent = 'Page ' + currentPage;
+            }
+
+            renderCompanionBookmarks();
+        }
+
+        function renderCompanionBookmarks() {
+            const list = document.getElementById('companionBookmarksList');
+            if (!list) return;
+            const countEl = document.getElementById('companionBookmarkCount');
+            if (countEl) countEl.textContent = bookmarkedPages.length;
+
+            if (!bookmarkedPages || bookmarkedPages.length === 0) {
+                list.innerHTML = '<div class="companion-empty-bm">No bookmarks yet. Tap 🔖 to mark your favorite pages.</div>';
+                return;
+            }
+
+            let html = '';
+            const sorted = [].concat(bookmarkedPages).sort(function(a, b) { return a - b; });
+            sorted.forEach(function(pg) {
+                const isCurrent = (pg === currentPage);
+                html += '<button type="button" class="companion-bm-pill ' + (isCurrent ? 'active' : '') + '" onclick="jumpToPage(' + pg + '); event.stopPropagation();" title="Jump to Page ' + pg + '">';
+                html += '<span>🔖 Page ' + pg + '</span>';
+                html += '</button>';
+            });
+            list.innerHTML = html;
+        }
         // --- Theme Engine ---
         window.setReaderTheme = function(theme, shouldSync) {
             if (typeof shouldSync === 'undefined') shouldSync = true;
@@ -17297,74 +17799,23 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             const bmNum = document.getElementById('bmCurrentPageNum');
             if (bmNum) bmNum.textContent = pageNo;
 
-            const prog = Math.min(100, Math.max(3, pageNo * 4));
+            const prog = Math.min(100, Math.max(4, pageNo * 3));
             const bar = document.getElementById('readerProgressBar');
             if (bar) bar.style.width = prog + '%';
 
-            // Check if Book View spread is active on PC
+            // Ensure single-page frame reflects current page if not a pure Google Drive preview
+            const frame = document.getElementById('pdf-frame');
+            if (frame && !base.includes('drive.google.com')) {
+                frame.src = base + '#page=' + pageNo + '&toolbar=0&navpanes=0&scrollbar=0&view=' + currentViewMode;
+            }
+
+            // In Book View, ensure right frame is synchronized and companion leaf is updated
             if (isBookView && window.innerWidth > 900) {
-                const flyleaf = document.getElementById('bookFlyleafLeft');
-                const frameLeft = document.getElementById('pdf-frame-left');
-                const frameRight = document.getElementById('pdf-frame-right');
-
-                let leftPage = 1;
-                let rightPage = 2;
-
-                if (currentPage === 1) {
-                    // Front Cover presentation: Left has decorative edition flyleaf, Right has Cover (Page 1)
-                    if (flyleaf) flyleaf.classList.add('active');
-                    if (frameLeft) frameLeft.style.display = 'none';
-
-                    if (frameRight) {
-                        frameRight.src = base.includes('drive.google.com')
-                            ? base + '#page=1'
-                            : base + '#page=1&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
-                    }
-
-                    const lTag = document.getElementById('leftPageTag');
-                    const lNum = document.getElementById('leftPageNumDisplay');
-                    const rTag = document.getElementById('rightPageTag');
-                    const rNum = document.getElementById('rightPageNumDisplay');
-
-                    if (lTag) lTag.textContent = 'Inside Cover';
-                    if (lNum) lNum.textContent = 'PustakVerse Library Edition';
-                    if (rTag) rTag.textContent = 'Cover (Page 1)';
-                    if (rNum) rNum.textContent = 'Page 1';
-                } else {
-                    if (flyleaf) flyleaf.classList.remove('active');
-                    if (frameLeft) frameLeft.style.display = 'block';
-
-                    leftPage = (currentPage % 2 === 0) ? currentPage : (currentPage - 1);
-                    rightPage = leftPage + 1;
-
-                    if (frameLeft) {
-                        frameLeft.src = base.includes('drive.google.com')
-                            ? base + '#page=' + leftPage
-                            : base + '#page=' + leftPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
-                    }
-                    if (frameRight) {
-                        frameRight.src = base.includes('drive.google.com')
-                            ? base + '#page=' + rightPage
-                            : base + '#page=' + rightPage + '&toolbar=0&navpanes=0&scrollbar=0&view=Fit';
-                    }
-
-                    const lTag = document.getElementById('leftPageTag');
-                    const lNum = document.getElementById('leftPageNumDisplay');
-                    const rTag = document.getElementById('rightPageTag');
-                    const rNum = document.getElementById('rightPageNumDisplay');
-
-                    if (lTag) lTag.textContent = 'Page ' + leftPage;
-                    if (lNum) lNum.textContent = 'Page ' + leftPage;
-                    if (rTag) rTag.textContent = 'Page ' + rightPage;
-                    if (rNum) rNum.textContent = 'Page ' + rightPage;
+                const rFrame = document.getElementById('pdf-frame-right');
+                if (rFrame && (!rFrame.src || rFrame.src === 'about:blank' || rFrame.src.endsWith('/about:blank'))) {
+                    rFrame.src = frame ? frame.src : base;
                 }
-            } else {
-                const frame = document.getElementById('pdf-frame');
-                if (frame) {
-                    frame.src = base.includes('drive.google.com')
-                        ? base + '#page=' + pageNo
-                        : base + '#page=' + pageNo + '&toolbar=0&navpanes=0&scrollbar=0&view=' + currentViewMode;
-                }
+                updateCompanionLeaf();
             }
 
             try {
@@ -17387,8 +17838,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                         setTimeout(function() { lPageEl.classList.remove('turn-flip-prev'); }, 420);
                     }
                     playPageTurnSound();
-                    const step = (currentPage === 2 || currentPage === 3) ? 2 : 2;
-                    jumpToPage(Math.max(1, currentPage - step));
+                    jumpToPage(Math.max(1, currentPage - 1));
                 } else {
                     jumpToPage(Math.max(1, currentPage - 1));
                 }
@@ -17405,8 +17855,7 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
                     setTimeout(function() { rPageEl.classList.remove('turn-flip-next'); }, 420);
                 }
                 playPageTurnSound();
-                const step = (currentPage === 1) ? 1 : 2;
-                jumpToPage(currentPage + step);
+                jumpToPage(currentPage + 1);
             } else {
                 jumpToPage(currentPage + 1);
             }
@@ -17426,7 +17875,6 @@ function renderEdgeViewerHtml(book, currentUser = null, canRead = true) {
             currentViewMode = viewMode;
             jumpToPage(currentPage);
         };
-
         // --- Bookmarks Engine ---
         function getBookmarks() {
             try {
