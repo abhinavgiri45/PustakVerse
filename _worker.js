@@ -248,8 +248,8 @@ async function isHumanVerified(cookies, secret) {
     if (parts.length !== 2) return false;
     const [tsStr, sig] = parts;
     const ts = parseInt(tsStr, 10);
-    // 3 days expiry = 259,200,000 ms, allow up to 2 mins clock drift
-    if (isNaN(ts) || Date.now() - ts > 259200000 || Date.now() < ts - 120000) return false;
+    // 30 days expiry = 2,592,000,000 ms, allow up to 2 mins clock drift
+    if (isNaN(ts) || Date.now() - ts > 2592000000 || Date.now() < ts - 120000) return false;
     const expected = await hmacSha256Hex(secret, tsStr);
     return sig === expected;
   } catch (_) {
@@ -278,7 +278,7 @@ function isSearchEngineBot(userAgent) {
 
 function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, clientIp }) {
   const safeHost = escapeHtml(host || "pustakverse.pages.dev");
-  const safeRayId = escapeHtml(rayId || "8d1f2a3c4b5e6f7a");
+  const safeRayId = escapeHtml(rayId || "a564e14edbfe3c33");
   const safeClientIp = escapeHtml(clientIp || "127.0.0.1");
   const safeSiteKey = escapeHtml(siteKey || "1x00000000000000000000AA");
   const safeTargetUrl = escapeHtml(targetUrl || "/");
@@ -291,210 +291,202 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Just a moment... | ${safeHost}</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/static/PustakVerse.png" type="image/png">
   <style>
-    :root {
-      --cf-bg: #f8fafc;
-      --cf-card: #ffffff;
-      --cf-text-main: #1e293b;
-      --cf-text-sub: #64748b;
-      --cf-border: #e2e8f0;
-      --cf-brand: #f38020;
-      --cf-btn-bg: #2563eb;
-      --cf-btn-hover: #1d4ed8;
-      --cf-btn-text: #ffffff;
-      --cf-accent: #0284c7;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --cf-bg: #0b0f19;
-        --cf-card: #151d2f;
-        --cf-text-main: #f1f5f9;
-        --cf-text-sub: #94a3b8;
-        --cf-border: #1e293b;
-        --cf-brand: #f38020;
-        --cf-btn-bg: #3b82f6;
-        --cf-btn-hover: #2563eb;
-        --cf-btn-text: #ffffff;
-        --cf-accent: #38bdf8;
-      }
-    }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: var(--cf-bg);
-      color: var(--cf-text-main);
+    html, body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      align-items: center;
-      padding: 24px 16px;
-      line-height: 1.5;
     }
-    .cf-wrapper {
+    body {
+      padding: 70px 48px 24px 48px;
+    }
+    @media (max-width: 640px) {
+      body {
+        padding: 40px 20px 20px 20px;
+      }
+    }
+    .cf-container {
+      max-width: 860px;
       width: 100%;
-      max-width: 520px;
-      margin: auto 0;
-      background: var(--cf-card);
-      border: 1px solid var(--cf-border);
-      border-radius: 16px;
-      padding: 36px 32px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      margin: 0;
     }
-    .cf-header {
-      margin-bottom: 24px;
-    }
-    .cf-site-title {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--cf-brand);
-      margin-bottom: 8px;
+    .cf-brand {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 14px;
+      margin-bottom: 24px;
     }
-    .cf-title {
+    .cf-logo-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #ea580c;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: -0.5px;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+      flex-shrink: 0;
+    }
+    .cf-host {
       font-size: 26px;
       font-weight: 700;
-      color: var(--cf-text-main);
-      margin-bottom: 10px;
+      color: #ffffff;
       letter-spacing: -0.02em;
+      word-break: break-all;
+    }
+    .cf-heading {
+      font-size: 21px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
     }
     .cf-desc {
       font-size: 14.5px;
-      color: var(--cf-text-sub);
-      line-height: 1.6;
+      color: #9ca3af;
+      line-height: 1.55;
+      max-width: 700px;
+      margin-bottom: 28px;
     }
-    .cf-turnstile-box {
-      margin: 28px 0 20px 0;
+    .cf-turnstile-wrapper {
+      margin: 20px 0 16px 0;
       min-height: 65px;
       display: flex;
-      justify-content: flex-start;
       align-items: center;
     }
     .cf-status {
-      font-size: 13.5px;
-      color: var(--cf-text-sub);
+      font-size: 14px;
+      color: #9ca3af;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       margin-top: 14px;
     }
     .cf-spinner {
       display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--cf-border);
-      border-top-color: var(--cf-brand);
+      width: 18px;
+      height: 18px;
+      border: 2px solid #27272a;
+      border-top-color: #ea580c;
       border-radius: 50%;
       animation: cf-spin 0.8s linear infinite;
     }
     @keyframes cf-spin {
       to { transform: rotate(360deg); }
     }
-    .cf-fallback-btn {
+    .cf-success-state {
       display: none;
-      margin-top: 16px;
-      background: var(--cf-btn-bg);
-      color: var(--cf-btn-text);
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 24px;
+      line-height: 1.4;
+      animation: cf-fade-in 0.3s ease;
+    }
+    @keyframes cf-fade-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .cf-fallback-action {
+      display: none;
+      margin-top: 24px;
+    }
+    .cf-fallback-btn {
+      background: #ea580c;
+      color: #ffffff;
       border: none;
       border-radius: 8px;
-      padding: 10px 20px;
+      padding: 10px 22px;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.1s;
     }
     .cf-fallback-btn:hover {
-      background: var(--cf-btn-hover);
+      background: #c2410c;
     }
-    .cf-info {
-      border-top: 1px solid var(--cf-border);
-      margin-top: 24px;
-      padding-top: 16px;
-      font-size: 12.5px;
-      color: var(--cf-text-sub);
-      line-height: 1.5;
-    }
-    .cf-footer {
+    .cf-footer-wrap {
       width: 100%;
-      max-width: 520px;
-      padding-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
+      margin-top: auto;
+      padding-top: 48px;
+    }
+    .cf-divider {
+      width: 100%;
+      border-top: 1px solid #27272a;
+      margin-bottom: 16px;
+    }
+    .cf-footer-content {
       text-align: center;
       font-size: 12px;
-      color: var(--cf-text-sub);
+      color: #71717a;
+      line-height: 1.7;
     }
-    .cf-footer code {
+    .cf-footer-content code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 11.5px;
-      background: rgba(148, 163, 184, 0.15);
-      padding: 2px 6px;
-      border-radius: 4px;
+      color: #a1a1aa;
     }
-    .cf-footer-brand {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .cf-footer-brand a {
-      color: inherit;
+    .cf-footer-content a {
+      color: #3b82f6;
       text-decoration: underline;
       text-underline-offset: 2px;
+    }
+    .cf-footer-content a:hover {
+      color: #60a5fa;
     }
   </style>
 </head>
 <body>
-  <div class="cf-wrapper">
-    <div class="cf-header">
-      <div class="cf-site-title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-        <span>${safeHost}</span>
-      </div>
-      <h1 class="cf-title">Verify you are human</h1>
-      <p class="cf-desc">
-        ${safeHost} needs to review the security of your connection before proceeding.
-      </p>
+  <div class="cf-container">
+    <div class="cf-brand">
+      <div class="cf-logo-badge">P</div>
+      <div class="cf-host">${safeHost}</div>
     </div>
 
-    <div class="cf-turnstile-box">
+    <h1 class="cf-heading">Performing security verification</h1>
+    <p class="cf-desc">
+      This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.
+    </p>
+
+    <div class="cf-turnstile-wrapper">
       <div id="cf-turnstile"></div>
     </div>
 
     <div id="cf-status" class="cf-status">
-      <span class="cf-spinner"></span> Verification is running. Please complete the checkbox if prompted.
+      <span class="cf-spinner"></span> Performing security verification...
     </div>
 
-    <button id="cf-fallback-btn" class="cf-fallback-btn" type="button" onclick="triggerFallback()">
-      Proceed to ${safeHost}
-    </button>
+    <div id="cf-success-state" class="cf-success-state">
+      Verification successful. Waiting for ${safeHost} to respond...
+    </div>
 
-    <div class="cf-info">
-      Why am I seeing this page? Automatic verification protects ${safeHost} from malicious automated attacks and ensures a secure reading experience.
+    <div id="cf-fallback-action" class="cf-fallback-action">
+      <button class="cf-fallback-btn" type="button" onclick="triggerFallback()">
+        Proceed to ${safeHost} &rarr;
+      </button>
     </div>
   </div>
 
-  <div class="cf-footer">
-    <div class="cf-footer-details">
-      <span>Ray ID: <code>${safeRayId}</code></span> &bull; <span>Your IP: <code>${safeClientIp}</code></span>
-    </div>
-    <div class="cf-footer-brand">
-      <svg width="22" height="14" viewBox="0 0 48 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M37.8 11.2C37.3 6.9 33.6 3.6 29.1 3.6c-3.3 0-6.2 1.8-7.7 4.5-1.1-.7-2.4-1.1-3.8-1.1-3.6 0-6.6 2.8-6.9 6.4C7.7 13.9 5 16.7 5 20.2c0 3.8 3.1 6.8 6.9 6.8h25.8c4 0 7.3-3.2 7.3-7.3 0-3.8-2.9-7-6.8-7.3l-.4-1.2z" fill="#F38020"/>
-      </svg>
-      <span>Performance &amp; security by <a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare</a></span>
+  <div class="cf-footer-wrap">
+    <div class="cf-divider"></div>
+    <div class="cf-footer-content">
+      <div>Ray ID: <code>${safeRayId}</code></div>
+      <div>Performance and Security by <a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare</a> &bull; <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Privacy</a></div>
     </div>
   </div>
 
@@ -510,7 +502,7 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
         try {
           turnstile.render('#cf-turnstile', {
             sitekey: '${safeSiteKey}',
-            theme: 'auto',
+            theme: 'dark',
             size: 'normal',
             callback: function(token) {
               submitVerification(token);
@@ -531,38 +523,41 @@ function renderCloudflareTurnstileChallenge({ host, targetUrl, siteKey, rayId, c
     };
 
     function showFallback() {
-      var btn = document.getElementById('cf-fallback-btn');
-      if (btn) btn.style.display = 'inline-block';
+      var act = document.getElementById('cf-fallback-action');
+      if (act) act.style.display = 'block';
     }
 
     function triggerFallback() {
       submitVerification('bypass_client_fallback');
     }
 
-    // If Turnstile widget doesn't load within 1.5 seconds (e.g. adblocker), show fallback button
+    // If Turnstile widget doesn't load within 1.6s (e.g. adblocker), show manual proceed button
     setTimeout(function() {
       var box = document.getElementById('cf-turnstile');
       if (!box || box.children.length === 0) {
         showFallback();
       }
-    }, 1500);
+    }, 1600);
 
-    // Auto-fallback after 3.5s so no user is ever locked out indefinitely
+    // Auto-proceed after 3.2s so legitimate readers are never locked out indefinitely
     setTimeout(function() {
       if (!submitted) {
         triggerFallback();
       }
-    }, 3500);
+    }, 3200);
 
     function submitVerification(token) {
       if (submitted) return;
       submitted = true;
 
       var status = document.getElementById('cf-status');
-      if (status) {
-        status.innerHTML = '<span style="color:#16a34a; font-weight:600;">✓</span> Verified. Connecting to PustakVerse...';
-        status.style.color = '#16a34a';
-      }
+      if (status) status.style.display = 'none';
+
+      var turnstileBox = document.getElementById('cf-turnstile');
+      if (turnstileBox) turnstileBox.style.display = 'none';
+
+      var success = document.getElementById('cf-success-state');
+      if (success) success.style.display = 'block';
 
       var target = ${jsonTargetUrl};
 
@@ -2901,15 +2896,17 @@ export default {
     const hasActiveSession = !!reqCookies.pv_session;
     const isClearanceVerified = await isHumanVerified(reqCookies, clearanceSecret);
 
-    // Only challenge visitors if Turnstile / Bot Protection is active
-    let isChallengeEnabled = false;
-    if (env && (env.TURNSTILE_ENABLED === "1" || env.ENABLE_BOT_PROTECTION === "1")) {
-      isChallengeEnabled = true;
+    // Challenge visitors at the start of the website (Cloudflare Security Verification)
+    let isChallengeEnabled = true;
+    if (hasBypassParam) {
+      isChallengeEnabled = false;
+    } else if (env && (env.TURNSTILE_ENABLED === "0" || env.ENABLE_BOT_PROTECTION === "0")) {
+      isChallengeEnabled = false;
     } else if (env && env.DB) {
       try {
         const fpsRow = await env.DB.prepare("SELECT cf_turnstile_active FROM front_page_settings WHERE id = 1").first();
-        if (fpsRow && (Number(fpsRow.cf_turnstile_active) === 1 || fpsRow.cf_turnstile_active === true || fpsRow.cf_turnstile_active === "1" || fpsRow.cf_turnstile_active === "true")) {
-          isChallengeEnabled = true;
+        if (fpsRow && (fpsRow.cf_turnstile_active === 0 || fpsRow.cf_turnstile_active === "0" || fpsRow.cf_turnstile_active === false)) {
+          isChallengeEnabled = false;
         }
       } catch (_) {}
     }
@@ -13226,7 +13223,7 @@ async function ensureFrontPageSettingsTable(env) {
         maintenance_end TEXT DEFAULT NULL,
         maintenance_reason TEXT DEFAULT NULL,
         maintenance_notified INTEGER DEFAULT 0,
-        cf_turnstile_active INTEGER DEFAULT 0
+        cf_turnstile_active INTEGER DEFAULT 1
       )
     `).run();
 
